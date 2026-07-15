@@ -1,0 +1,72 @@
+<div class="toolbar no-print">
+  <div class="container">
+    <p><b>Print, then choose "Save as PDF"</b> as the destination. This layout is single-column and heading-based, so any ATS can read it.</p>
+    <div style="display:flex;gap:9px">
+      <button class="btn ghost sm" type="button" (click)="back()">Back</button>
+      <button class="btn primary sm" type="button" (click)="print()">Print / Save as PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="sheet">
+  @if (loading()) {
+    <p style="color:#888">Loading…</p>
+  } @else if (error()) {
+    <p>{{ error() }}</p>
+  } @else if (resume(); as r) {
+    <h1>{{ r.personal.fullName }}</h1>
+    <p class="contact">{{ contactLine() }}</p>
+    @if (r.personal.summary) {
+      <section><h2>Summary</h2><p style="font-size:10.5pt">{{ r.personal.summary }}</p></section>
+    }
+    @for (kind of sectionOrder(); track kind) {
+      @switch (kind) {
+        @case ('education') {
+          @if (r.education?.length) {
+            <section>
+              <h2>Education</h2>
+              @for (e of r.education; track $index) {
+                <div class="item">
+                  <b>{{ e.degree }}</b>
+                  <i>{{ e.school }}{{ e.year ? ' · ' + e.year : '' }}</i>
+                </div>
+              }
+            </section>
+          }
+        }
+        @case ('experience') {
+          @if (r.experience?.length) {
+            <section>
+              <h2>Experience</h2>
+              @for (e of r.experience; track $index) {
+                <div class="item">
+                  <b>{{ e.position }}</b>
+                  <i>{{ e.company }}{{ e.months ? ' · ' + monthsLabel(e.months) : '' }}</i>
+                  @if (e.description) { <p>{{ e.description }}</p> }
+                </div>
+              }
+            </section>
+          }
+        }
+        @case ('skills') {
+          @if (r.skills?.length) {
+            <section><h2>Skills</h2><p class="skills">{{ r.skills.join(' · ') }}</p></section>
+          }
+        }
+        @case ('certifications') {
+          @if (r.certifications?.length) {
+            <section>
+              <h2>Certifications</h2>
+              @for (c of r.certifications; track $index) {
+                <div class="item">
+                  <b>{{ c.name }}</b>
+                  @if (c.year) { <i>{{ c.year }}</i> }
+                </div>
+              }
+            </section>
+          }
+        }
+      }
+    }
+  }
+</div>

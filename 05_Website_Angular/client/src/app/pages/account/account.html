@@ -1,0 +1,79 @@
+<app-header [variant]="headerVariant()" active="account" />
+
+<main id="main" class="container">
+  <div class="page-head">
+    <span class="eyebrow">Account</span>
+    <h1>My account</h1>
+    <p>Your details, your password, and your rights over the data you've given us.</p>
+  </div>
+
+  @if (msg()) {
+    <div class="alert error show" role="alert">{{ msg() }}</div>
+  }
+
+  <div class="sections">
+    <section class="card">
+      <h2 style="font-size:22px;margin-bottom:14px">Details</h2>
+      <div class="kv"><span>Name</span><b>{{ session.user()?.name }}</b></div>
+      <div class="kv"><span>Email</span><b>{{ session.user()?.email }}</b></div>
+      <div class="kv"><span>Account type</span><b>{{ session.user()?.role === 'seeker' ? 'Job seeker' : 'Recruiter / HR' }}</b></div>
+      <div class="kv"><span>Member since</span><b>{{ memberSince() }}</b></div>
+    </section>
+
+    <section class="card">
+      <h2 style="font-size:22px;margin-bottom:4px">Change password</h2>
+      <p style="font-size:13.5px;color:var(--muted);margin-bottom:18px">At least 6 characters.</p>
+      <form #pwFormRef (submit)="onPwSubmit($event, curInput, newInput, repInput, pwFormRef)" novalidate>
+        <div class="field" [class.invalid]="curInvalid()">
+          <label for="cur">Current password</label>
+          <input type="password" id="cur" #curInput autocomplete="current-password">
+          <span class="err">Enter your current password.</span>
+        </div>
+        <div class="field" [class.invalid]="newInvalid()">
+          <label for="new">New password</label>
+          <input type="password" id="new" #newInput autocomplete="new-password">
+          <span class="err">Use at least 6 characters.</span>
+        </div>
+        <div class="field" [class.invalid]="repInvalid()">
+          <label for="rep">Repeat new password</label>
+          <input type="password" id="rep" #repInput autocomplete="new-password">
+          <span class="err">The two passwords don't match.</span>
+        </div>
+        <button class="btn primary" type="submit" [disabled]="pwSaving()">
+          @if (pwSaving()) { <span class="spinner"></span> Saving… } @else { Change password }
+        </button>
+      </form>
+    </section>
+
+    <section class="card crest">
+      <h2 style="font-size:22px;margin-bottom:4px">Your data</h2>
+      <p style="font-size:13.5px;color:var(--muted);margin-bottom:16px">
+        Under the Data Privacy Act of 2012 (RA&nbsp;10173) you have the right to see, take a copy of, and erase the personal data you've given us. Both are here, and neither requires you to ask anyone.
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn ghost" type="button" (click)="downloadData()">Download a copy of my data</button>
+        <a class="btn ghost" routerLink="/privacy">Read the privacy notice</a>
+      </div>
+      <p class="hint" style="margin-top:12px">You'll get a JSON file with your account, every resume, and every application. Uploaded files download separately from My resumes.</p>
+    </section>
+
+    <section class="card danger">
+      <h2 style="font-size:22px;margin-bottom:4px">Delete my account</h2>
+      <p style="font-size:13.5px;color:var(--muted);margin-bottom:16px">
+        This erases your account, every resume, every uploaded file, and every application. It can't be undone, and recruiters lose access to applications you've already sent.
+      </p>
+      <form #delFormRef (submit)="onDeleteSubmit($event, delPwInput)" novalidate>
+        <div class="field" [class.invalid]="delInvalid()" style="max-width:320px">
+          <label for="delPw">Confirm with your password</label>
+          <input type="password" id="delPw" #delPwInput autocomplete="current-password">
+          <span class="err">Password is required.</span>
+        </div>
+        <button class="btn warn" type="submit" [disabled]="delSaving()">
+          @if (delSaving()) { <span class="spinner"></span> Deleting… } @else { Delete my account permanently }
+        </button>
+      </form>
+    </section>
+  </div>
+</main>
+
+<div class="toast" [class.show]="!!toastMsg()">{{ toastMsg() }}</div>
