@@ -1,0 +1,24 @@
+/* Page-specific rules ported verbatim from hr-posting.html's own
+   <style> block — the two-column layout, skill tags/pool, weights card,
+   and the live-simulation panel. */
+.cols{display:grid;grid-template-columns:1.2fr .8fr;gap:34px;align-items:start;margin-bottom:80px}
+@media(max-width:940px){.cols{grid-template-columns:1fr}}
+.tags{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}
+.tag{display:inline-flex;align-items:center;gap:8px;background:var(--gold-wash);border:1px solid var(--gold-line);
+  color:var(--gold-deep);font-size:13px;font-weight:600;border-radius:2px;padding:6px 7px 6px 12px}
+.tag button{border:none;background:var(--gold-deep);color:#fff;width:17px;height:17px;border-radius:50%;
+  font-size:10px;cursor:pointer;line-height:1;display:grid;place-items:center;padding:0}
+.pool{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.pool button{border:1px dashed var(--rule);background:var(--paper);border-radius:2px;font-size:12px;color:var(--muted);
+  padding:5px 11px;cursor:pointer;font-family:var(--body)}
+.pool button:hover{border-color:var(--gold);color:var(--gold-deep);border-style:solid}
+.aside{position:sticky;top:88px}
+.weights{border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;margin-top:12px}
+.weights .r{display:flex;justify-content:space-between;padding:11px 14px;font-size:13px;border-bottom:1px solid var(--rule-2)}
+.weights .r:last-child{border-bottom:none;background:var(--ivory)}
+.weights .r b{font-weight:600}
+.sim{border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;margin-top:12px}
+.sim .r{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--rule-2)}
+.sim .r:last-child{border-bottom:none}
+.sim .r .who{flex:1;font-size:13px}
+.sim .r .who span{display:block;font-size:11.5px;color:var(--muted)}

@@ -1,0 +1,70 @@
+<app-header variant="recruiter" active="company" />
+
+<main id="main" class="container">
+  <div class="page-head">
+    <span class="eyebrow">Partner company</span>
+    <h1>Company profile</h1>
+    <p>This is what applicants read before they decide whether to apply. Keep it honest and specific — vague profiles get fewer good applicants, not more.</p>
+  </div>
+
+  @if (loadError(); as err) {
+    <div class="alert error show" role="alert">{{ err }}</div>
+  } @else if (msg(); as m) {
+    <div class="alert error show" role="alert">{{ m }}</div>
+  } @else {
+    <div class="alert" role="alert"></div>
+  }
+
+  @if (loading()) {
+    <div class="loading"><span class="spinner"></span> Loading your company profile…</div>
+  } @else if (!loadError()) {
+    <div class="cols">
+      <form (ngSubmit)="submit()" class="card" novalidate>
+        <div class="field">
+          <label for="name">Company name</label>
+          <input type="text" id="name" [value]="name()" (input)="setName($event)">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="industry">Industry</label>
+            <input type="text" id="industry" [value]="industry()" (input)="setIndustry($event)" placeholder="Hospitality &amp; Gaming">
+          </div>
+          <div class="field">
+            <label for="website">Website</label>
+            <input type="url" id="website" [value]="website()" (input)="setWebsite($event)" placeholder="https://…">
+          </div>
+        </div>
+        <div class="field">
+          <label for="location">Location</label>
+          <input type="text" id="location" [value]="location()" (input)="setLocation($event)" placeholder="Clark Freeport Zone, Mabalacat, Pampanga">
+        </div>
+        <div class="field">
+          <label for="about">About the company</label>
+          <textarea id="about" rows="6" [value]="about()" (input)="setAbout($event)"></textarea>
+          <p class="hint">What you do, how big you are, and what kinds of roles you hire for.</p>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+          <a class="btn ghost" routerLink="/hr-dashboard">Cancel</a>
+          <button class="btn primary" type="submit" [disabled]="saving()">
+            @if (saving()) { <span class="spinner"></span> Saving… } @else { Save profile }
+          </button>
+        </div>
+      </form>
+
+      <aside class="prev">
+        <h3 style="font-size:19px;margin-bottom:4px">What applicants see</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Live preview.</p>
+        <div class="co">
+          <h3>{{ name() || 'Company name' }}</h3>
+          <div class="m">{{ previewMeta() }}</div>
+          <p>{{ about() || 'No description yet.' }}</p>
+        </div>
+        <div class="note" style="margin-top:18px">
+          Your name and department appear on every posting you publish, so applicants know a real person is reading.
+        </div>
+      </aside>
+    </div>
+  }
+</main>
+
+<div class="toast" [class.show]="toastMsg()" role="status" aria-live="polite">{{ toastMsg() }}</div>

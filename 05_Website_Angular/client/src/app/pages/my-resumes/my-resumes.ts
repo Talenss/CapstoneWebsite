@@ -71,12 +71,12 @@ export class MyResumes implements OnInit {
       return;
     }
     await this.render();
-    this.showToast("Copied. The uploaded file isn't carried over — attach it again if you want it.");
+    this.showToast('Copied. The uploaded file isn’t carried over — attach it again if you want it.');
   }
 
   async deleteResume(r: Resume): Promise<void> {
     if (!r.id) return;
-    if (!confirm(`Delete "${r.title}"? This can't be undone.`)) return;
+    if (!confirm(`Delete "${r.title}"? This can’t be undone.`)) return;
     const d = await this.api.resumes.remove(r.id);
     if (!d.ok) {
       this.showToast(d.error);

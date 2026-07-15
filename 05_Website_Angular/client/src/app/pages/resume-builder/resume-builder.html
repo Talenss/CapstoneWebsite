@@ -130,7 +130,7 @@
                     </div>
                     <div class="field">
                       <label [for]="'exp-months-' + $index">Months worked</label>
-                      <input type="number" [id]="'exp-months-' + $index" placeholder="6" [value]="e.months" (input)="updateExperience($index, 'months', inputValue($event))">
+                      <input type="number" [id]="'exp-months-' + $index" placeholder="6" [value]="e.months.toString()" (input)="updateExperience($index, 'months', inputValue($event))">
                     </div>
                   </div>
                   <div class="field">

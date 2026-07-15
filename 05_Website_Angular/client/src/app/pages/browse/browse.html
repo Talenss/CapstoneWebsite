@@ -9,11 +9,11 @@
 
   @if (!session.user()) {
     <div class="alert info show" style="margin-bottom:22px" role="status">
-      You're browsing as a guest. <a routerLink="/auth" fragment="register">Create a free account</a> to see how your resume scores against each of these and to apply.
+      You’re browsing as a guest. <a routerLink="/auth" fragment="register">Create a free account</a> to see how your resume scores against each of these and to apply.
     </div>
   } @else if (isSeeker() && !resume()) {
     <div class="alert info show" style="margin-bottom:22px" role="status">
-      You don't have a resume yet, so these can't be scored. <a routerLink="/resume-builder">Build one</a> — it takes a few minutes, and browsing stays open below.
+      You don’t have a resume yet, so these can’t be scored. <a routerLink="/resume-builder">Build one</a> — it takes a few minutes, and browsing stays open below.
     </div>
   }
 
@@ -117,7 +117,7 @@
               <span><b>Experience</b><span class="w">{{ WEIGHTS.experience * 100 }}% of the score</span></span>
               <b [style.color]="row.s.expMeets ? 'var(--emerald)' : 'var(--gold-deep)'">{{ row.s.seekerMonths }} mo · asks for {{ row.posting.minExperienceMonths || 0 }} mo</b>
             </div>
-            <div class="row"><span><b>If your score is low</b></span><b style="font-weight:500;color:var(--muted)">You still appear on the recruiter's list.</b></div>
+            <div class="row"><span><b>If your score is low</b></span><b style="font-weight:500;color:var(--muted)">You still appear on the recruiter’s list.</b></div>
           } @else {
             <div class="row"><span><b>Skills asked for</b></span><b>{{ row.posting.skills.join(', ') }}</b></div>
             <div class="row"><span><b>How scoring works</b></span><b style="font-weight:500;color:var(--muted)">Skills {{ WEIGHTS.skills * 100 }}% · education {{ WEIGHTS.education * 100 }}% · experience {{ WEIGHTS.experience * 100 }}%</b></div>
@@ -129,7 +129,7 @@
         @if (!session.user()) {
           <a class="btn primary" routerLink="/auth" fragment="register">Create an account to apply</a>
         } @else if (!isSeeker()) {
-          <span style="font-size:13px;color:var(--muted)">Recruiter accounts can't apply.</span>
+          <span style="font-size:13px;color:var(--muted)">Recruiter accounts can’t apply.</span>
         } @else if (!resume()) {
           <a class="btn primary" routerLink="/resume-builder">Build a resume to apply</a>
         } @else if (row.applied) {

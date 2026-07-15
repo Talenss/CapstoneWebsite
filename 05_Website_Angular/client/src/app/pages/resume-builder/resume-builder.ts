@@ -6,7 +6,7 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { TourService } from '../../shared/tour/tour.service';
 import { EDU_LABELS } from '../../core/engine';
-import { Certification, Education, EduLevel, Experience, Resume, Template } from '../../core/models';
+import { Education, EduLevel, Experience, Resume, Template } from '../../core/models';
 
 const STEPS = ['Details', 'Education', 'Experience', 'Skills', 'Certifications', 'Finish'];
 
@@ -24,8 +24,8 @@ function blankResume(id: string | null = null): Resume {
   };
 }
 
-const esc = (s: unknown): string =>
-  String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+const ESC_MAP: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const esc = (s: unknown): string => String(s ?? '').replace(/[&<>"']/g, (c) => ESC_MAP[c]);
 
 /** Port of 04_Website/app/resume-builder.html — the 6-step guided
  *  resume wizard with a live document preview. The original leaned on
