@@ -30,7 +30,7 @@
       <div class="nav-cta">
         <span class="whoami">{{ u.name }}</span>
         @if (showTour()) {
-          <button class="btn ghost sm" type="button" (click)="replayTour()">Show me around</button>
+          <button class="btn ghost sm" type="button" data-tour (click)="replayTour()">Show me around</button>
         }
         <button class="btn primary sm" type="button" (click)="logout()">Log out</button>
       </div>

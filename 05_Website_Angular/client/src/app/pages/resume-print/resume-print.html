@@ -22,7 +22,7 @@
     @for (kind of sectionOrder(); track kind) {
       @switch (kind) {
         @case ('education') {
-          @if (r.education?.length) {
+          @if (r.education.length) {
             <section>
               <h2>Education</h2>
               @for (e of r.education; track $index) {
@@ -35,7 +35,7 @@
           }
         }
         @case ('experience') {
-          @if (r.experience?.length) {
+          @if (r.experience.length) {
             <section>
               <h2>Experience</h2>
               @for (e of r.experience; track $index) {
@@ -49,12 +49,12 @@
           }
         }
         @case ('skills') {
-          @if (r.skills?.length) {
+          @if (r.skills.length) {
             <section><h2>Skills</h2><p class="skills">{{ r.skills.join(' · ') }}</p></section>
           }
         }
         @case ('certifications') {
-          @if (r.certifications?.length) {
+          @if (r.certifications.length) {
             <section>
               <h2>Certifications</h2>
               @for (c of r.certifications; track $index) {
