@@ -1,0 +1,52 @@
+@if (full()) {
+  <footer class="footer">
+    <div class="container">
+      <div class="cols">
+        <div>
+          <span class="brand" style="margin-bottom:14px">
+            <span class="mark">R</span>
+            <span class="word">Resume<em>Match</em><small>Philippines</small></span>
+          </span>
+          <p style="max-width:34ch;margin-top:14px;line-height:1.7">A capstone project of the School of Computing, Holy Angel University — built with Royce Hotel &amp; Casino, Clark Freeport Zone.</p>
+        </div>
+        <div>
+          <h4>Job seekers</h4>
+          <ul>
+            <li><a routerLink="/auth" fragment="register">Create an account</a></li>
+            <li><a routerLink="/browse">Browse openings</a></li>
+            <li><a routerLink="/resume-builder">Resume builder</a></li>
+            <li><a routerLink="/learning-hub">Learning hub</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Recruiters</h4>
+          <ul>
+            <li><a routerLink="/auth" fragment="register-hr">Request access</a></li>
+            <li><a routerLink="/auth">Log in</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Your data</h4>
+          <ul>
+            <li><a routerLink="/privacy">Privacy notice</a></li>
+            <li><a routerLink="/account">Download or delete my data</a></li>
+          </ul>
+          <p style="margin-top:14px;font-size:12px;line-height:1.65">Personal data is processed only for resume creation and job matching, under the Data Privacy Act of 2012 (RA&nbsp;10173).</p>
+        </div>
+      </div>
+      <div class="base">
+        <span>&copy; {{ year }} ResumeMatch PH &middot; An academic project. Not affiliated with, or endorsed by, any commercial job board.</span>
+        <span><a routerLink="/privacy">Privacy</a></span>
+      </div>
+    </div>
+  </footer>
+} @else {
+  <footer class="footer">
+    <div class="container">
+      <div class="base" style="margin-top:0;border-top:none;padding-top:0">
+        <span>&copy; {{ year }} ResumeMatch PH &middot; School of Computing, Holy Angel University.</span>
+        <span><a routerLink="/privacy">Privacy notice</a></span>
+      </div>
+    </div>
+  </footer>
+}

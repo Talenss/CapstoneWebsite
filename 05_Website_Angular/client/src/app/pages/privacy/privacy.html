@@ -1,0 +1,67 @@
+<app-header variant="guest" />
+
+<main id="main" class="container">
+  <div class="page-head">
+    <span class="eyebrow">Data Privacy Act of 2012 &middot; RA 10173</span>
+    <h1>Privacy notice</h1>
+  </div>
+
+  <article>
+    <p class="stamp">ResumeMatch PH is an academic capstone project of the School of Computing, Holy Angel University, developed with Royce Hotel &amp; Casino as its pilot partner company. This notice explains what we collect, why, who sees it, and what you can do about it.</p>
+
+    <h2>What we collect</h2>
+    <p>Only what you type in, and only what the system needs to do its job.</p>
+    <ul>
+      <li><b>Account details</b> — your name, email address, and password (stored hashed, never in readable form).</li>
+      <li><b>Resume content</b> — the education, work experience, skills, and certifications you enter in the builder, plus the summary and contact details you choose to include.</li>
+      <li><b>Your uploaded resume file</b>, if you attach one. This is optional.</li>
+      <li><b>Application records</b> — which openings you applied to, with which resume, and the status a recruiter has given each one.</li>
+    </ul>
+    <p>We do not collect browsing history, we do not track you across other websites, and we do not run advertising of any kind.</p>
+
+    <h2>What we use it for</h2>
+    <p>Two things, and nothing else: creating your resume, and matching you to job openings. Your resume data is compared against the requirements of postings to produce a compatibility score. That's the whole purpose.</p>
+    <p>Your data is never sold, never shared with third parties, and never used to train any model.</p>
+
+    <h2>Who can see it</h2>
+    <ul>
+      <li><b>You</b> — always, in full.</li>
+      <li><b>A recruiter</b> — only once you apply to one of their openings, and only the resume you chose to send with that application. Recruiters cannot browse resumes they haven't received, and cannot see resumes you never submitted.</li>
+      <li><b>Nobody else.</b> Other job seekers cannot see your data at all.</li>
+    </ul>
+    <p>Uploaded resume files are served through an access-checked route, not a public URL, so a file cannot be reached by guessing an address.</p>
+
+    <h2>Automated processing — and its limits</h2>
+    <p>The system calculates a compatibility score using a fixed, published, rule-based formula: skills at 50%, education at 25%, experience at 25%. It is not machine learning, it does not adapt, and it does not make decisions.</p>
+    <p><b>No application is ever rejected automatically.</b> The score ranks a list for a human recruiter to read. Every hiring outcome — including a rejection — is a decision made by a person at the partner company, and it is recorded against their account. If your score falls below the threshold, you are still shown to the recruiter, and the system additionally suggests roles that better fit the skills you have.</p>
+    <p>Your uploaded file is never parsed, never read by any algorithm, and never scored. It exists only so a human can read it.</p>
+
+    <h2>Your rights</h2>
+    <p>Under RA 10173 you may:</p>
+    <ul>
+      <li><b>See your data</b> — everything you've given us is visible in your account.</li>
+      <li><b>Take a copy</b> — download the whole lot as a file from <a routerLink="/account">My account</a>.</li>
+      <li><b>Correct it</b> — edit any resume at any time.</li>
+      <li><b>Erase it</b> — delete your account from <a routerLink="/account">My account</a>. This removes your account, resumes, uploaded files, and applications permanently.</li>
+      <li><b>Object or withdraw consent</b> — deleting your account is the mechanism, and it needs no one's approval.</li>
+    </ul>
+    <p>You do not need to email anyone or wait for a response to exercise any of these. They are buttons.</p>
+
+    <h2>How long we keep it</h2>
+    <p>Until you delete it. If you delete your account, your data is removed immediately, including applications already submitted — which means the recruiter loses access to them too.</p>
+    <p>Because this is a time-bound academic study, all research data collected for evaluation purposes is anonymised, and the deployment is decommissioned at the end of the study unless the partner company agrees otherwise.</p>
+
+    <h2>Security</h2>
+    <ul>
+      <li>Passwords are hashed with bcrypt. Nobody — including the researchers — can read them.</li>
+      <li>Access is role-based: seekers reach only their own records, recruiters reach only applications sent to their own company.</li>
+      <li>Uploaded files are restricted to PDF, Word, and image formats, size-capped, and stored outside the public web directory.</li>
+      <li>All database queries use prepared statements.</li>
+    </ul>
+
+    <h2>Contact</h2>
+    <p>For questions about your data, or to raise a concern, contact the research team through the School of Computing, Holy Angel University. Complaints may also be brought to the National Privacy Commission.</p>
+  </article>
+</main>
+
+<app-footer />

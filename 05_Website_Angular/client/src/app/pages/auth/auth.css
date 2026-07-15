@@ -1,0 +1,63 @@
+.auth { display: grid; grid-template-columns: 1fr 1fr; flex: 1; }
+@media (max-width: 940px) {
+  .auth { grid-template-columns: 1fr; }
+  .aside { display: none; }
+}
+
+.aside {
+  background: var(--ink); color: #9BA2B1; padding: 64px 52px;
+  display: flex; flex-direction: column; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.aside::before {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(700px 400px at 80% 0%, rgba(198, 166, 100, .12), transparent 60%);
+}
+.aside > * { position: relative; }
+.aside h2 { color: #fff; font-size: 36px; margin-bottom: 16px; line-height: 1.1; }
+.aside h2 em { font-style: italic; color: var(--gold); }
+.aside p { font-size: 15px; line-height: 1.75; max-width: 44ch; }
+.aside .plaque {
+  margin-top: 32px; background: var(--ink-2); border: 1px solid var(--ink-line);
+  border-left: 2px solid var(--gold); border-radius: 0 var(--r) var(--r) 0;
+  padding: 20px 22px; font-size: 13.5px; line-height: 1.7;
+}
+.aside .plaque b { display: block; color: #fff; font-weight: 600; margin-bottom: 6px; }
+
+.main { padding: 56px 24px; display: flex; justify-content: center; align-items: flex-start; }
+.panel-wrap { width: 100%; max-width: 480px; }
+
+.tabs {
+  display: flex; border: 1px solid var(--rule); border-radius: var(--r);
+  overflow: hidden; margin-bottom: 26px; background: var(--paper);
+}
+.tabs button {
+  flex: 1; border: none; background: transparent; font-family: var(--body);
+  font-weight: 600; font-size: 13.5px; padding: 13px; cursor: pointer;
+  color: var(--muted); border-bottom: 2px solid transparent; transition: .15s;
+}
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--gold); background: var(--ivory); }
+
+.panel { display: none; }
+.panel.show { display: block; }
+
+.roles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 22px; }
+@media (max-width: 480px) {
+  .roles { grid-template-columns: 1fr; }
+}
+.roles label {
+  border: 1px solid var(--rule); border-radius: var(--r); padding: 14px; cursor: pointer;
+  display: flex; gap: 10px; align-items: flex-start; transition: .15s; background: var(--paper);
+}
+.roles label:has(input:checked) { border-color: var(--gold); background: var(--gold-wash); }
+.roles input { margin-top: 3px; accent-color: var(--gold-deep); width: auto; }
+.roles b { display: block; font-size: 13.5px; color: var(--ink); }
+.roles small { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+.keys {
+  margin-top: 24px; border: 1px dashed var(--rule); border-radius: var(--r);
+  padding: 16px 18px; font-size: 12.5px; color: var(--muted); background: var(--paper);
+}
+.keys b { display: block; color: var(--ink); margin-bottom: 9px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }
+.keys code { background: var(--ivory); border: 1px solid var(--rule-2); padding: 2px 7px; border-radius: 2px; color: var(--ink); font-size: 12px; }
+.keys .k { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; }
