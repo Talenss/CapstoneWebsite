@@ -76,7 +76,7 @@ export class Auth implements OnInit {
     const res = await this.api.auth.me();
     if (res.ok && res.user) {
       const next = this.route.snapshot.queryParamMap.get('next');
-      this.router.navigateByUrl(next || (res.user.role === 'seeker' ? '/seeker-dashboard' : '/hr-dashboard'));
+      this.router.navigateByUrl(next || (res.user.role === 'seeker' ? '/seeker-dashboard' : '/hr-dashboard'), { replaceUrl: true });
     }
   }
 
