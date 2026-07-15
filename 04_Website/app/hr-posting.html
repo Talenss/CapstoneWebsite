@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Post an opening — ResumeMatch PH</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .cols{display:grid;grid-template-columns:1.2fr .8fr;gap:34px;align-items:start;margin-bottom:80px}
+  @media(max-width:940px){.cols{grid-template-columns:1fr}}
+  .tags{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}
+  .tag{display:inline-flex;align-items:center;gap:8px;background:var(--gold-wash);border:1px solid var(--gold-line);
+    color:var(--gold-deep);font-size:13px;font-weight:600;border-radius:2px;padding:6px 7px 6px 12px}
+  .tag button{border:none;background:var(--gold-deep);color:#fff;width:17px;height:17px;border-radius:50%;
+    font-size:10px;cursor:pointer;line-height:1;display:grid;place-items:center;padding:0}
+  .pool{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .pool button{border:1px dashed var(--rule);background:var(--paper);border-radius:2px;font-size:12px;color:var(--muted);
+    padding:5px 11px;cursor:pointer;font-family:var(--body)}
+  .pool button:hover{border-color:var(--gold);color:var(--gold-deep);border-style:solid}
+  .aside{position:sticky;top:88px}
+  .weights{border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;margin-top:12px}
+  .weights .r{display:flex;justify-content:space-between;padding:11px 14px;font-size:13px;border-bottom:1px solid var(--rule-2)}
+  .weights .r:last-child{border-bottom:none;background:var(--ivory)}
+  .weights .r b{font-weight:600}
+  .sim{border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;margin-top:12px}
+  .sim .r{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--rule-2)}
+  .sim .r:last-child{border-bottom:none}
+  .sim .r .who{flex:1;font-size:13px}
+  .sim .r .who span{display:block;font-size:11.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="container">
+    <a class="brand" href="index.html"><span class="mark">R</span><span class="word">Resume<em>Match</em><small>Recruiter</small></span></a>
+    <nav class="nav-links" id="nav" aria-label="Main">
+      <a href="hr-dashboard.html">Dashboard</a>
+      <a href="hr-posting.html" class="active">Post an opening</a>
+      <a href="hr-company.html">Company profile</a>
+    </nav>
+    <div class="nav-cta">
+      <span class="whoami" data-whoami></span>
+      <button class="btn primary sm" type="button" data-logout>Log out</button>
+    </div>
+    <button class="menu-btn" aria-expanded="false" aria-controls="nav" aria-label="Open menu">☰</button>
+  </div>
+  <div class="bar"></div>
+</header>
+
+<main id="main" class="container">
+  <div class="page-head">
+    <a href="hr-dashboard.html" style="font-size:12.5px;color:var(--muted);text-decoration:none">&larr; All openings</a>
+    <span class="eyebrow" style="display:block;margin-top:12px">New opening</span>
+    <h1 id="pageTitle">Post an opening</h1>
+    <p>Whatever you put in the three fields below <i>is</i> the scoring rule. Ask for what the job genuinely needs — asking for more than that quietly pushes good candidates down the list.</p>
+  </div>
+
+  <div class="alert" id="msg" role="alert"></div>
+
+  <div class="cols">
+    <form id="form" class="card" novalidate>
+      <div class="field" id="f-title">
+        <label for="title">Job title</label>
+        <input type="text" id="title" placeholder="Front Office Associate">
+        <span class="err">Give the opening a title.</span>
+      </div>
+
+      <div class="row2">
+        <div class="field" id="f-dept">
+          <label for="dept">Department</label>
+          <input type="text" id="dept" list="deptList" placeholder="Front Office">
+          <datalist id="deptList"></datalist>
+          <span class="err">Which department is this for?</span>
+        </div>
+        <div class="field">
+          <label for="type">Employment type</label>
+          <select id="type">
+            <option value="full-time">Full time</option>
+            <option value="part-time">Part time</option>
+            <option value="contract">Contract</option>
+            <option value="internship">Internship</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field" id="f-desc">
+        <label for="desc">What the job involves</label>
+        <textarea id="desc" rows="4" placeholder="Handle guest check-in and check-out, reservations, and inquiries at the front desk."></textarea>
+        <span class="err">Describe the role in a sentence or two.</span>
+        <p class="hint">Plain language. This is what the applicant reads before deciding to apply.</p>
+      </div>
+
+      <hr style="border:0;border-top:1px solid var(--rule);margin:26px 0">
+      <h2 style="font-size:21px;margin-bottom:4px">The scoring rule</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:20px">These three fields, and only these three, decide how every applicant is scored.</p>
+
+      <div class="field" id="f-skills">
+        <label for="skillInput">Required skills <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">— 50% of the score</span></label>
+        <input type="text" id="skillInput" list="skillOpts" placeholder="Type a skill, then press Enter" autocomplete="off">
+        <datalist id="skillOpts"></datalist>
+        <span class="err">Add at least one required skill.</span>
+        <div class="tags" id="tags"></div>
+        <p class="hint" style="margin-bottom:6px">Skills already in use across your other openings:</p>
+        <div class="pool" id="pool"></div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="edu">Minimum education <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">— 25%</span></label>
+          <select id="edu"></select>
+        </div>
+        <div class="field">
+          <label for="months">Minimum experience <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">— 25%</span></label>
+          <input type="number" id="months" min="0" step="1" value="0">
+          <p class="hint">In months. Enter 0 to open the role to fresh graduates.</p>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:26px;flex-wrap:wrap">
+        <a class="btn ghost" href="hr-dashboard.html">Cancel</a>
+        <button class="btn primary" id="submit" type="submit">Publish opening</button>
+      </div>
+    </form>
+
+    <aside class="aside">
+      <div class="card">
+        <h3 style="font-size:19px;margin-bottom:6px">How it will score</h3>
+        <p style="font-size:13px;color:var(--muted)">Fixed weights, applied identically to every applicant.</p>
+        <div class="weights" id="weights"></div>
+      </div>
+
+      <div class="card" style="margin-top:18px">
+        <h3 style="font-size:19px;margin-bottom:6px">Try it against real resumes</h3>
+        <p style="font-size:13px;color:var(--muted)">Live preview: how the people already in the system would score against what you've typed so far.</p>
+        <div class="sim" id="sim"><p style="padding:20px;font-size:13px;color:var(--muted);text-align:center">Add a skill to see this.</p></div>
+        <p class="hint" style="margin-top:10px">If everyone lands below 50%, the requirements are probably tighter than the job really is.</p>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="assets/api.js"></script>
+<script>
+(async function () {
+  const user = await RMPH.guard('recruiter');
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); };
+  const W = RMPH.WEIGHTS, T = RMPH.THRESHOLDS;
+
+  const id = new URLSearchParams(location.search).get('id');
+  let P = { id:null, title:'', department:'', employmentType:'full-time', description:'',
+            skills:[], educationLevel:'bachelor', minExperienceMonths:0, status:'open' };
+
+  $('#edu').innerHTML = Object.keys(RMPH.EDU_LABELS).map(k =>
+    '<option value="' + k + '">' + RMPH.EDU_LABELS[k] + '</option>').join('');
+
+  $('#weights').innerHTML =
+    '<div class="r"><span>Required skills matched</span><b>' + (W.skills * 100) + '%</b></div>' +
+    '<div class="r"><span>Education level</span><b>' + (W.education * 100) + '%</b></div>' +
+    '<div class="r"><span>Months of experience</span><b>' + (W.experience * 100) + '%</b></div>' +
+    '<div class="r"><span>Strong match at</span><b>' + T.strong + '% and up</b></div>' +
+    '<div class="r"><span>Below ' + T.related + '%</span><b>Still shown to you</b></div>';
+
+  /* existing openings → department + skill suggestions */
+  const mine = await RMPH.postings.mine();
+  const posts = mine.postings || [];
+  const depts = Array.from(new Set(posts.map(p => p.department).filter(Boolean))).sort();
+  $('#deptList').innerHTML = depts.map(d => '<option value="' + esc(d) + '">').join('');
+  const known = Array.from(new Set([].concat.apply([], posts.map(p => p.skills)))).sort();
+  $('#skillOpts').innerHTML = known.map(s => '<option value="' + esc(s) + '">').join('');
+
+  /* load for edit */
+  if (id) {
+    const res = await RMPH.postings.get(id);
+    if (!res.ok) { location.replace('hr-dashboard.html'); return; }
+    P = Object.assign(P, res.posting);
+    $('#pageTitle').textContent = 'Edit opening';
+    document.querySelector('.eyebrow').textContent = P.status === 'open' ? 'Open' : 'Closed';
+    $('#submit').textContent = 'Save changes';
+  }
+
+  $('#title').value = P.title;
+  $('#dept').value = P.department;
+  $('#type').value = P.employmentType || 'full-time';
+  $('#desc').value = P.description;
+  $('#edu').value = P.educationLevel;
+  $('#months').value = P.minExperienceMonths || 0;
+
+  /* ---- skills ---- */
+  function drawSkills() {
+    $('#tags').innerHTML = P.skills.map((s, i) =>
+      '<span class="tag">' + esc(s) + '<button type="button" data-i="' + i + '" aria-label="Remove ' + esc(s) + '">&times;</button></span>').join('')
+      || '<p style="color:var(--muted);font-size:13px">No skills yet \u2014 this is half the score, so add at least one.</p>';
+    $('#tags').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      P.skills.splice(Number(b.dataset.i), 1); drawSkills(); sim();
+    }));
+    const have = P.skills.map(s => s.toLowerCase());
+    const left = known.filter(s => have.indexOf(s.toLowerCase()) === -1);
+    $('#pool').innerHTML = left.map(s => '<button type="button">+ ' + esc(s) + '</button>').join('')
+      || '<span style="font-size:12.5px;color:var(--muted)">Nothing else in use yet.</span>';
+    $('#pool').querySelectorAll('button').forEach(b => b.addEventListener('click', () => add(b.textContent.slice(2))));
+  }
+  function add(s) {
+    s = String(s).trim();
+    if (!s) return;
+    if (P.skills.some(x => x.toLowerCase() === s.toLowerCase())) { toast('Already required.'); return; }
+    P.skills.push(s);
+    $('#skillInput').value = '';
+    $('#f-skills').classList.remove('invalid');
+    drawSkills(); sim();
+  }
+  $('#skillInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); add($('#skillInput').value); }
+  });
+
+  /* ---- live simulation against real resumes ---- */
+  // Recruiters can only see resumes actually submitted to their company, so the
+  // simulator is fed by the applicants already in their pipeline.
+  const known_resumes = [];
+  for (const p of posts) {
+    const rk = await RMPH.applications.ranked(p.id);
+    if (!rk.ok) continue;
+    rk.rows.forEach(r => {
+      if (!known_resumes.some(x => x.resume.id === r.resume.id)) known_resumes.push({ resume: r.resume, name: r.seeker.name });
+    });
+  }
+
+  function sim() {
+    P.educationLevel = $('#edu').value;
+    P.minExperienceMonths = Number($('#months').value) || 0;
+    const box = $('#sim');
+    if (!P.skills.length || !known_resumes.length) {
+      box.innerHTML = '<p style="padding:20px;font-size:13px;color:var(--muted);text-align:center">' +
+        (!P.skills.length ? 'Add a skill to see this.' : 'No applicants in your pipeline yet to test against.') + '</p>';
+      return;
+    }
+    const rows = known_resumes.map(k => Object.assign({ name: k.name }, RMPH.scoreLocal(k.resume, P)))
+      .sort((a, b) => b.score - a.score).slice(0, 5);
+    box.innerHTML = rows.map(r =>
+      '<div class="r">' +
+        '<span class="score-ring sm" style="--p:' + r.score + ';--c:' + RMPH.tierColor(r.score) + '"><b>' + r.score + '</b></span>' +
+        '<span class="who">' + esc(r.name) + '<span>' + r.matchedSkills.length + ' of ' + r.totalSkills + ' skills' +
+          (r.eduMeets ? '' : ' \u00b7 education below') + (r.expMeets ? '' : ' \u00b7 experience below') + '</span></span>' +
+      '</div>').join('');
+  }
+  ['#edu','#months'].forEach(s => $(s).addEventListener('input', sim));
+
+  /* ---- submit ---- */
+  $('#form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const msg = $('#msg'); msg.className = 'alert';
+
+    P.title = $('#title').value.trim();
+    P.department = $('#dept').value.trim();
+    P.employmentType = $('#type').value;
+    P.description = $('#desc').value.trim();
+    P.educationLevel = $('#edu').value;
+    P.minExperienceMonths = Math.max(0, Number($('#months').value) || 0);
+
+    const mark = (sel, ok) => { $(sel).classList.toggle('invalid', !ok); return ok; };
+    let ok = mark('#f-title', P.title.length >= 2);
+    ok = mark('#f-dept', P.department.length >= 2) && ok;
+    ok = mark('#f-desc', P.description.length >= 10) && ok;
+    ok = mark('#f-skills', P.skills.length > 0) && ok;
+    if (!ok) {
+      msg.textContent = 'Fill in the highlighted fields before publishing.';
+      msg.className = 'alert error show';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    const btn = $('#submit');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saving…';
+    const res = await RMPH.postings.save(P);
+    btn.disabled = false; btn.textContent = id ? 'Save changes' : 'Publish opening';
+
+    if (!res.ok) { msg.textContent = res.error; msg.className = 'alert error show'; return; }
+    toast(id ? 'Opening updated.' : 'Opening published. Applicants can see it now.');
+    setTimeout(() => location.href = 'hr-dashboard.html', 800);
+  });
+
+  drawSkills(); sim();
+})();
+</script>
+</body>
+</html>

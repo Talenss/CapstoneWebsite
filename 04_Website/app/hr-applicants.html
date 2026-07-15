@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Applicants — ResumeMatch PH</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px}
+  .bar input,.bar select{padding:10px 13px;border:1px solid var(--rule);border-radius:var(--r);
+    font-family:var(--body);font-size:13.5px;background:var(--paper)}
+  .bar input{flex:1;min-width:210px}
+  .bar .n{margin-left:auto;font-size:12.5px;color:var(--muted)}
+
+  .app{display:flex;align-items:center;gap:18px;padding:20px;border-bottom:1px solid var(--rule-2);flex-wrap:wrap}
+  .app:last-child{border-bottom:none}
+  .app:hover{background:var(--ivory)}
+  .app .rank{font-family:var(--display);font-size:20px;color:var(--faint);width:26px;flex:none;text-align:center}
+  .app .who{flex:1;min-width:210px}
+  .app .who h3{font-size:18px;line-height:1.25}
+  .app .who .meta{font-size:12.5px;color:var(--muted);margin-top:4px}
+  .app .who .chips{margin-top:9px}
+  .app .side{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+  .app select{padding:7px 10px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:12.5px;background:var(--paper)}
+
+  /* dual resume view */
+  .dual{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:820px){.dual{grid-template-columns:1fr}}
+  .pane{border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
+  .pane > header{padding:11px 14px;background:var(--ivory);border-bottom:1px solid var(--rule-2);
+    display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .pane > header b{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
+  .pane.scored{border-top:2px solid var(--emerald)}
+  .pane.human{border-top:2px solid var(--gold)}
+  .pane .inner{padding:20px;font-family:Georgia,serif;font-size:12.5px;line-height:1.55;max-height:460px;overflow:auto;flex:1;background:#fff}
+  .pane .none{padding:44px 20px;text-align:center;color:var(--muted);font-size:13px;background:var(--ivory);flex:1;
+    display:flex;flex-direction:column;justify-content:center;gap:12px}
+  .pane iframe{width:100%;height:460px;border:none;background:#fff}
+  .pane img{max-height:460px;margin:0 auto;object-fit:contain}
+  .p-name{font-size:19px;font-weight:700}
+  .p-contact{font-size:11px;color:#5A5F6B;margin-top:4px}
+  .p-sec{margin-top:15px}
+  .p-sec h4{font-family:'Inter',sans-serif;font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
+    border-bottom:1px solid #22252C;padding-bottom:3px;margin-bottom:8px;font-weight:600}
+  .p-item{margin-bottom:8px}
+  .p-item b{display:block}
+  .p-item i{font-style:italic;color:#5A5F6B;font-size:11px}
+  .p-item p{font-size:11.5px;margin-top:2px}
+  .p-skills span{display:inline-block;border:1px solid #B9BDC6;border-radius:2px;padding:1px 6px;font-size:10px;
+    margin:0 3px 3px 0;font-family:'Inter',sans-serif}
+  .p-skills span.hit{border-color:var(--emerald);background:var(--emerald-wash);color:var(--emerald);font-weight:600}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="container">
+    <a class="brand" href="index.html"><span class="mark">R</span><span class="word">Resume<em>Match</em><small>Recruiter</small></span></a>
+    <nav class="nav-links" id="nav" aria-label="Main">
+      <a href="hr-dashboard.html">Dashboard</a>
+      <a href="hr-posting.html">Post an opening</a>
+      <a href="hr-company.html">Company profile</a>
+    </nav>
+    <div class="nav-cta">
+      <span class="whoami" data-whoami></span>
+      <button class="btn primary sm" type="button" data-logout>Log out</button>
+    </div>
+    <button class="menu-btn" aria-expanded="false" aria-controls="nav" aria-label="Open menu">☰</button>
+  </div>
+  <div class="bar"></div>
+</header>
+
+<main id="main" class="container" style="padding-bottom:80px">
+  <div class="page-head head-row">
+    <div>
+      <a href="hr-dashboard.html" style="font-size:12.5px;color:var(--muted);text-decoration:none">&larr; All openings</a>
+      <span class="eyebrow" style="display:block;margin-top:12px" id="dept"></span>
+      <h1 id="title">Applicants</h1>
+      <p id="sub"></p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="btn ghost" id="editLink" href="#">Edit opening</a>
+    </div>
+  </div>
+
+  <div class="note" style="margin-bottom:22px">
+    Ranked by compatibility, not filtered by it. <b>Everyone who applied is on this list</b> — including low scores. The number is a reading aid; the decision is yours.
+  </div>
+
+  <div class="bar">
+    <input type="search" id="q" placeholder="Search by name or skill" aria-label="Search applicants">
+    <select id="fStatus" aria-label="Filter by status"><option value="">All statuses</option></select>
+    <select id="fTier" aria-label="Filter by match tier">
+      <option value="">All match levels</option>
+      <option value="strong">Strong only</option>
+      <option value="possible">Possible only</option>
+      <option value="related">Below threshold</option>
+    </select>
+    <select id="fFile" aria-label="Filter by attached file">
+      <option value="">Any attachment</option>
+      <option value="yes">Has own file</option>
+      <option value="no">System resume only</option>
+    </select>
+    <span class="n" id="n"></span>
+  </div>
+
+  <div class="card flush" id="list"><div class="loading"><span class="spinner"></span> Ranking applicants…</div></div>
+</main>
+
+<!-- applicant detail: both resumes, side by side -->
+<div class="modal-back" id="modal" role="dialog" aria-modal="true" aria-labelledby="mT">
+  <div class="modal wide">
+    <button class="close-x" id="mX" type="button" aria-label="Close">&times;</button>
+    <div class="modal-head">
+      <h3 id="mT"></h3>
+      <p class="sub" id="mSub"></p>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:center;gap:18px;margin-bottom:16px;flex-wrap:wrap">
+        <span class="score-ring lg" id="mRing" style="--p:0"><b></b></span>
+        <div style="flex:1;min-width:200px">
+          <span class="badge" id="mTier" style="margin-bottom:8px"></span>
+          <div class="breakdown" id="mBreak" style="margin:8px 0 0"></div>
+        </div>
+      </div>
+      <div class="dual">
+        <section class="pane scored">
+          <header><b>Structured resume</b><span class="badge green">Scored</span></header>
+          <div class="inner" id="mPaper"></div>
+        </section>
+        <section class="pane human">
+          <header><b>Applicant's own file</b><span class="badge gold">Never scored</span></header>
+          <div id="mFile"></div>
+        </section>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span style="margin-right:auto;font-size:12.5px;color:var(--muted)">Status changes are recorded against your account.</span>
+      <select id="mStatus" style="padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px"></select>
+      <button class="btn primary" id="mSave" type="button">Update status</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="assets/api.js"></script>
+<script>
+(async function () {
+  const user = await RMPH.guard('recruiter');
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); };
+  const day = ts => new Date(ts).toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' });
+  const kb = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(0) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
+  const W = RMPH.WEIGHTS, L = RMPH.STATUS_LABELS;
+
+  const id = new URLSearchParams(location.search).get('id');
+  if (!id) { location.replace('hr-dashboard.html'); return; }
+
+  $('#fStatus').innerHTML += RMPH.STATUS_ORDER.map(k => '<option value="' + k + '">' + L[k] + '</option>').join('');
+  $('#mStatus').innerHTML = RMPH.STATUS_ORDER.map(k => '<option value="' + k + '">' + L[k] + '</option>').join('');
+  $('#editLink').href = 'hr-posting.html?id=' + id;
+
+  let posting = null, rows = [], current = null;
+
+  async function load() {
+    const res = await RMPH.applications.ranked(id);
+    if (!res.ok) { $('#list').innerHTML = '<div class="empty"><h2>Not found</h2><p>' + esc(res.error) + '</p><a class="btn ghost" href="hr-dashboard.html">Back to dashboard</a></div>'; return; }
+    posting = res.posting;
+    rows = res.rows;
+    $('#title').textContent = posting.title;
+    $('#dept').textContent = posting.department + (posting.status === 'closed' ? ' \u00b7 closed' : '');
+    $('#sub').textContent = rows.length + ' applicant' + (rows.length === 1 ? '' : 's') + ' \u00b7 asking for ' +
+      posting.skills.join(', ') + ' \u00b7 ' + RMPH.EDU_LABELS[posting.educationLevel].toLowerCase() +
+      (posting.minExperienceMonths ? ' \u00b7 ' + posting.minExperienceMonths + ' months experience' : ' \u00b7 no experience required');
+    render();
+  }
+
+  function render() {
+    const q = $('#q').value.trim().toLowerCase();
+    const fs = $('#fStatus').value, ft = $('#fTier').value, ff = $('#fFile').value;
+
+    const out = rows.filter(r => {
+      if (fs && r.application.status !== fs) return false;
+      if (ft && r.tier !== ft) return false;
+      if (ff === 'yes' && !r.resume.ownFile) return false;
+      if (ff === 'no' && r.resume.ownFile) return false;
+      if (!q) return true;
+      return (r.seeker.name + ' ' + (r.resume.skills || []).join(' ')).toLowerCase().indexOf(q) !== -1;
+    });
+
+    $('#n').textContent = out.length + ' of ' + rows.length + ' shown';
+    const wrap = $('#list');
+    wrap.innerHTML = '';
+
+    if (!rows.length) {
+      wrap.innerHTML = '<div class="empty"><h2>No applicants yet</h2><p>When someone applies, they\u2019ll appear here ranked by compatibility \u2014 with the score broken down and both of their resumes attached.</p><a class="btn ghost" href="hr-dashboard.html">Back to dashboard</a></div>';
+      return;
+    }
+    if (!out.length) {
+      wrap.innerHTML = '<div class="empty"><h2>Nothing matches those filters</h2><p>Clear a filter to see the rest of the pool. Applicants are only ever hidden by <i>your</i> filters — never by the system.</p></div>';
+      return;
+    }
+
+    out.forEach((r, i) => {
+      const el = document.createElement('div');
+      el.className = 'app';
+      const rank = rows.indexOf(r) + 1;
+      el.innerHTML =
+        '<span class="rank">' + rank + '</span>' +
+        '<span class="score-ring" style="--p:' + r.score + ';--c:' + RMPH.tierColor(r.score) + '"><b>' + r.score + '%</b></span>' +
+        '<div class="who">' +
+          '<h3>' + esc(r.seeker.name) + (r.resume.ownFile ? ' <span class="clip" title="Attached their own resume file">&#128206;</span>' : '') + '</h3>' +
+          '<div class="meta">' +
+            r.matchedSkills.length + ' of ' + r.totalSkills + ' skills \u00b7 ' +
+            'education ' + (r.eduMeets ? 'meets' : 'below') + ' \u00b7 ' +
+            r.seekerMonths + ' mo experience \u00b7 applied ' + day(r.application.appliedAt) +
+          '</div>' +
+          '<div class="chips">' + posting.skills.map(s =>
+            '<span class="chip' + (r.matchedSkills.indexOf(s) !== -1 ? '' : ' miss') + '">' + esc(s) + '</span>').join('') + '</div>' +
+        '</div>' +
+        '<div class="side">' +
+          '<span class="badge ' + RMPH.statusBadge(r.application.status) + '">' + L[r.application.status] + '</span>' +
+          '<button class="btn primary sm" type="button">Open both resumes</button>' +
+        '</div>';
+      el.querySelector('button').addEventListener('click', () => open(r));
+      wrap.appendChild(el);
+    });
+  }
+
+  ['#q','#fStatus','#fTier','#fFile'].forEach(s => $(s).addEventListener('input', render));
+
+  /* ---------- the dual-resume view ---------- */
+  function paperHtml(r, matched) {
+    const p = r.personal || {};
+    const contact = [p.email, p.phone, p.address].filter(Boolean).join('  \u00b7  ');
+    const sec = (t, inner) => inner ? '<div class="p-sec"><h4>' + t + '</h4>' + inner + '</div>' : '';
+    const hit = s => matched.indexOf(s) !== -1;
+    return '<div class="p-name">' + esc(p.fullName || '') + '</div>' +
+      '<div class="p-contact">' + esc(contact) + '</div>' +
+      (p.summary ? '<div class="p-sec"><h4>Summary</h4><p style="font-size:11.5px">' + esc(p.summary) + '</p></div>' : '') +
+      sec('Education', (r.education || []).map(e =>
+        '<div class="p-item"><b>' + esc(e.degree || '') + '</b><i>' + esc(e.school || '') + (e.year ? ' \u00b7 ' + esc(e.year) : '') + '</i></div>').join('')) +
+      sec('Experience', (r.experience || []).map(e =>
+        '<div class="p-item"><b>' + esc(e.position || '') + '</b><i>' + esc(e.company || '') +
+        (e.months ? ' \u00b7 ' + e.months + ' months' : '') + '</i>' +
+        (e.description ? '<p>' + esc(e.description) + '</p>' : '') + '</div>').join('')) +
+      sec('Skills', (r.skills || []).length
+        ? '<div class="p-skills">' + r.skills.map(s => '<span class="' + (hit(s) ? 'hit' : '') + '">' + esc(s) + '</span>').join('') + '</div>' : '') +
+      sec('Certifications', (r.certifications || []).map(c =>
+        '<div class="p-item"><b>' + esc(c.name || '') + '</b>' + (c.year ? '<i>' + esc(c.year) + '</i>' : '') + '</div>').join(''));
+  }
+
+  function open(r) {
+    current = r;
+    $('#mT').textContent = r.seeker.name;
+    $('#mSub').textContent = 'Applied ' + day(r.application.appliedAt) + ' \u00b7 ' + posting.title + ' \u00b7 resume: ' + r.resume.title;
+
+    const ring = $('#mRing');
+    ring.style.setProperty('--p', r.score);
+    ring.style.setProperty('--c', RMPH.tierColor(r.score));
+    ring.querySelector('b').textContent = r.score + '%';
+
+    const t = $('#mTier');
+    t.className = 'badge ' + (r.tier === 'strong' ? 'green' : r.tier === 'possible' ? 'gold' : 'slate');
+    t.textContent = RMPH.tierLabel(r.score);
+
+    $('#mBreak').innerHTML =
+      '<div class="row"><span><b>Skills</b><span class="w">' + (W.skills*100) + '% weight</span></span>' +
+        '<b>' + r.matchedSkills.length + ' of ' + r.totalSkills + (r.missingSkills.length ? ' \u00b7 missing ' + r.missingSkills.map(esc).join(', ') : '') + '</b></div>' +
+      '<div class="row"><span><b>Education</b><span class="w">' + (W.education*100) + '% weight</span></span>' +
+        '<b style="color:' + (r.eduMeets ? 'var(--emerald)' : 'var(--gold-deep)') + '">' + (r.eduMeets ? 'Meets' : 'Below') + ' ' + esc(RMPH.EDU_LABELS[posting.educationLevel]) + '</b></div>' +
+      '<div class="row"><span><b>Experience</b><span class="w">' + (W.experience*100) + '% weight</span></span>' +
+        '<b style="color:' + (r.expMeets ? 'var(--emerald)' : 'var(--gold-deep)') + '">' + r.seekerMonths + ' mo \u00b7 asked ' + (posting.minExperienceMonths || 0) + ' mo</b></div>';
+
+    $('#mPaper').innerHTML = paperHtml(r.resume, r.matchedSkills);
+
+    const f = r.resume.ownFile;
+    const box = $('#mFile');
+    if (!f) {
+      box.className = 'none';
+      box.innerHTML = '<b style="font-family:var(--display);font-size:19px;color:var(--ink)">No file attached</b>' +
+        '<span>This applicant didn\u2019t upload their own resume document \u2014 only the structured one on the left.</span>';
+    } else {
+      const url = RMPH.resumes.fileUrl(r.resume.id);
+      box.className = '';
+      const view = f.mime === 'application/pdf'
+        ? '<iframe src="' + url + '" title="' + esc(f.name) + '"></iframe>'
+        : f.mime.startsWith('image/')
+        ? '<img src="' + url + '" alt="Resume uploaded by ' + esc(r.seeker.name) + '">'
+        : '<div style="padding:44px 20px;text-align:center;color:var(--muted);font-size:13px;background:var(--ivory)">' +
+          'Word documents can\u2019t be previewed in the browser \u2014 download it to read it.</div>';
+      box.innerHTML = view +
+        '<div style="padding:12px 14px;background:var(--ivory);border-top:1px solid var(--rule-2);display:flex;' +
+        'justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">' +
+          '<span style="font-size:12px;color:var(--muted)">' + esc(f.name) + ' \u00b7 ' + kb(f.size) + '</span>' +
+          '<a class="btn ghost sm" href="' + url + '" download="' + esc(f.name) + '">Download</a>' +
+        '</div>';
+    }
+
+    $('#mStatus').value = r.application.status;
+    $('#modal').classList.add('show');
+  }
+
+  const close = () => { $('#modal').classList.remove('show'); current = null; };
+  $('#mX').addEventListener('click', close);
+  $('#modal').addEventListener('click', e => { if (e.target === e.currentTarget) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+
+  $('#mSave').addEventListener('click', async () => {
+    if (!current) return;
+    const btn = $('#mSave');
+    const next = $('#mStatus').value;
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saving…';
+    const res = await RMPH.applications.setStatus(current.application.id, next);
+    btn.disabled = false; btn.textContent = 'Update status';
+    if (!res.ok) { toast(res.error); return; }
+    const name = current.seeker.name;
+    close();
+    await load();
+    toast(name + ' \u2192 ' + L[next] + '. They\u2019ll see it on their dashboard.');
+  });
+
+  await load();
+})();
+</script>
+</body>
+</html>

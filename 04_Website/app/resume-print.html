@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resume — ResumeMatch PH</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  /* An ATS-friendly print sheet: one column, real headings, no tables,
+     no text boxes, no graphics. Print to PDF from any browser.        */
+  .toolbar{background:var(--ink);padding:14px 0}
+  .toolbar .container{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+  .toolbar p{color:#9BA2B1;font-size:13px}
+  .toolbar b{color:var(--gold)}
+  .sheet{max-width:760px;margin:32px auto 60px;background:#fff;padding:56px 60px;
+    border:1px solid var(--rule);box-shadow:var(--shadow);
+    font-family:Georgia,'Times New Roman',serif;font-size:12pt;line-height:1.5;color:#1a1d24}
+  @media(max-width:620px){.sheet{padding:32px 26px;margin:20px 14px 40px}}
+  .sheet h1{font-family:Georgia,serif;font-size:22pt;font-weight:700;letter-spacing:.3px;line-height:1.1;color:#1a1d24;margin:0}
+  .sheet .contact{font-size:10pt;color:#4d525c;margin-top:6px}
+  .sheet section{margin-top:22px}
+  .sheet h2{font-family:'Inter',Arial,sans-serif;font-size:9.5pt;font-weight:600;letter-spacing:2px;text-transform:uppercase;
+    color:#1a1d24;border-bottom:1px solid #1a1d24;padding-bottom:3px;margin:0 0 10px}
+  .sheet .item{margin-bottom:11px}
+  .sheet .item b{display:block;font-size:11.5pt}
+  .sheet .item i{font-style:italic;color:#4d525c;font-size:10pt}
+  .sheet .item p{margin-top:2px;font-size:10.5pt}
+  .sheet .skills{font-size:11pt}
+  @media print{
+    .toolbar{display:none!important}
+    body{background:#fff}
+    .sheet{margin:0;padding:0;border:none;box-shadow:none;max-width:none}
+    @page{margin:18mm}
+  }
+</style>
+</head>
+<body>
+<div class="toolbar no-print">
+  <div class="container">
+    <p><b>Print, then choose "Save as PDF"</b> as the destination. This layout is single-column and heading-based, so any ATS can read it.</p>
+    <div style="display:flex;gap:9px">
+      <button class="btn ghost sm" onclick="history.back()" type="button">Back</button>
+      <button class="btn primary sm" onclick="window.print()" type="button">Print / Save as PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="sheet"><p style="color:#888">Loading…</p></div>
+
+<script src="assets/api.js"></script>
+<script>
+(async function () {
+  await RMPH.guard();
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const id = new URLSearchParams(location.search).get('id');
+  const sheet = document.getElementById('sheet');
+
+  if (!id) { sheet.innerHTML = '<p>No resume selected.</p>'; return; }
+  const res = await RMPH.resumes.get(id);
+  if (!res.ok) { sheet.innerHTML = '<p>' + esc(res.error) + '</p>'; return; }
+
+  const R = res.resume, p = R.personal || {};
+  document.title = (p.fullName || 'Resume') + ' — ResumeMatch PH';
+
+  const sec = (t, inner) => inner ? '<section><h2>' + t + '</h2>' + inner + '</section>' : '';
+  const edu = (R.education || []).map(e =>
+    '<div class="item"><b>' + esc(e.degree || '') + '</b><i>' + esc(e.school || '') +
+    (e.year ? ' &middot; ' + esc(e.year) : '') + '</i></div>').join('');
+  const exp = (R.experience || []).map(e =>
+    '<div class="item"><b>' + esc(e.position || '') + '</b><i>' + esc(e.company || '') +
+    (e.months ? ' &middot; ' + e.months + ' month' + (e.months > 1 ? 's' : '') : '') + '</i>' +
+    (e.description ? '<p>' + esc(e.description) + '</p>' : '') + '</div>').join('');
+  const skills = (R.skills || []).length ? '<p class="skills">' + R.skills.map(esc).join(' &middot; ') + '</p>' : '';
+  const certs = (R.certifications || []).map(c =>
+    '<div class="item"><b>' + esc(c.name || '') + '</b>' + (c.year ? '<i>' + esc(c.year) + '</i>' : '') + '</div>').join('');
+
+  // section order follows the chosen template
+  const blocks = R.template === 'functional'
+    ? [sec('Skills', skills), sec('Experience', exp), sec('Education', edu), sec('Certifications', certs)]
+    : R.template === 'combination'
+    ? [sec('Skills', skills), sec('Education', edu), sec('Experience', exp), sec('Certifications', certs)]
+    : [sec('Education', edu), sec('Experience', exp), sec('Skills', skills), sec('Certifications', certs)];
+
+  sheet.innerHTML =
+    '<h1>' + esc(p.fullName || '') + '</h1>' +
+    '<p class="contact">' + [p.email, p.phone, p.address].filter(Boolean).map(esc).join(' &nbsp;&middot;&nbsp; ') + '</p>' +
+    (p.summary ? '<section><h2>Summary</h2><p style="font-size:10.5pt">' + esc(p.summary) + '</p></section>' : '') +
+    blocks.join('');
+})();
+</script>
+</body>
+</html>

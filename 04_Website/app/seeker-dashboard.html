@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My dashboard — ResumeMatch PH</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .picker{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .picker select{padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:14px;background:var(--paper);min-width:190px}
+  .picker .attached{font-size:12px;color:var(--gold-deep);font-weight:600;white-space:nowrap}
+  .tier{margin-top:40px}
+  .tier-head{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+  .tier-head h2{font-size:25px}
+  .tier > p{color:var(--muted);font-size:13.5px;margin-bottom:18px;max-width:70ch}
+  .job{display:flex;flex-direction:column;gap:14px}
+  .job .top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+  .job h3{font-size:19px;line-height:1.25}
+  .job .co{font-size:12.5px;color:var(--muted);margin-top:4px}
+  .job .req{display:flex;gap:16px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+  .job .req b.ok{color:var(--emerald)} .job .req b.no{color:var(--gold-deep)}
+  .job .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto;padding-top:4px}
+  .job .foot span{font-size:12.5px;color:var(--muted)}
+  .tally{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--rule);border-radius:var(--r-lg);background:var(--paper);overflow:hidden;margin-top:26px}
+  @media(max-width:700px){.tally{grid-template-columns:1fr 1fr}}
+  .tally div{padding:18px 20px;border-right:1px solid var(--rule-2)}
+  .tally div:last-child{border-right:none}
+  .tally b{display:block;font-family:var(--display);font-size:32px;line-height:1;color:var(--ink)}
+  .tally span{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:600;margin-top:6px;display:block}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="container">
+    <a class="brand" href="index.html"><span class="mark">R</span><span class="word">Resume<em>Match</em><small>Philippines</small></span></a>
+    <nav class="nav-links" id="nav" aria-label="Main">
+      <a href="seeker-dashboard.html" class="active">Dashboard</a>
+      <a href="browse.html">Openings</a>
+      <a href="my-resumes.html">My resumes</a>
+      <a href="learning-hub.html">Learning hub</a>
+      <a href="account.html">Account</a>
+    </nav>
+    <div class="nav-cta">
+      <span class="whoami" data-whoami></span>
+      <button class="btn ghost sm" type="button" data-tour>Show me around</button>
+      <button class="btn primary sm" type="button" data-logout>Log out</button>
+    </div>
+    <button class="menu-btn" aria-expanded="false" aria-controls="nav" aria-label="Open menu">☰</button>
+  </div>
+  <div class="bar"></div>
+</header>
+
+<main id="main" class="container" style="padding-bottom:80px">
+
+  <div class="page-head head-row">
+    <div>
+      <span class="eyebrow">Your matches</span>
+      <h1 id="hello">Hello.</h1>
+      <p>Scored from your <b>active resume</b> against every open position — skills 50%, education 25%, experience 25%. Change the resume and the whole board re-scores.</p>
+    </div>
+    <div class="picker" id="picker">
+      <label for="resumeSel" style="font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Active resume</label>
+      <select id="resumeSel" aria-label="Choose your active resume"></select>
+      <span class="attached" id="attached" hidden>&#128206; own file attached</span>
+      <a class="btn ghost sm" href="resume-builder.html" id="editBtn">Edit</a>
+    </div>
+  </div>
+
+  <div id="board">
+    <div class="loading"><span class="spinner"></span> Scoring your resume against the open positions…</div>
+  </div>
+
+  <section class="tier" id="appsSection">
+    <div class="tier-head">
+      <h2>My applications</h2>
+      <span class="badge slate">Statuses are set by the recruiter</span>
+    </div>
+    <p>Every change here was made by a person at the hotel. The system never moves an application on its own.</p>
+    <div class="tally" id="tally" hidden></div>
+    <div class="card flush" style="margin-top:18px">
+      <div class="wrap-x">
+        <table class="tbl" id="apps">
+          <thead><tr><th>Position</th><th>Company</th><th>Resume sent</th><th>Applied</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p id="noApps" style="padding:32px;text-align:center;color:var(--muted);font-size:14px">
+        Nothing here yet. Apply to a match above and you'll be able to follow it from Submitted through to Hired.
+      </p>
+    </div>
+  </section>
+</main>
+
+<!-- apply -->
+<div class="modal-back" id="modal" role="dialog" aria-modal="true" aria-labelledby="mT">
+  <div class="modal">
+    <button class="close-x" id="mX" type="button" aria-label="Close">&times;</button>
+    <div class="modal-head">
+      <h3 id="mT"></h3>
+      <p class="sub" id="mCo"></p>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:center;gap:18px;margin-bottom:6px">
+        <span class="score-ring lg" id="mRing" style="--p:0"><b></b></span>
+        <div>
+          <div id="mTier" class="badge" style="margin-bottom:7px"></div>
+          <div style="font-size:13px;color:var(--muted)">Your resume: <b id="mResume" style="color:var(--ink)"></b></div>
+        </div>
+      </div>
+      <p id="mDesc" style="font-size:14px;background:var(--ivory);border-radius:var(--r);padding:14px 16px;margin:16px 0;color:var(--text)"></p>
+      <div class="breakdown" id="mBreak"></div>
+      <p style="font-size:12.5px;color:var(--muted)">Applying sends the resume above, plus your uploaded file if you attached one. A recruiter reads both.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="mCancel" type="button">Close</button>
+      <button class="btn primary" id="mApply" type="button">Apply now</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="assets/api.js"></script>
+<script src="assets/tutorial.js"></script>
+<script>
+(async function () {
+  const user = await RMPH.guard('seeker');
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const W = RMPH.WEIGHTS, T = RMPH.THRESHOLDS;
+  const day = ts => new Date(ts).toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' });
+
+  $('#hello').textContent = 'Hello, ' + user.name.split(' ')[0] + '.';
+
+  const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); };
+
+  /* ---------------- recommendations ---------------- */
+  const TIERS = [
+    { key:'strong',   title:'Strong matches',  badge:'green', note:'At or above ' + T.strong + '% \u2014 your resume already meets most of what the posting asks for.' },
+    { key:'possible', title:'Possible matches',badge:'gold',  note:'Between ' + T.related + '% and ' + (T.strong - 1) + '% \u2014 worth applying to. Recruiters read every applicant, not just the top of the list.' },
+    { key:'related',  title:'Related roles',   badge:'slate', note:'Below ' + T.related + '%, but you share real skills with these. This is where you get pointed instead of turned away.' },
+  ];
+
+  function jobCard(item) {
+    const { posting, company, score, matchedSkills, eduMeets, expMeets, applied } = item;
+    const el = document.createElement('article');
+    el.className = 'card job';
+    el.innerHTML =
+      '<div class="top">' +
+        '<div><h3>' + esc(posting.title) + '</h3><div class="co">' + esc(company.name) + ' &middot; ' + esc(posting.department) + '</div></div>' +
+        '<span class="score-ring" style="--p:' + score + ';--c:' + RMPH.tierColor(score) + '"><b>' + score + '%</b></span>' +
+      '</div>' +
+      '<div>' + posting.skills.map(s =>
+        '<span class="chip' + (matchedSkills.indexOf(s) !== -1 ? '' : ' miss') + '">' + esc(s) + '</span>').join('') + '</div>' +
+      '<div class="req">' +
+        '<span>Education <b class="' + (eduMeets ? 'ok' : 'no') + '">' + (eduMeets ? 'meets' : 'below') + '</b></span>' +
+        '<span>Experience <b class="' + (expMeets ? 'ok' : 'no') + '">' + (expMeets ? 'meets' : 'below') + '</b></span>' +
+      '</div>' +
+      '<div class="foot">' +
+        '<span>' + matchedSkills.length + ' of ' + posting.skills.length + ' skills</span>' +
+        (applied ? '<span class="badge slate">Applied</span>'
+                 : '<button class="btn primary sm" type="button">View &amp; apply</button>') +
+      '</div>';
+    if (!applied) el.querySelector('button').addEventListener('click', () => openApply(item));
+    return el;
+  }
+
+  let current = null, activeResumeTitle = '';
+
+  function openApply(item) {
+    current = item;
+    const { posting, company, score, matchedSkills, eduMeets, expMeets, seekerMonths } = item;
+    $('#mT').textContent = posting.title;
+    $('#mCo').textContent = company.name + ' \u00b7 ' + posting.department;
+    $('#mDesc').textContent = posting.description;
+    $('#mResume').textContent = activeResumeTitle;
+
+    const ring = $('#mRing');
+    ring.style.setProperty('--p', score);
+    ring.style.setProperty('--c', RMPH.tierColor(score));
+    ring.querySelector('b').textContent = score + '%';
+
+    const tier = $('#mTier');
+    tier.className = 'badge ' + (RMPH.tierOf(score) === 'strong' ? 'green' : RMPH.tierOf(score) === 'possible' ? 'gold' : 'slate');
+    tier.textContent = RMPH.tierLabel(score);
+
+    $('#mBreak').innerHTML =
+      '<div class="row"><span><b>Skills matched</b><span class="w">' + (W.skills * 100) + '% of the score</span></span>' +
+        '<b>' + matchedSkills.length + ' of ' + posting.skills.length + (matchedSkills.length ? ' \u2014 ' + matchedSkills.map(esc).join(', ') : '') + '</b></div>' +
+      '<div class="row"><span><b>Education</b><span class="w">' + (W.education * 100) + '% of the score</span></span>' +
+        '<b style="color:' + (eduMeets ? 'var(--emerald)' : 'var(--gold-deep)') + '">' + (eduMeets ? 'Meets ' + RMPH.EDU_LABELS[posting.educationLevel] : 'Below ' + RMPH.EDU_LABELS[posting.educationLevel]) + '</b></div>' +
+      '<div class="row"><span><b>Experience</b><span class="w">' + (W.experience * 100) + '% of the score</span></span>' +
+        '<b style="color:' + (expMeets ? 'var(--emerald)' : 'var(--gold-deep)') + '">' + seekerMonths + ' mo &middot; asks for ' + (posting.minExperienceMonths || 0) + ' mo</b></div>' +
+      '<div class="row"><span><b>What happens to a low score</b></span><b style="font-weight:500;color:var(--muted)">Nothing automatic. A recruiter still sees you.</b></div>';
+
+    $('#modal').classList.add('show');
+    $('#mApply').focus();
+  }
+  const closeApply = () => { $('#modal').classList.remove('show'); current = null; };
+  $('#mX').addEventListener('click', closeApply);
+  $('#mCancel').addEventListener('click', closeApply);
+  $('#modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeApply(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeApply(); });
+
+  $('#mApply').addEventListener('click', async () => {
+    if (!current) return;
+    const btn = $('#mApply');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Sending…';
+    const me = (await RMPH.auth.me()).user;
+    const res = await RMPH.applications.apply(me.activeResumeId, current.posting.id);
+    btn.disabled = false; btn.textContent = 'Apply now';
+    if (!res.ok) { toast(res.error); return; }
+    const title = current.posting.title;
+    closeApply();
+    await render();
+    toast('Applied to ' + title + '. Track it below.');
+  });
+
+  /* ---------------- applications ---------------- */
+  async function renderApps() {
+    const res = await RMPH.applications.mine();
+    const list = res.ok ? res.applications : [];
+    const body = $('#apps tbody');
+    body.innerHTML = '';
+    $('#noApps').style.display = list.length ? 'none' : 'block';
+    $('#tally').hidden = !list.length;
+
+    if (list.length) {
+      const count = s => list.filter(a => a.status === s).length;
+      $('#tally').innerHTML =
+        '<div><b>' + list.length + '</b><span>Applied</span></div>' +
+        '<div><b>' + (count('submitted') + count('review')) + '</b><span>In progress</span></div>' +
+        '<div><b>' + count('shortlisted') + '</b><span>Shortlisted</span></div>' +
+        '<div><b>' + count('hired') + '</b><span>Hired</span></div>';
+    }
+
+    list.forEach(a => {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td><b>' + esc(a.posting ? a.posting.title : 'Removed') + '</b></td>' +
+        '<td>' + esc(a.company ? a.company.name : '\u2014') + '</td>' +
+        '<td>' + esc(a.resumeTitle || '\u2014') + '</td>' +
+        '<td style="white-space:nowrap">' + day(a.appliedAt) + '</td>' +
+        '<td><span class="badge ' + RMPH.statusBadge(a.status) + '">' + RMPH.STATUS_LABELS[a.status] + '</span></td>';
+      body.appendChild(tr);
+    });
+  }
+
+  /* ---------------- main render ---------------- */
+  async function render() {
+    const [rRes, me] = await Promise.all([RMPH.resumes.mine(), RMPH.auth.me()]);
+    const resumes = rRes.ok ? rRes.resumes : [];
+    const sel = $('#resumeSel');
+
+    if (!resumes.length) {
+      $('#picker').style.display = 'none';
+      $('#board').innerHTML =
+        '<div class="card empty crest">' +
+          '<h2>Let\u2019s build your first resume</h2>' +
+          '<p>Everything here runs off it. Once it exists, the system scores it against every open position at Royce and shows you exactly where you fit \u2014 and where you nearly fit.</p>' +
+          '<a class="btn primary" href="resume-builder.html">Start the guided builder</a>' +
+        '</div>';
+      await renderApps();
+      return;
+    }
+
+    // keep the picker honest if the active resume was deleted elsewhere
+    let activeId = me.user.activeResumeId;
+    if (!resumes.some(r => r.id === activeId)) {
+      activeId = resumes[0].id;
+      await RMPH.resumes.setActive(activeId);
+    }
+    sel.innerHTML = resumes.map(r =>
+      '<option value="' + r.id + '"' + (r.id === activeId ? ' selected' : '') + '>' + esc(r.title) + (r.ownFile ? ' \u{1F4CE}' : '') + '</option>').join('');
+    const active = resumes.find(r => r.id === activeId);
+    activeResumeTitle = active.title;
+    $('#attached').hidden = !active.ownFile;
+    $('#editBtn').href = 'resume-builder.html?id=' + activeId;
+
+    const reco = await RMPH.match.recommendations();
+    const board = $('#board');
+    board.innerHTML = '';
+
+    const total = reco.strong.length + reco.possible.length + reco.related.length;
+    if (!total) {
+      board.innerHTML = '<div class="card empty"><h2>No open positions right now</h2>' +
+        '<p>Royce hasn\u2019t posted anything your resume can be scored against yet. Check back, or polish your resume in the meantime.</p>' +
+        '<a class="btn ghost" href="learning-hub.html">Read the resume guides</a></div>';
+    } else {
+      TIERS.forEach(t => {
+        const items = reco[t.key];
+        if (!items.length) return;
+        const sec = document.createElement('section');
+        sec.className = 'tier';
+        sec.id = 'tier-' + t.key;
+        sec.innerHTML = '<div class="tier-head"><h2>' + t.title + '</h2><span class="badge ' + t.badge + '">' + items.length + '</span></div><p>' + t.note + '</p>';
+        const grid = document.createElement('div');
+        grid.className = 'grid cols-3';
+        items.forEach(i => grid.appendChild(jobCard(i)));
+        sec.appendChild(grid);
+        board.appendChild(sec);
+      });
+      if (!reco.strong.length && !reco.possible.length) {
+        const n = document.createElement('div');
+        n.className = 'note';
+        n.style.marginTop = '26px';
+        n.textContent = 'Nothing above ' + T.related + '% yet \u2014 but the related roles above share skills you already have. Adding the missing skills to your resume (the crossed-out ones) is usually the fastest way to move a score up.';
+        board.appendChild(n);
+      }
+    }
+
+    await renderApps();
+  }
+
+  $('#resumeSel').addEventListener('change', async e => {
+    await RMPH.resumes.setActive(e.target.value);
+    await render();
+    toast('Active resume changed — everything re-scored.');
+  });
+
+  await render();
+
+  /* ---------------- onboarding tour (Objective 4) ---------------- */
+  RMPHTour.init('seeker-dashboard', [
+    { sel:'#picker',   title:'Your active resume', text:'Every score on this page comes from this one resume. Keep several versions and switch between them — the board re-scores instantly.' },
+    { sel:'#board .tier:first-child', title:'Matches, in three tiers', text:'Strong, possible, and related. That third tier is the point: a low score redirects you to roles that fit, rather than shutting a door.' },
+    { sel:'#board .score-ring', title:'What the number means', text:'Skills are half of it, education and experience a quarter each. Open any match to see the full breakdown — the same one the recruiter sees.' },
+    { sel:'#appsSection', title:'Follow your applications', text:'Submitted, Under review, Shortlisted, Hired, or Not selected. Every one of those is set by a person at the hotel — never by the system.' },
+    { sel:'[data-tour]', title:'Lost? Come back here', text:'This tour is always available from this button, on every page. Nothing you do here is permanent until you say so.' },
+  ], { user: user.id });
+})();
+</script>
+</body>
+</html>

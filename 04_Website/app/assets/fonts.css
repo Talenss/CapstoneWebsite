@@ -1,0 +1,43 @@
+/* ============================================================
+   Offline / self-hosted fonts (OPTIONAL)
+   ------------------------------------------------------------
+   Only needed if you present WITHOUT internet. Steps:
+
+   1. On any machine with internet, download the two families:
+        Cormorant Garamond (500, 600, 700)
+        Inter (400, 500, 600, 700)
+      Easiest source: https://gwfh.mranftl.com/fonts  (pick woff2)
+      or the official Google Fonts "Download family" button.
+
+   2. Put the .woff2 files in this folder (assets/fonts/) with the
+      names used below — rename them to match, or edit the src paths.
+
+   3. Uncomment every @font-face rule below.
+
+   4. Add this line to the <head> of every page, AFTER styles.css:
+        <link rel="stylesheet" href="assets/fonts.css">
+
+   That's it. styles.css already lists these families first, so the
+   local files win and the Google CDN @import becomes a no-op you can
+   also delete from styles.css if you want zero external requests.
+   ============================================================ */
+
+/*
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:500;font-display:swap;
+  src:url('fonts/cormorant-garamond-500.woff2') format('woff2')}
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:600;font-display:swap;
+  src:url('fonts/cormorant-garamond-600.woff2') format('woff2')}
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:700;font-display:swap;
+  src:url('fonts/cormorant-garamond-700.woff2') format('woff2')}
+@font-face{font-family:'Cormorant Garamond';font-style:italic;font-weight:600;font-display:swap;
+  src:url('fonts/cormorant-garamond-600-italic.woff2') format('woff2')}
+
+@font-face{font-family:'Inter';font-style:normal;font-weight:400;font-display:swap;
+  src:url('fonts/inter-400.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:500;font-display:swap;
+  src:url('fonts/inter-500.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:600;font-display:swap;
+  src:url('fonts/inter-600.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:700;font-display:swap;
+  src:url('fonts/inter-700.woff2') format('woff2')}
+*/

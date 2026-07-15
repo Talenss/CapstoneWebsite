@@ -1,0 +1,7 @@
+# Applicant resume files live here.
+# Nothing in this folder may be fetched directly, ever — every read
+# goes through ../file.php, which checks who is asking (RA 10173).
+Require all denied
+Options -Indexes -ExecCGI
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8
+php_flag engine off

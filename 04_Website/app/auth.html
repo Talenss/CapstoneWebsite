@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log in or create an account — ResumeMatch PH</title>
+<meta name="description" content="Log in to ResumeMatch PH, create a free job seeker account, or request recruiter access as HR of a partner company.">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .auth{display:grid;grid-template-columns:1fr 1fr;flex:1}
+  @media(max-width:940px){.auth{grid-template-columns:1fr}.aside{display:none}}
+  .aside{background:var(--ink);color:#9BA2B1;padding:64px 52px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden}
+  .aside::before{content:"";position:absolute;inset:0;background:radial-gradient(700px 400px at 80% 0%, rgba(198,166,100,.12), transparent 60%)}
+  .aside > *{position:relative}
+  .aside h2{color:#fff;font-size:36px;margin-bottom:16px;line-height:1.1}
+  .aside h2 em{font-style:italic;color:var(--gold)}
+  .aside p{font-size:15px;line-height:1.75;max-width:44ch}
+  .aside .plaque{margin-top:32px;background:var(--ink-2);border:1px solid var(--ink-line);border-left:2px solid var(--gold);
+    border-radius:0 var(--r) var(--r) 0;padding:20px 22px;font-size:13.5px;line-height:1.7}
+  .aside .plaque b{display:block;color:#fff;font-weight:600;margin-bottom:6px}
+  .main{padding:56px 24px;display:flex;justify-content:center;align-items:flex-start}
+  .panel-wrap{width:100%;max-width:480px}
+  .tabs{display:flex;border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;margin-bottom:26px;background:var(--paper)}
+  .tabs button{flex:1;border:none;background:transparent;font-family:var(--body);font-weight:600;font-size:13.5px;
+    padding:13px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:.15s}
+  .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--gold);background:var(--ivory)}
+  .panel{display:none}.panel.show{display:block}
+  .roles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px}
+  @media(max-width:480px){.roles{grid-template-columns:1fr}}
+  .roles label{border:1px solid var(--rule);border-radius:var(--r);padding:14px;cursor:pointer;display:flex;gap:10px;align-items:flex-start;transition:.15s;background:var(--paper)}
+  .roles label:has(input:checked){border-color:var(--gold);background:var(--gold-wash)}
+  .roles input{margin-top:3px;accent-color:var(--gold-deep);width:auto}
+  .roles b{display:block;font-size:13.5px;color:var(--ink)}
+  .roles small{display:block;font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5}
+  .keys{margin-top:24px;border:1px dashed var(--rule);border-radius:var(--r);padding:16px 18px;font-size:12.5px;color:var(--muted);background:var(--paper)}
+  .keys b{display:block;color:var(--ink);margin-bottom:9px;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+  .keys code{background:var(--ivory);border:1px solid var(--rule-2);padding:2px 7px;border-radius:2px;color:var(--ink);font-size:12px}
+  .keys .k{display:flex;justify-content:space-between;gap:10px;padding:4px 0}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="container">
+    <a class="brand" href="index.html">
+      <span class="mark">R</span>
+      <span class="word">Resume<em>Match</em><small>Philippines</small></span>
+    </a>
+    <nav class="nav-links" id="nav" aria-label="Main">
+      <a href="index.html#how">How it works</a>
+      <a href="browse.html">Openings</a>
+      <a href="learning-hub.html">Learning hub</a>
+    </nav>
+    <div class="nav-cta"><a class="btn ghost sm" href="index.html">&larr; Home</a></div>
+    <button class="menu-btn" aria-expanded="false" aria-controls="nav" aria-label="Open menu">☰</button>
+  </div>
+  <div class="bar"></div>
+</header>
+
+<main id="main" class="auth">
+  <aside class="aside">
+    <span class="eyebrow">ResumeMatch PH</span>
+    <h2>One account.<br>Both sides of the <em>hire</em>.</h2>
+    <p>Job seekers build a structured resume and can attach their own file. Royce's HR posts structured openings. The engine compares them and shows both sides the same honest number.</p>
+    <div class="plaque">
+      <b>Recruiter accounts are provisioned, not self-served.</b>
+      So that every posting on this platform is a real job, recruiter accounts are created by the research team together with the partner company's HR department. Request access here — job seeker accounts open immediately.
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="panel-wrap">
+      <div class="tabs" role="tablist" aria-label="Log in or create an account">
+        <button id="tab-login" role="tab" aria-selected="true" aria-controls="p-login" type="button">Log in</button>
+        <button id="tab-reg" role="tab" aria-selected="false" aria-controls="p-reg" type="button">Create account</button>
+      </div>
+
+      <!-- LOG IN -->
+      <section class="panel show card" id="p-login" role="tabpanel" aria-labelledby="tab-login">
+        <h1 style="font-size:27px;margin-bottom:4px">Welcome back</h1>
+        <p style="font-size:13.5px;color:var(--muted);margin-bottom:22px">Log in to pick up where you left off.</p>
+        <div class="alert error" id="loginErr" role="alert"></div>
+        <form id="loginForm" novalidate>
+          <div class="field" id="f-le">
+            <label for="le">Email address</label>
+            <input type="email" id="le" autocomplete="email" required>
+            <span class="err">Enter a valid email address.</span>
+          </div>
+          <div class="field" id="f-lp">
+            <label for="lp">Password</label>
+            <input type="password" id="lp" autocomplete="current-password" required>
+            <span class="err">Enter your password.</span>
+          </div>
+          <button class="btn primary block" type="submit" id="loginBtn">Log in</button>
+        </form>
+        <div class="keys">
+          <b>Demo accounts</b>
+          <div class="k"><span>Job seeker</span> <code>seeker@demo.ph</code></div>
+          <div class="k"><span>Royce HR</span> <code>hr@demo.ph</code></div>
+          <div class="k"><span>More applicants</span> <code>ana@ / marco@ / liza@demo.ph</code></div>
+          <div class="k" style="border-top:1px solid var(--rule-2);margin-top:8px;padding-top:9px"><span>Password (all)</span> <code>demo123</code></div>
+        </div>
+      </section>
+
+      <!-- CREATE ACCOUNT / REQUEST ACCESS -->
+      <section class="panel card" id="p-reg" role="tabpanel" aria-labelledby="tab-reg">
+        <h1 style="font-size:27px;margin-bottom:4px" id="regHead">Create your free account</h1>
+        <p style="font-size:13.5px;color:var(--muted);margin-bottom:22px" id="regSub">Pick your role — the form follows.</p>
+        <div class="alert" id="regMsg" role="alert"></div>
+        <form id="regForm" novalidate>
+          <div class="roles" role="radiogroup" aria-label="Account type">
+            <label><input type="radio" name="role" value="seeker" checked>
+              <span><b>Job seeker</b><small>Build a resume, get matched, apply. Opens right away.</small></span></label>
+            <label><input type="radio" name="role" value="recruiter">
+              <span><b>Recruiter / HR</b><small>For partner-company staff. Activated with your HR.</small></span></label>
+          </div>
+
+          <div class="field" id="f-rn">
+            <label for="rn">Full name</label>
+            <input type="text" id="rn" autocomplete="name" required>
+            <span class="err">Enter your full name.</span>
+          </div>
+          <div class="field" id="f-re">
+            <label for="re">Email address</label>
+            <input type="email" id="re" autocomplete="email" required>
+            <span class="err">Enter a valid email address.</span>
+          </div>
+
+          <div class="field" id="f-rp">
+            <label for="rp">Password</label>
+            <input type="password" id="rp" autocomplete="new-password">
+            <span class="err">Use at least 6 characters.</span>
+            <p class="hint">At least 6 characters.</p>
+          </div>
+
+          <div id="hrOnly" hidden>
+            <div class="field" id="f-rc">
+              <label for="rc">Partner company</label>
+              <select id="rc"><option value="">Choose your company…</option></select>
+              <span class="err">Choose your partner company.</span>
+              <p class="hint">Company not listed? Companies join as partners through the research team first.</p>
+            </div>
+            <div class="field" id="f-rpos">
+              <label for="rpos">Your position</label>
+              <input type="text" id="rpos" placeholder="HR Officer, Talent Acquisition Specialist…">
+              <span class="err">Enter your position.</span>
+            </div>
+            <div class="field">
+              <label for="rnote">Anything the research team should know <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(optional)</span></label>
+              <textarea id="rnote" rows="2" placeholder="e.g. an HR contact number we can verify this request against"></textarea>
+            </div>
+          </div>
+
+          <button class="btn primary block" type="submit" id="regBtn">Create job seeker account</button>
+          <p class="hint" style="text-align:center;margin-top:14px">By continuing you agree that your data is processed for resume creation and job matching only. <a href="privacy.html">Read the privacy notice</a>.</p>
+        </form>
+      </section>
+    </div>
+  </div>
+</main>
+
+<script src="assets/api.js"></script>
+<script>
+(async function () {
+  const $ = s => document.querySelector(s);
+
+  // already signed in? go where they belong
+  const meRes = await RMPH.auth.me();
+  if (meRes.ok && meRes.user) {
+    const next = new URLSearchParams(location.search).get('next');
+    location.replace(next || (meRes.user.role === 'seeker' ? 'seeker-dashboard.html' : 'hr-dashboard.html'));
+    return;
+  }
+
+  /* ---- tabs, hash-aware (#register, #register-hr) ---- */
+  const tabs = { login: [$('#tab-login'), $('#p-login')], reg: [$('#tab-reg'), $('#p-reg')] };
+  function show(which) {
+    Object.keys(tabs).forEach(k => {
+      tabs[k][0].setAttribute('aria-selected', String(k === which));
+      tabs[k][1].classList.toggle('show', k === which);
+    });
+  }
+  tabs.login[0].addEventListener('click', () => show('login'));
+  tabs.reg[0].addEventListener('click', () => show('reg'));
+
+  function applyHash() {
+    if (!location.hash.startsWith('#register')) return;
+    show('reg');
+    if (location.hash === '#register-hr') {
+      document.querySelector('input[name="role"][value="recruiter"]').checked = true;
+      syncRole();
+    }
+  }
+  window.addEventListener('hashchange', applyHash);
+
+  /* ---- role toggle ---- */
+  const role = () => document.querySelector('input[name="role"]:checked').value;
+  function syncRole() {
+    const hr = role() === 'recruiter';
+    $('#hrOnly').hidden = !hr;
+    $('#f-rp').style.display = hr ? 'none' : 'block';
+    $('#regBtn').textContent = hr ? 'Send access request' : 'Create job seeker account';
+    $('#regHead').textContent = hr ? 'Request recruiter access' : 'Create your free account';
+    $('#regSub').textContent = hr
+      ? 'We verify every request with the partner company before activating an account.'
+      : 'Pick your role — the form follows.';
+  }
+  document.querySelectorAll('input[name="role"]').forEach(el => el.addEventListener('change', syncRole));
+
+  /* ---- partner companies ---- */
+  const cRes = await RMPH.companies.list();
+  const sel = $('#rc');
+  (cRes.companies || []).forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.id; o.textContent = c.name;
+    sel.appendChild(o);
+  });
+
+  /* ---- validation ---- */
+  const mark = (id, ok) => { $(id).classList.toggle('invalid', !ok); return ok; };
+  const emailOk = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim());
+  const busy = (btn, on, label) => { btn.disabled = on; btn.innerHTML = on ? '<span class="spinner"></span> Working…' : label; };
+
+  /* ---- log in ---- */
+  $('#loginForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const err = $('#loginErr'); err.classList.remove('show');
+    let ok = mark('#f-le', emailOk($('#le').value));
+    ok = mark('#f-lp', $('#lp').value.length > 0) && ok;
+    if (!ok) return;
+
+    busy($('#loginBtn'), true);
+    const res = await RMPH.auth.login($('#le').value.trim(), $('#lp').value);
+    busy($('#loginBtn'), false, 'Log in');
+    if (!res.ok) { err.textContent = res.error; err.classList.add('show'); return; }
+
+    const next = new URLSearchParams(location.search).get('next');
+    location.href = next || (res.user.role === 'seeker' ? 'seeker-dashboard.html' : 'hr-dashboard.html');
+  });
+
+  /* ---- create account / request access ---- */
+  $('#regForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const msg = $('#regMsg');
+    msg.className = 'alert';
+    const hr = role() === 'recruiter';
+
+    let ok = mark('#f-rn', $('#rn').value.trim().length >= 2);
+    ok = mark('#f-re', emailOk($('#re').value)) && ok;
+    if (!hr) ok = mark('#f-rp', $('#rp').value.length >= 6) && ok;
+    if (hr) {
+      ok = mark('#f-rc', !!sel.value) && ok;
+      ok = mark('#f-rpos', $('#rpos').value.trim().length >= 2) && ok;
+    }
+    if (!ok) return;
+
+    busy($('#regBtn'), true);
+    if (!hr) {
+      const res = await RMPH.auth.registerSeeker({ name: $('#rn').value.trim(), email: $('#re').value.trim(), password: $('#rp').value });
+      busy($('#regBtn'), false, 'Create job seeker account');
+      if (!res.ok) { msg.textContent = res.error; msg.className = 'alert error show'; return; }
+      location.href = 'resume-builder.html?welcome=1';
+    } else {
+      const res = await RMPH.auth.requestRecruiterAccess({
+        name: $('#rn').value.trim(), email: $('#re').value.trim(),
+        position: $('#rpos').value.trim(), companyId: sel.value, note: $('#rnote').value.trim(),
+      });
+      busy($('#regBtn'), false, 'Send access request');
+      if (!res.ok) { msg.textContent = res.error; msg.className = 'alert error show'; return; }
+      msg.innerHTML = 'Request received. The research team will confirm it with <b>' + sel.options[sel.selectedIndex].text +
+        '</b>\u2019s HR department, then activate your account and email you. <br><br>Meanwhile, you can explore the recruiter side with <code>hr@demo.ph</code> / <code>demo123</code>.';
+      msg.className = 'alert ok show';
+      e.target.reset(); syncRole();
+    }
+  });
+
+  syncRole(); applyHash();
+})();
+</script>
+</body>
+</html>
