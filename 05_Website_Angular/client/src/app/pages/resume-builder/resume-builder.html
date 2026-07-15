@@ -1,0 +1,392 @@
+<app-header variant="seeker" active="builder" [showTour]="true" />
+
+<main id="main" class="container">
+  <div class="page-head head-row" style="margin-bottom:8px">
+    <div>
+      <span class="eyebrow">Guided builder</span>
+      <h1>{{ pageTitle() }}</h1>
+      <p>Nothing here is scored until you save. Take your time — every step has guidance, and you can go back.</p>
+    </div>
+    <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
+      @if (savedFlag()) {
+        <span class="badge green">Saved</span>
+      }
+      <button class="btn ghost sm" type="button" [disabled]="saving()" (click)="save(false)">Save draft</button>
+    </div>
+  </div>
+
+  @if (formError()) {
+    <div class="alert error show" role="alert">{{ formError() }}</div>
+  }
+
+  @if (!ready()) {
+    <div class="loading"><span class="spinner"></span> Loading your resume…</div>
+  } @else {
+    <div class="wiz">
+      <!-- ===================== FORM ===================== -->
+      <div>
+        <div class="rail" id="rail" role="tablist" aria-label="Resume sections">
+          @for (label of STEPS; track $index) {
+            <button type="button" role="tab" [attr.aria-current]="step() === $index ? 'true' : 'false'" [class.done]="$index < step()" (click)="goTo($index)">
+              <span class="n">{{ $index + 1 }}</span>{{ label }}
+            </button>
+          }
+        </div>
+
+        <!-- 1 · Details -->
+        @if (step() === 0) {
+          <section class="step" id="s0">
+            <h2>Who you are</h2>
+            <p class="sub">This is the header of your resume. Keep the summary to two or three plain sentences — what you studied, what you've done, what you're looking for.</p>
+            <div class="field">
+              <label for="rtitle">Name this resume <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(only you see this)</span></label>
+              <input type="text" id="rtitle" placeholder="e.g. IT — fresh graduate" [value]="resume().title" (input)="setTitle(inputValue($event))">
+            </div>
+            <div class="row2">
+              <div class="field">
+                <label for="pName">Full name</label>
+                <input type="text" id="pName" autocomplete="name" [value]="resume().personal.fullName" (input)="setPersonal('fullName', inputValue($event))">
+              </div>
+              <div class="field">
+                <label for="pEmail">Email</label>
+                <input type="email" id="pEmail" autocomplete="email" [value]="resume().personal.email" (input)="setPersonal('email', inputValue($event))">
+              </div>
+            </div>
+            <div class="row2">
+              <div class="field">
+                <label for="pPhone">Phone</label>
+                <input type="tel" id="pPhone" placeholder="0917 000 0000" [value]="resume().personal.phone" (input)="setPersonal('phone', inputValue($event))">
+              </div>
+              <div class="field">
+                <label for="pAddr">City / province</label>
+                <input type="text" id="pAddr" placeholder="Angeles City, Pampanga" [value]="resume().personal.address" (input)="setPersonal('address', inputValue($event))">
+              </div>
+            </div>
+            <div class="field">
+              <label for="pSummary">Short summary</label>
+              <textarea id="pSummary" rows="3" placeholder="BS Information Technology graduate with internship experience in web development. Looking for an entry-level developer role." [value]="resume().personal.summary" (input)="setPersonal('summary', inputValue($event))"></textarea>
+              <p class="hint">Write it in plain sentences. Skip words like "hardworking" — say what you actually did instead.</p>
+            </div>
+          </section>
+        }
+
+        <!-- 2 · Education -->
+        @if (step() === 1) {
+          <section class="step" id="s1">
+            <h2>Education</h2>
+            <p class="sub">The level you pick here is a quarter of every compatibility score, so choose the one that matches the diploma you actually hold.</p>
+            <div>
+              @for (e of resume().education; track $index) {
+                <div class="item">
+                  <button class="kill" type="button" (click)="removeEducation($index)">Remove</button>
+                  <div class="field">
+                    <label [for]="'edu-school-' + $index">School</label>
+                    <input type="text" [id]="'edu-school-' + $index" [value]="e.school" (input)="updateEducation($index, 'school', inputValue($event))">
+                  </div>
+                  <div class="field">
+                    <label [for]="'edu-degree-' + $index">Degree or strand</label>
+                    <input type="text" [id]="'edu-degree-' + $index" placeholder="BS Information Technology" [value]="e.degree" (input)="updateEducation($index, 'degree', inputValue($event))">
+                  </div>
+                  <div class="row2">
+                    <div class="field">
+                      <label [for]="'edu-level-' + $index">Level</label>
+                      <select [id]="'edu-level-' + $index" [value]="e.level" (change)="updateEducation($index, 'level', inputValue($event))">
+                        @for (opt of eduLevelOptions; track opt.value) {
+                          <option [value]="opt.value">{{ opt.label }}</option>
+                        }
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label [for]="'edu-year-' + $index">Year graduated</label>
+                      <input type="text" [id]="'edu-year-' + $index" placeholder="2026" [value]="e.year" (input)="updateEducation($index, 'year', inputValue($event))">
+                    </div>
+                  </div>
+                </div>
+              } @empty {
+                <p style="color:var(--muted);font-size:13.5px;margin-bottom:14px">Nothing added yet.</p>
+              }
+            </div>
+            <button class="add" type="button" (click)="addEducation()">+ Add education</button>
+          </section>
+        }
+
+        <!-- 3 · Experience -->
+        @if (step() === 2) {
+          <section class="step" id="s2">
+            <h2>Experience</h2>
+            <p class="sub">Internships, OJT, part-time work, and student-organisation roles all count. If you have none, skip this — plenty of openings ask for zero months.</p>
+            <div>
+              @for (e of resume().experience; track $index) {
+                <div class="item">
+                  <button class="kill" type="button" (click)="removeExperience($index)">Remove</button>
+                  <div class="field">
+                    <label [for]="'exp-position-' + $index">Position</label>
+                    <input type="text" [id]="'exp-position-' + $index" placeholder="Web Development Intern" [value]="e.position" (input)="updateExperience($index, 'position', inputValue($event))">
+                  </div>
+                  <div class="row2">
+                    <div class="field">
+                      <label [for]="'exp-company-' + $index">Company or organisation</label>
+                      <input type="text" [id]="'exp-company-' + $index" [value]="e.company" (input)="updateExperience($index, 'company', inputValue($event))">
+                    </div>
+                    <div class="field">
+                      <label [for]="'exp-months-' + $index">Months worked</label>
+                      <input type="number" [id]="'exp-months-' + $index" placeholder="6" [value]="e.months" (input)="updateExperience($index, 'months', inputValue($event))">
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label [for]="'exp-desc-' + $index">What you did</label>
+                    <textarea [id]="'exp-desc-' + $index" rows="2" placeholder="Built and maintained pages for the city job portal." [value]="e.description" (input)="updateExperience($index, 'description', inputValue($event))"></textarea>
+                  </div>
+                </div>
+              } @empty {
+                <p style="color:var(--muted);font-size:13.5px;margin-bottom:14px">Nothing added yet.</p>
+              }
+            </div>
+            <button class="add" type="button" (click)="addExperience()">+ Add experience</button>
+          </section>
+        }
+
+        <!-- 4 · Skills -->
+        @if (step() === 3) {
+          <section class="step" id="s3">
+            <h2>Skills</h2>
+            <p class="sub">Half of every score comes from this one list. Be specific — "MySQL" scores; "computer skills" doesn't match anything.</p>
+            <div class="field" style="margin-bottom:8px">
+              <label for="skillInput">Add a skill</label>
+              <input type="text" id="skillInput" list="skillOpts" placeholder="Type a skill, then press Enter" autocomplete="off" (keydown)="onSkillKeydown($event)" (change)="onSkillChange($event)">
+              <datalist id="skillOpts">
+                @for (s of poolAll(); track s) {
+                  <option [value]="s"></option>
+                }
+              </datalist>
+            </div>
+            <div class="tags">
+              @for (s of resume().skills; track s; let i = $index) {
+                <span class="tag">{{ s }}<button type="button" [attr.aria-label]="'Remove ' + s" (click)="removeSkill(i)">&times;</button></span>
+              } @empty {
+                <p style="color:var(--muted);font-size:13.5px">No skills yet. Half of your score depends on this list.</p>
+              }
+            </div>
+            <div class="sugg">
+              <b>Skills Royce is currently asking for</b>
+              <div class="pool">
+                @for (s of poolSuggestions(); track s) {
+                  <button type="button" (click)="addSkill(s)">+ {{ s }} <span style="color:var(--faint)">&middot; {{ demanded()[s] }}</span></button>
+                } @empty {
+                  <p style="color:var(--emerald);font-size:13px;font-weight:500">You already list every skill Royce is asking for.</p>
+                }
+              </div>
+            </div>
+          </section>
+        }
+
+        <!-- 5 · Certifications -->
+        @if (step() === 4) {
+          <section class="step" id="s4">
+            <h2>Certifications</h2>
+            <p class="sub">TESDA certificates, short courses, seminars, training. Optional — but they're free evidence, so add them if you have them.</p>
+            <div>
+              @for (c of resume().certifications; track $index) {
+                <div class="item">
+                  <button class="kill" type="button" (click)="removeCertification($index)">Remove</button>
+                  <div class="field">
+                    <label [for]="'cert-name-' + $index">Certificate</label>
+                    <input type="text" [id]="'cert-name-' + $index" placeholder="TESDA Web Development NC III" [value]="c.name" (input)="updateCertification($index, 'name', inputValue($event))">
+                  </div>
+                  <div class="field">
+                    <label [for]="'cert-year-' + $index">Year</label>
+                    <input type="text" [id]="'cert-year-' + $index" placeholder="2025" [value]="c.year" (input)="updateCertification($index, 'year', inputValue($event))">
+                  </div>
+                </div>
+              } @empty {
+                <p style="color:var(--muted);font-size:13.5px;margin-bottom:14px">Nothing added yet.</p>
+              }
+            </div>
+            <button class="add" type="button" (click)="addCertification()">+ Add certification</button>
+          </section>
+        }
+
+        <!-- 6 · Your own file + template -->
+        @if (step() === 5) {
+          <section class="step" id="s5">
+            <h2>Your own resume file</h2>
+            <p class="sub">If you already have a resume, attach it. The recruiter reads it with their own eyes, alongside the one you just built. <b>It is never parsed and never scored</b> — so a formatting quirk in your file can't count against you.</p>
+
+            <div class="drop" [class.has]="!!resume().ownFile">
+              @if (resume().ownFile; as file) {
+                <div>
+                  <div class="file">
+                    <span style="font-size:22px">&#128206;</span>
+                    <div style="flex:1;min-width:0">
+                      <b>{{ file.name }}</b>
+                      <span>{{ formatSize(file.size) }} &middot; uploaded {{ formatUploadDate(file.uploadedAt) }} &middot; never scored</span>
+                    </div>
+                    <a class="btn ghost sm" [href]="fileUrl() || '#'" target="_blank" rel="noopener">View</a>
+                    <button class="btn warn sm" type="button" (click)="removeOwnFile()">Remove</button>
+                  </div>
+                </div>
+              } @else {
+                <div>
+                  <p style="font-size:14px;margin-bottom:12px">PDF, Word, JPG, or PNG &middot; up to 2&nbsp;MB</p>
+                  <label class="btn ghost sm" for="ownFile" style="cursor:pointer">Choose a file</label>
+                  <input type="file" id="ownFile" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" hidden (change)="onFileSelected($event)">
+                </div>
+              }
+            </div>
+
+            <h3 style="font-size:20px;margin:32px 0 4px">Template</h3>
+            <p class="sub" style="margin-bottom:16px">All three are ATS-friendly. The choice is about how you want your background read, not about which one is "safe".</p>
+            <div class="tpl">
+              <label>
+                <input type="radio" name="tpl" value="chronological" [checked]="resume().template === 'chronological'" (change)="setTemplate('chronological')">
+                <b>Chronological</b>
+                <small>Most recent first. Best when your education and experience already line up with the role.</small>
+              </label>
+              <label>
+                <input type="radio" name="tpl" value="functional" [checked]="resume().template === 'functional'" (change)="setTemplate('functional')">
+                <b>Functional</b>
+                <small>Skills first, history second. Useful when you're changing direction or short on experience.</small>
+              </label>
+              <label>
+                <input type="radio" name="tpl" value="combination" [checked]="resume().template === 'combination'" (change)="setTemplate('combination')">
+                <b>Combination</b>
+                <small>Skills and history given equal weight. A middle ground.</small>
+              </label>
+            </div>
+
+            <h3 style="font-size:20px;margin:32px 0 10px">Before you save</h3>
+            <ul class="checks">
+              @for (row of checklist(); track row.label) {
+                <li [class.ok]="row.done" [class.no]="!row.done">
+                  <b>{{ row.done ? '✓' : row.optional ? '○' : '•' }}</b>{{ row.label }}
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
+        <div class="nav">
+          <button class="btn ghost" type="button" [disabled]="step() === 0" (click)="goTo(step() - 1)">&larr; Back</button>
+          <div style="display:flex;gap:9px">
+            <button class="btn ghost" type="button" [disabled]="saving()" (click)="save(false)">Save draft</button>
+            @if (step() === STEPS.length - 1) {
+              <button class="btn good" type="button" [disabled]="saving()" (click)="save(true)">Save resume</button>
+            } @else {
+              <button class="btn primary" type="button" (click)="goTo(step() + 1)">Next &rarr;</button>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== PREVIEW ===================== -->
+      <aside class="preview">
+        <div class="pv-head">
+          <h3>Live preview</h3>
+          <span class="badge slate">{{ templateLabel() }}</span>
+        </div>
+        <div class="paper" id="paper">
+          <div class="p-name">
+            @if (resume().personal.fullName) { {{ resume().personal.fullName }} } @else { <span class="p-empty">Your name</span> }
+          </div>
+          <div class="p-contact">
+            @if (contactLine()) { {{ contactLine() }} } @else { <span class="p-empty">email &middot; phone &middot; city</span> }
+          </div>
+          @if (resume().personal.summary) {
+            <div class="p-sec"><h4>Summary</h4><p style="font-size:11.5px">{{ resume().personal.summary }}</p></div>
+          }
+
+          <ng-template #eduSection>
+            @if (visibleEducation().length) {
+              <div class="p-sec">
+                <h4>Education</h4>
+                @for (e of visibleEducation(); track $index) {
+                  <div class="p-item">
+                    <b>{{ e.degree || 'Degree' }}</b>
+                    <i>{{ e.school }}{{ e.year ? ' · ' + e.year : '' }}</i>
+                  </div>
+                }
+              </div>
+            }
+          </ng-template>
+
+          <ng-template #expSection>
+            @if (visibleExperience().length) {
+              <div class="p-sec">
+                <h4>Experience</h4>
+                @for (e of visibleExperience(); track $index) {
+                  <div class="p-item">
+                    <b>{{ e.position || 'Position' }}</b>
+                    <i>{{ e.company }}{{ e.months ? ' · ' + e.months + ' month' + (e.months > 1 ? 's' : '') : '' }}</i>
+                    @if (e.description) { <p>{{ e.description }}</p> }
+                  </div>
+                }
+              </div>
+            }
+          </ng-template>
+
+          <ng-template #skillSection>
+            @if (resume().skills.length) {
+              <div class="p-sec">
+                <h4>Skills</h4>
+                <div class="p-skills">
+                  @for (s of resume().skills; track s) { <span>{{ s }}</span> }
+                </div>
+              </div>
+            }
+          </ng-template>
+
+          <ng-template #certSection>
+            @if (visibleCertifications().length) {
+              <div class="p-sec">
+                <h4>Certifications</h4>
+                @for (c of visibleCertifications(); track $index) {
+                  <div class="p-item">
+                    <b>{{ c.name }}</b>
+                    @if (c.year) { <i>{{ c.year }}</i> }
+                  </div>
+                }
+              </div>
+            }
+          </ng-template>
+
+          <!-- template order — functional and combination lead with skills, chronological with history -->
+          @switch (resume().template) {
+            @case ('functional') {
+              <ng-container [ngTemplateOutlet]="skillSection" />
+              <ng-container [ngTemplateOutlet]="expSection" />
+              <ng-container [ngTemplateOutlet]="eduSection" />
+              <ng-container [ngTemplateOutlet]="certSection" />
+            }
+            @case ('combination') {
+              <ng-container [ngTemplateOutlet]="skillSection" />
+              <ng-container [ngTemplateOutlet]="eduSection" />
+              <ng-container [ngTemplateOutlet]="expSection" />
+              <ng-container [ngTemplateOutlet]="certSection" />
+            }
+            @default {
+              <ng-container [ngTemplateOutlet]="eduSection" />
+              <ng-container [ngTemplateOutlet]="expSection" />
+              <ng-container [ngTemplateOutlet]="skillSection" />
+              <ng-container [ngTemplateOutlet]="certSection" />
+            }
+          }
+
+          @if (resume().ownFile; as file) {
+            <div class="p-sec">
+              <h4>Attached by the applicant</h4>
+              <p style="font-size:11px;color:#5A5F6B">{{ file.name }} &mdash; sent to the recruiter alongside this resume. Not part of the score.</p>
+            </div>
+          }
+        </div>
+        <div class="exports">
+          <button class="btn ghost sm" type="button" (click)="exportPdf()">Export PDF</button>
+          <button class="btn ghost sm" type="button" (click)="exportWord()">Export Word</button>
+          <button class="btn ghost sm" type="button" (click)="exportTxt()">Export text</button>
+        </div>
+        <p class="hint" style="margin-top:10px">Exports use the structured resume above — not your uploaded file.</p>
+      </aside>
+    </div>
+  }
+</main>
+
+<div class="toast" [class.show]="!!toastMsg()" role="status" aria-live="polite">{{ toastMsg() }}</div>
