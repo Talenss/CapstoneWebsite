@@ -1,0 +1,28 @@
+/* Page-specific rules ported verbatim from hr-dashboard.html's own
+   <style> block — the stat tally, pipeline funnel, and posting rows. */
+.tally{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--rule);border-radius:var(--r-lg);
+  background:var(--paper);overflow:hidden;margin-bottom:34px;box-shadow:var(--shadow)}
+@media(max-width:760px){.tally{grid-template-columns:1fr 1fr}}
+.tally div{padding:20px 22px;border-right:1px solid var(--rule-2)}
+.tally div:last-child{border-right:none}
+.tally b{display:block;font-family:var(--display);font-size:38px;line-height:1;color:var(--ink)}
+.tally b.alert{color:var(--gold-deep)}
+.tally span{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:8px}
+
+/* pipeline: the whole funnel, visible. nobody drops off silently. */
+.pipe{display:flex;border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;margin-top:14px;background:var(--paper)}
+.pipe div{flex:1;padding:14px 16px;border-right:1px solid var(--rule-2);text-align:center}
+.pipe div:last-child{border-right:none}
+.pipe b{display:block;font-family:var(--display);font-size:26px;line-height:1;color:var(--ink)}
+.pipe span{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:6px;font-weight:600}
+
+.p-row{display:flex;align-items:center;gap:16px;padding:18px 20px;border-bottom:1px solid var(--rule-2);flex-wrap:wrap}
+.p-row:last-child{border-bottom:none}
+.p-row .main{flex:1;min-width:200px}
+.p-row h3{font-size:18px;line-height:1.3}
+.p-row .meta{font-size:12.5px;color:var(--muted);margin-top:4px}
+.p-row .num{text-align:center;flex:none;min-width:64px}
+.p-row .num b{display:block;font-family:var(--display);font-size:26px;line-height:1;color:var(--ink)}
+.p-row .num span{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.p-row.closed{opacity:.6}
+.acts{display:flex;gap:7px;flex-wrap:wrap}

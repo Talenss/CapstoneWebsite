@@ -1,0 +1,22 @@
+/* Port of the inline <style> block from 04_Website/app/seeker-dashboard.html. */
+.picker{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.picker select{padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:14px;background:var(--paper);min-width:190px}
+.picker .attached{font-size:12px;color:var(--gold-deep);font-weight:600;white-space:nowrap}
+.tier{margin-top:40px}
+.tier-head{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+.tier-head h2{font-size:25px}
+.tier > p{color:var(--muted);font-size:13.5px;margin-bottom:18px;max-width:70ch}
+.job{display:flex;flex-direction:column;gap:14px}
+.job .top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+.job h3{font-size:19px;line-height:1.25}
+.job .co{font-size:12.5px;color:var(--muted);margin-top:4px}
+.job .req{display:flex;gap:16px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.job .req b.ok{color:var(--emerald)} .job .req b.no{color:var(--gold-deep)}
+.job .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto;padding-top:4px}
+.job .foot span{font-size:12.5px;color:var(--muted)}
+.tally{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--rule);border-radius:var(--r-lg);background:var(--paper);overflow:hidden;margin-top:26px}
+@media(max-width:700px){.tally{grid-template-columns:1fr 1fr}}
+.tally div{padding:18px 20px;border-right:1px solid var(--rule-2)}
+.tally div:last-child{border-right:none}
+.tally b{display:block;font-family:var(--display);font-size:32px;line-height:1;color:var(--ink)}
+.tally span{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:600;margin-top:6px;display:block}

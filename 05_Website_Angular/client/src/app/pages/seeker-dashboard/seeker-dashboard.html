@@ -1,0 +1,173 @@
+<app-header variant="seeker" active="dashboard" [showTour]="true" />
+
+<main id="main" class="container" style="padding-bottom:80px">
+
+  <div class="page-head head-row">
+    <div>
+      <span class="eyebrow">Your matches</span>
+      <h1>{{ hello() }}</h1>
+      <p>Scored from your <b>active resume</b> against every open position — skills 50%, education 25%, experience 25%. Change the resume and the whole board re-scores.</p>
+    </div>
+    @if (resumes().length) {
+      <div class="picker" id="picker">
+        <label for="resumeSel" style="font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Active resume</label>
+        <select id="resumeSel" aria-label="Choose your active resume" [value]="activeId() ?? ''" (change)="onResumeChange($event)">
+          @for (r of resumes(); track r.id) {
+            <option [value]="r.id ?? ''">{{ r.title }}{{ r.ownFile ? ' 📎' : '' }}</option>
+          }
+        </select>
+        <span class="attached" [hidden]="!activeResumeHasFile()">📎 own file attached</span>
+        <a class="btn ghost sm" routerLink="/resume-builder" [queryParams]="{ id: activeId() }">Edit</a>
+      </div>
+    }
+  </div>
+
+  <div id="board">
+    @if (loading()) {
+      <div class="loading"><span class="spinner"></span> Scoring your resume against the open positions…</div>
+    } @else if (!resumes().length) {
+      <div class="card empty crest">
+        <h2>Let’s build your first resume</h2>
+        <p>Everything here runs off it. Once it exists, the system scores it against every open position at Royce and shows you exactly where you fit — and where you nearly fit.</p>
+        <a class="btn primary" routerLink="/resume-builder">Start the guided builder</a>
+      </div>
+    } @else if (totalReco() === 0) {
+      <div class="card empty">
+        <h2>No open positions right now</h2>
+        <p>Royce hasn’t posted anything your resume can be scored against yet. Check back, or polish your resume in the meantime.</p>
+        <a class="btn ghost" routerLink="/learning-hub">Read the resume guides</a>
+      </div>
+    } @else {
+      @for (t of tiersConfig; track t.key) {
+        @if (reco()![t.key].length) {
+          <section class="tier" [id]="'tier-' + t.key">
+            <div class="tier-head">
+              <h2>{{ t.title }}</h2>
+              <span class="badge {{ t.badgeClass }}">{{ reco()![t.key].length }}</span>
+            </div>
+            <p>{{ t.note }}</p>
+            <div class="grid cols-3">
+              @for (item of reco()![t.key]; track item.posting.id) {
+                <article class="card job">
+                  <div class="top">
+                    <div>
+                      <h3>{{ item.posting.title }}</h3>
+                      <div class="co">{{ item.company?.name }} · {{ item.posting.department }}</div>
+                    </div>
+                    <span class="score-ring" [style.--p]="item.score" [style.--c]="tierColor(item.score)"><b>{{ item.score }}%</b></span>
+                  </div>
+                  <div>
+                    @for (s of item.posting.skills; track s) {
+                      <span class="chip" [class.miss]="!item.matchedSkills.includes(s)">{{ s }}</span>
+                    }
+                  </div>
+                  <div class="req">
+                    <span>Education <b [class.ok]="item.eduMeets" [class.no]="!item.eduMeets">{{ item.eduMeets ? 'meets' : 'below' }}</b></span>
+                    <span>Experience <b [class.ok]="item.expMeets" [class.no]="!item.expMeets">{{ item.expMeets ? 'meets' : 'below' }}</b></span>
+                  </div>
+                  <div class="foot">
+                    <span>{{ item.matchedSkills.length }} of {{ item.posting.skills.length }} skills</span>
+                    @if (item.applied) {
+                      <span class="badge slate">Applied</span>
+                    } @else {
+                      <button class="btn primary sm" type="button" (click)="openApply(item)">View &amp; apply</button>
+                    }
+                  </div>
+                </article>
+              }
+            </div>
+          </section>
+        }
+      }
+      @if (reco() && !reco()!.strong.length && !reco()!.possible.length) {
+        <div class="note" style="margin-top:26px">Nothing above {{ THRESHOLDS.related }}% yet — but the related roles above share skills you already have. Adding the missing skills to your resume (the crossed-out ones) is usually the fastest way to move a score up.</div>
+      }
+    }
+  </div>
+
+  <section class="tier" id="appsSection">
+    <div class="tier-head">
+      <h2>My applications</h2>
+      <span class="badge slate">Statuses are set by the recruiter</span>
+    </div>
+    <p>Every change here was made by a person at the hotel. The system never moves an application on its own.</p>
+    @if (applications().length) {
+      <div class="tally" id="tally">
+        <div><b>{{ applications().length }}</b><span>Applied</span></div>
+        <div><b>{{ countByStatus('submitted') + countByStatus('review') }}</b><span>In progress</span></div>
+        <div><b>{{ countByStatus('shortlisted') }}</b><span>Shortlisted</span></div>
+        <div><b>{{ countByStatus('hired') }}</b><span>Hired</span></div>
+      </div>
+    }
+    <div class="card flush" style="margin-top:18px">
+      <div class="wrap-x">
+        <table class="tbl" id="apps">
+          <thead><tr><th>Position</th><th>Company</th><th>Resume sent</th><th>Applied</th><th>Status</th></tr></thead>
+          <tbody>
+            @for (a of applications(); track a.id) {
+              <tr>
+                <td><b>{{ a.posting ? a.posting.title : 'Removed' }}</b></td>
+                <td>{{ a.company ? a.company.name : '—' }}</td>
+                <td>{{ a.resumeTitle || '—' }}</td>
+                <td style="white-space:nowrap">{{ day(a.appliedAt) }}</td>
+                <td><span class="badge {{ statusBadge(a.status) }}">{{ STATUS_LABELS[a.status] }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (!applications().length) {
+        <p id="noApps" style="padding:32px;text-align:center;color:var(--muted);font-size:14px">
+          Nothing here yet. Apply to a match above and you'll be able to follow it from Submitted through to Hired.
+        </p>
+      }
+    </div>
+  </section>
+</main>
+
+<!-- apply -->
+<div class="modal-back" [class.show]="!!current()" (click)="onBackdropClick($event)">
+  @if (current(); as item) {
+    <div class="modal">
+      <button class="close-x" type="button" aria-label="Close" (click)="closeApply()">&times;</button>
+      <div class="modal-head">
+        <h3>{{ item.posting.title }}</h3>
+        <p class="sub">{{ item.company?.name }} · {{ item.posting.department }}</p>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex;align-items:center;gap:18px;margin-bottom:6px">
+          <span class="score-ring lg" [style.--p]="item.score" [style.--c]="tierColor(item.score)"><b>{{ item.score }}%</b></span>
+          <div>
+            <div class="badge {{ tierBadgeClass(item.score) }}" style="margin-bottom:7px">{{ tierLabel(item.score) }}</div>
+            <div style="font-size:13px;color:var(--muted)">Your resume: <b style="color:var(--ink)">{{ activeResumeTitle() }}</b></div>
+          </div>
+        </div>
+        <p style="font-size:14px;background:var(--ivory);border-radius:var(--r);padding:14px 16px;margin:16px 0;color:var(--text)">{{ item.posting.description }}</p>
+        <div class="breakdown">
+          <div class="row">
+            <span><b>Skills matched</b><span class="w">{{ WEIGHTS.skills * 100 }}% of the score</span></span>
+            <b>{{ item.matchedSkills.length }} of {{ item.posting.skills.length }}{{ item.matchedSkills.length ? ' — ' + item.matchedSkills.join(', ') : '' }}</b>
+          </div>
+          <div class="row">
+            <span><b>Education</b><span class="w">{{ WEIGHTS.education * 100 }}% of the score</span></span>
+            <b [style.color]="item.eduMeets ? 'var(--emerald)' : 'var(--gold-deep)'">{{ item.eduMeets ? 'Meets ' + EDU_LABELS[item.posting.educationLevel] : 'Below ' + EDU_LABELS[item.posting.educationLevel] }}</b>
+          </div>
+          <div class="row">
+            <span><b>Experience</b><span class="w">{{ WEIGHTS.experience * 100 }}% of the score</span></span>
+            <b [style.color]="item.expMeets ? 'var(--emerald)' : 'var(--gold-deep)'">{{ item.seekerMonths }} mo · asks for {{ item.posting.minExperienceMonths || 0 }} mo</b>
+          </div>
+          <div class="row"><span><b>What happens to a low score</b></span><b style="font-weight:500;color:var(--muted)">Nothing automatic. A recruiter still sees you.</b></div>
+        </div>
+        <p style="font-size:12.5px;color:var(--muted)">Applying sends the resume above, plus your uploaded file if you attached one. A recruiter reads both.</p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn ghost" type="button" (click)="closeApply()">Close</button>
+        <button class="btn primary" type="button" [disabled]="applying()" (click)="applyNow()">
+          @if (applying()) { <span class="spinner"></span> Sending… } @else { Apply now }
+        </button>
+      </div>
+    </div>
+  }
+</div>
+
+<div class="toast" [class.show]="!!toastMsg()">{{ toastMsg() }}</div>

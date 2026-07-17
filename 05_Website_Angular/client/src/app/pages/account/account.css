@@ -1,0 +1,7 @@
+/* Port of the inline <style> block from 04_Website/app/account.html. */
+.sections{display:grid;gap:22px;max-width:760px;margin-bottom:80px}
+.danger{border-top:2px solid var(--wine)}
+.kv{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--rule-2);font-size:14px}
+.kv:last-child{border-bottom:none}
+.kv span:first-child{color:var(--muted)}
+.kv b{font-weight:600}

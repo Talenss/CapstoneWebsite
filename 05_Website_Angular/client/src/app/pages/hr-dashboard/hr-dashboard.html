@@ -1,0 +1,80 @@
+<app-header variant="recruiter" active="dashboard" [showTour]="true" />
+
+<main id="main" class="container" style="padding-bottom:80px">
+  <div class="page-head head-row">
+    <div>
+      <span class="eyebrow" id="coName">{{ coLabel() || 'Your company' }}</span>
+      <h1>{{ hello() }}</h1>
+      <p>Applicants arrive scored and ranked, with the maths shown. The ranking is a starting point — <b>every decision here is yours</b>.</p>
+    </div>
+    <a class="btn primary" routerLink="/hr-posting">+ Post an opening</a>
+  </div>
+
+  <div class="tally" id="tally">
+    @if (stats(); as s) {
+      <div><b>{{ s.openPostings }}</b><span>Open positions</span></div>
+      <div><b>{{ s.totalApplicants }}</b><span>Total applicants</span></div>
+      <div><b [class.alert]="s.needsReview > 0">{{ s.needsReview }}</b><span>Waiting for you</span></div>
+      <div><b>{{ s.byStatus.shortlisted }}</b><span>Shortlisted</span></div>
+    }
+  </div>
+
+  <section id="pipeSection">
+    <h2 style="font-size:24px;margin-bottom:2px">The pipeline</h2>
+    <p style="color:var(--muted);font-size:13.5px">Everyone who applied is somewhere in here. The system moves nobody — you do.</p>
+    <div class="pipe" id="pipe">
+      @if (stats(); as s) {
+        @for (k of statusOrder; track k) {
+          <div><b>{{ s.byStatus[k] }}</b><span>{{ statusLabels[k] }}</span></div>
+        }
+      }
+    </div>
+  </section>
+
+  <section style="margin-top:44px" id="postSection">
+    <div class="head-row" style="margin-bottom:16px">
+      <div>
+        <h2 style="font-size:24px">Openings</h2>
+        <p style="color:var(--muted);font-size:13.5px">Close an opening to stop new applications without losing the ones you already have.</p>
+      </div>
+    </div>
+    <div class="card flush" id="posts">
+      @if (loading()) {
+        <div class="loading"><span class="spinner"></span> Loading your openings…</div>
+      } @else if (!postings().length) {
+        <div class="empty">
+          <h2>No openings yet</h2>
+          <p>Post one and applicants will start arriving here, already scored against the skills and qualifications you asked for.</p>
+          <a class="btn primary" routerLink="/hr-posting">Post your first opening</a>
+        </div>
+      } @else {
+        @for (p of postings(); track p.id) {
+          <div class="p-row" [class.closed]="p.status === 'closed'">
+            <div class="main">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <h3>{{ p.title }}</h3>
+                @if (p.status === 'open') {
+                  <span class="badge green">Open</span>
+                } @else {
+                  <span class="badge slate">Closed</span>
+                }
+                @if (p.newCount) {
+                  <span class="badge gold">{{ p.newCount }} new</span>
+                }
+              </div>
+              <div class="meta">{{ p.department }} · {{ p.skills.length }} skills asked for · posted {{ day(p.createdAt) }}</div>
+            </div>
+            <div class="num"><b>{{ p.applicantCount }}</b><span>applied</span></div>
+            <div class="acts">
+              <a class="btn primary sm" [routerLink]="['/hr-applicants']" [queryParams]="{ id: p.id }">Review applicants</a>
+              <a class="btn ghost sm" [routerLink]="['/hr-posting']" [queryParams]="{ id: p.id }">Edit</a>
+              <button class="btn ghost sm" type="button" (click)="toggle(p)">{{ p.status === 'open' ? 'Close' : 'Reopen' }}</button>
+            </div>
+          </div>
+        }
+      }
+    </div>
+  </section>
+</main>
+
+<div class="toast" [class.show]="toastMsg()" role="status" aria-live="polite">{{ toastMsg() }}</div>

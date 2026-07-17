@@ -1,0 +1,147 @@
+<app-header [variant]="headerVariant()" active="openings" />
+
+<main id="main" class="container" style="padding-bottom:80px">
+  <div class="page-head">
+    <span class="eyebrow">Royce Hotel &amp; Casino · Clark Freeport Zone</span>
+    <h1>Open positions</h1>
+    <p>{{ sub() }}</p>
+  </div>
+
+  @if (!session.user()) {
+    <div class="alert info show" style="margin-bottom:22px" role="status">
+      You’re browsing as a guest. <a routerLink="/auth" fragment="register">Create a free account</a> to see how your resume scores against each of these and to apply.
+    </div>
+  } @else if (isSeeker() && !resume()) {
+    <div class="alert info show" style="margin-bottom:22px" role="status">
+      You don’t have a resume yet, so these can’t be scored. <a routerLink="/resume-builder">Build one</a> — it takes a few minutes, and browsing stays open below.
+    </div>
+  }
+
+  <div class="filters">
+    <input type="search" placeholder="Search by title, department, or skill" aria-label="Search openings" [value]="query()" (input)="onQueryInput($event)">
+    <select aria-label="Filter by department" [value]="dept()" (change)="onDeptChange($event)">
+      <option value="">All departments</option>
+      @for (d of depts(); track d) {
+        <option [value]="d">{{ d }}</option>
+      }
+    </select>
+    <select aria-label="Sort openings" [value]="sort()" (change)="onSortChange($event)">
+      @if (resume()) {
+        <option value="score">Best match first</option>
+      }
+      <option value="new">Newest first</option>
+      <option value="az">A to Z</option>
+    </select>
+    <span class="count">{{ filteredRows().length }} of {{ rows().length }} shown</span>
+  </div>
+
+  <div id="list">
+    @if (!loaded()) {
+      <div class="loading"><span class="spinner"></span> Loading openings…</div>
+    } @else if (!filteredRows().length) {
+      <div class="card empty"><h2>Nothing matches that</h2><p>Try a different word, or clear the department filter.</p></div>
+    } @else {
+      <div class="grid cols-3">
+        @for (row of filteredRows(); track row.posting.id) {
+          <article class="card job">
+            <div class="top">
+              <div>
+                <h3>{{ row.posting.title }}</h3>
+                <div class="co">{{ row.company?.name }} · {{ row.posting.department }}</div>
+              </div>
+              @if (row.s) {
+                <span class="score-ring" [style.--p]="row.s.score" [style.--c]="tierColor(row.s.score)"><b>{{ row.s.score }}%</b></span>
+              }
+            </div>
+            <p class="desc">{{ row.posting.description }}</p>
+            <div>
+              @for (sk of row.posting.skills; track sk) {
+                <span class="chip" [class.miss]="!!row.s && !row.s.matchedSkills.includes(sk)">{{ sk }}</span>
+              }
+            </div>
+            <div class="req">
+              <span>{{ EDU_LABELS[row.posting.educationLevel] }}</span>
+              <span>{{ row.posting.minExperienceMonths ? row.posting.minExperienceMonths + ' months experience' : 'No experience required' }}</span>
+            </div>
+            <div class="foot">
+              <span>{{ row.s ? row.s.matchedSkills.length + ' of ' + row.posting.skills.length + ' skills' : row.posting.skills.length + ' skills asked for' }}</span>
+              @if (row.applied) {
+                <span class="badge slate">Applied</span>
+              } @else {
+                <button class="btn primary sm" type="button" (click)="openDetail(row)">View</button>
+              }
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </div>
+</main>
+
+<!-- detail / apply -->
+<div class="modal-back" [class.show]="!!current()" (click)="onBackdropClick($event)">
+  @if (current(); as row) {
+    <div class="modal">
+      <button class="close-x" type="button" aria-label="Close" (click)="closeDetail()">&times;</button>
+      <div class="modal-head">
+        <h3>{{ row.posting.title }}</h3>
+        <p class="sub">{{ row.company?.name }} · {{ row.posting.department }}</p>
+      </div>
+      <div class="modal-body">
+        @if (row.s) {
+          <div style="display:flex;align-items:center;gap:18px">
+            <span class="score-ring lg" [style.--p]="row.s.score" [style.--c]="tierColor(row.s.score)"><b>{{ row.s.score }}%</b></span>
+            <div>
+              <div class="badge {{ tierBadgeClass(row.s.score) }}" style="margin-bottom:7px">{{ tierLabel(row.s.score) }}</div>
+              <div style="font-size:13px;color:var(--muted)">Your resume: <b style="color:var(--ink)">{{ resume()?.title }}</b></div>
+            </div>
+          </div>
+        }
+        <p style="font-size:14px;background:var(--ivory);border-radius:var(--r);padding:14px 16px;margin:16px 0">{{ row.posting.description }}</p>
+        <div style="margin-bottom:14px">
+          <span class="badge slate">{{ EDU_LABELS[row.posting.educationLevel] }}</span>
+          <span class="badge slate">{{ row.posting.minExperienceMonths ? row.posting.minExperienceMonths + ' months experience' : 'No experience required' }}</span>
+          <span class="badge slate">{{ row.posting.employmentType || 'full-time' }}</span>
+        </div>
+        <div class="breakdown">
+          @if (row.s) {
+            <div class="row">
+              <span><b>Skills matched</b><span class="w">{{ WEIGHTS.skills * 100 }}% of the score</span></span>
+              <b>{{ row.s.matchedSkills.length }} of {{ row.posting.skills.length }}{{ row.s.missingSkills.length ? ' — missing: ' + row.s.missingSkills.join(', ') : '' }}</b>
+            </div>
+            <div class="row">
+              <span><b>Education</b><span class="w">{{ WEIGHTS.education * 100 }}% of the score</span></span>
+              <b [style.color]="row.s.eduMeets ? 'var(--emerald)' : 'var(--gold-deep)'">{{ row.s.eduMeets ? 'Meets' : 'Below' }} {{ EDU_LABELS[row.posting.educationLevel] }}</b>
+            </div>
+            <div class="row">
+              <span><b>Experience</b><span class="w">{{ WEIGHTS.experience * 100 }}% of the score</span></span>
+              <b [style.color]="row.s.expMeets ? 'var(--emerald)' : 'var(--gold-deep)'">{{ row.s.seekerMonths }} mo · asks for {{ row.posting.minExperienceMonths || 0 }} mo</b>
+            </div>
+            <div class="row"><span><b>If your score is low</b></span><b style="font-weight:500;color:var(--muted)">You still appear on the recruiter’s list.</b></div>
+          } @else {
+            <div class="row"><span><b>Skills asked for</b></span><b>{{ row.posting.skills.join(', ') }}</b></div>
+            <div class="row"><span><b>How scoring works</b></span><b style="font-weight:500;color:var(--muted)">Skills {{ WEIGHTS.skills * 100 }}% · education {{ WEIGHTS.education * 100 }}% · experience {{ WEIGHTS.experience * 100 }}%</b></div>
+          }
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn ghost" type="button" (click)="closeDetail()">Close</button>
+        @if (!session.user()) {
+          <a class="btn primary" routerLink="/auth" fragment="register">Create an account to apply</a>
+        } @else if (!isSeeker()) {
+          <span style="font-size:13px;color:var(--muted)">Recruiter accounts can’t apply.</span>
+        } @else if (!resume()) {
+          <a class="btn primary" routerLink="/resume-builder">Build a resume to apply</a>
+        } @else if (row.applied) {
+          <span class="badge slate">Already applied</span>
+        } @else {
+          <button class="btn primary" type="button" [disabled]="applying()" (click)="applyNow(row)">
+            @if (applying()) { <span class="spinner"></span> Sending… } @else { Apply now }
+          </button>
+        }
+      </div>
+    </div>
+  }
+</div>
+
+<div class="toast" [class.show]="!!toastMsg()">{{ toastMsg() }}</div>

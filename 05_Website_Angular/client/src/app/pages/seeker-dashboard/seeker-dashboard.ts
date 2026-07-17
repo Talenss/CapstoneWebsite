@@ -1,0 +1,181 @@
+import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { Header } from '../../layout/header/header';
+import { ApiService } from '../../core/api.service';
+import { SessionService } from '../../core/session.service';
+import { TourService } from '../../shared/tour/tour.service';
+import { AppStatus, Application, RecommendationItem, Resume } from '../../core/models';
+import { EDU_LABELS, STATUS_LABELS, THRESHOLDS, WEIGHTS, statusBadge, tierColor, tierLabel, tierOf } from '../../core/engine';
+
+type TierKey = 'strong' | 'possible' | 'related';
+interface Reco { strong: RecommendationItem[]; possible: RecommendationItem[]; related: RecommendationItem[] }
+interface TierConfig { key: TierKey; title: string; badgeClass: string; note: string }
+
+/** Port of 04_Website/app/seeker-dashboard.html — the seeker's home base.
+ *  Scores their active resume against every open posting (via
+ *  api.match.recommendations()) into three tiers, and lists their
+ *  applications. Carries the site's only onboarding tour. */
+@Component({
+  selector: 'app-seeker-dashboard',
+  standalone: true,
+  imports: [RouterLink, Header],
+  templateUrl: './seeker-dashboard.html',
+  styleUrl: './seeker-dashboard.css',
+})
+export class SeekerDashboard implements OnInit {
+  private api = inject(ApiService);
+  session = inject(SessionService);
+  private tour = inject(TourService);
+
+  readonly THRESHOLDS = THRESHOLDS;
+  readonly WEIGHTS = WEIGHTS;
+  readonly EDU_LABELS = EDU_LABELS;
+  readonly STATUS_LABELS = STATUS_LABELS;
+  readonly tierColor = tierColor;
+  readonly tierLabel = tierLabel;
+  readonly statusBadge = statusBadge;
+
+  readonly tiersConfig: TierConfig[] = [
+    { key: 'strong', title: 'Strong matches', badgeClass: 'green', note: `At or above ${THRESHOLDS.strong}% — your resume already meets most of what the posting asks for.` },
+    { key: 'possible', title: 'Possible matches', badgeClass: 'gold', note: `Between ${THRESHOLDS.related}% and ${THRESHOLDS.strong - 1}% — worth applying to. Recruiters read every applicant, not just the top of the list.` },
+    { key: 'related', title: 'Related roles', badgeClass: 'slate', note: `Below ${THRESHOLDS.related}%, but you share real skills with these. This is where you get pointed instead of turned away.` },
+  ];
+
+  loading = signal(true);
+  resumes = signal<Resume[]>([]);
+  activeId = signal<string | null>(null);
+  reco = signal<Reco | null>(null);
+  applications = signal<Application[]>([]);
+  current = signal<RecommendationItem | null>(null);
+  applying = signal(false);
+  toastMsg = signal<string | null>(null);
+
+  hello = computed(() => {
+    const name = this.session.user()?.name ?? '';
+    return `Hello, ${name.split(' ')[0] ?? ''}.`;
+  });
+
+  activeResume = computed(() => this.resumes().find((r) => r.id === this.activeId()) ?? null);
+  activeResumeTitle = computed(() => this.activeResume()?.title ?? '');
+  activeResumeHasFile = computed(() => !!this.activeResume()?.ownFile);
+
+  totalReco = computed(() => {
+    const r = this.reco();
+    return r ? r.strong.length + r.possible.length + r.related.length : 0;
+  });
+
+  async ngOnInit(): Promise<void> {
+    await this.render();
+    const uid = this.session.user()?.id;
+    this.tour.init(
+      'seeker-dashboard',
+      [
+        { sel: '#picker', title: 'Your active resume', text: 'Every score on this page comes from this one resume. Keep several versions and switch between them — the board re-scores instantly.' },
+        { sel: '#board .tier:first-child', title: 'Matches, in three tiers', text: 'Strong, possible, and related. That third tier is the point: a low score redirects you to roles that fit, rather than shutting a door.' },
+        { sel: '#board .score-ring', title: 'What the number means', text: 'Skills are half of it, education and experience a quarter each. Open any match to see the full breakdown — the same one the recruiter sees.' },
+        { sel: '#appsSection', title: 'Follow your applications', text: 'Submitted, Under review, Shortlisted, Hired, or Not selected. Every one of those is set by a person at the hotel — never by the system.' },
+        { sel: '[data-tour]', title: 'Lost? Come back here', text: 'This tour is always available from this button, on every page. Nothing you do here is permanent until you say so.' },
+      ],
+      { user: uid },
+    );
+  }
+
+  private async render(): Promise<void> {
+    const [rRes, meRes] = await Promise.all([this.api.resumes.mine(), this.api.auth.me()]);
+    const resumes = rRes.ok ? rRes.resumes : [];
+    this.resumes.set(resumes);
+
+    if (!resumes.length) {
+      this.reco.set(null);
+      this.activeId.set(null);
+      await this.renderApps();
+      this.loading.set(false);
+      return;
+    }
+
+    const me = meRes.ok ? meRes.user : null;
+    let activeId = me?.activeResumeId || null;
+    if (!activeId || !resumes.some((r) => r.id === activeId)) {
+      activeId = resumes[0].id;
+      if (activeId) await this.api.resumes.setActive(activeId);
+    }
+    this.activeId.set(activeId);
+
+    const recoRes = await this.api.match.recommendations();
+    this.reco.set(
+      recoRes.ok
+        ? { strong: recoRes.strong, possible: recoRes.possible, related: recoRes.related }
+        : { strong: [], possible: [], related: [] },
+    );
+
+    await this.renderApps();
+    this.loading.set(false);
+  }
+
+  private async renderApps(): Promise<void> {
+    const res = await this.api.applications.mine();
+    this.applications.set(res.ok ? res.applications : []);
+  }
+
+  countByStatus(status: AppStatus): number {
+    return this.applications().filter((a) => a.status === status).length;
+  }
+
+  day(ts: number): string {
+    return new Date(ts).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  tierBadgeClass(score: number): string {
+    const t = tierOf(score);
+    return t === 'strong' ? 'green' : t === 'possible' ? 'gold' : 'slate';
+  }
+
+  async onResumeChange(e: Event): Promise<void> {
+    const id = (e.target as HTMLSelectElement).value;
+    await this.api.resumes.setActive(id);
+    await this.render();
+    this.showToast('Active resume changed — everything re-scored.');
+  }
+
+  openApply(item: RecommendationItem): void {
+    this.current.set(item);
+  }
+
+  closeApply(): void {
+    this.current.set(null);
+  }
+
+  onBackdropClick(e: MouseEvent): void {
+    if (e.target === e.currentTarget) this.closeApply();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.current()) this.closeApply();
+  }
+
+  async applyNow(): Promise<void> {
+    const item = this.current();
+    if (!item) return;
+    this.applying.set(true);
+    const meRes = await this.api.auth.me();
+    const activeResumeId = meRes.ok ? meRes.user?.activeResumeId : null;
+    const res = activeResumeId
+      ? await this.api.applications.apply(activeResumeId, item.posting.id)
+      : ({ ok: false, error: 'No active resume.' } as const);
+    this.applying.set(false);
+    if (!res.ok) {
+      this.showToast(res.error);
+      return;
+    }
+    const title = item.posting.title;
+    this.closeApply();
+    await this.render();
+    this.showToast(`Applied to ${title}. Track it below.`);
+  }
+
+  private showToast(msg: string): void {
+    this.toastMsg.set(msg);
+    setTimeout(() => this.toastMsg.set(null), 3000);
+  }
+}

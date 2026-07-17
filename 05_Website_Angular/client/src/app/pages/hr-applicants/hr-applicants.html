@@ -1,0 +1,202 @@
+<app-header variant="recruiter" />
+
+<main id="main" class="container" style="padding-bottom:80px">
+  <div class="page-head head-row">
+    <div>
+      <a routerLink="/hr-dashboard" style="font-size:12.5px;color:var(--muted);text-decoration:none">&larr; All openings</a>
+      <span class="eyebrow" style="display:block;margin-top:12px">{{ deptLabel() }}</span>
+      <h1>{{ posting()?.title || 'Applicants' }}</h1>
+      <p>{{ subLabel() }}</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="btn ghost" [routerLink]="['/hr-posting']" [queryParams]="{ id: postingId() }">Edit opening</a>
+    </div>
+  </div>
+
+  <div class="note" style="margin-bottom:22px">
+    Ranked by compatibility, not filtered by it. <b>Everyone who applied is on this list</b> — including low scores. The number is a reading aid; the decision is yours.
+  </div>
+
+  <div class="bar">
+    <input type="search" [value]="q()" (input)="setQuery($event)" placeholder="Search by name or skill" aria-label="Search applicants">
+    <select [value]="fStatus()" (change)="setFStatus($event)" aria-label="Filter by status">
+      <option value="">All statuses</option>
+      @for (k of statusOrder; track k) { <option [value]="k">{{ statusLabels[k] }}</option> }
+    </select>
+    <select [value]="fTier()" (change)="setFTier($event)" aria-label="Filter by match tier">
+      <option value="">All match levels</option>
+      <option value="strong">Strong only</option>
+      <option value="possible">Possible only</option>
+      <option value="related">Below threshold</option>
+    </select>
+    <select [value]="fFile()" (change)="setFFile($event)" aria-label="Filter by attached file">
+      <option value="">Any attachment</option>
+      <option value="yes">Has own file</option>
+      <option value="no">System resume only</option>
+    </select>
+    <span class="n">{{ filteredRows().length }} of {{ rows().length }} shown</span>
+  </div>
+
+  <div class="card flush" id="list">
+    @if (loadError(); as err) {
+      <div class="empty">
+        <h2>Not found</h2>
+        <p>{{ err }}</p>
+        <a class="btn ghost" routerLink="/hr-dashboard">Back to dashboard</a>
+      </div>
+    } @else if (loading()) {
+      <div class="loading"><span class="spinner"></span> Ranking applicants…</div>
+    } @else if (!rows().length) {
+      <div class="empty">
+        <h2>No applicants yet</h2>
+        <p>When someone applies, they’ll appear here ranked by compatibility — with the score broken down and both of their resumes attached.</p>
+        <a class="btn ghost" routerLink="/hr-dashboard">Back to dashboard</a>
+      </div>
+    } @else if (!filteredRows().length) {
+      <div class="empty">
+        <h2>Nothing matches those filters</h2>
+        <p>Clear a filter to see the rest of the pool. Applicants are only ever hidden by <i>your</i> filters — never by the system.</p>
+      </div>
+    } @else if (posting(); as p) {
+      @for (r of filteredRows(); track r.application.id) {
+        <div class="app">
+          <span class="rank">{{ rank(r) }}</span>
+          <span class="score-ring" [style.--p]="r.score" [style.--c]="tierColor(r.score)"><b>{{ r.score }}%</b></span>
+          <div class="who">
+            <h3>{{ r.seeker.name }} @if (r.resume.ownFile) {<span class="clip" title="Attached their own resume file">&#128206;</span>}</h3>
+            <div class="meta">{{ r.matchedSkills.length }} of {{ r.totalSkills }} skills · education {{ r.eduMeets ? 'meets' : 'below' }} · {{ r.seekerMonths }} mo experience · applied {{ day(r.application.appliedAt) }}</div>
+            <div class="chips">
+              @for (s of p.skills; track s) {
+                <span class="chip" [class.miss]="!r.matchedSkills.includes(s)">{{ s }}</span>
+              }
+            </div>
+          </div>
+          <div class="side">
+            <span class="badge {{ statusBadge(r.application.status) }}">{{ statusLabels[r.application.status] }}</span>
+            <button class="btn primary sm" type="button" (click)="openModal(r)">Open both resumes</button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</main>
+
+<!-- applicant detail: both resumes, side by side -->
+<div class="modal-back" [class.show]="current()" (click)="onBackdropClick($event)">
+  <div class="modal wide">
+    <button class="close-x" type="button" aria-label="Close" (click)="closeModal()">&times;</button>
+    @if (current(); as r) {
+      <div class="modal-head">
+        <h3>{{ r.seeker.name }}</h3>
+        <p class="sub">Applied {{ day(r.application.appliedAt) }} · {{ posting()?.title }} · resume: {{ r.resume.title }}</p>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex;align-items:center;gap:18px;margin-bottom:16px;flex-wrap:wrap">
+          <span class="score-ring lg" [style.--p]="r.score" [style.--c]="tierColor(r.score)"><b>{{ r.score }}%</b></span>
+          <div style="flex:1;min-width:200px">
+            <span class="badge {{ tierBadgeClass(r.tier) }}" style="margin-bottom:8px">{{ tierLabel(r.score) }}</span>
+            <div class="breakdown" style="margin:8px 0 0">
+              <div class="row">
+                <span><b>Skills</b><span class="w">{{ weights.skills * 100 }}% weight</span></span>
+                <b>{{ r.matchedSkills.length }} of {{ r.totalSkills }}{{ r.missingSkills.length ? ' · missing ' + r.missingSkills.join(', ') : '' }}</b>
+              </div>
+              <div class="row">
+                <span><b>Education</b><span class="w">{{ weights.education * 100 }}% weight</span></span>
+                <b [style.color]="r.eduMeets ? 'var(--emerald)' : 'var(--gold-deep)'">{{ r.eduMeets ? 'Meets' : 'Below' }} {{ posting() ? eduLabels[posting()!.educationLevel] : '' }}</b>
+              </div>
+              <div class="row">
+                <span><b>Experience</b><span class="w">{{ weights.experience * 100 }}% weight</span></span>
+                <b [style.color]="r.expMeets ? 'var(--emerald)' : 'var(--gold-deep)'">{{ r.seekerMonths }} mo · asked {{ posting()?.minExperienceMonths || 0 }} mo</b>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dual">
+          <section class="pane scored">
+            <header><b>Structured resume</b><span class="badge green">Scored</span></header>
+            <div class="inner">
+              <div class="p-name">{{ r.resume.personal.fullName }}</div>
+              <div class="p-contact">{{ contactLine(r.resume.personal) }}</div>
+              @if (r.resume.personal.summary) {
+                <div class="p-sec"><h4>Summary</h4><p style="font-size:11.5px">{{ r.resume.personal.summary }}</p></div>
+              }
+              @if (r.resume.education.length) {
+                <div class="p-sec">
+                  <h4>Education</h4>
+                  @for (e of r.resume.education; track $index) {
+                    <div class="p-item"><b>{{ e.degree }}</b><i>{{ e.school }}{{ e.year ? ' · ' + e.year : '' }}</i></div>
+                  }
+                </div>
+              }
+              @if (r.resume.experience.length) {
+                <div class="p-sec">
+                  <h4>Experience</h4>
+                  @for (e of r.resume.experience; track $index) {
+                    <div class="p-item">
+                      <b>{{ e.position }}</b><i>{{ e.company }}{{ e.months ? ' · ' + e.months + ' months' : '' }}</i>
+                      @if (e.description) { <p>{{ e.description }}</p> }
+                    </div>
+                  }
+                </div>
+              }
+              @if (r.resume.skills.length) {
+                <div class="p-sec">
+                  <h4>Skills</h4>
+                  <div class="p-skills">
+                    @for (s of r.resume.skills; track s) {
+                      <span [class.hit]="r.matchedSkills.includes(s)">{{ s }}</span>
+                    }
+                  </div>
+                </div>
+              }
+              @if (r.resume.certifications.length) {
+                <div class="p-sec">
+                  <h4>Certifications</h4>
+                  @for (c of r.resume.certifications; track $index) {
+                    <div class="p-item"><b>{{ c.name }}</b>@if (c.year) {<i>{{ c.year }}</i>}</div>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+          <section class="pane human">
+            <header><b>Applicant's own file</b><span class="badge gold">Never scored</span></header>
+            @if (r.resume.ownFile; as f) {
+              <div>
+                @if (f.mime === 'application/pdf') {
+                  <iframe [src]="iframeUrl(r.resume.id)" [title]="f.name"></iframe>
+                } @else if (f.mime.startsWith('image/')) {
+                  <img [src]="imgUrl(r.resume.id)" [alt]="'Resume uploaded by ' + r.seeker.name">
+                } @else {
+                  <div style="padding:44px 20px;text-align:center;color:var(--muted);font-size:13px;background:var(--ivory)">
+                    Word documents can't be previewed in the browser — download it to read it.
+                  </div>
+                }
+                <div style="padding:12px 14px;background:var(--ivory);border-top:1px solid var(--rule-2);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+                  <span style="font-size:12px;color:var(--muted)">{{ f.name }} · {{ kb(f.size) }}</span>
+                  <a class="btn ghost sm" [href]="downloadUrl(r.resume.id)" [download]="f.name">Download</a>
+                </div>
+              </div>
+            } @else {
+              <div class="none">
+                <b style="font-family:var(--display);font-size:19px;color:var(--ink)">No file attached</b>
+                <span>This applicant didn't upload their own resume document — only the structured one on the left.</span>
+              </div>
+            }
+          </section>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <span style="margin-right:auto;font-size:12.5px;color:var(--muted)">Status changes are recorded against your account.</span>
+        <select [value]="modalStatus()" (change)="setModalStatus($event)" style="padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px">
+          @for (k of statusOrder; track k) { <option [value]="k">{{ statusLabels[k] }}</option> }
+        </select>
+        <button class="btn primary" type="button" (click)="saveStatus()" [disabled]="savingStatus()">
+          @if (savingStatus()) { <span class="spinner"></span> Saving… } @else { Update status }
+        </button>
+      </div>
+    }
+  </div>
+</div>
+
+<div class="toast" [class.show]="toastMsg()" role="status" aria-live="polite">{{ toastMsg() }}</div>
