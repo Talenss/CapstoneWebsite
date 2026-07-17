@@ -23,8 +23,14 @@ import matchRoutes from './routes/match';
 import statsRoutes from './routes/stats';
 import fileRoutes from './routes/file';
 import analyzeRoutes from './routes/analyze';
+import { ensureEmailCodesTable } from './lib/email-codes';
 
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+// The email-codes table is additive, so databases imported from the original
+// 04_Website schema upgrade themselves on first boot.
+ensureEmailCodesTable().catch((e) =>
+  console.error('Could not create the email_codes table (is MySQL running?):', e?.message || e));
 
 const app = express();
 

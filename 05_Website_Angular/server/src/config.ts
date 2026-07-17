@@ -45,3 +45,15 @@ export const SESSION_SECRET = process.env.SESSION_SECRET || 'rmph-dev-secret-cha
 // https://aistudio.google.com/apikey and put it in .env.
 export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
+// ---------- Email sending (verification codes, password reset) ----------
+// Any SMTP service works: Gmail with an "app password", Brevo's free tier,
+// Outlook, etc. — see SETUP.md. Without SMTP settings the email features
+// tell the user email isn't configured; with DEBUG=true the code is also
+// printed to this server's console so development works without SMTP.
+export const SMTP_HOST = process.env.SMTP_HOST || '';
+export const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+export const SMTP_SECURE = (process.env.SMTP_SECURE || (SMTP_PORT === 465 ? 'true' : 'false')) === 'true';
+export const SMTP_USER = process.env.SMTP_USER || '';
+export const SMTP_PASS = process.env.SMTP_PASS || '';
+export const MAIL_FROM = process.env.MAIL_FROM || (SMTP_USER ? `ResumeMatch PH <${SMTP_USER}>` : '');

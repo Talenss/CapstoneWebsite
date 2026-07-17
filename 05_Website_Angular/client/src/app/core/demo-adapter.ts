@@ -16,6 +16,13 @@ const uid = () => 'x' + Math.random().toString(36).slice(2, 9);
 interface DemoUser extends User {
   password: string;
 }
+interface EmailCode {
+  email: string;
+  purpose: 'verify' | 'reset';
+  code: string;
+  attempts: number;
+  expiresAt: number;
+}
 interface Db {
   companies: Company[];
   users: DemoUser[];
@@ -23,6 +30,7 @@ interface Db {
   postings: Posting[];
   applications: Application[];
   recruiterRequests: any[];
+  emailCodes: EmailCode[];
 }
 
 function seed(): Db {
@@ -107,13 +115,18 @@ function seed(): Db {
       { id: 'a5', seekerId: 'u5', resumeId: 'r4', postingId: 'p6', status: 'submitted', appliedAt: Date.now() - D * 1 },
     ] as unknown as Application[],
     recruiterRequests: [],
+    emailCodes: [],
   };
 }
 
 function load(): Db {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const db: Db = JSON.parse(raw);
+      if (!db.emailCodes) db.emailCodes = []; // databases saved before this field existed
+      return db;
+    }
   } catch { /* ignore */ }
   const db = seed();
   persist(db);
@@ -145,6 +158,22 @@ const pubUser = (u: DemoUser | null): User | null => {
   return c;
 };
 
+/** Validate a submitted email code against the demo DB. Returns an error
+ *  message, or null on success (in which case the code is consumed). */
+function consumeCode(db: Db, email: string, purpose: 'verify' | 'reset', submitted: string): string | null {
+  const row = db.emailCodes.find((c) => c.email === email && c.purpose === purpose);
+  if (!row) return 'No code was requested for this email. Use “Resend code” to get one.';
+  if (Date.now() > row.expiresAt) return 'That code has expired. Use “Resend code” to get a fresh one.';
+  if (row.attempts >= 5) return 'Too many wrong tries for this code. Use “Resend code” to get a fresh one.';
+  if (String(submitted).trim() !== row.code) {
+    row.attempts += 1;
+    persist(db);
+    return 'That code isn’t right. Check the email and try again.';
+  }
+  db.emailCodes = db.emailCodes.filter((c) => !(c.email === email && c.purpose === purpose));
+  return null;
+}
+
 export class DemoAdapter implements ApiAdapter {
   auth = {
     login: (email: string, password: string) => {
@@ -156,13 +185,45 @@ export class DemoAdapter implements ApiAdapter {
       setSession(u.id);
       return apiOk({ user: pubUser(u)! });
     },
-    registerSeeker: ({ name, email, password }: { name: string; email: string; password: string }) => {
+    /* Demo mode can't send real email, so the "sent" code is handed straight
+       back (devCode) and the auth page shows it in a banner clearly labelled
+       as demo behavior. Same 6-digit / 10-minute / 5-attempt rules as the
+       real server, so the demonstrated flow is honest. */
+    sendCode: (email: string, purpose: 'verify' | 'reset') => {
       const db = load();
-      if (db.users.some((u) => u.email.toLowerCase() === String(email).trim().toLowerCase()))
-        return apiFail('An account already uses this email. Log in instead.');
+      const e = String(email).trim().toLowerCase();
+      const exists = db.users.some((u) => u.email.toLowerCase() === e);
+      if (purpose === 'verify' && exists)
+        return Promise.resolve({ ok: false, exists: true, error: 'This email already has an account.' } as any);
+      if (purpose === 'reset' && !exists)
+        return apiOk({ sent: true, simulated: true }); // same reply as success — no account enumeration, even in demo
+      const code = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+      db.emailCodes = db.emailCodes.filter((c) => !(c.email === e && c.purpose === purpose));
+      db.emailCodes.push({ email: e, purpose, code, attempts: 0, expiresAt: Date.now() + 10 * 60000 });
+      persist(db);
+      return apiOk({ sent: false, simulated: true, devCode: code });
+    },
+    registerSeeker: ({ name, email, password, code }: { name: string; email: string; password: string; code: string }) => {
+      const db = load();
+      const e = String(email).trim().toLowerCase();
+      if (db.users.some((u) => u.email.toLowerCase() === e))
+        return Promise.resolve({ ok: false, exists: true, error: 'An account already uses this email. Log in instead.' } as any);
+      const err = consumeCode(db, e, 'verify', code);
+      if (err) return apiFail(err);
       const user: DemoUser = { id: uid(), role: 'seeker', name: String(name).trim(), email: String(email).trim(), password, activeResumeId: null, createdAt: Date.now() };
       db.users.push(user); persist(db); setSession(user.id);
       return apiOk({ user: pubUser(user)! });
+    },
+    resetPassword: ({ email, code, password }: { email: string; code: string; password: string }) => {
+      const db = load();
+      const e = String(email).trim().toLowerCase();
+      const u = db.users.find((x) => x.email.toLowerCase() === e);
+      if (!u) return apiFail('That code isn’t right. Check the email and try again.');
+      const err = consumeCode(db, e, 'reset', code);
+      if (err) return apiFail(err);
+      u.password = password;
+      persist(db);
+      return apiOk({});
     },
     requestRecruiterAccess: ({ name, email, position, companyId, note }: { name: string; email: string; position: string; companyId: string; note?: string }) => {
       const db = load();

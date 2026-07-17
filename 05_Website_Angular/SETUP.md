@@ -67,6 +67,46 @@ It listens on **http://localhost:4300** (`PORT` in `.env`). Applicant-uploaded
 files are stored in `server/uploads/`, served only through the access-checked
 `/api/file` route — never a public URL.
 
+#### Optional — email sending (`SMTP_*`): verification codes & password reset
+
+Creating an account emails the address a 6-digit verification code (so
+every registered email is a proven, real inbox), and "Forgot your
+password?" emails a reset code. Both need an SMTP service in server mode.
+Two free options:
+
+**Gmail (simplest if you have a Google account):**
+
+1. Turn on 2-Step Verification for the Google account
+   (myaccount.google.com → Security).
+2. Create an *App password* at <https://myaccount.google.com/apppasswords>
+   (choose "Mail"; copy the 16-character password it generates).
+3. In `server/.env`:
+
+   ```
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=yourgmail@gmail.com
+   SMTP_PASS=the 16-character app password
+   MAIL_FROM=ResumeMatch PH <yourgmail@gmail.com>
+   ```
+
+**Brevo (free tier, ~300 emails/day, no Gmail needed):** sign up at
+<https://www.brevo.com>, get your SMTP credentials from *SMTP & API*, and
+fill the same variables with `SMTP_HOST=smtp-relay.brevo.com`.
+
+Behavior without SMTP configured:
+
+- **Demo mode** — no email possible in a pure-browser app, so the code is
+  shown on screen in a banner clearly labelled *"Demo mode — no real email
+  is sent"*. The flow itself (code entry, expiry, attempt limits) is real.
+- **Server mode with `DEBUG=true`** — the code is printed to the server
+  console and shown in the page, so you can develop without SMTP.
+- **Server mode with `DEBUG=false`** — the user is told email isn't
+  configured. Set up SMTP before going live.
+
+The `email_codes` table these features use is created automatically the
+first time the server starts — an existing database needs no manual change.
+
 #### Optional — AI resume analysis (`GEMINI_API_KEY`)
 
 The "Upload & analyze my resume" feature sends an uploaded resume to

@@ -161,4 +161,6 @@ export interface AnalyzedResume {
 
 /** Every API method returns this shape — success carries the payload,
  *  failure carries a human-readable message. Never throws. */
-export type ApiResult<T extends object = object> = ({ ok: true } & T) | { ok: false; error: string };
+export type ApiResult<T extends object = object> =
+  | ({ ok: true } & T)
+  | { ok: false; error: string; exists?: boolean };

@@ -10,9 +10,74 @@ import { UserRow, ResumeRow, ApplicationRow } from '../types';
 import { ok, fail } from '../lib/http';
 import { currentUser, requireUser } from '../lib/auth';
 import { serializeUser, serializeResume, serializeApplication } from '../lib/serializers';
-import { UPLOAD_DIR } from '../config';
+import { UPLOAD_DIR, DEBUG } from '../config';
+import { mailConfigured, sendCodeEmail, CodePurpose } from '../lib/mailer';
+import { issueCode, checkCode } from '../lib/email-codes';
 
 const router = Router();
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/* ---- Email codes: one endpoint issues them for both purposes. ----
+   'verify'  — sign-up: the email must NOT have an account yet. If it does,
+               the client shows the familiar “log in instead?” prompt
+               (exists: true in the response drives that).
+   'reset'   — forgot password: never reveals whether an account exists;
+               the answer is the same either way, and a code is only
+               actually sent when there is an account behind the email. */
+router.post('/send-code', async (req, res) => {
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
+  const purpose = String(req.body?.purpose ?? '') as CodePurpose;
+  if (!EMAIL_RE.test(email)) return fail(res, 'Enter a valid email address.');
+  if (purpose !== 'verify' && purpose !== 'reset') return fail(res, 'Unknown code purpose.');
+
+  const account = await queryOne('SELECT 1 FROM users WHERE email = ? LIMIT 1', [email]);
+  if (purpose === 'verify' && account)
+    return res.json({ ok: false, exists: true, error: 'This email already has an account.' });
+  if (purpose === 'reset' && !account)
+    return ok(res, { sent: true }); // same reply as success — no account enumeration
+
+  const issued = await issueCode(email, purpose);
+  if (!issued.ok) return fail(res, issued.error);
+
+  if (mailConfigured()) {
+    try {
+      await sendCodeEmail(email, issued.code, purpose);
+    } catch (e: any) {
+      console.error('SMTP send failed:', e?.message || e);
+      return fail(res, 'The email could not be sent right now. Try again in a moment.');
+    }
+    return ok(res, { sent: true });
+  }
+
+  // No SMTP configured. In development the code is surfaced on the server
+  // console (and echoed to the client) so the flow stays testable; in
+  // production the honest answer is that email isn't set up.
+  if (DEBUG) {
+    console.log(`[email-codes] DEBUG — code for ${email} (${purpose}): ${issued.code}`);
+    return ok(res, { sent: false, devCode: issued.code, note: 'SMTP is not configured; DEBUG mode returned the code directly.' });
+  }
+  return fail(res, "Email sending isn't configured on this server. Contact the site administrators.");
+});
+
+router.post('/reset-password', async (req, res) => {
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
+  const code = String(req.body?.code ?? '').trim();
+  const pass = String(req.body?.password ?? '');
+  if (!EMAIL_RE.test(email)) return fail(res, 'Enter a valid email address.');
+  if (pass.length < 6) return fail(res, 'Use a password of at least 6 characters.');
+
+  const u = await queryOne<UserRow>('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
+  // The generic message matches the 'reset' send-code reply: neither
+  // confirms whether the email has an account.
+  if (!u) return fail(res, "That code isn't right. Check the email and try again.");
+
+  const check = await checkCode(email, 'reset', code);
+  if (!check.ok) return fail(res, check.error);
+
+  await exec('UPDATE users SET password_hash = ? WHERE user_id = ?', [await bcrypt.hash(pass, 10), u.user_id]);
+  ok(res);
+});
 
 router.post('/login', async (req, res) => {
   const email = String(req.body?.email ?? '').trim();
@@ -38,15 +103,21 @@ router.post('/login', async (req, res) => {
 
 router.post('/register', async (req, res) => {
   const name = String(req.body?.name ?? '').trim();
-  const email = String(req.body?.email ?? '').trim();
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
   const pass = String(req.body?.password ?? '');
+  const code = String(req.body?.code ?? '').trim();
 
   if (name.length < 2) return fail(res, 'Enter your full name.');
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail(res, 'Enter a valid email address.');
+  if (!EMAIL_RE.test(email)) return fail(res, 'Enter a valid email address.');
   if (pass.length < 6) return fail(res, 'Use a password of at least 6 characters.');
 
   const exists = await queryOne('SELECT 1 FROM users WHERE email = ? LIMIT 1', [email]);
-  if (exists) return fail(res, 'An account already uses this email. Log in instead.');
+  if (exists) return res.json({ ok: false, exists: true, error: 'An account already uses this email. Log in instead.' });
+
+  // The account only comes into being once the emailed code checks out —
+  // so every registered email is a verified email.
+  const check = await checkCode(email, 'verify', code);
+  if (!check.ok) return fail(res, check.error);
 
   const hash = await bcrypt.hash(pass, 10);
   const { insertId } = await exec(

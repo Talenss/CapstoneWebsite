@@ -27,7 +27,10 @@ export class HttpAdapter implements ApiAdapter {
 
   auth = {
     login: (email: string, password: string) => this.call<{ user: User }>('auth', 'login', { email, password }),
+    sendCode: (email: string, purpose: 'verify' | 'reset') =>
+      this.call<{ sent?: boolean; devCode?: string; simulated?: boolean; note?: string }>('auth', 'send-code', { email, purpose }),
     registerSeeker: (d: any) => this.call<{ user: User }>('auth', 'register', d),
+    resetPassword: (d: { email: string; code: string; password: string }) => this.call<object>('auth', 'reset-password', d),
     requestRecruiterAccess: (d: any) => this.call<object>('auth', 'request-access', d),
     logout: () => this.call<object>('auth', 'logout'),
     me: () => this.call<{ user: User | null }>('auth', 'me'),

@@ -11,7 +11,14 @@ import {
 export interface ApiAdapter {
   auth: {
     login(email: string, password: string): Promise<ApiResult<{ user: User }>>;
-    registerSeeker(d: { name: string; email: string; password: string }): Promise<ApiResult<{ user: User }>>;
+    /** Emails a 6-digit code. 'verify' = sign-up (fails with exists:true when
+     *  the email already has an account); 'reset' = forgot password (never
+     *  reveals whether an account exists). In demo mode — and in server dev
+     *  mode without SMTP — the code comes back in devCode so the flow still
+     *  works, clearly labelled as such in the UI. */
+    sendCode(email: string, purpose: 'verify' | 'reset'): Promise<ApiResult<{ sent?: boolean; devCode?: string; simulated?: boolean; note?: string }>>;
+    registerSeeker(d: { name: string; email: string; password: string; code: string }): Promise<ApiResult<{ user: User }>>;
+    resetPassword(d: { email: string; code: string; password: string }): Promise<ApiResult<object>>;
     requestRecruiterAccess(d: { name: string; email: string; position: string; companyId: string; note?: string }): Promise<ApiResult<object>>;
     logout(): Promise<ApiResult<object>>;
     me(): Promise<ApiResult<{ user: User | null }>>;
