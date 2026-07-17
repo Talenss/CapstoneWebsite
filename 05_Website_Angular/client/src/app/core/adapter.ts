@@ -5,7 +5,7 @@
    ApiService without caring which mode is active.
    ============================================================ */
 import {
-  ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, User,
+  AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, User,
 } from './models';
 
 export interface ApiAdapter {
@@ -54,6 +54,12 @@ export interface ApiAdapter {
   };
   stats: {
     hr(): Promise<ApiResult<{ stats: HrStats }>>;
+  };
+  analyze: {
+    /** Opt-in AI extraction of an uploaded resume file. Returns a structured
+     *  resume for the user to review in the builder — never saves anything.
+     *  `simulated` is true in demo mode (no real AI behind it). */
+    resume(file: File): Promise<ApiResult<{ resume: AnalyzedResume; provider?: string; simulated?: boolean }>>;
   };
   resetDemo(): Promise<ApiResult<object>>;
 }

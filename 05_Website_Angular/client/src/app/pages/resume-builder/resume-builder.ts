@@ -1,9 +1,10 @@
 import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
+import { AnalysisService } from '../../core/analysis.service';
 import { TourService } from '../../shared/tour/tour.service';
 import { EDU_LABELS } from '../../core/engine';
 import { Education, EduLevel, Experience, Resume, Template } from '../../core/models';
@@ -36,16 +37,21 @@ const esc = (s: unknown): string => String(s ?? '').replace(/[&<>"']/g, (c) => E
 @Component({
   selector: 'app-resume-builder',
   standalone: true,
-  imports: [Header, NgTemplateOutlet],
+  imports: [Header, NgTemplateOutlet, RouterLink],
   templateUrl: './resume-builder.html',
   styleUrl: './resume-builder.css',
 })
 export class ResumeBuilder implements OnInit {
   private api = inject(ApiService);
   private session = inject(SessionService);
+  private analysis = inject(AnalysisService);
   private tour = inject(TourService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+
+  /** The original file from the Upload & Analyze flow, attached to the
+   *  resume as the recruiter-visible "own file" after the first save. */
+  private pendingAnalysisFile: File | null = null;
 
   readonly STEPS = STEPS;
   readonly eduLevelOptions: { value: EduLevel; label: string }[] = [
@@ -109,6 +115,9 @@ export class ResumeBuilder implements OnInit {
     const id = this.route.snapshot.queryParamMap.get('id');
     const welcome = this.route.snapshot.queryParamMap.get('welcome');
 
+    const fromAnalysis = this.route.snapshot.queryParamMap.get('from') === 'analysis';
+    const pending = fromAnalysis && !id ? this.analysis.take() : null;
+
     if (id) {
       const res = await this.api.resumes.get(id);
       if (!res.ok) {
@@ -116,6 +125,33 @@ export class ResumeBuilder implements OnInit {
         return;
       }
       this.resume.set(res.resume);
+    } else if (pending) {
+      // Prefill from the Upload & Analyze extraction. Nothing is saved yet —
+      // this is exactly the review step the consent text promised.
+      const d = pending.data;
+      this.resume.set({
+        ...blankResume(),
+        title: d.title || 'Uploaded resume',
+        template: d.template || 'chronological',
+        personal: {
+          fullName: d.personal.fullName || user.name,
+          email: d.personal.email || user.email,
+          phone: d.personal.phone || '',
+          address: d.personal.address || '',
+          summary: d.personal.summary || '',
+        },
+        education: d.education,
+        experience: d.experience,
+        skills: d.skills,
+        certifications: d.certifications,
+      });
+      this.pendingAnalysisFile = pending.file;
+      this.dirty.set(true);
+      this.showToast(
+        pending.simulated
+          ? 'Prefilled from a simulated analysis (demo mode) — review each step, then save.'
+          : 'We filled this in from your uploaded resume — review each step before saving.',
+      );
     } else {
       this.resume.update((r) => ({ ...r, title: 'My resume', personal: { ...r.personal, fullName: user.name, email: user.email } }));
     }
@@ -330,6 +366,19 @@ export class ResumeBuilder implements OnInit {
     this.dirty.set(false);
     this.savedFlag.set(true);
     this.router.navigate([], { relativeTo: this.route, queryParams: { id: res.resume.id }, replaceUrl: true });
+
+    // Upload & Analyze flow: attach the original uploaded file to the saved
+    // resume as the recruiter-visible copy (dual-resume model). One attempt —
+    // if it fails, the user can attach it manually on the Finish step.
+    if (this.pendingAnalysisFile && !this.resume().ownFile) {
+      const file = this.pendingAnalysisFile;
+      this.pendingAnalysisFile = null;
+      const up = await this.api.resumes.uploadFile(res.resume.id!, file);
+      if (up.ok) {
+        this.resume.update((cur) => ({ ...cur, ownFile: up.ownFile }));
+        this.showToast('Saved — and your original file is attached for recruiters to read.');
+      }
+    }
 
     if (andLeave) {
       this.showToast('Resume saved. Scoring it now…');

@@ -67,6 +67,31 @@ It listens on **http://localhost:4300** (`PORT` in `.env`). Applicant-uploaded
 files are stored in `server/uploads/`, served only through the access-checked
 `/api/file` route — never a public URL.
 
+#### Optional — AI resume analysis (`GEMINI_API_KEY`)
+
+The "Upload & analyze my resume" feature sends an uploaded resume to
+Google's Gemini API, which extracts the details (skills, education,
+experience) to prefill the resume builder. The AI only *extracts* — all
+scoring and job matching stays with the rule-based 50/25/25 engine.
+
+To enable it in server mode:
+
+1. Get a free API key at <https://aistudio.google.com/apikey> (Google
+   account required, free tier is enough — no billing setup needed).
+2. Put it in `server/.env`:
+
+   ```
+   GEMINI_API_KEY=your-key-here
+   GEMINI_MODEL=gemini-2.5-flash   # optional, this is the default
+   ```
+
+3. Restart the server.
+
+Without a key, everything else works normally — the upload-and-analyze
+page just tells the user the feature isn't configured and points them to
+the builder instead. **Demo mode needs no key at all**: it runs a clearly
+labelled simulated extraction so the flow can be demonstrated offline.
+
 ### Step 3 — Flip the Angular app to API mode
 
 Open `client/src/environments/environment.ts` and change:

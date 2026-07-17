@@ -5,7 +5,11 @@
     <div>
       <span class="eyebrow">Guided builder</span>
       <h1>{{ pageTitle() }}</h1>
-      <p>Nothing here is scored until you save. Take your time — every step has guidance, and you can go back.</p>
+      <p>Nothing here is scored until you save. Take your time — every step has guidance, and you can go back.
+        @if (!resume().id) {
+          Already have a resume file? <a routerLink="/upload-resume">Upload it and let the system fill this in for you</a>.
+        }
+      </p>
     </div>
     <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
       @if (savedFlag()) {

@@ -36,3 +36,12 @@ export const ALLOW_ORIGIN = process.env.ALLOW_ORIGIN || 'http://localhost:4200';
 export const DEBUG = (process.env.DEBUG || 'true') === 'true';
 
 export const SESSION_SECRET = process.env.SESSION_SECRET || 'rmph-dev-secret-change-in-production';
+
+// ---------- AI resume analysis (optional) ----------
+// The "Upload & analyze" feature reads an uploaded resume with Google's
+// Gemini API (free tier) and prefills the structured resume builder.
+// Without a key, the feature shows a friendly "not configured" message;
+// everything else on the site keeps working. Get a free key at
+// https://aistudio.google.com/apikey and put it in .env.
+export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
