@@ -146,6 +146,19 @@ export interface HrStats {
   byStatus: Record<AppStatus, number>;
 }
 
+/** What the AI analysis of an uploaded resume returns: the same structured
+ *  shape the builder edits, minus ids/files. Nothing is saved until the
+ *  user reviews it in the builder and saves like any hand-built resume. */
+export interface AnalyzedResume {
+  title: string;
+  template: Template;
+  personal: Personal;
+  education: Education[];
+  experience: Experience[];
+  skills: string[];
+  certifications: Certification[];
+}
+
 /** Every API method returns this shape — success carries the payload,
  *  failure carries a human-readable message. Never throws. */
 export type ApiResult<T extends object = object> = ({ ok: true } & T) | { ok: false; error: string };

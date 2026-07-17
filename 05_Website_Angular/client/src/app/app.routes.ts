@@ -17,6 +17,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/resume-builder/resume-builder').then((m) => m.ResumeBuilder),
   },
   {
+    path: 'upload-resume', canActivate: [authGuard('seeker')], title: 'Upload & analyze your resume — ResumeMatch PH',
+    loadComponent: () => import('./pages/upload-analyze/upload-analyze').then((m) => m.UploadAnalyze),
+  },
+  {
     path: 'my-resumes', canActivate: [authGuard('seeker')], title: 'My resumes — ResumeMatch PH',
     loadComponent: () => import('./pages/my-resumes/my-resumes').then((m) => m.MyResumes),
   },

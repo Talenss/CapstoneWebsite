@@ -27,9 +27,13 @@
       <div class="loading"><span class="spinner"></span> Scoring your resume against the open positions…</div>
     } @else if (!resumes().length) {
       <div class="card empty crest">
-        <h2>Let’s build your first resume</h2>
-        <p>Everything here runs off it. Once it exists, the system scores it against every open position at Royce and shows you exactly where you fit — and where you nearly fit.</p>
-        <a class="btn primary" routerLink="/resume-builder">Start the guided builder</a>
+        <h2>Let’s set up your first resume</h2>
+        <p>Everything here runs off it. Once it exists, the system scores it against every open position at Royce and shows you exactly where you fit — and where you nearly fit. Two ways to start:</p>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <a class="btn primary" routerLink="/upload-resume">Upload my existing resume</a>
+          <a class="btn ghost" routerLink="/resume-builder">Build it from scratch</a>
+        </div>
+        <p style="font-size:12.5px;color:var(--muted);margin-top:14px">Upload a file and the system reads it into the builder for you — you review everything before it's saved.</p>
       </div>
     } @else if (totalReco() === 0) {
       <div class="card empty">

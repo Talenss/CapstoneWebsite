@@ -7,7 +7,10 @@
       <h1>My resumes</h1>
       <p>Keep a version for each kind of role. The <b>active</b> one is what gets scored on your dashboard and sent when you apply.</p>
     </div>
-    <a class="btn primary" routerLink="/resume-builder">+ New resume</a>
+    <div style="display:flex;gap:9px;flex-wrap:wrap">
+      <a class="btn ghost" routerLink="/upload-resume">Upload &amp; analyze</a>
+      <a class="btn primary" routerLink="/resume-builder">+ New resume</a>
+    </div>
   </div>
 
   <div id="wrap">
@@ -16,8 +19,11 @@
     } @else if (!resumes().length) {
       <div class="card empty crest">
         <h2>No resumes yet</h2>
-        <p>Build one and the system will score it against every open position at Royce — and show you which roles you nearly fit, not just the ones you already do.</p>
-        <a class="btn primary" routerLink="/resume-builder">Start the guided builder</a>
+        <p>Set one up and the system will score it against every open position at Royce — and show you which roles you nearly fit, not just the ones you already do.</p>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <a class="btn primary" routerLink="/upload-resume">Upload my existing resume</a>
+          <a class="btn ghost" routerLink="/resume-builder">Build it from scratch</a>
+        </div>
       </div>
     } @else {
       <div class="grid cols-3">

@@ -22,6 +22,7 @@ import applicationsRoutes from './routes/applications';
 import matchRoutes from './routes/match';
 import statsRoutes from './routes/stats';
 import fileRoutes from './routes/file';
+import analyzeRoutes from './routes/analyze';
 
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
@@ -51,6 +52,7 @@ app.use('/api/applications', applicationsRoutes);
 app.use('/api/match', matchRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/file', fileRoutes);
+app.use('/api/analyze', analyzeRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 

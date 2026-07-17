@@ -8,7 +8,7 @@
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ApiAdapter } from './adapter';
-import { Application, ApiResult, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, User } from './models';
+import { AnalyzedResume, Application, ApiResult, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, User } from './models';
 import { MAX_UPLOAD, ALLOWED_MIME } from './engine';
 
 export class HttpAdapter implements ApiAdapter {
@@ -88,6 +88,22 @@ export class HttpAdapter implements ApiAdapter {
   };
 
   stats = { hr: () => this.call<{ stats: HrStats }>('stats', 'hr') };
+
+  analyze = {
+    resume: async (file: File): Promise<ApiResult<{ resume: AnalyzedResume; provider?: string; simulated?: boolean }>> => {
+      if (file.size > MAX_UPLOAD) return { ok: false, error: 'That file is larger than 2 MB. Save it at a smaller size and try again.' };
+      if (!ALLOWED_MIME.includes(file.type)) return { ok: false, error: 'Upload a PDF, Word document, or image (JPG or PNG).' };
+      const fd = new FormData();
+      fd.append('file', file);
+      try {
+        return await firstValueFrom(
+          this.http.post<ApiResult<{ resume: AnalyzedResume; provider?: string }>>(`${this.apiBase}/analyze/resume`, fd, { withCredentials: true }),
+        );
+      } catch (e: any) {
+        return { ok: false, error: e?.error?.error || 'The analysis failed. Check that the server is running and try again.' };
+      }
+    },
+  };
 
   resetDemo(): Promise<ApiResult<object>> {
     return Promise.resolve({ ok: false, error: 'Not available in server mode.' });

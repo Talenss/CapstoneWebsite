@@ -4,7 +4,7 @@
    departments so all three match tiers actually demonstrate.
    ============================================================ */
 import { ApiAdapter } from './adapter';
-import { ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, User } from './models';
+import { AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, User } from './models';
 import { scoreLocal, STATUS_ORDER } from './engine';
 
 const KEY = 'rmph_v3_db';
@@ -483,6 +483,42 @@ export class DemoAdapter implements ApiAdapter {
           byStatus,
         } as HrStats,
       });
+    },
+  };
+
+  analyze = {
+    /** Demo mode can't call a real AI, so this returns a clearly-labeled
+     *  simulated extraction after a short delay — enough to demonstrate the
+     *  whole upload → review → score journey offline. */
+    resume: (file: File): Promise<ApiResult<{ resume: AnalyzedResume; provider?: string; simulated?: boolean }>> => {
+      const db = load();
+      const me = meRow(db);
+      if (!me || me.role !== 'seeker') return apiFail('Sign in as a job seeker to analyze a resume.');
+      if (file.size > 2 * 1024 * 1024) return apiFail('That file is larger than 2 MB. Save it at a smaller size and try again.');
+
+      // Sample a few in-demand skills from the open postings so the simulated
+      // extraction produces real matches on the dashboard.
+      const demanded: Record<string, number> = {};
+      db.postings.filter((p) => p.status === 'open').forEach((p) => p.skills.forEach((s) => { demanded[s] = (demanded[s] || 0) + 1; }));
+      const topSkills = Object.keys(demanded).sort((a, b) => demanded[b] - demanded[a]).slice(0, 5);
+
+      const baseName = file.name.replace(/\.[^.]+$/, '');
+      const resume: AnalyzedResume = {
+        title: baseName || 'Uploaded resume',
+        template: 'chronological',
+        personal: {
+          fullName: me.name,
+          email: me.email,
+          phone: '',
+          address: '',
+          summary: `Motivated applicant with practical experience and a growing skill set, imported from ${file.name}.`,
+        },
+        education: [{ school: 'Holy Angel University', degree: 'BS Information Technology', level: 'bachelor', year: '2025' }],
+        experience: [{ position: 'Working Student / Intern', company: 'Local business', months: 6, description: 'Assisted daily operations and customer-facing tasks.' }],
+        skills: topSkills.length ? topSkills : ['Communication', 'Teamwork', 'MS Office'],
+        certifications: [],
+      };
+      return new Promise((resolve) => setTimeout(() => resolve({ ok: true, resume, provider: 'demo', simulated: true }), 1400));
     },
   };
 

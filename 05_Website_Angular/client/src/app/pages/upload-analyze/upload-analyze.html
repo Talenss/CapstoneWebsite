@@ -1,0 +1,120 @@
+<app-header variant="seeker" active="builder" />
+
+<main id="main" class="container narrow" style="padding-bottom:80px">
+  <div class="page-head">
+    <span class="eyebrow">Upload &amp; analyze</span>
+    <h1>Start from the resume you already have</h1>
+    <p>Upload your existing resume and the system reads it for you — it extracts your skills, education, and experience into the guided builder, where <b>you review and correct everything before anything is saved</b>. The same transparent formula (skills 50% · education 25% · experience 25%) then scores it against every opening. Prefer to type it in yourself? <a routerLink="/resume-builder">Use the builder directly</a>.</p>
+  </div>
+
+  @if (errorMsg()) {
+    <div class="alert error show" role="alert">{{ errorMsg() }}</div>
+  }
+
+  @if (!result()) {
+    <section class="card crest">
+      <h2 style="font-size:22px;margin-bottom:6px">1 · Choose your resume file</h2>
+      <p style="font-size:13.5px;color:var(--muted);margin-bottom:16px">PDF, Word (.docx), JPG, or PNG &middot; up to 2&nbsp;MB.</p>
+
+      @if (!file()) {
+        <div class="drop">
+          <p style="font-size:14px;margin-bottom:12px">Pick the file you'd normally send to an employer.</p>
+          <label class="btn primary" for="resumeFile" style="cursor:pointer">Choose a file</label>
+          <input type="file" id="resumeFile" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" hidden (change)="onFileChosen($event)">
+        </div>
+      } @else {
+        <div class="drop has">
+          <div class="file-row">
+            <span style="font-size:22px">&#128196;</span>
+            <div style="flex:1;min-width:0">
+              <b>{{ file()!.name }}</b>
+              <span>{{ kb(file()!.size) }}</span>
+            </div>
+            <button class="btn ghost sm" type="button" (click)="clearFile()">Change file</button>
+          </div>
+        </div>
+      }
+
+      <h2 style="font-size:22px;margin:28px 0 6px">2 · Your consent</h2>
+      <p style="font-size:13.5px;color:var(--muted);margin-bottom:12px">
+        This is the one place on the site where software reads a file you upload. It happens only because you choose it here, and only to fill in the builder for your review.
+      </p>
+      <label class="consent">
+        <input type="checkbox" [checked]="consented()" (change)="consented.set(!consented())">
+        <span>I agree that this file will be read by the system's analysis service to extract my resume details. Nothing is saved until I review and save it myself. The copy recruiters see is still read by people, never by the matching engine.</span>
+      </label>
+
+      <div style="display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;align-items:center">
+        <button class="btn primary" type="button" [disabled]="!file() || !consented() || busy()" (click)="analyzeNow()">
+          @if (busy()) { <span class="spinner"></span> Reading your resume&hellip; }
+          @else { Analyze my resume }
+        </button>
+        <a class="btn ghost" routerLink="/resume-builder">Skip — build it by hand</a>
+      </div>
+      @if (busy()) {
+        <p class="hint" style="margin-top:12px">This usually takes a few seconds. The extraction is a starting point — you'll check every field next.</p>
+      }
+    </section>
+  } @else {
+    <section class="card crest">
+      <div class="head-row" style="margin-bottom:14px">
+        <h2 style="font-size:24px">Here's what the analysis found</h2>
+        @if (simulated()) {
+          <span class="badge gold">Simulated analysis &middot; demo mode</span>
+        } @else {
+          <span class="badge green">AI analysis</span>
+        }
+      </div>
+      <p style="font-size:13.5px;color:var(--muted);margin-bottom:20px">
+        Check it over — extraction is never perfect. Next you'll review and edit everything in the builder; <b>nothing has been saved yet</b>.
+      </p>
+
+      <div class="found">
+        <div class="f-sec">
+          <h3>Who you are</h3>
+          <p><b>{{ result()!.personal.fullName || '—' }}</b></p>
+          <p class="sub">{{ [result()!.personal.email, result()!.personal.phone, result()!.personal.address].join(' · ') }}</p>
+          @if (result()!.personal.summary) { <p class="sum">{{ result()!.personal.summary }}</p> }
+        </div>
+
+        <div class="f-sec">
+          <h3>Skills <span class="n">({{ result()!.skills.length }}) — half of every score</span></h3>
+          @if (result()!.skills.length) {
+            <div>
+              @for (s of result()!.skills; track s) { <span class="chip">{{ s }}</span> }
+            </div>
+          } @else { <p class="sub">None found — you can add them in the builder.</p> }
+        </div>
+
+        <div class="f-sec">
+          <h3>Education <span class="n">({{ result()!.education.length }})</span></h3>
+          @for (e of result()!.education; track $index) {
+            <p><b>{{ e.degree || 'Degree' }}</b> — {{ e.school }}{{ e.year ? ' · ' + e.year : '' }}</p>
+          } @empty { <p class="sub">None found.</p> }
+        </div>
+
+        <div class="f-sec">
+          <h3>Experience <span class="n">({{ result()!.experience.length }})</span></h3>
+          @for (e of result()!.experience; track $index) {
+            <p><b>{{ e.position || 'Position' }}</b> — {{ e.company }}{{ e.months ? ' · ' + monthsLabel(e.months) : '' }}</p>
+          } @empty { <p class="sub">None found — plenty of openings ask for zero months.</p> }
+        </div>
+
+        @if (result()!.certifications.length) {
+          <div class="f-sec">
+            <h3>Certifications <span class="n">({{ result()!.certifications.length }})</span></h3>
+            @for (c of result()!.certifications; track $index) {
+              <p><b>{{ c.name }}</b>{{ c.year ? ' · ' + c.year : '' }}</p>
+            }
+          </div>
+        }
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:24px;flex-wrap:wrap">
+        <button class="btn primary" type="button" (click)="reviewInBuilder()">Review &amp; edit in the builder &rarr;</button>
+        <button class="btn ghost" type="button" (click)="clearFile()">Start over</button>
+      </div>
+      <p class="hint" style="margin-top:12px">Your original file comes along too — after you save, it's attached for recruiters to read with their own eyes, exactly as you wrote it.</p>
+    </section>
+  }
+</main>
