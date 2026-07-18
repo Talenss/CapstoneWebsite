@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
 import { ApiService } from '../../core/api.service';
+import { SessionService } from '../../core/session.service';
 import { Company } from '../../core/models';
 
 type Tab = 'login' | 'reg';
@@ -31,6 +32,7 @@ const RESEND_SECONDS = 60;
 })
 export class Auth implements OnInit, OnDestroy {
   private api = inject(ApiService);
+  private session = inject(SessionService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
@@ -117,7 +119,7 @@ export class Auth implements OnInit, OnDestroy {
     const res = await this.api.auth.me();
     if (res.ok && res.user) {
       const next = this.route.snapshot.queryParamMap.get('next');
-      this.router.navigateByUrl(next || (res.user.role === 'seeker' ? '/seeker-dashboard' : '/hr-dashboard'), { replaceUrl: true });
+      this.router.navigateByUrl(next || this.session.homeFor(res.user), { replaceUrl: true });
     }
   }
 
@@ -178,7 +180,7 @@ export class Auth implements OnInit, OnDestroy {
     }
 
     const next = this.route.snapshot.queryParamMap.get('next');
-    this.router.navigateByUrl(next || (res.user.role === 'seeker' ? '/seeker-dashboard' : '/hr-dashboard'));
+    this.router.navigateByUrl(next || this.session.homeFor(res.user));
   }
 
   // ========================= FORGOT PASSWORD =========================

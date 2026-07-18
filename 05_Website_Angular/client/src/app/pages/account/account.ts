@@ -19,7 +19,10 @@ export class Account {
   private api = inject(ApiService);
   session = inject(SessionService);
 
-  headerVariant = computed<'seeker' | 'recruiter'>(() => (this.session.user()?.role === 'seeker' ? 'seeker' : 'recruiter'));
+  headerVariant = computed<'seeker' | 'recruiter' | 'admin'>(() => {
+    const role = this.session.user()?.role;
+    return role === 'seeker' ? 'seeker' : role === 'admin' ? 'admin' : 'recruiter';
+  });
 
   memberSince = computed(() => {
     const u = this.session.user();

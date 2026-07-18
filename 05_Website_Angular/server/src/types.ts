@@ -8,7 +8,7 @@ declare module 'express-session' {
 
 export interface UserRow {
   user_id: number;
-  role: 'seeker' | 'recruiter';
+  role: 'seeker' | 'recruiter' | 'admin';
   full_name: string;
   email: string;
   password_hash: string;

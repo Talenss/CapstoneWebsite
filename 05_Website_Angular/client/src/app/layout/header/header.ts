@@ -24,13 +24,14 @@ export class Header {
   session = inject(SessionService);
   private tour = inject(TourService);
 
-  variant = input<'guest' | 'seeker' | 'recruiter' | 'auth'>('guest');
+  variant = input<'guest' | 'seeker' | 'recruiter' | 'admin' | 'auth'>('guest');
   active = input<string>('');
   showTour = input(false);
 
   menuOpen = false;
 
-  brandSuffix = computed(() => (this.variant() === 'recruiter' ? 'Recruiter' : 'Philippines'));
+  brandSuffix = computed(() =>
+    this.variant() === 'recruiter' ? 'Recruiter' : this.variant() === 'admin' ? 'Research Team' : 'Philippines');
 
   navItems = computed<NavItem[]>(() => {
     switch (this.variant()) {
@@ -48,6 +49,11 @@ export class Header {
           { key: 'dashboard', label: 'Dashboard', link: '/hr-dashboard' },
           { key: 'post', label: 'Post an opening', link: '/hr-posting' },
           { key: 'company', label: 'Company profile', link: '/hr-company' },
+          { key: 'account', label: 'Account', link: '/account' },
+        ];
+      case 'admin':
+        return [
+          { key: 'admin', label: 'Recruiter requests', link: '/admin' },
           { key: 'account', label: 'Account', link: '/account' },
         ];
       default:

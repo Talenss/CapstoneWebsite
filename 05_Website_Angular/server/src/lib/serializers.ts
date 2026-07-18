@@ -9,7 +9,7 @@ import { UserRow, CompanyRow, ResumeRow, PostingRow, ApplicationRow } from '../t
 
 // requires the db pool to be created with dateStrings:true (see db.ts) so
 // DATETIME/TIMESTAMP columns arrive as 'YYYY-MM-DD HH:MM:SS' local-time strings
-function ts(v: string | null): number {
+export function ts(v: string | null): number {
   return v ? new Date(v.replace(' ', 'T')).getTime() : 0;
 }
 
@@ -27,7 +27,7 @@ export function serializeUser(u: UserRow | null): any {
   };
   if (u.role === 'seeker') {
     out.activeResumeId = u.active_resume_id !== null ? String(u.active_resume_id) : null;
-  } else {
+  } else if (u.role === 'recruiter') {
     out.companyId = u.company_id !== null ? String(u.company_id) : null;
     out.position = u.position_title;
     out.verified = !!u.verified;

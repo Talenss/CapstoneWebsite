@@ -8,7 +8,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts"
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "test": "node -r ts-node/register/transpile-only --test tests/engine.test.ts",
+    "create-admin": "node -r ts-node/register/transpile-only scripts/create-admin.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

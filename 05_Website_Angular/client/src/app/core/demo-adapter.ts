@@ -47,6 +47,7 @@ function seed(): Db {
       { id: 'u3', role: 'seeker', name: 'Ana Reyes', email: 'ana@demo.ph', password: 'demo123', activeResumeId: 'r2', createdAt: Date.now() - D * 20 },
       { id: 'u4', role: 'seeker', name: 'Marco Garcia', email: 'marco@demo.ph', password: 'demo123', activeResumeId: 'r3', createdAt: Date.now() - D * 15 },
       { id: 'u5', role: 'seeker', name: 'Liza Cruz', email: 'liza@demo.ph', password: 'demo123', activeResumeId: 'r4', createdAt: Date.now() - D * 10 },
+      { id: 'u6', role: 'admin', name: 'Research Team', email: 'admin@demo.ph', password: 'demo123', createdAt: Date.now() - D * 90 },
     ] as DemoUser[],
     resumes: [
       { id: 'r1', userId: 'u1', title: 'IT — fresh graduate', template: 'chronological',
@@ -114,7 +115,11 @@ function seed(): Db {
       { id: 'a4', seekerId: 'u5', resumeId: 'r4', postingId: 'p5', status: 'review', appliedAt: Date.now() - D * 3 },
       { id: 'a5', seekerId: 'u5', resumeId: 'r4', postingId: 'p6', status: 'submitted', appliedAt: Date.now() - D * 1 },
     ] as unknown as Application[],
-    recruiterRequests: [],
+    recruiterRequests: [
+      // A sample pending request, so the admin panel has something to demonstrate.
+      { id: 'q1', name: 'Carlos Mendoza', email: 'carlos.mendoza@roycehotel.ph', position: 'Talent Acquisition Specialist',
+        companyId: 'c1', note: 'Verify with HR head Ms. Santos, local 214.', status: 'pending', requestedAt: Date.now() - D * 1 },
+    ],
     emailCodes: [],
   };
 }
@@ -125,6 +130,11 @@ function load(): Db {
     if (raw) {
       const db: Db = JSON.parse(raw);
       if (!db.emailCodes) db.emailCodes = []; // databases saved before this field existed
+      if (!db.users.some((u) => u.role === 'admin')) {
+        // databases saved before the admin panel existed get the admin account
+        db.users.push({ id: 'u6', role: 'admin', name: 'Research Team', email: 'admin@demo.ph', password: 'demo123', createdAt: Date.now() } as DemoUser);
+        persist(db);
+      }
       return db;
     }
   } catch { /* ignore */ }
@@ -555,6 +565,65 @@ export class DemoAdapter implements ApiAdapter {
       });
     },
   };
+
+  /* The research-team panel. Approving a request creates the verified
+     recruiter account with an unguessable placeholder password — the new
+     recruiter sets their own via "Forgot password", exactly like server
+     mode (demo shows the code on screen). */
+  admin = {
+    requests: () => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+      return apiOk({ requests: this.reqList(db) });
+    },
+    approve: (id: string) => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+      const r = db.recruiterRequests.find((x) => x.id === id);
+      if (!r) return apiFail('Request not found.');
+      if (r.status !== 'pending') return apiFail('This request was already handled.');
+      if (db.users.some((u) => u.email.toLowerCase() === r.email.toLowerCase()))
+        return apiFail('An account already uses this email. Decline the request instead.');
+      db.users.push({
+        id: uid(), role: 'recruiter', name: r.name, email: r.email,
+        password: uid() + uid() + uid(), // placeholder; they set their own via Forgot password
+        companyId: r.companyId, position: r.position || 'Recruiter', verified: true, createdAt: Date.now(),
+      } as DemoUser);
+      r.status = 'approved';
+      persist(db);
+      return apiOk({ requests: this.reqList(db) });
+    },
+    decline: (id: string) => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+      const r = db.recruiterRequests.find((x) => x.id === id);
+      if (!r) return apiFail('Request not found.');
+      if (r.status !== 'pending') return apiFail('This request was already handled.');
+      r.status = 'declined';
+      persist(db);
+      return apiOk({ requests: this.reqList(db) });
+    },
+    recruiters: () => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+      return apiOk({
+        recruiters: db.users.filter((u) => u.role === 'recruiter').map((u) => ({
+          id: u.id, name: u.name, email: u.email, position: u.position || '',
+          companyName: db.companies.find((c) => c.id === u.companyId)?.name || '—',
+          verified: !!u.verified, createdAt: u.createdAt, lastLoginAt: null,
+        })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
+      });
+    },
+  };
+
+  private reqList(db: Db) {
+    return db.recruiterRequests.map((r) => ({
+      id: r.id, name: r.name, email: r.email, position: r.position || '',
+      companyId: r.companyId ?? null,
+      companyName: db.companies.find((c) => c.id === r.companyId)?.name || '—',
+      note: r.note || '', status: r.status, requestedAt: r.requestedAt,
+    })).sort((a: any, b: any) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || b.requestedAt - a.requestedAt);
+  }
 
   analyze = {
     /** Demo mode can't call a real AI, so this returns a clearly-labeled

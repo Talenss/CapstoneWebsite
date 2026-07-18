@@ -6,7 +6,32 @@
    assets/api.js / api/_lib.php contract 1:1.
    ============================================================ */
 
-export type Role = 'seeker' | 'recruiter';
+export type Role = 'seeker' | 'recruiter' | 'admin';
+
+/** A pending/handled request for recruiter access, reviewed at /admin. */
+export interface RecruiterRequest {
+  id: string;
+  name: string;
+  email: string;
+  position: string;
+  companyId: string | null;
+  companyName: string;
+  note: string;
+  status: 'pending' | 'approved' | 'declined';
+  requestedAt: number;
+}
+
+/** A recruiter account as listed on the admin panel. */
+export interface AdminRecruiter {
+  id: string;
+  name: string;
+  email: string;
+  position: string;
+  companyName: string;
+  verified: boolean;
+  createdAt: number;
+  lastLoginAt: number | null;
+}
 export type EduLevel = 'none' | 'highschool' | 'vocational' | 'associate' | 'bachelor' | 'master';
 export type Template = 'chronological' | 'functional' | 'combination';
 export type EmploymentType = 'full-time' | 'part-time' | 'contract' | 'internship';

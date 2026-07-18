@@ -5,7 +5,7 @@
    ApiService without caring which mode is active.
    ============================================================ */
 import {
-  AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, User,
+  AdminRecruiter, AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, User,
 } from './models';
 
 export interface ApiAdapter {
@@ -63,6 +63,15 @@ export interface ApiAdapter {
   };
   stats: {
     hr(): Promise<ApiResult<{ stats: HrStats }>>;
+  };
+  admin: {
+    /** All recruiter-access requests, pending first. Admin only. */
+    requests(): Promise<ApiResult<{ requests: RecruiterRequest[] }>>;
+    /** Approve = create the verified recruiter account. The person sets
+     *  their own password via the forgot-password code flow. */
+    approve(id: string): Promise<ApiResult<{ requests: RecruiterRequest[] }>>;
+    decline(id: string): Promise<ApiResult<{ requests: RecruiterRequest[] }>>;
+    recruiters(): Promise<ApiResult<{ recruiters: AdminRecruiter[] }>>;
   };
   analyze: {
     /** Opt-in AI extraction of an uploaded resume file. Returns a structured

@@ -34,6 +34,7 @@ Open <http://localhost:4200>. Log in with any of (password `demo123` for all):
 | Job seeker | `seeker@demo.ph` |
 | Royce HR (recruiter) | `hr@demo.ph` |
 | More applicants | `ana@demo.ph`, `marco@demo.ph`, `liza@demo.ph` |
+| Research team (admin) | `admin@demo.ph` — reviews recruiter requests at `/admin` |
 
 Data lives in that browser's `localStorage` only. To wipe it, open the
 console and run `localStorage.clear(); sessionStorage.clear();`, then refresh.
@@ -66,6 +67,36 @@ npm run dev                # ts-node-dev, restarts on change — or `npm run bui
 It listens on **http://localhost:4300** (`PORT` in `.env`). Applicant-uploaded
 files are stored in `server/uploads/`, served only through the access-checked
 `/api/file` route — never a public URL.
+
+#### The admin account — approving recruiter requests
+
+Recruiter accounts are provisioned, not self-served: the "Request
+recruiter access" form creates a pending request, and an **admin**
+approves it at `/admin` — approval is what actually creates the verified
+recruiter account (the new recruiter then sets their password through
+"Forgot password", guided by the approval email).
+
+Admin accounts are deliberately command-line-only:
+
+```bash
+cd 05_Website_Angular/server
+npm run create-admin -- you@example.com "a strong password"
+```
+
+Then log in at `/auth` with that email and you'll land on the admin
+panel. (Demo mode already has `admin@demo.ph` / `demo123` seeded.)
+
+#### The engine test suite
+
+The matching engine — the study's core claim — has an automated test
+suite covering the 50/25/25 weights, each component's scoring rules, the
+exact tier boundaries (80/50), and a 500-case sweep proving the server
+and client implementations agree exactly:
+
+```bash
+cd 05_Website_Angular/server
+npm test        # no database needed — the tests run the pure engine
+```
 
 #### Optional — email sending (`SMTP_*`): verification codes & password reset
 
