@@ -70,8 +70,16 @@ export interface MatchResult {
   tier: 'strong' | 'possible' | 'related';
 }
 
-export async function rmScore(resume: SerializedResume, posting: SerializedPosting): Promise<MatchResult> {
-  const cfg = await getSettings();
+/** The defaults used when the match_settings table has no overrides —
+ *  the study's published 50/25/25 weights and 80/50 tier thresholds. */
+export const DEFAULT_SETTINGS: MatchSettings = {
+  weights: { skills: 0.5, education: 0.25, experience: 0.25 },
+  thresholds: { strong: 80, related: 50 },
+};
+
+/** The pure scoring function — no database, no I/O. rmScore() wraps it
+ *  with the DB-loaded settings; the test suite calls it directly. */
+export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting: SerializedPosting): MatchResult {
   const W = cfg.weights;
   const T = cfg.thresholds;
 
@@ -105,6 +113,10 @@ export async function rmScore(resume: SerializedResume, posting: SerializedPosti
     seekerMonths: months,
     tier: total >= T.strong ? 'strong' : total >= T.related ? 'possible' : 'related',
   };
+}
+
+export async function rmScore(resume: SerializedResume, posting: SerializedPosting): Promise<MatchResult> {
+  return scoreWith(await getSettings(), resume, posting);
 }
 
 /** Cache a computed score so the study can report on it later. */

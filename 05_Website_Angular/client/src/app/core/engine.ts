@@ -24,6 +24,15 @@ export const EDU_LABELS: Record<EduLevel, string> = {
   associate: 'Associate degree', bachelor: 'Bachelor’s degree', master: 'Master’s degree',
 };
 
+/** Password rule for anything that SETS a password — mirrored in
+ *  server/src/lib/password.ts. Never checked at login, so accounts made
+ *  under the older 6-character rule keep working until their next change. */
+export const PASSWORD_MIN = 8;
+export const PASSWORD_HINT = 'At least 8 characters, including a letter and a number.';
+export function passwordOk(p: string): boolean {
+  return typeof p === 'string' && p.length >= PASSWORD_MIN && /[A-Za-z]/.test(p) && /\d/.test(p);
+}
+
 export const MAX_UPLOAD = 2 * 1024 * 1024; // 2 MB
 export const ALLOWED_MIME = [
   'application/pdf', 'application/msword',

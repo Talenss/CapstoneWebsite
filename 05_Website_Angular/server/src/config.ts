@@ -37,6 +37,14 @@ export const DEBUG = (process.env.DEBUG || 'true') === 'true';
 
 export const SESSION_SECRET = process.env.SESSION_SECRET || 'rmph-dev-secret-change-in-production';
 
+// ---------- production hardening (see SETUP.md, "Going live checklist") ----------
+// Behind an HTTPS reverse proxy set BOTH to true: TRUST_PROXY makes
+// Express believe the proxy's X-Forwarded-* headers (real client IPs for
+// rate limiting, https detection), COOKIE_SECURE marks the session cookie
+// HTTPS-only. Leave false for plain-http local development.
+export const TRUST_PROXY = (process.env.TRUST_PROXY || 'false') === 'true';
+export const COOKIE_SECURE = (process.env.COOKIE_SECURE || 'false') === 'true';
+
 // ---------- AI resume analysis (optional) ----------
 // The "Upload & analyze" feature reads an uploaded resume with Google's
 // Gemini API (free tier) and prefills the structured resume builder.
@@ -45,3 +53,17 @@ export const SESSION_SECRET = process.env.SESSION_SECRET || 'rmph-dev-secret-cha
 // https://aistudio.google.com/apikey and put it in .env.
 export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
+// ---------- Email sending (verification codes, password reset) ----------
+// Any SMTP service works: Gmail with an "app password", Brevo's free tier,
+// Outlook, etc. — see SETUP.md. Without SMTP settings the email features
+// tell the user email isn't configured; with DEBUG=true the code is also
+// printed to this server's console so development works without SMTP.
+export const SMTP_HOST = process.env.SMTP_HOST || '';
+export const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+export const SMTP_SECURE = (process.env.SMTP_SECURE || (SMTP_PORT === 465 ? 'true' : 'false')) === 'true';
+export const SMTP_USER = process.env.SMTP_USER || '';
+export const SMTP_PASS = process.env.SMTP_PASS || '';
+export const MAIL_FROM = process.env.MAIL_FROM || (SMTP_USER ? `ResumeMatch PH <${SMTP_USER}>` : '');
+// Public base URL of the site, used for links inside notification emails.
+export const APP_URL = (process.env.APP_URL || `http://localhost:${PORT}`).replace(/\/$/, '');

@@ -18,43 +18,120 @@
         <button id="tab-reg" role="tab" [attr.aria-selected]="activeTab() === 'reg'" aria-controls="p-reg" type="button" (click)="showTab('reg')">Create account</button>
       </div>
 
-      <!-- LOG IN -->
+      <!-- LOG IN / FORGOT PASSWORD -->
       <section class="panel card" [class.show]="activeTab() === 'login'" id="p-login" role="tabpanel" aria-labelledby="tab-login">
-        <h1 style="font-size:27px;margin-bottom:4px">Welcome back</h1>
-        <p style="font-size:13.5px;color:var(--muted);margin-bottom:22px">Log in to pick up where you left off.</p>
-        <div class="alert error" [class.show]="!!loginError()" role="alert">{{ loginError() }}</div>
-        <form id="loginForm" novalidate (ngSubmit)="onLogin($event)">
-          <div class="field" [class.invalid]="loginEmailInvalid()">
-            <label for="le">Email address</label>
-            <input type="email" id="le" autocomplete="email" required [(ngModel)]="loginEmail" name="le">
-            <span class="err">Enter a valid email address.</span>
+        @if (!forgotOpen()) {
+          <h1 style="font-size:27px;margin-bottom:4px">Welcome back</h1>
+          <p style="font-size:13.5px;color:var(--muted);margin-bottom:22px">Log in to pick up where you left off.</p>
+          <div class="alert ok" [class.show]="!!loginNotice()" role="status">{{ loginNotice() }}</div>
+          <div class="alert error" [class.show]="!!loginError()" role="alert">{{ loginError() }}</div>
+          <form id="loginForm" novalidate (ngSubmit)="onLogin($event)">
+            <div class="field" [class.invalid]="loginEmailInvalid()">
+              <label for="le">Email address</label>
+              <input type="email" id="le" autocomplete="email" required [(ngModel)]="loginEmail" name="le">
+              <span class="err">Enter a valid email address.</span>
+            </div>
+            <div class="field" [class.invalid]="loginPasswordInvalid()">
+              <label for="lp">Password</label>
+              <input type="password" id="lp" autocomplete="current-password" required [(ngModel)]="loginPassword" name="lp">
+              <span class="err">Enter your password.</span>
+            </div>
+            <p class="forgot-row"><button type="button" class="linklike" (click)="toggleForgot(true)">Forgot your password?</button></p>
+            <button class="btn primary block" type="submit" id="loginBtn" [disabled]="loginBusy()">
+              @if (loginBusy()) {
+                <span class="spinner"></span> Working…
+              } @else {
+                Log in
+              }
+            </button>
+          </form>
+          <div class="keys">
+            <b>Demo accounts</b>
+            <div class="k"><span>Job seeker</span> <code>seeker&#64;demo.ph</code></div>
+            <div class="k"><span>Royce HR</span> <code>hr&#64;demo.ph</code></div>
+            <div class="k"><span>More applicants</span> <code>ana&#64; / marco&#64; / liza&#64;demo.ph</code></div>
+            <div class="k"><span>Research team (admin)</span> <code>admin&#64;demo.ph</code></div>
+            <div class="k" style="border-top:1px solid var(--rule-2);margin-top:8px;padding-top:9px"><span>Password (all)</span> <code>demo123</code></div>
           </div>
-          <div class="field" [class.invalid]="loginPasswordInvalid()">
-            <label for="lp">Password</label>
-            <input type="password" id="lp" autocomplete="current-password" required [(ngModel)]="loginPassword" name="lp">
-            <span class="err">Enter your password.</span>
-          </div>
-          <button class="btn primary block" type="submit" id="loginBtn" [disabled]="loginBusy()">
-            @if (loginBusy()) {
-              <span class="spinner"></span> Working…
-            } @else {
-              Log in
+        } @else {
+          <h1 style="font-size:27px;margin-bottom:4px">Reset your password</h1>
+          @if (fpStep() === 'email') {
+            <p style="font-size:13.5px;color:var(--muted);margin-bottom:22px">Enter your account's email and we'll send a 6-digit code to prove it's you.</p>
+            <div class="alert error" [class.show]="!!fpError()" role="alert">{{ fpError() }}</div>
+            <form novalidate (ngSubmit)="onForgotSend($event)">
+              <div class="field" [class.invalid]="fpEmailInvalid()">
+                <label for="fpe">Email address</label>
+                <input type="email" id="fpe" autocomplete="email" required [(ngModel)]="fpEmail" name="fpe">
+                <span class="err">Enter a valid email address.</span>
+              </div>
+              <button class="btn primary block" type="submit" [disabled]="fpBusy()">
+                @if (fpBusy()) {
+                  <span class="spinner"></span> Sending…
+                } @else {
+                  Email me a reset code
+                }
+              </button>
+            </form>
+          } @else {
+            <p style="font-size:13.5px;color:var(--muted);margin-bottom:18px">If <b>{{ fpEmail }}</b> has an account, a 6-digit code is on its way. Enter it below with your new password.</p>
+            @if (fpDevCode(); as code) {
+              <div class="dev-code" role="status">
+                @if (fpDevNote() === 'demo') {
+                  <b>Demo mode</b> — no real email is sent. Your code is <code>{{ code }}</code>.
+                } @else {
+                  <b>Development</b> — SMTP isn't configured, so here's your code: <code>{{ code }}</code>.
+                }
+              </div>
             }
-          </button>
-        </form>
-        <div class="keys">
-          <b>Demo accounts</b>
-          <div class="k"><span>Job seeker</span> <code>seeker&#64;demo.ph</code></div>
-          <div class="k"><span>Royce HR</span> <code>hr&#64;demo.ph</code></div>
-          <div class="k"><span>More applicants</span> <code>ana&#64; / marco&#64; / liza&#64;demo.ph</code></div>
-          <div class="k" style="border-top:1px solid var(--rule-2);margin-top:8px;padding-top:9px"><span>Password (all)</span> <code>demo123</code></div>
-        </div>
+            <div class="alert error" [class.show]="!!fpError()" role="alert">{{ fpError() }}</div>
+            <form novalidate (ngSubmit)="onForgotReset($event)">
+              <div class="field" [class.invalid]="fpCodeInvalid()">
+                <label for="fpc">6-digit code</label>
+                <input type="text" id="fpc" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" required [(ngModel)]="fpCode" name="fpc">
+                <span class="err">Enter the 6-digit code from the email.</span>
+              </div>
+              <div class="field" [class.invalid]="fpPasswordInvalid()">
+                <label for="fpp">New password</label>
+                <input type="password" id="fpp" autocomplete="new-password" required [(ngModel)]="fpPassword" name="fpp">
+                <span class="err">{{ passwordHint }}</span>
+                <p class="hint">{{ passwordHint }}</p>
+              </div>
+              <button class="btn primary block" type="submit" [disabled]="fpBusy()">
+                @if (fpBusy()) {
+                  <span class="spinner"></span> Working…
+                } @else {
+                  Set my new password
+                }
+              </button>
+            </form>
+            <p class="code-links">
+              <button type="button" class="linklike" [disabled]="fpResendLeft() > 0 || fpBusy()" (click)="resendForgot()">
+                @if (fpResendLeft() > 0) { Resend code ({{ fpResendLeft() }}s) } @else { Resend code }
+              </button>
+            </p>
+          }
+          <p class="code-links"><button type="button" class="linklike" (click)="toggleForgot(false)">&larr; Back to log in</button></p>
+        }
       </section>
 
       <!-- CREATE ACCOUNT / REQUEST ACCESS -->
       <section class="panel card" [class.show]="activeTab() === 'reg'" id="p-reg" role="tabpanel" aria-labelledby="tab-reg">
         <h1 style="font-size:27px;margin-bottom:4px" id="regHead">{{ regHeading() }}</h1>
         <p style="font-size:13.5px;color:var(--muted);margin-bottom:22px" id="regSub">{{ regSub() }}</p>
+
+        <!-- The familiar "this email already has an account" moment -->
+        @if (regExists()) {
+          <div class="exists card" role="alert">
+            <h3>This email already has an account</h3>
+            <p><b>{{ regEmail }}</b> is registered here. Did you mean to log in to it?</p>
+            <div class="acts">
+              <button class="btn primary" type="button" (click)="useLoginInstead()">Log in to that account</button>
+              <button class="btn ghost" type="button" (click)="dismissExists()">Use a different email</button>
+            </div>
+            <p class="hint" style="margin-top:10px">Forgot the password? Use <button type="button" class="linklike" (click)="useLoginInstead(); toggleForgot(true)">reset password</button> — we'll email you a code.</p>
+          </div>
+        }
+
         <div class="alert" [class.error]="regMessage()?.type === 'error'" [class.ok]="regMessage()?.type === 'ok'" [class.show]="!!regMessage()" id="regMsg" role="alert">
           @if (regMessage(); as m) {
             @if (m.type === 'ok') {
@@ -66,72 +143,112 @@
             }
           }
         </div>
-        <form id="regForm" novalidate (ngSubmit)="onRegister($event)">
-          <div class="roles" role="radiogroup" aria-label="Account type">
-            <label>
-              <input type="radio" name="role" value="seeker" [checked]="role() === 'seeker'" (change)="setRole('seeker')">
-              <span><b>Job seeker</b><small>Build a resume, get matched, apply. Opens right away.</small></span>
-            </label>
-            <label>
-              <input type="radio" name="role" value="recruiter" [checked]="role() === 'recruiter'" (change)="setRole('recruiter')">
-              <span><b>Recruiter / HR</b><small>For partner-company staff. Activated with your HR.</small></span>
-            </label>
-          </div>
 
-          <div class="field" [class.invalid]="regNameInvalid()">
-            <label for="rn">Full name</label>
-            <input type="text" id="rn" autocomplete="name" required [(ngModel)]="regName" name="rn">
-            <span class="err">Enter your full name.</span>
-          </div>
-          <div class="field" [class.invalid]="regEmailInvalid()">
-            <label for="re">Email address</label>
-            <input type="email" id="re" autocomplete="email" required [(ngModel)]="regEmail" name="re">
-            <span class="err">Enter a valid email address.</span>
-          </div>
-
-          @if (role() === 'seeker') {
-            <div class="field" [class.invalid]="regPasswordInvalid()">
-              <label for="rp">Password</label>
-              <input type="password" id="rp" autocomplete="new-password" [(ngModel)]="regPassword" name="rp">
-              <span class="err">Use at least 6 characters.</span>
-              <p class="hint">At least 6 characters.</p>
+        @if (regStep() === 'form' || role() === 'recruiter') {
+          <form id="regForm" novalidate (ngSubmit)="onRegister($event)">
+            <div class="roles" role="radiogroup" aria-label="Account type">
+              <label>
+                <input type="radio" name="role" value="seeker" [checked]="role() === 'seeker'" (change)="setRole('seeker')">
+                <span><b>Job seeker</b><small>Build a resume, get matched, apply. Opens right away.</small></span>
+              </label>
+              <label>
+                <input type="radio" name="role" value="recruiter" [checked]="role() === 'recruiter'" (change)="setRole('recruiter')">
+                <span><b>Recruiter / HR</b><small>For partner-company staff. Activated with your HR.</small></span>
+              </label>
             </div>
-          }
 
-          @if (role() === 'recruiter') {
-            <div id="hrOnly">
-              <div class="field" [class.invalid]="regCompanyInvalid()">
-                <label for="rc">Partner company</label>
-                <select id="rc" [(ngModel)]="regCompanyId" name="rc">
-                  <option value="">Choose your company…</option>
-                  @for (c of companies(); track c.id) {
-                    <option [value]="c.id">{{ c.name }}</option>
-                  }
-                </select>
-                <span class="err">Choose your partner company.</span>
-                <p class="hint">Company not listed? Companies join as partners through the research team first.</p>
-              </div>
-              <div class="field" [class.invalid]="regPositionInvalid()">
-                <label for="rpos">Your position</label>
-                <input type="text" id="rpos" placeholder="HR Officer, Talent Acquisition Specialist…" [(ngModel)]="regPosition" name="rpos">
-                <span class="err">Enter your position.</span>
-              </div>
-              <div class="field">
-                <label for="rnote">Anything the research team should know <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(optional)</span></label>
-                <textarea id="rnote" rows="2" placeholder="e.g. an HR contact number we can verify this request against" [(ngModel)]="regNote" name="rnote"></textarea>
-              </div>
+            <div class="field" [class.invalid]="regNameInvalid()">
+              <label for="rn">Full name</label>
+              <input type="text" id="rn" autocomplete="name" required [(ngModel)]="regName" name="rn">
+              <span class="err">Enter your full name.</span>
             </div>
-          }
+            <div class="field" [class.invalid]="regEmailInvalid()">
+              <label for="re">Email address</label>
+              <input type="email" id="re" autocomplete="email" required [(ngModel)]="regEmail" name="re">
+              <span class="err">Enter a valid email address.</span>
+              @if (role() === 'seeker') {
+                <p class="hint">We'll email a 6-digit code here to confirm it's yours.</p>
+              }
+            </div>
 
-          <button class="btn primary block" type="submit" id="regBtn" [disabled]="regBusy()">
-            @if (regBusy()) {
-              <span class="spinner"></span> Working…
-            } @else {
-              {{ regBtnLabel() }}
+            @if (role() === 'seeker') {
+              <div class="field" [class.invalid]="regPasswordInvalid()">
+                <label for="rp">Password</label>
+                <input type="password" id="rp" autocomplete="new-password" [(ngModel)]="regPassword" name="rp">
+                <span class="err">{{ passwordHint }}</span>
+                <p class="hint">{{ passwordHint }}</p>
+              </div>
             }
-          </button>
-          <p class="hint" style="text-align:center;margin-top:14px">By continuing you agree that your data is processed for resume creation and job matching only. <a routerLink="/privacy">Read the privacy notice</a>.</p>
-        </form>
+
+            @if (role() === 'recruiter') {
+              <div id="hrOnly">
+                <div class="field" [class.invalid]="regCompanyInvalid()">
+                  <label for="rc">Partner company</label>
+                  <select id="rc" [(ngModel)]="regCompanyId" name="rc">
+                    <option value="">Choose your company…</option>
+                    @for (c of companies(); track c.id) {
+                      <option [value]="c.id">{{ c.name }}</option>
+                    }
+                  </select>
+                  <span class="err">Choose your partner company.</span>
+                  <p class="hint">Company not listed? Companies join as partners through the research team first.</p>
+                </div>
+                <div class="field" [class.invalid]="regPositionInvalid()">
+                  <label for="rpos">Your position</label>
+                  <input type="text" id="rpos" placeholder="HR Officer, Talent Acquisition Specialist…" [(ngModel)]="regPosition" name="rpos">
+                  <span class="err">Enter your position.</span>
+                </div>
+                <div class="field">
+                  <label for="rnote">Anything the research team should know <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(optional)</span></label>
+                  <textarea id="rnote" rows="2" placeholder="e.g. an HR contact number we can verify this request against" [(ngModel)]="regNote" name="rnote"></textarea>
+                </div>
+              </div>
+            }
+
+            <button class="btn primary block" type="submit" id="regBtn" [disabled]="regBusy()">
+              @if (regBusy()) {
+                <span class="spinner"></span> Working…
+              } @else {
+                {{ regBtnLabel() }}
+              }
+            </button>
+            <p class="hint" style="text-align:center;margin-top:14px">By continuing you agree that your data is processed for resume creation and job matching only. <a routerLink="/privacy">Read the privacy notice</a>.</p>
+          </form>
+        } @else {
+          <!-- Step 2 of 2: the emailed verification code -->
+          <p style="font-size:14px;margin-bottom:16px">We sent a 6-digit code to <b>{{ regEmail }}</b>. Enter it below to create your account.</p>
+          @if (regDevCode(); as code) {
+            <div class="dev-code" role="status">
+              @if (regDevNote() === 'demo') {
+                <b>Demo mode</b> — no real email is sent. Your code is <code>{{ code }}</code>.
+              } @else {
+                <b>Development</b> — SMTP isn't configured, so here's your code: <code>{{ code }}</code>.
+              }
+            </div>
+          }
+          <form novalidate (ngSubmit)="onVerifyRegister($event)">
+            <div class="field" [class.invalid]="regCodeInvalid()">
+              <label for="rcode">6-digit code</label>
+              <input type="text" id="rcode" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" required [(ngModel)]="regCode" name="rcode">
+              <span class="err">Enter the 6-digit code from the email.</span>
+            </div>
+            <button class="btn primary block" type="submit" [disabled]="regBusy()">
+              @if (regBusy()) {
+                <span class="spinner"></span> Working…
+              } @else {
+                Verify &amp; create my account
+              }
+            </button>
+          </form>
+          <p class="code-links">
+            <button type="button" class="linklike" [disabled]="regResendLeft() > 0 || regBusy()" (click)="resendRegister()">
+              @if (regResendLeft() > 0) { Resend code ({{ regResendLeft() }}s) } @else { Resend code }
+            </button>
+            <span aria-hidden="true">&middot;</span>
+            <button type="button" class="linklike" (click)="backToRegForm()">Wrong email? Go back</button>
+          </p>
+          <p class="hint">Nothing arrives after a minute? Check your spam folder, then resend.</p>
+        }
       </section>
     </div>
   </div>

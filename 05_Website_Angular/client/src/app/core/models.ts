@@ -6,7 +6,32 @@
    assets/api.js / api/_lib.php contract 1:1.
    ============================================================ */
 
-export type Role = 'seeker' | 'recruiter';
+export type Role = 'seeker' | 'recruiter' | 'admin';
+
+/** A pending/handled request for recruiter access, reviewed at /admin. */
+export interface RecruiterRequest {
+  id: string;
+  name: string;
+  email: string;
+  position: string;
+  companyId: string | null;
+  companyName: string;
+  note: string;
+  status: 'pending' | 'approved' | 'declined';
+  requestedAt: number;
+}
+
+/** A recruiter account as listed on the admin panel. */
+export interface AdminRecruiter {
+  id: string;
+  name: string;
+  email: string;
+  position: string;
+  companyName: string;
+  verified: boolean;
+  createdAt: number;
+  lastLoginAt: number | null;
+}
 export type EduLevel = 'none' | 'highschool' | 'vocational' | 'associate' | 'bachelor' | 'master';
 export type Template = 'chronological' | 'functional' | 'combination';
 export type EmploymentType = 'full-time' | 'part-time' | 'contract' | 'internship';
@@ -19,6 +44,8 @@ export interface User {
   name: string;
   email: string;
   createdAt: number;
+  /** Application-event emails (status changes / new applicants). Absent = on. */
+  emailNotifications?: boolean;
   // seeker
   activeResumeId?: string | null;
   // recruiter
@@ -95,6 +122,10 @@ export interface Posting {
   skills: string[];
   educationLevel: EduLevel;
   minExperienceMonths: number;
+  /** Optional "apply by" date (YYYY-MM-DD). Past it, the posting stops
+   *  accepting applications without anyone closing it by hand. */
+  deadline?: string | null;
+  expired?: boolean;
   status: 'open' | 'closed';
   createdAt: number;
   company?: Company;
@@ -161,4 +192,6 @@ export interface AnalyzedResume {
 
 /** Every API method returns this shape — success carries the payload,
  *  failure carries a human-readable message. Never throws. */
-export type ApiResult<T extends object = object> = ({ ok: true } & T) | { ok: false; error: string };
+export type ApiResult<T extends object = object> =
+  | ({ ok: true } & T)
+  | { ok: false; error: string; exists?: boolean };

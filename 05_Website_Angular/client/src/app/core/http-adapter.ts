@@ -8,7 +8,7 @@
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ApiAdapter } from './adapter';
-import { AnalyzedResume, Application, ApiResult, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, User } from './models';
+import { AdminRecruiter, AnalyzedResume, Application, ApiResult, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, User } from './models';
 import { MAX_UPLOAD, ALLOWED_MIME } from './engine';
 
 export class HttpAdapter implements ApiAdapter {
@@ -27,11 +27,18 @@ export class HttpAdapter implements ApiAdapter {
 
   auth = {
     login: (email: string, password: string) => this.call<{ user: User }>('auth', 'login', { email, password }),
+    sendCode: (email: string, purpose: 'verify' | 'reset') =>
+      this.call<{ sent?: boolean; devCode?: string; simulated?: boolean; note?: string }>('auth', 'send-code', { email, purpose }),
     registerSeeker: (d: any) => this.call<{ user: User }>('auth', 'register', d),
+    resetPassword: (d: { email: string; code: string; password: string }) => this.call<object>('auth', 'reset-password', d),
     requestRecruiterAccess: (d: any) => this.call<object>('auth', 'request-access', d),
     logout: () => this.call<object>('auth', 'logout'),
     me: () => this.call<{ user: User | null }>('auth', 'me'),
     changePassword: (current: string, next: string) => this.call<object>('auth', 'change-password', { current, next }),
+    changeEmailStart: (newEmail: string, password: string) =>
+      this.call<{ sent?: boolean; devCode?: string; simulated?: boolean; note?: string }>('auth', 'change-email-start', { newEmail, password }),
+    changeEmailConfirm: (newEmail: string, code: string) => this.call<{ user: User }>('auth', 'change-email-confirm', { newEmail, code }),
+    setEmailNotifications: (enabled: boolean) => this.call<{ user: User }>('auth', 'set-notifications', { enabled }),
     deleteAccount: (password: string) => this.call<object>('auth', 'delete-account', { password }),
     exportMyData: () => this.call<{ data: any }>('auth', 'export'),
   };
@@ -80,6 +87,16 @@ export class HttpAdapter implements ApiAdapter {
     mine: () => this.call<{ applications: Application[] }>('applications', 'mine'),
     ranked: (postingId: string) => this.call<{ posting: Posting; rows: RankedRow[] }>('applications', 'ranked', { postingId }),
     setStatus: (id: string, status: string) => this.call<{ application: Application }>('applications', 'set-status', { id, status }),
+    invite: (id: string, message: string) => this.call<{ sent?: boolean; simulated?: boolean }>('applications', 'invite', { id, message }),
+  };
+
+  saved = {
+    list: () => this.call<{ postings: Posting[] }>('saved', 'list'),
+    toggle: (postingId: string) => this.call<{ saved: boolean }>('saved', 'toggle', { postingId }),
+  };
+
+  metrics = {
+    summary: () => this.call<{ metrics: any }>('metrics', 'summary'),
   };
 
   match = {
@@ -88,6 +105,13 @@ export class HttpAdapter implements ApiAdapter {
   };
 
   stats = { hr: () => this.call<{ stats: HrStats }>('stats', 'hr') };
+
+  admin = {
+    requests: () => this.call<{ requests: RecruiterRequest[] }>('admin', 'requests'),
+    approve: (id: string) => this.call<{ requests: RecruiterRequest[] }>('admin', 'approve', { id }),
+    decline: (id: string) => this.call<{ requests: RecruiterRequest[] }>('admin', 'decline', { id }),
+    recruiters: () => this.call<{ recruiters: AdminRecruiter[] }>('admin', 'recruiters'),
+  };
 
   analyze = {
     resume: async (file: File): Promise<ApiResult<{ resume: AnalyzedResume; provider?: string; simulated?: boolean }>> => {

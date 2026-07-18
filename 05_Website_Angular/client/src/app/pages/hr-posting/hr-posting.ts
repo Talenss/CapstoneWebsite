@@ -39,7 +39,9 @@ export class HrPosting {
   skillsVal = signal<string[]>([]);
   eduVal = signal<EduLevel>('bachelor');
   monthsVal = signal(0);
+  deadlineVal = signal(''); // optional YYYY-MM-DD; empty = no deadline
   skillInput = signal('');
+  todayStr = new Date().toISOString().slice(0, 10);
 
   titleInvalid = signal(false);
   deptInvalid = signal(false);
@@ -96,6 +98,7 @@ export class HrPosting {
       this.skillsVal.set([...p.skills]);
       this.eduVal.set(p.educationLevel);
       this.monthsVal.set(p.minExperienceMonths || 0);
+      this.deadlineVal.set(p.deadline || '');
     }
 
     // Recruiters can only see resumes actually submitted to their company, so
@@ -117,6 +120,7 @@ export class HrPosting {
   setDesc(e: Event): void { this.descVal.set((e.target as HTMLTextAreaElement).value); }
   setEdu(e: Event): void { this.eduVal.set((e.target as HTMLSelectElement).value as EduLevel); }
   setMonths(e: Event): void { this.monthsVal.set(Number((e.target as HTMLInputElement).value) || 0); }
+  setDeadline(e: Event): void { this.deadlineVal.set((e.target as HTMLInputElement).value); }
   setSkillInput(e: Event): void { this.skillInput.set((e.target as HTMLInputElement).value); }
 
   onSkillKeydown(e: KeyboardEvent): void {
@@ -162,6 +166,7 @@ export class HrPosting {
       title, department, employmentType: this.typeVal(), description,
       skills, educationLevel: this.eduVal(),
       minExperienceMonths: Math.max(0, this.monthsVal() || 0),
+      deadline: this.deadlineVal() || null,
       status: this.postingStatus(),
     };
     const id = this.postingId();

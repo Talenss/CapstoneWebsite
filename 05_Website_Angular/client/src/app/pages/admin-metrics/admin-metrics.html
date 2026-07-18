@@ -1,0 +1,73 @@
+<app-header variant="admin" active="metrics" />
+
+<main id="main" class="container" style="padding-bottom:80px">
+  <div class="page-head head-row">
+    <div>
+      <span class="eyebrow">Research team</span>
+      <h1>Study metrics</h1>
+      <p>Evaluation data for the paper — aggregates only, never a name. Scores are captured <b>at the moment of applying</b>, so they reflect what the applicant and recruiter actually saw.</p>
+    </div>
+    <button class="btn primary" type="button" [disabled]="!m()" (click)="downloadJson()">Download as JSON</button>
+  </div>
+
+  @if (errorMsg()) {
+    <div class="alert error show" role="alert">{{ errorMsg() }}</div>
+  }
+
+  @if (!loaded()) {
+    <div class="loading"><span class="spinner"></span> Computing…</div>
+  } @else if (m(); as mm) {
+
+    <div class="tiles">
+      <div class="tile"><b>{{ mm.volumes.seekers }}</b><span>Job seekers</span></div>
+      <div class="tile"><b>{{ mm.volumes.resumes }}</b><span>Resumes built</span></div>
+      <div class="tile"><b>{{ mm.volumes.postings }}</b><span>Postings ({{ mm.volumes.openPostings }} open)</span></div>
+      <div class="tile"><b>{{ mm.volumes.applications }}</b><span>Applications</span></div>
+      <div class="tile"><b>{{ mm.scores.average ?? '—' }}<i>{{ mm.scores.average != null ? '%' : '' }}</i></b><span>Average score at application</span></div>
+      <div class="tile"><b>{{ mm.responsiveness.avgHoursToFirstDecision ?? '—' }}<i>{{ mm.responsiveness.avgHoursToFirstDecision != null ? 'h' : '' }}</i></b><span>Avg. time to first recruiter action ({{ mm.responsiveness.applicationsDecided }} decided)</span></div>
+    </div>
+
+    <section class="block">
+      <h2>Score distribution at application</h2>
+      <p class="lede">Each bar is a 10-point band of the compatibility score applicants had when they pressed Apply.</p>
+      <div class="hist">
+        @for (b of mm.scores.buckets; track b.range) {
+          <div class="col">
+            <span class="n">{{ b.count || '' }}</span>
+            <div class="bar" [style.height.%]="(b.count / maxBucket()) * 100"></div>
+            <span class="lbl">{{ b.range }}</span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="block">
+      <h2>Tier when applying</h2>
+      <p class="lede">The third row is the study's no-rejection claim in action: people applying to roles the engine scored <i>below</i> the threshold — because a low score here is a redirection, never a locked door.</p>
+      @for (t of tierRows(); track t.label) {
+        <div class="hrow">
+          <span class="hlabel">{{ t.label }}</span>
+          <div class="htrack"><div class="hfill {{ t.cls }}" [style.width.%]="t.pct"></div></div>
+          <b class="hcount">{{ t.count }}</b>
+        </div>
+      }
+    </section>
+
+    <section class="block">
+      <h2>Application status funnel</h2>
+      <p class="lede">Every status was set by a person at the partner company.</p>
+      @for (f of funnelRows(); track f.key) {
+        <div class="hrow">
+          <span class="hlabel">{{ f.label }}</span>
+          <div class="htrack"><div class="hfill ink" [style.width.%]="f.pct"></div></div>
+          <b class="hcount">{{ f.count }}</b>
+        </div>
+      }
+    </section>
+
+    @if (isDemo) {
+      <p class="hint">Demo mode computes these live from this browser's data — in server mode the same numbers come from the real database, where time-to-decision uses the full status history.</p>
+    }
+    <p class="hint">Generated {{ mm.generatedAt }}. Thresholds: strong ≥ {{ mm.thresholds.strong }}%, related ≥ {{ mm.thresholds.related }}%.</p>
+  }
+</main>

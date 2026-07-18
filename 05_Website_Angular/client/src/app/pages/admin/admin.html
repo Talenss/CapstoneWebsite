@@ -1,0 +1,111 @@
+<app-header variant="admin" active="admin" />
+
+<main id="main" class="container" style="padding-bottom:80px">
+  <div class="page-head">
+    <span class="eyebrow">Research team</span>
+    <h1>Recruiter requests</h1>
+    <p>Every posting on the platform is a real job because every recruiter account passes through this desk. Verify each request with the partner company's HR before approving — <b>approving is what creates the account</b>. The recruiter then sets their own password through "Forgot password"{{ isDemo ? ' (in demo mode the code appears on screen)' : ', guided by the approval email' }}.</p>
+  </div>
+
+  @if (errorMsg()) {
+    <div class="alert error show" role="alert">{{ errorMsg() }}</div>
+  }
+
+  @if (!loaded()) {
+    <div class="loading"><span class="spinner"></span> Loading requests…</div>
+  } @else {
+
+    <section class="block">
+      <h2>Waiting for review <span class="count">{{ pending().length }}</span></h2>
+      @if (!pending().length) {
+        <div class="card empty">
+          <p>Nothing pending. New requests from the "Request recruiter access" form land here.</p>
+        </div>
+      } @else {
+        <div class="grid cols-2">
+          @for (r of pending(); track r.id) {
+            <article class="card req">
+              <div class="who">
+                <h3>{{ r.name }}</h3>
+                <span class="badge gold">Pending</span>
+              </div>
+              <div class="facts">
+                <p><span>Email</span><b>{{ r.email }}</b></p>
+                <p><span>Position</span><b>{{ r.position || '—' }}</b></p>
+                <p><span>Company</span><b>{{ r.companyName }}</b></p>
+                <p><span>Requested</span><b>{{ day(r.requestedAt) }}</b></p>
+              </div>
+              @if (r.note) {
+                <p class="note"><b>Note:</b> {{ r.note }}</p>
+              }
+              <div class="acts">
+                <button class="btn primary" type="button" [disabled]="busyId() === r.id" (click)="approve(r)">
+                  @if (busyId() === r.id) { <span class="spinner"></span> Working… } @else { Approve — create account }
+                </button>
+                <button class="btn ghost" type="button" [disabled]="busyId() === r.id" (click)="decline(r)">Decline</button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="block">
+      <h2>Recruiter accounts <span class="count">{{ recruiters().length }}</span></h2>
+      @if (!recruiters().length) {
+        <div class="card empty"><p>No recruiter accounts yet.</p></div>
+      } @else {
+        <div class="card" style="padding:0;overflow-x:auto">
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Email</th><th>Position</th><th>Company</th><th>Since</th><th>Last login</th></tr>
+            </thead>
+            <tbody>
+              @for (u of recruiters(); track u.id) {
+                <tr>
+                  <td><b>{{ u.name }}</b></td>
+                  <td>{{ u.email }}</td>
+                  <td>{{ u.position || '—' }}</td>
+                  <td>{{ u.companyName }}</td>
+                  <td>{{ day(u.createdAt) }}</td>
+                  <td>{{ u.lastLoginAt ? day(u.lastLoginAt) : 'Never' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <section class="block">
+      <h2>Handled requests <span class="count">{{ handled().length }}</span></h2>
+      @if (!handled().length) {
+        <div class="card empty"><p>No approved or declined requests yet.</p></div>
+      } @else {
+        <div class="card" style="padding:0;overflow-x:auto">
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Email</th><th>Company</th><th>Requested</th><th>Outcome</th></tr>
+            </thead>
+            <tbody>
+              @for (r of handled(); track r.id) {
+                <tr>
+                  <td><b>{{ r.name }}</b></td>
+                  <td>{{ r.email }}</td>
+                  <td>{{ r.companyName }}</td>
+                  <td>{{ day(r.requestedAt) }}</td>
+                  <td>
+                    @if (r.status === 'approved') { <span class="badge green">Approved</span> }
+                    @else { <span class="badge wine">Declined</span> }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+</main>
+
+<div class="toast" [class.show]="!!toastMsg()">{{ toastMsg() }}</div>

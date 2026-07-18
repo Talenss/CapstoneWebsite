@@ -21,7 +21,7 @@ export async function requireUser(req: Request, res: Response): Promise<UserRow 
 }
 
 /** Returns the user if they hold `role`, or sends a 401/403 and returns null. */
-export async function requireRole(req: Request, res: Response, role: 'seeker' | 'recruiter'): Promise<UserRow | null> {
+export async function requireRole(req: Request, res: Response, role: 'seeker' | 'recruiter' | 'admin'): Promise<UserRow | null> {
   const u = await requireUser(req, res);
   if (!u) return null;
   if (u.role !== role) {

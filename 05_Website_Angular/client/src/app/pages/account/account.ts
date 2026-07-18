@@ -1,8 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Header } from '../../layout/header/header';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
+import { environment } from '../../../environments/environment';
+import { passwordOk, PASSWORD_HINT } from '../../core/engine';
 
 /** Port of 04_Website/app/account.html — shared by both seeker and
  *  recruiter accounts (the route is guarded with no specific role).
@@ -10,7 +13,7 @@ import { SessionService } from '../../core/session.service';
 @Component({
   selector: 'app-account',
   standalone: true,
-  imports: [RouterLink, Header],
+  imports: [FormsModule, RouterLink, Header],
   templateUrl: './account.html',
   styleUrl: './account.css',
 })
@@ -18,7 +21,10 @@ export class Account {
   private api = inject(ApiService);
   session = inject(SessionService);
 
-  headerVariant = computed<'seeker' | 'recruiter'>(() => (this.session.user()?.role === 'seeker' ? 'seeker' : 'recruiter'));
+  headerVariant = computed<'seeker' | 'recruiter' | 'admin'>(() => {
+    const role = this.session.user()?.role;
+    return role === 'seeker' ? 'seeker' : role === 'admin' ? 'admin' : 'recruiter';
+  });
 
   memberSince = computed(() => {
     const u = this.session.user();
@@ -29,6 +35,86 @@ export class Account {
 
   msg = signal<string | null>(null);
   toastMsg = signal<string | null>(null);
+  readonly passwordHint = PASSWORD_HINT;
+
+  // ---- change email (code-verified, like registration) ----
+  emailStep = signal<'closed' | 'form' | 'code'>('closed');
+  ceNewEmail = '';
+  cePassword = '';
+  ceCode = '';
+  ceError = signal('');
+  ceBusy = signal(false);
+  ceDevCode = signal<string | null>(null);
+
+  openChangeEmail(): void {
+    this.emailStep.set('form');
+    this.ceNewEmail = '';
+    this.cePassword = '';
+    this.ceCode = '';
+    this.ceError.set('');
+    this.ceDevCode.set(null);
+  }
+
+  cancelChangeEmail(): void {
+    this.emailStep.set('closed');
+  }
+
+  async onChangeEmailStart(e: Event): Promise<void> {
+    e.preventDefault();
+    this.ceError.set('');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.ceNewEmail.trim())) {
+      this.ceError.set('Enter a valid email address.');
+      return;
+    }
+    this.ceBusy.set(true);
+    const res = await this.api.auth.changeEmailStart(this.ceNewEmail.trim(), this.cePassword);
+    this.ceBusy.set(false);
+    if (!res.ok) {
+      this.ceError.set(res.error);
+      return;
+    }
+    this.ceDevCode.set(res.devCode ?? null);
+    this.emailStep.set('code');
+  }
+
+  async onChangeEmailConfirm(e: Event): Promise<void> {
+    e.preventDefault();
+    this.ceError.set('');
+    if (!/^\d{6}$/.test(this.ceCode.trim())) {
+      this.ceError.set('Enter the 6-digit code from the email.');
+      return;
+    }
+    this.ceBusy.set(true);
+    const res = await this.api.auth.changeEmailConfirm(this.ceNewEmail.trim(), this.ceCode.trim());
+    this.ceBusy.set(false);
+    if (!res.ok) {
+      this.ceError.set(res.error);
+      return;
+    }
+    this.session.user.set(res.user);
+    this.emailStep.set('closed');
+    this.showToast('Email address updated.');
+  }
+
+  // ---- email notifications toggle ----
+  isDemo = environment.mode === 'demo';
+  notifySaving = signal(false);
+  notifyOn = computed(() => this.session.user()?.emailNotifications !== false);
+
+  async onToggleNotify(e: Event): Promise<void> {
+    const box = e.target as HTMLInputElement;
+    const enabled = box.checked;
+    this.notifySaving.set(true);
+    const res = await this.api.auth.setEmailNotifications(enabled);
+    this.notifySaving.set(false);
+    if (!res.ok) {
+      box.checked = !enabled;
+      this.msg.set(res.error);
+      return;
+    }
+    this.session.user.set(res.user);
+    this.showToast(enabled ? 'Email updates are on.' : 'Email updates are off.');
+  }
 
   curInvalid = signal(false);
   newInvalid = signal(false);
@@ -49,7 +135,7 @@ export class Account {
     this.msg.set(null);
 
     const curOk = curInput.value.length > 0;
-    const newOk = newInput.value.length >= 6;
+    const newOk = passwordOk(newInput.value);
     const repOk = repInput.value === newInput.value && repInput.value.length > 0;
     this.curInvalid.set(!curOk);
     this.newInvalid.set(!newOk);

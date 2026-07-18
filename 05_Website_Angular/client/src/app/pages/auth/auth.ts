@@ -1,21 +1,29 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, WritableSignal, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
 import { ApiService } from '../../core/api.service';
+import { SessionService } from '../../core/session.service';
 import { Company } from '../../core/models';
+import { passwordOk, PASSWORD_HINT } from '../../core/engine';
 
 type Tab = 'login' | 'reg';
 type Role = 'seeker' | 'recruiter';
 type RegMessage = { type: 'error' | 'ok'; text: string; companyName?: string };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const RESEND_SECONDS = 60;
 
 /** Port of 04_Website/app/auth.html — the log in / create account page.
  *  Combines a login form and a role-aware register form (seeker vs.
  *  recruiter/HR access request) in one tabbed panel, mirroring the
- *  original's tab + hash + role-toggle script 1:1. */
+ *  original's tab + hash + role-toggle script 1:1.
+ *
+ *  Seeker registration is a two-step flow: the form first, then a 6-digit
+ *  code emailed to the address (simulated on-screen in demo mode) — so an
+ *  account only exists once its email is proven real. The login panel
+ *  doubles as the forgot-password flow, same code mechanism. */
 @Component({
   selector: 'app-auth',
   standalone: true,
@@ -23,14 +31,16 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   templateUrl: './auth.html',
   styleUrl: './auth.css',
 })
-export class Auth implements OnInit {
+export class Auth implements OnInit, OnDestroy {
   private api = inject(ApiService);
+  private session = inject(SessionService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
   activeTab = signal<Tab>('login');
   role = signal<Role>('seeker');
   companies = signal<Company[]>([]);
+  readonly passwordHint = PASSWORD_HINT;
 
   // ---- login form state ----
   loginEmail = '';
@@ -38,7 +48,23 @@ export class Auth implements OnInit {
   loginEmailInvalid = signal(false);
   loginPasswordInvalid = signal(false);
   loginError = signal('');
+  loginNotice = signal(''); // green banner, e.g. after a password reset
   loginBusy = signal(false);
+
+  // ---- forgot password (lives inside the login panel) ----
+  forgotOpen = signal(false);
+  fpStep = signal<'email' | 'code'>('email');
+  fpEmail = '';
+  fpCode = '';
+  fpPassword = '';
+  fpEmailInvalid = signal(false);
+  fpCodeInvalid = signal(false);
+  fpPasswordInvalid = signal(false);
+  fpError = signal('');
+  fpBusy = signal(false);
+  fpDevCode = signal<string | null>(null);
+  fpDevNote = signal<'demo' | 'debug' | null>(null);
+  fpResendLeft = signal(0);
 
   // ---- register form state ----
   regName = '';
@@ -55,13 +81,28 @@ export class Auth implements OnInit {
   regMessage = signal<RegMessage | null>(null);
   regBusy = signal(false);
 
-  regBtnLabel = computed(() => (this.role() === 'recruiter' ? 'Send access request' : 'Create job seeker account'));
-  regHeading = computed(() => (this.role() === 'recruiter' ? 'Request recruiter access' : 'Create your free account'));
-  regSub = computed(() =>
-    this.role() === 'recruiter'
-      ? 'We verify every request with the partner company before activating an account.'
-      : 'Pick your role — the form follows.',
-  );
+  // ---- register: email verification step ----
+  regStep = signal<'form' | 'code'>('form');
+  regCode = '';
+  regCodeInvalid = signal(false);
+  regExists = signal(false); // "this email already has an account — log in instead?"
+  regDevCode = signal<string | null>(null);
+  regDevNote = signal<'demo' | 'debug' | null>(null);
+  regResendLeft = signal(0);
+
+  private timers: ReturnType<typeof setInterval>[] = [];
+
+  regBtnLabel = computed(() => (this.role() === 'recruiter' ? 'Send access request' : 'Continue — verify my email'));
+  regHeading = computed(() => {
+    if (this.role() === 'recruiter') return 'Request recruiter access';
+    return this.regStep() === 'code' ? 'Confirm your email' : 'Create your free account';
+  });
+  regSub = computed(() => {
+    if (this.role() === 'recruiter') return 'We verify every request with the partner company before activating an account.';
+    return this.regStep() === 'code'
+      ? 'One last step — prove the email is really yours.'
+      : 'Pick your role — the form follows.';
+  });
 
   constructor() {
     this.route.fragment.pipe(takeUntilDestroyed()).subscribe((fragment) => this.applyFragment(fragment));
@@ -72,11 +113,15 @@ export class Auth implements OnInit {
     this.loadCompanies();
   }
 
+  ngOnDestroy(): void {
+    this.timers.forEach((t) => clearInterval(t));
+  }
+
   private async checkExistingSession(): Promise<void> {
     const res = await this.api.auth.me();
     if (res.ok && res.user) {
       const next = this.route.snapshot.queryParamMap.get('next');
-      this.router.navigateByUrl(next || (res.user.role === 'seeker' ? '/seeker-dashboard' : '/hr-dashboard'), { replaceUrl: true });
+      this.router.navigateByUrl(next || this.session.homeFor(res.user), { replaceUrl: true });
     }
   }
 
@@ -97,15 +142,30 @@ export class Auth implements OnInit {
 
   setRole(role: Role): void {
     this.role.set(role);
+    this.regExists.set(false);
   }
 
   private emailValid(v: string): boolean {
     return EMAIL_RE.test(String(v).trim());
   }
 
+  /** 60-second countdown before "Resend code" becomes clickable again. */
+  private startCooldown(sig: WritableSignal<number>): void {
+    sig.set(RESEND_SECONDS);
+    const t = setInterval(() => {
+      const left = sig() - 1;
+      sig.set(left);
+      if (left <= 0) clearInterval(t);
+    }, 1000);
+    this.timers.push(t);
+  }
+
+  // ============================== LOG IN ==============================
+
   async onLogin(e: Event): Promise<void> {
     e.preventDefault();
     this.loginError.set('');
+    this.loginNotice.set('');
 
     const emailOk = this.emailValid(this.loginEmail);
     this.loginEmailInvalid.set(!emailOk);
@@ -122,12 +182,90 @@ export class Auth implements OnInit {
     }
 
     const next = this.route.snapshot.queryParamMap.get('next');
-    this.router.navigateByUrl(next || (res.user.role === 'seeker' ? '/seeker-dashboard' : '/hr-dashboard'));
+    this.router.navigateByUrl(next || this.session.homeFor(res.user));
   }
+
+  // ========================= FORGOT PASSWORD =========================
+
+  toggleForgot(open: boolean): void {
+    this.forgotOpen.set(open);
+    this.fpStep.set('email');
+    this.fpEmail = open ? this.loginEmail : '';
+    this.fpCode = '';
+    this.fpPassword = '';
+    this.fpError.set('');
+    this.fpDevCode.set(null);
+    this.fpDevNote.set(null);
+    this.fpEmailInvalid.set(false);
+    this.fpCodeInvalid.set(false);
+    this.fpPasswordInvalid.set(false);
+    this.loginError.set('');
+    this.loginNotice.set('');
+  }
+
+  async onForgotSend(e: Event): Promise<void> {
+    e.preventDefault();
+    this.fpError.set('');
+    const emailOk = this.emailValid(this.fpEmail);
+    this.fpEmailInvalid.set(!emailOk);
+    if (!emailOk) return;
+
+    this.fpBusy.set(true);
+    const res = await this.api.auth.sendCode(this.fpEmail.trim(), 'reset');
+    this.fpBusy.set(false);
+    if (!res.ok) {
+      this.fpError.set(res.error);
+      return;
+    }
+    this.fpDevCode.set(res.devCode ?? null);
+    this.fpDevNote.set(res.devCode ? (res.simulated ? 'demo' : 'debug') : null);
+    this.fpStep.set('code');
+    this.startCooldown(this.fpResendLeft);
+  }
+
+  async resendForgot(): Promise<void> {
+    if (this.fpResendLeft() > 0 || this.fpBusy()) return;
+    this.fpError.set('');
+    this.fpBusy.set(true);
+    const res = await this.api.auth.sendCode(this.fpEmail.trim(), 'reset');
+    this.fpBusy.set(false);
+    if (!res.ok) {
+      this.fpError.set(res.error);
+      return;
+    }
+    this.fpDevCode.set(res.devCode ?? null);
+    this.fpDevNote.set(res.devCode ? (res.simulated ? 'demo' : 'debug') : null);
+    this.startCooldown(this.fpResendLeft);
+  }
+
+  async onForgotReset(e: Event): Promise<void> {
+    e.preventDefault();
+    this.fpError.set('');
+    const codeOk = /^\d{6}$/.test(this.fpCode.trim());
+    this.fpCodeInvalid.set(!codeOk);
+    const passOk = passwordOk(this.fpPassword);
+    this.fpPasswordInvalid.set(!passOk);
+    if (!codeOk || !passOk) return;
+
+    this.fpBusy.set(true);
+    const res = await this.api.auth.resetPassword({ email: this.fpEmail.trim(), code: this.fpCode.trim(), password: this.fpPassword });
+    this.fpBusy.set(false);
+    if (!res.ok) {
+      this.fpError.set(res.error);
+      return;
+    }
+    this.loginEmail = this.fpEmail.trim();
+    this.loginPassword = '';
+    this.toggleForgot(false);
+    this.loginNotice.set('Password updated. Log in with your new password.');
+  }
+
+  // ====================== CREATE ACCOUNT (SEEKER) ======================
 
   async onRegister(e: Event): Promise<void> {
     e.preventDefault();
     this.regMessage.set(null);
+    this.regExists.set(false);
     const hr = this.role() === 'recruiter';
 
     const nameOk = this.regName.trim().length >= 2;
@@ -137,7 +275,7 @@ export class Auth implements OnInit {
 
     let passOk = true;
     if (!hr) {
-      passOk = this.regPassword.length >= 6;
+      passOk = passwordOk(this.regPassword);
       this.regPasswordInvalid.set(!passOk);
     } else {
       this.regPasswordInvalid.set(false);
@@ -159,17 +297,24 @@ export class Auth implements OnInit {
 
     this.regBusy.set(true);
     if (!hr) {
-      const res = await this.api.auth.registerSeeker({
-        name: this.regName.trim(),
-        email: this.regEmail.trim(),
-        password: this.regPassword,
-      });
+      // Step 1 of 2: send the verification code. The account is only
+      // created after the code checks out in onVerifyRegister().
+      const res = await this.api.auth.sendCode(this.regEmail.trim(), 'verify');
       this.regBusy.set(false);
       if (!res.ok) {
-        this.regMessage.set({ type: 'error', text: res.error });
+        if (res.exists) {
+          this.regExists.set(true);
+        } else {
+          this.regMessage.set({ type: 'error', text: res.error });
+        }
         return;
       }
-      this.router.navigate(['/resume-builder'], { queryParams: { welcome: 1 } });
+      this.regCode = '';
+      this.regCodeInvalid.set(false);
+      this.regDevCode.set(res.devCode ?? null);
+      this.regDevNote.set(res.devCode ? (res.simulated ? 'demo' : 'debug') : null);
+      this.regStep.set('code');
+      this.startCooldown(this.regResendLeft);
     } else {
       const companyName = this.companies().find((c) => c.id === this.regCompanyId)?.name ?? '';
       const res = await this.api.auth.requestRecruiterAccess({
@@ -189,6 +334,70 @@ export class Auth implements OnInit {
     }
   }
 
+  async onVerifyRegister(e: Event): Promise<void> {
+    e.preventDefault();
+    this.regMessage.set(null);
+    const codeOk = /^\d{6}$/.test(this.regCode.trim());
+    this.regCodeInvalid.set(!codeOk);
+    if (!codeOk) return;
+
+    this.regBusy.set(true);
+    const res = await this.api.auth.registerSeeker({
+      name: this.regName.trim(),
+      email: this.regEmail.trim(),
+      password: this.regPassword,
+      code: this.regCode.trim(),
+    });
+    this.regBusy.set(false);
+    if (!res.ok) {
+      if (res.exists) {
+        this.regStep.set('form');
+        this.regExists.set(true);
+      } else {
+        this.regMessage.set({ type: 'error', text: res.error });
+      }
+      return;
+    }
+    this.router.navigate(['/resume-builder'], { queryParams: { welcome: 1 } });
+  }
+
+  async resendRegister(): Promise<void> {
+    if (this.regResendLeft() > 0 || this.regBusy()) return;
+    this.regMessage.set(null);
+    this.regBusy.set(true);
+    const res = await this.api.auth.sendCode(this.regEmail.trim(), 'verify');
+    this.regBusy.set(false);
+    if (!res.ok) {
+      this.regMessage.set({ type: 'error', text: res.error });
+      return;
+    }
+    this.regDevCode.set(res.devCode ?? null);
+    this.regDevNote.set(res.devCode ? (res.simulated ? 'demo' : 'debug') : null);
+    this.startCooldown(this.regResendLeft);
+  }
+
+  backToRegForm(): void {
+    this.regStep.set('form');
+    this.regCode = '';
+    this.regCodeInvalid.set(false);
+    this.regMessage.set(null);
+  }
+
+  /** "This email already has an account" → jump to the login tab, prefilled. */
+  useLoginInstead(): void {
+    this.loginEmail = this.regEmail.trim();
+    this.loginPassword = '';
+    this.loginError.set('');
+    this.loginNotice.set('This email already has an account — welcome back. Log in below.');
+    this.regExists.set(false);
+    this.activeTab.set('login');
+  }
+
+  dismissExists(): void {
+    this.regExists.set(false);
+    this.regEmail = '';
+  }
+
   private resetRegisterForm(): void {
     this.regName = '';
     this.regEmail = '';
@@ -201,6 +410,11 @@ export class Auth implements OnInit {
     this.regPasswordInvalid.set(false);
     this.regCompanyInvalid.set(false);
     this.regPositionInvalid.set(false);
+    this.regStep.set('form');
+    this.regCode = '';
+    this.regExists.set(false);
+    this.regDevCode.set(null);
+    this.regDevNote.set(null);
     this.role.set('seeker');
   }
 }

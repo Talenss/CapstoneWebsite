@@ -5,7 +5,7 @@
    ============================================================ */
 import { ApiAdapter } from './adapter';
 import { AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, User } from './models';
-import { scoreLocal, STATUS_ORDER } from './engine';
+import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, THRESHOLDS } from './engine';
 
 const KEY = 'rmph_v3_db';
 const SESSION = 'rmph_v3_session';
@@ -16,6 +16,13 @@ const uid = () => 'x' + Math.random().toString(36).slice(2, 9);
 interface DemoUser extends User {
   password: string;
 }
+interface EmailCode {
+  email: string;
+  purpose: 'verify' | 'reset';
+  code: string;
+  attempts: number;
+  expiresAt: number;
+}
 interface Db {
   companies: Company[];
   users: DemoUser[];
@@ -23,7 +30,16 @@ interface Db {
   postings: Posting[];
   applications: Application[];
   recruiterRequests: any[];
+  emailCodes: EmailCode[];
+  savedJobs: { userId: string; postingId: string; createdAt: number }[];
 }
+
+/** Past-deadline postings stop accepting applications — same lazy
+ *  auto-close rule as server mode (deadline day itself still counts). */
+function isExpired(p: Posting): boolean {
+  return !!p.deadline && String(p.deadline).slice(0, 10) < new Date().toISOString().slice(0, 10);
+}
+const withExpired = (p: Posting): Posting => ({ ...p, expired: isExpired(p) });
 
 function seed(): Db {
   return {
@@ -39,6 +55,7 @@ function seed(): Db {
       { id: 'u3', role: 'seeker', name: 'Ana Reyes', email: 'ana@demo.ph', password: 'demo123', activeResumeId: 'r2', createdAt: Date.now() - D * 20 },
       { id: 'u4', role: 'seeker', name: 'Marco Garcia', email: 'marco@demo.ph', password: 'demo123', activeResumeId: 'r3', createdAt: Date.now() - D * 15 },
       { id: 'u5', role: 'seeker', name: 'Liza Cruz', email: 'liza@demo.ph', password: 'demo123', activeResumeId: 'r4', createdAt: Date.now() - D * 10 },
+      { id: 'u6', role: 'admin', name: 'Research Team', email: 'admin@demo.ph', password: 'demo123', createdAt: Date.now() - D * 90 },
     ] as DemoUser[],
     resumes: [
       { id: 'r1', userId: 'u1', title: 'IT — fresh graduate', template: 'chronological',
@@ -94,7 +111,9 @@ function seed(): Db {
         skills: ['Communication', 'MS Office', 'Recruitment', 'Organization'], educationLevel: 'bachelor', minExperienceMonths: 0, status: 'open', createdAt: Date.now() - D * 4 },
       { id: 'p6', companyId: 'c1', title: 'Marketing Associate', department: 'Marketing', employmentType: 'full-time',
         description: 'Support promotions, events, and social media for the hotel and casino.',
-        skills: ['Social Media', 'Copywriting', 'Canva', 'Communication'], educationLevel: 'bachelor', minExperienceMonths: 6, status: 'open', createdAt: Date.now() - D * 3 },
+        skills: ['Social Media', 'Copywriting', 'Canva', 'Communication'], educationLevel: 'bachelor', minExperienceMonths: 6,
+        deadline: new Date(Date.now() + D * 14).toISOString().slice(0, 10), // demos the "Apply by" chip
+        status: 'open', createdAt: Date.now() - D * 3 },
       { id: 'p7', companyId: 'c1', title: 'Housekeeping Team Leader', department: 'Housekeeping', employmentType: 'full-time',
         description: 'Lead a room-attendant team across the Deluxe Building; manage schedules and quality inspections.',
         skills: ['Housekeeping Operations', 'Leadership', 'Scheduling', 'Teamwork'], educationLevel: 'highschool', minExperienceMonths: 12, status: 'open', createdAt: Date.now() - D * 2 },
@@ -106,14 +125,30 @@ function seed(): Db {
       { id: 'a4', seekerId: 'u5', resumeId: 'r4', postingId: 'p5', status: 'review', appliedAt: Date.now() - D * 3 },
       { id: 'a5', seekerId: 'u5', resumeId: 'r4', postingId: 'p6', status: 'submitted', appliedAt: Date.now() - D * 1 },
     ] as unknown as Application[],
-    recruiterRequests: [],
+    recruiterRequests: [
+      // A sample pending request, so the admin panel has something to demonstrate.
+      { id: 'q1', name: 'Carlos Mendoza', email: 'carlos.mendoza@roycehotel.ph', position: 'Talent Acquisition Specialist',
+        companyId: 'c1', note: 'Verify with HR head Ms. Santos, local 214.', status: 'pending', requestedAt: Date.now() - D * 1 },
+    ],
+    emailCodes: [],
+    savedJobs: [],
   };
 }
 
 function load(): Db {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const db: Db = JSON.parse(raw);
+      if (!db.emailCodes) db.emailCodes = []; // databases saved before this field existed
+      if (!db.savedJobs) db.savedJobs = [];
+      if (!db.users.some((u) => u.role === 'admin')) {
+        // databases saved before the admin panel existed get the admin account
+        db.users.push({ id: 'u6', role: 'admin', name: 'Research Team', email: 'admin@demo.ph', password: 'demo123', createdAt: Date.now() } as DemoUser);
+        persist(db);
+      }
+      return db;
+    }
   } catch { /* ignore */ }
   const db = seed();
   persist(db);
@@ -145,6 +180,22 @@ const pubUser = (u: DemoUser | null): User | null => {
   return c;
 };
 
+/** Validate a submitted email code against the demo DB. Returns an error
+ *  message, or null on success (in which case the code is consumed). */
+function consumeCode(db: Db, email: string, purpose: 'verify' | 'reset', submitted: string): string | null {
+  const row = db.emailCodes.find((c) => c.email === email && c.purpose === purpose);
+  if (!row) return 'No code was requested for this email. Use “Resend code” to get one.';
+  if (Date.now() > row.expiresAt) return 'That code has expired. Use “Resend code” to get a fresh one.';
+  if (row.attempts >= 5) return 'Too many wrong tries for this code. Use “Resend code” to get a fresh one.';
+  if (String(submitted).trim() !== row.code) {
+    row.attempts += 1;
+    persist(db);
+    return 'That code isn’t right. Check the email and try again.';
+  }
+  db.emailCodes = db.emailCodes.filter((c) => !(c.email === email && c.purpose === purpose));
+  return null;
+}
+
 export class DemoAdapter implements ApiAdapter {
   auth = {
     login: (email: string, password: string) => {
@@ -156,13 +207,47 @@ export class DemoAdapter implements ApiAdapter {
       setSession(u.id);
       return apiOk({ user: pubUser(u)! });
     },
-    registerSeeker: ({ name, email, password }: { name: string; email: string; password: string }) => {
+    /* Demo mode can't send real email, so the "sent" code is handed straight
+       back (devCode) and the auth page shows it in a banner clearly labelled
+       as demo behavior. Same 6-digit / 10-minute / 5-attempt rules as the
+       real server, so the demonstrated flow is honest. */
+    sendCode: (email: string, purpose: 'verify' | 'reset') => {
       const db = load();
-      if (db.users.some((u) => u.email.toLowerCase() === String(email).trim().toLowerCase()))
-        return apiFail('An account already uses this email. Log in instead.');
+      const e = String(email).trim().toLowerCase();
+      const exists = db.users.some((u) => u.email.toLowerCase() === e);
+      if (purpose === 'verify' && exists)
+        return Promise.resolve({ ok: false, exists: true, error: 'This email already has an account.' } as any);
+      if (purpose === 'reset' && !exists)
+        return apiOk({ sent: true, simulated: true }); // same reply as success — no account enumeration, even in demo
+      const code = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+      db.emailCodes = db.emailCodes.filter((c) => !(c.email === e && c.purpose === purpose));
+      db.emailCodes.push({ email: e, purpose, code, attempts: 0, expiresAt: Date.now() + 10 * 60000 });
+      persist(db);
+      return apiOk({ sent: false, simulated: true, devCode: code });
+    },
+    registerSeeker: ({ name, email, password, code }: { name: string; email: string; password: string; code: string }) => {
+      const db = load();
+      const e = String(email).trim().toLowerCase();
+      if (!passwordOk(password)) return apiFail(PASSWORD_HINT);
+      if (db.users.some((u) => u.email.toLowerCase() === e))
+        return Promise.resolve({ ok: false, exists: true, error: 'An account already uses this email. Log in instead.' } as any);
+      const err = consumeCode(db, e, 'verify', code);
+      if (err) return apiFail(err);
       const user: DemoUser = { id: uid(), role: 'seeker', name: String(name).trim(), email: String(email).trim(), password, activeResumeId: null, createdAt: Date.now() };
       db.users.push(user); persist(db); setSession(user.id);
       return apiOk({ user: pubUser(user)! });
+    },
+    resetPassword: ({ email, code, password }: { email: string; code: string; password: string }) => {
+      const db = load();
+      const e = String(email).trim().toLowerCase();
+      if (!passwordOk(password)) return apiFail(PASSWORD_HINT);
+      const u = db.users.find((x) => x.email.toLowerCase() === e);
+      if (!u) return apiFail('That code isn’t right. Check the email and try again.');
+      const err = consumeCode(db, e, 'reset', code);
+      if (err) return apiFail(err);
+      u.password = password;
+      persist(db);
+      return apiOk({});
     },
     requestRecruiterAccess: ({ name, email, position, companyId, note }: { name: string; email: string; position: string; companyId: string; note?: string }) => {
       const db = load();
@@ -176,10 +261,47 @@ export class DemoAdapter implements ApiAdapter {
     },
     logout: () => { setSession(null); return apiOk({}); },
     me: () => apiOk({ user: pubUser(meRow(load())) }),
+    /* Change email — same proof-of-inbox flow as registration, with the
+       demo's on-screen code standing in for the real email. */
+    changeEmailStart: (newEmail: string, password: string) => {
+      const db = load(); const u = meRow(db);
+      if (!u) return apiFail('You are not signed in.');
+      const e = String(newEmail).trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return apiFail('Enter a valid email address.');
+      if (e === u.email.toLowerCase()) return apiFail('That is already your email address.');
+      if (u.password !== password) return apiFail('Your password is incorrect.');
+      if (db.users.some((x) => x.email.toLowerCase() === e)) return apiFail('Another account already uses that email.');
+      const code = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+      db.emailCodes = db.emailCodes.filter((c) => !(c.email === e && c.purpose === 'verify'));
+      db.emailCodes.push({ email: e, purpose: 'verify', code, attempts: 0, expiresAt: Date.now() + 10 * 60000 });
+      persist(db);
+      return apiOk({ sent: false, simulated: true, devCode: code });
+    },
+    changeEmailConfirm: (newEmail: string, code: string) => {
+      const db = load(); const u = meRow(db);
+      if (!u) return apiFail('You are not signed in.');
+      const e = String(newEmail).trim().toLowerCase();
+      if (db.users.some((x) => x.email.toLowerCase() === e)) return apiFail('Another account already uses that email.');
+      const err = consumeCode(db, e, 'verify', code);
+      if (err) return apiFail(err);
+      u.email = String(newEmail).trim();
+      persist(db);
+      return apiOk({ user: pubUser(u)! });
+    },
+    /* Demo mode stores the preference but sends nothing — there's no mail
+       server behind a pure-browser demo, and the account page says so. */
+    setEmailNotifications: (enabled: boolean) => {
+      const db = load(); const u = meRow(db);
+      if (!u) return apiFail('You are not signed in.');
+      u.emailNotifications = enabled;
+      persist(db);
+      return apiOk({ user: pubUser(u)! });
+    },
     changePassword: (current: string, next: string) => {
       const db = load(); const u = meRow(db);
       if (!u) return apiFail('You are not signed in.');
       if (u.password !== current) return apiFail('Your current password is incorrect.');
+      if (!passwordOk(next)) return apiFail(PASSWORD_HINT);
       u.password = next; persist(db);
       return apiOk({});
     },
@@ -330,11 +452,13 @@ export class DemoAdapter implements ApiAdapter {
   };
 
   postings = {
+    // Open AND still accepting — a past deadline hides a posting without
+    // anyone closing it by hand.
     open: () => {
       const db = load();
       return apiOk({
-        postings: db.postings.filter((p) => p.status === 'open')
-          .map((p) => ({ ...p, company: db.companies.find((c) => c.id === p.companyId) })),
+        postings: db.postings.filter((p) => p.status === 'open' && !isExpired(p))
+          .map((p) => ({ ...withExpired(p), company: db.companies.find((c) => c.id === p.companyId) })),
       });
     },
     mine: () => { // recruiter: every posting of my company, open or closed
@@ -343,7 +467,7 @@ export class DemoAdapter implements ApiAdapter {
       return apiOk({
         postings: db.postings.filter((p) => p.companyId === me.companyId)
           .map((p) => ({
-            ...p,
+            ...withExpired(p),
             company: db.companies.find((c) => c.id === p.companyId),
             applicantCount: db.applications.filter((a) => a.postingId === p.id).length,
             newCount: db.applications.filter((a) => a.postingId === p.id && a.status === 'submitted').length,
@@ -355,11 +479,18 @@ export class DemoAdapter implements ApiAdapter {
       const db = load();
       const p = db.postings.find((x) => x.id === id);
       if (!p) return apiFail('That opening no longer exists.');
-      return apiOk({ posting: { ...p, company: db.companies.find((c) => c.id === p.companyId) } });
+      return apiOk({ posting: { ...withExpired(p), company: db.companies.find((c) => c.id === p.companyId) } });
     },
     save: (posting: Partial<Posting>) => {
       const db = load(); const me = meRow(db);
       if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
+      if (posting.deadline) {
+        const d = String(posting.deadline).slice(0, 10);
+        if (d < new Date().toISOString().slice(0, 10)) return apiFail("The application deadline can't be in the past.");
+        posting = { ...posting, deadline: d };
+      } else {
+        posting = { ...posting, deadline: null };
+      }
       const i = db.postings.findIndex((p) => p.id === posting.id);
       if (i >= 0) {
         if (db.postings[i].companyId !== me.companyId) return apiFail("You can only edit your own company's openings.");
@@ -388,6 +519,7 @@ export class DemoAdapter implements ApiAdapter {
       if (!r || r.userId !== me.id) return apiFail('Choose one of your own resumes.');
       const p = db.postings.find((x) => x.id === postingId);
       if (!p || p.status !== 'open') return apiFail('This opening is closed.');
+      if (isExpired(p)) return apiFail('The application deadline for this opening has passed.');
       if (db.applications.some((a) => a.seekerId === me.id && a.postingId === postingId))
         return apiFail('You already applied to this position.');
       const app: Application = { id: uid(), seekerId: me.id, resumeId, postingId, status: 'submitted', appliedAt: Date.now() };
@@ -434,6 +566,102 @@ export class DemoAdapter implements ApiAdapter {
       persist(db);
       return apiOk({ application: a });
     },
+    /* Demo mode can't send the applicant a real email — the panel shows
+       what WOULD be sent, clearly labelled. */
+    invite: (applicationId: string, message: string) => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
+      if (String(message).trim().length < 10) return apiFail('Write the applicant a short message first.');
+      const a = db.applications.find((x) => x.id === applicationId);
+      const p = a && db.postings.find((x) => x.id === a.postingId);
+      if (!a || !p || p.companyId !== me.companyId) return apiFail('Application not found.');
+      return apiOk({ sent: false, simulated: true });
+    },
+  };
+
+  saved = {
+    list: () => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'seeker') return apiFail('Sign in as a job seeker.');
+      const mine = db.savedJobs.filter((s) => s.userId === me.id).sort((a, b) => b.createdAt - a.createdAt);
+      return apiOk({
+        postings: mine
+          .map((s) => db.postings.find((p) => p.id === s.postingId))
+          .filter((p): p is Posting => !!p)
+          .map((p) => ({ ...withExpired(p), company: db.companies.find((c) => c.id === p.companyId) })),
+      });
+    },
+    toggle: (postingId: string) => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'seeker') return apiFail('Sign in as a job seeker.');
+      const i = db.savedJobs.findIndex((s) => s.userId === me.id && s.postingId === postingId);
+      if (i >= 0) {
+        db.savedJobs.splice(i, 1);
+        persist(db);
+        return apiOk({ saved: false });
+      }
+      if (!db.postings.some((p) => p.id === postingId)) return apiFail('Opening not found.');
+      db.savedJobs.push({ userId: me.id, postingId, createdAt: Date.now() });
+      persist(db);
+      return apiOk({ saved: true });
+    },
+  };
+
+  /* Researcher aggregates. Demo mode computes them live from the browser
+     database; no status history exists here, so time-to-decision is
+     approximated from updatedAt where present. */
+  metrics = {
+    summary: () => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+      const T = THRESHOLDS;
+      const scored = db.applications.map((a) => {
+        const r = db.resumes.find((x) => x.id === a.resumeId);
+        const p = db.postings.find((x) => x.id === a.postingId);
+        return r && p ? { a, score: scoreLocal(r, p).score } : null;
+      }).filter((x): x is { a: Application; score: number } => !!x);
+
+      const buckets = Array.from({ length: 10 }, (_, i) => ({
+        range: i === 9 ? '90–100' : `${i * 10}–${i * 10 + 9}`, count: 0,
+      }));
+      for (const s of scored) buckets[Math.min(Math.floor(s.score / 10), 9)].count++;
+
+      const funnel: Record<string, number> = { submitted: 0, review: 0, shortlisted: 0, rejected: 0, hired: 0 };
+      for (const a of db.applications) funnel[a.status] = (funnel[a.status] || 0) + 1;
+
+      const decided = db.applications.filter((a) => a.status !== 'submitted');
+      const withTimes = decided.filter((a) => (a as any).updatedAt && a.appliedAt);
+      const avgHours = withTimes.length
+        ? Math.round(withTimes.reduce((t, a) => t + ((a as any).updatedAt - a.appliedAt), 0) / withTimes.length / 360000) / 10
+        : null;
+
+      return apiOk({
+        metrics: {
+          generatedAt: new Date().toISOString(),
+          thresholds: T,
+          volumes: {
+            seekers: db.users.filter((u) => u.role === 'seeker').length,
+            recruiters: db.users.filter((u) => u.role === 'recruiter').length,
+            resumes: db.resumes.length,
+            postings: db.postings.length,
+            openPostings: db.postings.filter((p) => p.status === 'open' && !isExpired(p)).length,
+            applications: db.applications.length,
+            savedJobs: db.savedJobs.length,
+          },
+          scores: {
+            average: scored.length ? Math.round((scored.reduce((t, s) => t + s.score, 0) / scored.length) * 10) / 10 : null,
+            buckets,
+          },
+          tiersAtApplication: {
+            strong: scored.filter((s) => s.score >= T.strong).length,
+            possible: scored.filter((s) => s.score >= T.related && s.score < T.strong).length,
+            related: scored.filter((s) => s.score < T.related).length,
+          },
+          funnel,
+          responsiveness: { applicationsDecided: decided.length, avgHoursToFirstDecision: avgHours },
+        },
+      });
+    },
   };
 
   match = {
@@ -450,7 +678,7 @@ export class DemoAdapter implements ApiAdapter {
       const resume = db.resumes.find((r) => r.id === me.activeResumeId) || db.resumes.find((r) => r.userId === me.id);
       if (!resume) return apiOk({ resume: null, strong: [], possible: [], related: [] });
       const applied = db.applications.filter((a) => a.seekerId === me.id).map((a) => a.postingId);
-      const scored = db.postings.filter((p) => p.status === 'open').map((p) => ({
+      const scored = db.postings.filter((p) => p.status === 'open' && !isExpired(p)).map((p) => ({
         posting: p,
         company: db.companies.find((c) => c.id === p.companyId) || null,
         applied: applied.indexOf(p.id) !== -1,
@@ -485,6 +713,65 @@ export class DemoAdapter implements ApiAdapter {
       });
     },
   };
+
+  /* The research-team panel. Approving a request creates the verified
+     recruiter account with an unguessable placeholder password — the new
+     recruiter sets their own via "Forgot password", exactly like server
+     mode (demo shows the code on screen). */
+  admin = {
+    requests: () => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+      return apiOk({ requests: this.reqList(db) });
+    },
+    approve: (id: string) => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+      const r = db.recruiterRequests.find((x) => x.id === id);
+      if (!r) return apiFail('Request not found.');
+      if (r.status !== 'pending') return apiFail('This request was already handled.');
+      if (db.users.some((u) => u.email.toLowerCase() === r.email.toLowerCase()))
+        return apiFail('An account already uses this email. Decline the request instead.');
+      db.users.push({
+        id: uid(), role: 'recruiter', name: r.name, email: r.email,
+        password: uid() + uid() + uid(), // placeholder; they set their own via Forgot password
+        companyId: r.companyId, position: r.position || 'Recruiter', verified: true, createdAt: Date.now(),
+      } as DemoUser);
+      r.status = 'approved';
+      persist(db);
+      return apiOk({ requests: this.reqList(db) });
+    },
+    decline: (id: string) => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+      const r = db.recruiterRequests.find((x) => x.id === id);
+      if (!r) return apiFail('Request not found.');
+      if (r.status !== 'pending') return apiFail('This request was already handled.');
+      r.status = 'declined';
+      persist(db);
+      return apiOk({ requests: this.reqList(db) });
+    },
+    recruiters: () => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+      return apiOk({
+        recruiters: db.users.filter((u) => u.role === 'recruiter').map((u) => ({
+          id: u.id, name: u.name, email: u.email, position: u.position || '',
+          companyName: db.companies.find((c) => c.id === u.companyId)?.name || '—',
+          verified: !!u.verified, createdAt: u.createdAt, lastLoginAt: null,
+        })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
+      });
+    },
+  };
+
+  private reqList(db: Db) {
+    return db.recruiterRequests.map((r) => ({
+      id: r.id, name: r.name, email: r.email, position: r.position || '',
+      companyId: r.companyId ?? null,
+      companyName: db.companies.find((c) => c.id === r.companyId)?.name || '—',
+      note: r.note || '', status: r.status, requestedAt: r.requestedAt,
+    })).sort((a: any, b: any) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || b.requestedAt - a.requestedAt);
+  }
 
   analyze = {
     /** Demo mode can't call a real AI, so this returns a clearly-labeled

@@ -33,6 +33,6 @@ export class SessionService {
 
   homeFor(u: User | null): string {
     if (!u) return '/';
-    return u.role === 'seeker' ? '/seeker-dashboard' : '/hr-dashboard';
+    return u.role === 'seeker' ? '/seeker-dashboard' : u.role === 'admin' ? '/admin' : '/hr-dashboard';
   }
 }

@@ -29,6 +29,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/resume-print/resume-print').then((m) => m.ResumePrint),
   },
   {
+    path: 'admin', canActivate: [authGuard('admin')], title: 'Recruiter requests — ResumeMatch PH',
+    loadComponent: () => import('./pages/admin/admin').then((m) => m.Admin),
+  },
+  {
+    path: 'admin/metrics', canActivate: [authGuard('admin')], title: 'Study metrics — ResumeMatch PH',
+    loadComponent: () => import('./pages/admin-metrics/admin-metrics').then((m) => m.AdminMetrics),
+  },
+  {
     path: 'account', canActivate: [authGuard()], title: 'My account — ResumeMatch PH',
     loadComponent: () => import('./pages/account/account').then((m) => m.Account),
   },

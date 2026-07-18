@@ -10,9 +10,10 @@
 import express from 'express';
 import session from 'express-session';
 import cors from 'cors';
+import helmet from 'helmet';
 import path from 'path';
 import fs from 'fs';
-import { PORT, ALLOW_ORIGIN, SESSION_SECRET, UPLOAD_DIR, DEBUG } from './config';
+import { PORT, ALLOW_ORIGIN, SESSION_SECRET, UPLOAD_DIR, DEBUG, TRUST_PROXY, COOKIE_SECURE } from './config';
 
 import authRoutes from './routes/auth';
 import companiesRoutes from './routes/companies';
@@ -23,10 +24,45 @@ import matchRoutes from './routes/match';
 import statsRoutes from './routes/stats';
 import fileRoutes from './routes/file';
 import analyzeRoutes from './routes/analyze';
+import adminRoutes from './routes/admin';
+import savedRoutes from './routes/saved';
+import metricsRoutes from './routes/metrics';
+import { runMigrations } from './lib/migrate';
 
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
+// Additive schema upgrades (email_codes table, notification preference
+// column) — databases imported from the original 04_Website schema
+// upgrade themselves on first boot.
+runMigrations().catch((e) =>
+  console.error('Schema migration failed (is MySQL running?):', e?.message || e));
+
 const app = express();
+
+// Behind an HTTPS reverse proxy, TRUST_PROXY=true makes X-Forwarded-*
+// trustworthy (real client IPs for the rate limiters, https detection).
+if (TRUST_PROXY) app.set('trust proxy', 1);
+
+// Security headers. The CSP allows what the Angular app actually uses:
+// its own bundles, inline style bindings, Google Fonts, and same-origin
+// API/file requests (demo-mode file previews use data:/blob: URLs).
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      imgSrc: ["'self'", 'data:', 'blob:'],
+      connectSrc: ["'self'"],
+      frameSrc: ["'self'", 'data:', 'blob:'],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // would block the Google Fonts stylesheet
+}));
 
 app.use(cors({ origin: ALLOW_ORIGIN, credentials: true }));
 app.use(express.json({ limit: '2mb' }));
@@ -39,7 +75,7 @@ app.use(session({
   cookie: {
     httpOnly: true,
     sameSite: 'lax',
-    secure: false, // set true behind HTTPS in production
+    secure: COOKIE_SECURE, // COOKIE_SECURE=true in .env when serving over HTTPS
     maxAge: 1000 * 60 * 60 * 24 * 7,
   },
 }));
@@ -53,6 +89,9 @@ app.use('/api/match', matchRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/file', fileRoutes);
 app.use('/api/analyze', analyzeRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/saved', savedRoutes);
+app.use('/api/metrics', metricsRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
