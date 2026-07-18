@@ -7,6 +7,10 @@
 
 .wiz { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; margin: 26px 0 70px; }
 @media (max-width: 1000px) { .wiz { grid-template-columns: 1fr; } }
+/* Grid items default to min-width:auto, which would let the step rail's
+   content width blow the page out past a phone screen. Letting the
+   columns shrink is what makes the rail's own overflow-x:auto kick in. */
+.wiz > * { min-width: 0; }
 
 /* step rail — a real sequence, so it's numbered */
 .rail { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 1px solid var(--rule); overflow-x: auto; }

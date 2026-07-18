@@ -254,7 +254,7 @@ table.tbl tbody tr:hover{background:var(--ivory)}
 .modal-head h3{font-size:25px}
 .modal-head .sub{font-size:13px;color:var(--muted);margin-top:3px}
 .modal-body{padding:18px 26px}
-.modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:16px 26px;border-top:1px solid var(--rule-2);background:var(--ivory);
+.modal-foot{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;padding:16px 26px;border-top:1px solid var(--rule-2);background:var(--ivory);
   border-radius:0 0 var(--r-lg) var(--r-lg);flex-wrap:wrap}
 .close-x{position:absolute;top:12px;right:14px;background:none;border:none;font-size:24px;color:var(--muted);cursor:pointer;line-height:1;padding:4px 8px}
 .close-x:hover{color:var(--ink)}
@@ -266,6 +266,11 @@ table.tbl tbody tr:hover{background:var(--ivory)}
 .breakdown .row:last-child{border-bottom:none;background:var(--ivory)}
 .breakdown .row b{text-align:right;font-weight:600}
 .breakdown .w{color:var(--muted);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;display:block}
+/* On phones the label/value pair reads better stacked than squeezed. */
+@media(max-width:480px){
+  .breakdown .row{flex-direction:column;align-items:flex-start;gap:4px}
+  .breakdown .row b{text-align:left}
+}
 
 /* ---------- footer ---------- */
 .footer{background:var(--ink);color:#8A91A0;padding:56px 0 28px;font-size:13px}
