@@ -3,6 +3,7 @@ import { Header } from '../../layout/header/header';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
+import { environment } from '../../../environments/environment';
 
 /** Port of 04_Website/app/account.html — shared by both seeker and
  *  recruiter accounts (the route is guarded with no specific role).
@@ -29,6 +30,26 @@ export class Account {
 
   msg = signal<string | null>(null);
   toastMsg = signal<string | null>(null);
+
+  // ---- email notifications toggle ----
+  isDemo = environment.mode === 'demo';
+  notifySaving = signal(false);
+  notifyOn = computed(() => this.session.user()?.emailNotifications !== false);
+
+  async onToggleNotify(e: Event): Promise<void> {
+    const box = e.target as HTMLInputElement;
+    const enabled = box.checked;
+    this.notifySaving.set(true);
+    const res = await this.api.auth.setEmailNotifications(enabled);
+    this.notifySaving.set(false);
+    if (!res.ok) {
+      box.checked = !enabled;
+      this.msg.set(res.error);
+      return;
+    }
+    this.session.user.set(res.user);
+    this.showToast(enabled ? 'Email updates are on.' : 'Email updates are off.');
+  }
 
   curInvalid = signal(false);
   newInvalid = signal(false);

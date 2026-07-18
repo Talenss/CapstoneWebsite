@@ -6,6 +6,8 @@ import { ok, fail } from '../lib/http';
 import { requireRole, requireUser } from '../lib/auth';
 import { fetchResume, fetchPosting, serializeResume, serializePosting, serializeApplication } from '../lib/serializers';
 import { rmScore, cacheScore } from '../lib/engine';
+import { notifyStatusChange, notifyNewApplication } from '../lib/notify';
+import { UserRow } from '../types';
 
 const router = Router();
 
@@ -37,6 +39,18 @@ router.post('/apply', async (req, res) => {
     [insertId, u.user_id],
   );
   await cacheScore(rid, pid, s);
+
+  // Tell the posting's recruiters — fire-and-forget, and only those who
+  // keep email notifications on.
+  query<UserRow>(
+    `SELECT * FROM users
+      WHERE role = 'recruiter' AND company_id = ? AND verified = 1 AND email_notifications = 1`,
+    [p.company_id],
+  ).then((recruiters) =>
+    recruiters.forEach((r) =>
+      notifyNewApplication(r.email, r.full_name, p.title, u.full_name, s.score)
+        .catch((e) => console.error('new-application notify failed:', e?.message || e))),
+  ).catch((e) => console.error('new-application notify failed:', e?.message || e));
 
   const app = await queryOne<ApplicationRow>('SELECT * FROM applications WHERE application_id = ?', [insertId]);
   ok(res, { application: serializeApplication(app!) });
@@ -126,6 +140,21 @@ router.post('/set-status', async (req, res) => {
     'INSERT INTO application_status_history (application_id, old_status, new_status, changed_by) VALUES (?,?,?,?)',
     [aid, a.status, status, u.user_id],
   );
+
+  // Tell the seeker — unless they opted out, nothing actually changed, or
+  // the "change" is back to submitted (their own starting state).
+  if (status !== a.status && status !== 'submitted') {
+    (async () => {
+      const seeker = await queryOne<UserRow>(
+        'SELECT * FROM users WHERE user_id = ? AND email_notifications = 1', [a.seeker_id]);
+      if (!seeker) return;
+      const p = await fetchPosting(a.posting_id);
+      if (!p) return;
+      const co = await queryOne<{ company_name: string }>(
+        'SELECT company_name FROM companies WHERE company_id = ?', [p.company_id]);
+      await notifyStatusChange(seeker.email, seeker.full_name, p.title, co?.company_name || 'the company', status);
+    })().catch((e) => console.error('status notify failed:', e?.message || e));
+  }
 
   const updated = await queryOne<ApplicationRow>('SELECT * FROM applications WHERE application_id = ?', [aid]);
   ok(res, { application: serializeApplication(updated!) });

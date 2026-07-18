@@ -35,6 +35,7 @@ export class HttpAdapter implements ApiAdapter {
     logout: () => this.call<object>('auth', 'logout'),
     me: () => this.call<{ user: User | null }>('auth', 'me'),
     changePassword: (current: string, next: string) => this.call<object>('auth', 'change-password', { current, next }),
+    setEmailNotifications: (enabled: boolean) => this.call<{ user: User }>('auth', 'set-notifications', { enabled }),
     deleteAccount: (password: string) => this.call<object>('auth', 'delete-account', { password }),
     exportMyData: () => this.call<{ data: any }>('auth', 'export'),
   };

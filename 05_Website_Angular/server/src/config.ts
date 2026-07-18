@@ -57,3 +57,5 @@ export const SMTP_SECURE = (process.env.SMTP_SECURE || (SMTP_PORT === 465 ? 'tru
 export const SMTP_USER = process.env.SMTP_USER || '';
 export const SMTP_PASS = process.env.SMTP_PASS || '';
 export const MAIL_FROM = process.env.MAIL_FROM || (SMTP_USER ? `ResumeMatch PH <${SMTP_USER}>` : '');
+// Public base URL of the site, used for links inside notification emails.
+export const APP_URL = (process.env.APP_URL || `http://localhost:${PORT}`).replace(/\/$/, '');

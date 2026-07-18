@@ -19,6 +19,8 @@ export interface User {
   name: string;
   email: string;
   createdAt: number;
+  /** Application-event emails (status changes / new applicants). Absent = on. */
+  emailNotifications?: boolean;
   // seeker
   activeResumeId?: string | null;
   // recruiter

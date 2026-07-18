@@ -69,10 +69,17 @@ files are stored in `server/uploads/`, served only through the access-checked
 
 #### Optional — email sending (`SMTP_*`): verification codes & password reset
 
-Creating an account emails the address a 6-digit verification code (so
-every registered email is a proven, real inbox), and "Forgot your
-password?" emails a reset code. Both need an SMTP service in server mode.
-Two free options:
+Email powers three things in server mode: the 6-digit **verification
+code** at sign-up (so every registered email is a proven, real inbox),
+the **password-reset code**, and **application notifications** — seekers
+get an email when a recruiter moves their application (under review /
+shortlisted / hired / not selected), recruiters get one when a new
+applicant arrives. Notifications are on by default and each user can
+switch them off in *My account*; the security codes only ever arrive
+when explicitly requested. Set `APP_URL` in `.env` to your public URL so
+the links inside these emails point at the right place.
+
+All of it needs an SMTP service. Two free options:
 
 **Gmail (simplest if you have a Google account):**
 

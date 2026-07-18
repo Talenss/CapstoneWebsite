@@ -21,6 +21,9 @@ export function serializeUser(u: UserRow | null): any {
     name: u.full_name,
     email: u.email,
     createdAt: ts(u.created_at),
+    // undefined can happen on rows loaded before the migration ran; the
+    // feature defaults to on, matching the column default
+    emailNotifications: u.email_notifications === undefined ? true : !!u.email_notifications,
   };
   if (u.role === 'seeker') {
     out.activeResumeId = u.active_resume_id !== null ? String(u.active_resume_id) : null;

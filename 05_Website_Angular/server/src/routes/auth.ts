@@ -173,6 +173,18 @@ router.post('/me', async (req, res) => {
   ok(res, { user: serializeUser(await currentUser(req)) });
 });
 
+/** Toggle application-event emails (status changes for seekers, new
+ *  applicants for recruiters). Security-code emails are unaffected —
+ *  they only ever arrive when the user asks for one. */
+router.post('/set-notifications', async (req, res) => {
+  const u = await requireUser(req, res);
+  if (!u) return;
+  const enabled = req.body?.enabled ? 1 : 0;
+  await exec('UPDATE users SET email_notifications = ? WHERE user_id = ?', [enabled, u.user_id]);
+  const updated = await queryOne<UserRow>('SELECT * FROM users WHERE user_id = ?', [u.user_id]);
+  ok(res, { user: serializeUser(updated) });
+});
+
 router.post('/change-password', async (req, res) => {
   const u = await requireUser(req, res);
   if (!u) return;

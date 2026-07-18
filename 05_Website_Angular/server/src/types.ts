@@ -16,6 +16,7 @@ export interface UserRow {
   company_id: number | null;
   position_title: string | null;
   verified: number;
+  email_notifications: number;
   created_at: string;
   last_login_at: string | null;
 }

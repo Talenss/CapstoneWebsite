@@ -45,6 +45,29 @@
       </form>
     </section>
 
+    <section class="card">
+      <h2 style="font-size:22px;margin-bottom:4px">Email notifications</h2>
+      <p style="font-size:13.5px;color:var(--muted);margin-bottom:16px">
+        @if (session.user()?.role === 'seeker') {
+          When a recruiter moves one of your applications — under review, shortlisted, hired, or not selected — we email you so you don't have to keep checking.
+        } @else {
+          When someone applies to one of your openings, we email you so applications never sit unseen.
+        }
+        Security codes (sign-up, password reset) are separate and always sent when you request them.
+      </p>
+      <label class="notify-toggle">
+        <input type="checkbox" [checked]="notifyOn()" [disabled]="notifySaving()" (change)="onToggleNotify($event)">
+        <span>
+          <b>{{ notifyOn() ? 'On' : 'Off' }}</b>
+          — email me about
+          {{ session.user()?.role === 'seeker' ? 'my applications' : 'new applicants' }}
+        </span>
+      </label>
+      @if (isDemo) {
+        <p class="hint" style="margin-top:12px">Demo mode runs entirely in your browser, so no email is actually sent — the setting itself works and is remembered.</p>
+      }
+    </section>
+
     <section class="card crest">
       <h2 style="font-size:22px;margin-bottom:4px">Your data</h2>
       <p style="font-size:13.5px;color:var(--muted);margin-bottom:16px">

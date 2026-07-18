@@ -5,3 +5,7 @@
 .kv:last-child{border-bottom:none}
 .kv span:first-child{color:var(--muted)}
 .kv b{font-weight:600}
+.notify-toggle{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--rule);border-radius:var(--r);padding:14px 16px;cursor:pointer;background:var(--paper);font-size:14px;line-height:1.6}
+.notify-toggle:has(input:checked){border-color:var(--gold);background:var(--gold-wash)}
+.notify-toggle input{margin-top:4px;accent-color:var(--gold-deep);width:auto}
+.notify-toggle b{font-weight:700}

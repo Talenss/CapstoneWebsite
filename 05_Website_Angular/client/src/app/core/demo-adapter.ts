@@ -237,6 +237,15 @@ export class DemoAdapter implements ApiAdapter {
     },
     logout: () => { setSession(null); return apiOk({}); },
     me: () => apiOk({ user: pubUser(meRow(load())) }),
+    /* Demo mode stores the preference but sends nothing — there's no mail
+       server behind a pure-browser demo, and the account page says so. */
+    setEmailNotifications: (enabled: boolean) => {
+      const db = load(); const u = meRow(db);
+      if (!u) return apiFail('You are not signed in.');
+      u.emailNotifications = enabled;
+      persist(db);
+      return apiOk({ user: pubUser(u)! });
+    },
     changePassword: (current: string, next: string) => {
       const db = load(); const u = meRow(db);
       if (!u) return apiFail('You are not signed in.');

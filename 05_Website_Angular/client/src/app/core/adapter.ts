@@ -23,6 +23,8 @@ export interface ApiAdapter {
     logout(): Promise<ApiResult<object>>;
     me(): Promise<ApiResult<{ user: User | null }>>;
     changePassword(current: string, next: string): Promise<ApiResult<object>>;
+    /** Toggle application-event emails. Security codes are unaffected. */
+    setEmailNotifications(enabled: boolean): Promise<ApiResult<{ user: User }>>;
     deleteAccount(password: string): Promise<ApiResult<object>>;
     exportMyData(): Promise<ApiResult<{ data: any }>>;
   };
