@@ -8,7 +8,7 @@ Same product, same MySQL schema, same matching engine and rules. What changed:
 |---|---|---|
 | Frontend | Plain HTML/CSS/JS, one file per page | Angular 21 (standalone components), one app |
 | Backend | PHP 8 + PDO | Node.js + Express + TypeScript (`mysql2`) |
-| Database | MySQL (`db/schema.sql`, `db/seed.sql`) | **Same** — reuse `../04_Website/db/*.sql` as-is |
+| Database | MySQL, two files (`db/schema.sql` + `db/seed.sql`) | **One self-contained file**: `db/resumematch_ph.sql` |
 
 Like the original, there are two modes:
 
@@ -45,15 +45,27 @@ console and run `localStorage.clear(); sessionStorage.clear();`, then refresh.
 
 ### Step 1 — Database
 
-Same schema as the PHP version — nothing to change if you already ran it:
+Everything lives in **one file** inside this folder — schema and demo
+data together, nothing borrowed from `04_Website`:
 
 ```bash
-mysql -u root < ../04_Website/db/schema.sql
-mysql -u root < ../04_Website/db/seed.sql
+cd 05_Website_Angular
+mysql -u root < db/resumematch_ph.sql
 ```
 
-This creates the `resumematch_ph` database with the demo accounts above
-already seeded (same emails/password as demo mode).
+(Using phpMyAdmin instead? Import that single file from the *Import*
+tab — done.)
+
+This creates the `resumematch_ph` database complete with every table the
+Node server uses — including the newer ones (email codes, saved jobs,
+notification preferences, posting deadlines, the admin role) — and the
+demo accounts above already seeded, same emails/password as demo mode.
+
+> Already have a database from the old two-file setup? You don't need
+> this file: the server upgrades an existing database automatically at
+> startup. This one-file import is for fresh installs (note: it starts
+> with `DROP DATABASE IF EXISTS resumematch_ph`, so don't run it on a
+> database whose data you want to keep).
 
 ### Step 2 — Start the API server
 
