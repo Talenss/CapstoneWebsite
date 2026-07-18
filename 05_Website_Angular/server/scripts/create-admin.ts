@@ -8,6 +8,7 @@
 import bcrypt from 'bcryptjs';
 import { db, queryOne, exec } from '../src/db';
 import { runMigrations } from '../src/lib/migrate';
+import { passwordProblem } from '../src/lib/password';
 
 async function main(): Promise<void> {
   const [email, password] = process.argv.slice(2);
@@ -15,8 +16,9 @@ async function main(): Promise<void> {
     console.error('Usage: npm run create-admin -- <email> <password>');
     process.exit(1);
   }
-  if (password.length < 6) {
-    console.error('Use a password of at least 6 characters.');
+  const pwErr = passwordProblem(password);
+  if (pwErr) {
+    console.error(pwErr);
     process.exit(1);
   }
 

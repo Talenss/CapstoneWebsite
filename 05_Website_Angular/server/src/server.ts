@@ -10,9 +10,10 @@
 import express from 'express';
 import session from 'express-session';
 import cors from 'cors';
+import helmet from 'helmet';
 import path from 'path';
 import fs from 'fs';
-import { PORT, ALLOW_ORIGIN, SESSION_SECRET, UPLOAD_DIR, DEBUG } from './config';
+import { PORT, ALLOW_ORIGIN, SESSION_SECRET, UPLOAD_DIR, DEBUG, TRUST_PROXY, COOKIE_SECURE } from './config';
 
 import authRoutes from './routes/auth';
 import companiesRoutes from './routes/companies';
@@ -36,6 +37,31 @@ runMigrations().catch((e) =>
 
 const app = express();
 
+// Behind an HTTPS reverse proxy, TRUST_PROXY=true makes X-Forwarded-*
+// trustworthy (real client IPs for the rate limiters, https detection).
+if (TRUST_PROXY) app.set('trust proxy', 1);
+
+// Security headers. The CSP allows what the Angular app actually uses:
+// its own bundles, inline style bindings, Google Fonts, and same-origin
+// API/file requests (demo-mode file previews use data:/blob: URLs).
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      imgSrc: ["'self'", 'data:', 'blob:'],
+      connectSrc: ["'self'"],
+      frameSrc: ["'self'", 'data:', 'blob:'],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // would block the Google Fonts stylesheet
+}));
+
 app.use(cors({ origin: ALLOW_ORIGIN, credentials: true }));
 app.use(express.json({ limit: '2mb' }));
 
@@ -47,7 +73,7 @@ app.use(session({
   cookie: {
     httpOnly: true,
     sameSite: 'lax',
-    secure: false, // set true behind HTTPS in production
+    secure: COOKIE_SECURE, // COOKIE_SECURE=true in .env when serving over HTTPS
     maxAge: 1000 * 60 * 60 * 24 * 7,
   },
 }));

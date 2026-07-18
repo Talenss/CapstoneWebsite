@@ -93,8 +93,8 @@
               <div class="field" [class.invalid]="fpPasswordInvalid()">
                 <label for="fpp">New password</label>
                 <input type="password" id="fpp" autocomplete="new-password" required [(ngModel)]="fpPassword" name="fpp">
-                <span class="err">Use at least 6 characters.</span>
-                <p class="hint">At least 6 characters.</p>
+                <span class="err">{{ passwordHint }}</span>
+                <p class="hint">{{ passwordHint }}</p>
               </div>
               <button class="btn primary block" type="submit" [disabled]="fpBusy()">
                 @if (fpBusy()) {
@@ -175,8 +175,8 @@
               <div class="field" [class.invalid]="regPasswordInvalid()">
                 <label for="rp">Password</label>
                 <input type="password" id="rp" autocomplete="new-password" [(ngModel)]="regPassword" name="rp">
-                <span class="err">Use at least 6 characters.</span>
-                <p class="hint">At least 6 characters.</p>
+                <span class="err">{{ passwordHint }}</span>
+                <p class="hint">{{ passwordHint }}</p>
               </div>
             }
 

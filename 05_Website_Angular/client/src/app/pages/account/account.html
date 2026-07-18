@@ -16,13 +16,13 @@
       <h2 style="font-size:22px;margin-bottom:14px">Details</h2>
       <div class="kv"><span>Name</span><b>{{ session.user()?.name }}</b></div>
       <div class="kv"><span>Email</span><b>{{ session.user()?.email }}</b></div>
-      <div class="kv"><span>Account type</span><b>{{ session.user()?.role === 'seeker' ? 'Job seeker' : 'Recruiter / HR' }}</b></div>
+      <div class="kv"><span>Account type</span><b>{{ session.user()?.role === 'seeker' ? 'Job seeker' : session.user()?.role === 'admin' ? 'Research team (admin)' : 'Recruiter / HR' }}</b></div>
       <div class="kv"><span>Member since</span><b>{{ memberSince() }}</b></div>
     </section>
 
     <section class="card">
       <h2 style="font-size:22px;margin-bottom:4px">Change password</h2>
-      <p style="font-size:13.5px;color:var(--muted);margin-bottom:18px">At least 6 characters.</p>
+      <p style="font-size:13.5px;color:var(--muted);margin-bottom:18px">{{ passwordHint }}</p>
       <form #pwFormRef (submit)="onPwSubmit($event, curInput, newInput, repInput, pwFormRef)" novalidate>
         <div class="field" [class.invalid]="curInvalid()">
           <label for="cur">Current password</label>
@@ -32,7 +32,7 @@
         <div class="field" [class.invalid]="newInvalid()">
           <label for="new">New password</label>
           <input type="password" id="new" #newInput autocomplete="new-password">
-          <span class="err">Use at least 6 characters.</span>
+          <span class="err">{{ passwordHint }}</span>
         </div>
         <div class="field" [class.invalid]="repInvalid()">
           <label for="rep">Repeat new password</label>

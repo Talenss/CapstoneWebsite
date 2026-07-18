@@ -13,10 +13,16 @@ import { serializeUser, serializeResume, serializeApplication } from '../lib/ser
 import { UPLOAD_DIR, DEBUG } from '../config';
 import { mailConfigured, sendCodeEmail, CodePurpose } from '../lib/mailer';
 import { issueCode, checkCode } from '../lib/email-codes';
+import { passwordProblem } from '../lib/password';
+import { loginLimiter, sendCodeLimiter, authWriteLimiter } from '../lib/rate-limit';
 
 const router = Router();
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Compared against when the email has no account, so "user not found" and
+// "wrong password" take the same time — no timing-based email discovery.
+const DUMMY_HASH = bcrypt.hashSync('rmph-timing-equalizer', 10);
 
 /* ---- Email codes: one endpoint issues them for both purposes. ----
    'verify'  — sign-up: the email must NOT have an account yet. If it does,
@@ -25,7 +31,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
    'reset'   — forgot password: never reveals whether an account exists;
                the answer is the same either way, and a code is only
                actually sent when there is an account behind the email. */
-router.post('/send-code', async (req, res) => {
+router.post('/send-code', sendCodeLimiter, async (req, res) => {
   const email = String(req.body?.email ?? '').trim().toLowerCase();
   const purpose = String(req.body?.purpose ?? '') as CodePurpose;
   if (!EMAIL_RE.test(email)) return fail(res, 'Enter a valid email address.');
@@ -60,12 +66,13 @@ router.post('/send-code', async (req, res) => {
   return fail(res, "Email sending isn't configured on this server. Contact the site administrators.");
 });
 
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', authWriteLimiter, async (req, res) => {
   const email = String(req.body?.email ?? '').trim().toLowerCase();
   const code = String(req.body?.code ?? '').trim();
   const pass = String(req.body?.password ?? '');
   if (!EMAIL_RE.test(email)) return fail(res, 'Enter a valid email address.');
-  if (pass.length < 6) return fail(res, 'Use a password of at least 6 characters.');
+  const pwErr = passwordProblem(pass);
+  if (pwErr) return fail(res, pwErr);
 
   const u = await queryOne<UserRow>('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
   // The generic message matches the 'reset' send-code reply: neither
@@ -79,19 +86,22 @@ router.post('/reset-password', async (req, res) => {
   ok(res);
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const email = String(req.body?.email ?? '').trim();
   const pass = String(req.body?.password ?? '');
   if (!email || !pass) return fail(res, 'Enter your email and password.');
 
   const u = await queryOne<UserRow>('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
 
-  // Same message either way — never reveal whether an email exists.
-  if (!u || !(await bcrypt.compare(pass, u.password_hash)))
-    return fail(res, "That email and password don't match an account.");
+  // Same message — and same bcrypt cost — either way: never reveal
+  // whether an email exists, not even by response time. The 401 status
+  // also lets the rate limiter count exactly the FAILED attempts.
+  const passOk = await bcrypt.compare(pass, u ? u.password_hash : DUMMY_HASH);
+  if (!u || !passOk)
+    return fail(res, "That email and password don't match an account.", 401);
 
   if (u.role === 'recruiter' && !u.verified)
-    return fail(res, "This recruiter account isn't active yet. Accounts are activated by the research team together with the partner company's HR.");
+    return fail(res, "This recruiter account isn't active yet. Accounts are activated by the research team together with the partner company's HR.", 403);
 
   req.session.regenerate(async (err) => {
     if (err) return fail(res, 'Login failed. Try again.', 500);
@@ -101,7 +111,7 @@ router.post('/login', async (req, res) => {
   });
 });
 
-router.post('/register', async (req, res) => {
+router.post('/register', authWriteLimiter, async (req, res) => {
   const name = String(req.body?.name ?? '').trim();
   const email = String(req.body?.email ?? '').trim().toLowerCase();
   const pass = String(req.body?.password ?? '');
@@ -109,7 +119,8 @@ router.post('/register', async (req, res) => {
 
   if (name.length < 2) return fail(res, 'Enter your full name.');
   if (!EMAIL_RE.test(email)) return fail(res, 'Enter a valid email address.');
-  if (pass.length < 6) return fail(res, 'Use a password of at least 6 characters.');
+  const pwErr = passwordProblem(pass);
+  if (pwErr) return fail(res, pwErr);
 
   const exists = await queryOne('SELECT 1 FROM users WHERE email = ? LIMIT 1', [email]);
   if (exists) return res.json({ ok: false, exists: true, error: 'An account already uses this email. Log in instead.' });
@@ -192,7 +203,8 @@ router.post('/change-password', async (req, res) => {
   const next = String(req.body?.next ?? '');
 
   if (!(await bcrypt.compare(cur, u.password_hash))) return fail(res, 'Your current password is incorrect.');
-  if (next.length < 6) return fail(res, 'Use a password of at least 6 characters.');
+  const pwErr = passwordProblem(next);
+  if (pwErr) return fail(res, pwErr);
 
   await exec('UPDATE users SET password_hash = ? WHERE user_id = ?', [await bcrypt.hash(next, 10), u.user_id]);
   ok(res);

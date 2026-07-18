@@ -37,6 +37,14 @@ export const DEBUG = (process.env.DEBUG || 'true') === 'true';
 
 export const SESSION_SECRET = process.env.SESSION_SECRET || 'rmph-dev-secret-change-in-production';
 
+// ---------- production hardening (see SETUP.md, "Going live checklist") ----------
+// Behind an HTTPS reverse proxy set BOTH to true: TRUST_PROXY makes
+// Express believe the proxy's X-Forwarded-* headers (real client IPs for
+// rate limiting, https detection), COOKIE_SECURE marks the session cookie
+// HTTPS-only. Leave false for plain-http local development.
+export const TRUST_PROXY = (process.env.TRUST_PROXY || 'false') === 'true';
+export const COOKIE_SECURE = (process.env.COOKIE_SECURE || 'false') === 'true';
+
 // ---------- AI resume analysis (optional) ----------
 // The "Upload & analyze" feature reads an uploaded resume with Google's
 // Gemini API (free tier) and prefills the structured resume builder.

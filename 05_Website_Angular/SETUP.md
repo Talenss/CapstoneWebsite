@@ -210,9 +210,37 @@ cd ../server && npm run build && npm start
 ```
 
 Then everything is served from `http://localhost:4300` (or whatever `PORT`
-you set). Set `DEBUG=false` and a strong random `SESSION_SECRET` in `.env`
-before exposing this publicly, and put a real HTTPS reverse proxy in front
-of it (and flip the session cookie's `secure: true` in `server/src/server.ts`).
+you set).
+
+### Going-live checklist
+
+Before exposing the site publicly, set these in `server/.env`:
+
+| Setting | Value | Why |
+|---|---|---|
+| `DEBUG` | `false` | hides SQL/error detail from API responses |
+| `SESSION_SECRET` | long random string | signs the session cookie (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`) |
+| `TRUST_PROXY` | `true` | behind an HTTPS proxy: real client IPs reach the rate limiters |
+| `COOKIE_SECURE` | `true` | behind HTTPS: session cookie is HTTPS-only |
+| `APP_URL` | your public URL | links inside notification emails |
+
+…and put a real HTTPS reverse proxy (nginx, Caddy, or your cloud host's)
+in front of the Node process. No code edits needed — it's all `.env`.
+
+Protections that are always on, no configuration required:
+
+- **Security headers** (helmet) including a content-security-policy
+  tailored to what the app actually loads.
+- **Login rate limiting** — 10 *failed* attempts per 15 minutes per
+  client+email; successful logins never count. Code requests and
+  register/reset submissions are similarly capped (on top of the
+  per-address cooldowns of the email codes themselves).
+- **Password policy** — anything that sets a password (register, reset,
+  change, `create-admin`) requires at least 8 characters with a letter
+  and a number. Existing passwords keep working until changed.
+- **No account enumeration** — login answers with the same message and
+  the same timing whether the email exists or not, and password-reset
+  requests answer identically either way.
 
 ---
 

@@ -5,7 +5,7 @@
    ============================================================ */
 import { ApiAdapter } from './adapter';
 import { AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, User } from './models';
-import { scoreLocal, STATUS_ORDER } from './engine';
+import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER } from './engine';
 
 const KEY = 'rmph_v3_db';
 const SESSION = 'rmph_v3_session';
@@ -216,6 +216,7 @@ export class DemoAdapter implements ApiAdapter {
     registerSeeker: ({ name, email, password, code }: { name: string; email: string; password: string; code: string }) => {
       const db = load();
       const e = String(email).trim().toLowerCase();
+      if (!passwordOk(password)) return apiFail(PASSWORD_HINT);
       if (db.users.some((u) => u.email.toLowerCase() === e))
         return Promise.resolve({ ok: false, exists: true, error: 'An account already uses this email. Log in instead.' } as any);
       const err = consumeCode(db, e, 'verify', code);
@@ -227,6 +228,7 @@ export class DemoAdapter implements ApiAdapter {
     resetPassword: ({ email, code, password }: { email: string; code: string; password: string }) => {
       const db = load();
       const e = String(email).trim().toLowerCase();
+      if (!passwordOk(password)) return apiFail(PASSWORD_HINT);
       const u = db.users.find((x) => x.email.toLowerCase() === e);
       if (!u) return apiFail('That code isn’t right. Check the email and try again.');
       const err = consumeCode(db, e, 'reset', code);
@@ -260,6 +262,7 @@ export class DemoAdapter implements ApiAdapter {
       const db = load(); const u = meRow(db);
       if (!u) return apiFail('You are not signed in.');
       if (u.password !== current) return apiFail('Your current password is incorrect.');
+      if (!passwordOk(next)) return apiFail(PASSWORD_HINT);
       u.password = next; persist(db);
       return apiOk({});
     },

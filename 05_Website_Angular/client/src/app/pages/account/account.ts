@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { environment } from '../../../environments/environment';
+import { passwordOk, PASSWORD_HINT } from '../../core/engine';
 
 /** Port of 04_Website/app/account.html — shared by both seeker and
  *  recruiter accounts (the route is guarded with no specific role).
@@ -33,6 +34,7 @@ export class Account {
 
   msg = signal<string | null>(null);
   toastMsg = signal<string | null>(null);
+  readonly passwordHint = PASSWORD_HINT;
 
   // ---- email notifications toggle ----
   isDemo = environment.mode === 'demo';
@@ -73,7 +75,7 @@ export class Account {
     this.msg.set(null);
 
     const curOk = curInput.value.length > 0;
-    const newOk = newInput.value.length >= 6;
+    const newOk = passwordOk(newInput.value);
     const repOk = repInput.value === newInput.value && repInput.value.length > 0;
     this.curInvalid.set(!curOk);
     this.newInvalid.set(!newOk);

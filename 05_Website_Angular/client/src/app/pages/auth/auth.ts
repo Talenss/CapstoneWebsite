@@ -6,6 +6,7 @@ import { Header } from '../../layout/header/header';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { Company } from '../../core/models';
+import { passwordOk, PASSWORD_HINT } from '../../core/engine';
 
 type Tab = 'login' | 'reg';
 type Role = 'seeker' | 'recruiter';
@@ -39,6 +40,7 @@ export class Auth implements OnInit, OnDestroy {
   activeTab = signal<Tab>('login');
   role = signal<Role>('seeker');
   companies = signal<Company[]>([]);
+  readonly passwordHint = PASSWORD_HINT;
 
   // ---- login form state ----
   loginEmail = '';
@@ -241,7 +243,7 @@ export class Auth implements OnInit, OnDestroy {
     this.fpError.set('');
     const codeOk = /^\d{6}$/.test(this.fpCode.trim());
     this.fpCodeInvalid.set(!codeOk);
-    const passOk = this.fpPassword.length >= 6;
+    const passOk = passwordOk(this.fpPassword);
     this.fpPasswordInvalid.set(!passOk);
     if (!codeOk || !passOk) return;
 
@@ -273,7 +275,7 @@ export class Auth implements OnInit, OnDestroy {
 
     let passOk = true;
     if (!hr) {
-      passOk = this.regPassword.length >= 6;
+      passOk = passwordOk(this.regPassword);
       this.regPasswordInvalid.set(!passOk);
     } else {
       this.regPasswordInvalid.set(false);
