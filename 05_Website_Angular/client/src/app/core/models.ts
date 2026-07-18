@@ -122,6 +122,10 @@ export interface Posting {
   skills: string[];
   educationLevel: EduLevel;
   minExperienceMonths: number;
+  /** Optional "apply by" date (YYYY-MM-DD). Past it, the posting stops
+   *  accepting applications without anyone closing it by hand. */
+  deadline?: string | null;
+  expired?: boolean;
   status: 'open' | 'closed';
   createdAt: number;
   company?: Company;

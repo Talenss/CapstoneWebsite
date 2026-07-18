@@ -35,6 +35,9 @@ export class HttpAdapter implements ApiAdapter {
     logout: () => this.call<object>('auth', 'logout'),
     me: () => this.call<{ user: User | null }>('auth', 'me'),
     changePassword: (current: string, next: string) => this.call<object>('auth', 'change-password', { current, next }),
+    changeEmailStart: (newEmail: string, password: string) =>
+      this.call<{ sent?: boolean; devCode?: string; simulated?: boolean; note?: string }>('auth', 'change-email-start', { newEmail, password }),
+    changeEmailConfirm: (newEmail: string, code: string) => this.call<{ user: User }>('auth', 'change-email-confirm', { newEmail, code }),
     setEmailNotifications: (enabled: boolean) => this.call<{ user: User }>('auth', 'set-notifications', { enabled }),
     deleteAccount: (password: string) => this.call<object>('auth', 'delete-account', { password }),
     exportMyData: () => this.call<{ data: any }>('auth', 'export'),
@@ -84,6 +87,16 @@ export class HttpAdapter implements ApiAdapter {
     mine: () => this.call<{ applications: Application[] }>('applications', 'mine'),
     ranked: (postingId: string) => this.call<{ posting: Posting; rows: RankedRow[] }>('applications', 'ranked', { postingId }),
     setStatus: (id: string, status: string) => this.call<{ application: Application }>('applications', 'set-status', { id, status }),
+    invite: (id: string, message: string) => this.call<{ sent?: boolean; simulated?: boolean }>('applications', 'invite', { id, message }),
+  };
+
+  saved = {
+    list: () => this.call<{ postings: Posting[] }>('saved', 'list'),
+    toggle: (postingId: string) => this.call<{ saved: boolean }>('saved', 'toggle', { postingId }),
+  };
+
+  metrics = {
+    summary: () => this.call<{ metrics: any }>('metrics', 'summary'),
   };
 
   match = {

@@ -1,19 +1,52 @@
 /* ResumeMatch PH — routes/postings.ts : list · mine · get · save · toggle */
 import { Router } from 'express';
 import { query, queryOne, exec, db } from '../db';
-import { PostingRow } from '../types';
+import { PostingRow, UserRow, ResumeRow } from '../types';
 import { ok, fail } from '../lib/http';
 import { requireRole } from '../lib/auth';
-import { fetchPosting, serializePosting } from '../lib/serializers';
-import { EDU_RANK, skillId } from '../lib/engine';
+import { fetchPosting, fetchResume, serializePosting, serializeResume } from '../lib/serializers';
+import { EDU_RANK, skillId, rmScore, getSettings } from '../lib/engine';
+import { notifyNewPostingMatch } from '../lib/notify';
 
 const router = Router();
 
-// Public: every open position. Browsing needs no account.
+// Public: every open position still accepting applications (a past
+// application deadline hides a posting without anyone closing it).
 router.post('/list', async (_req, res) => {
-  const rows = await query<PostingRow>("SELECT * FROM job_postings WHERE status='open' ORDER BY created_at DESC");
+  const rows = await query<PostingRow>(
+    `SELECT * FROM job_postings
+      WHERE status='open' AND (application_deadline IS NULL OR application_deadline >= CURDATE())
+      ORDER BY created_at DESC`,
+  );
   ok(res, { postings: await Promise.all(rows.map((p) => serializePosting(p))) });
 });
+
+/** Job alerts: score the brand-new posting against every seeker's ACTIVE
+ *  resume and email the ones it fits (possible tier or better). Runs
+ *  fire-and-forget after the posting is created. */
+async function alertMatchingSeekers(postingId: number): Promise<void> {
+  const p = await fetchPosting(postingId);
+  if (!p || p.status !== 'open') return;
+  const posting = await serializePosting(p);
+  const companyName = posting.company?.name || 'Our partner company';
+  const T = (await getSettings()).thresholds;
+
+  const seekers = await query<UserRow>(
+    `SELECT * FROM users
+      WHERE role='seeker' AND email_notifications=1 AND active_resume_id IS NOT NULL`,
+  );
+  for (const s of seekers) {
+    try {
+      const r = await fetchResume(s.active_resume_id!);
+      if (!r) continue;
+      const score = await rmScore(await serializeResume(r as ResumeRow), posting);
+      if (score.score < T.related) continue; // below "possible" — no alert
+      await notifyNewPostingMatch(s.email, s.full_name, p.title, companyName, score.score, score.tier);
+    } catch (e: any) {
+      console.error('job alert failed for', s.email, '-', e?.message || e);
+    }
+  }
+}
 
 // Recruiter: every posting of MY company, open or closed, with counts.
 router.post('/mine', async (req, res) => {
@@ -60,6 +93,15 @@ router.post('/save', async (req, res) => {
   const type = ['full-time', 'part-time', 'contract', 'internship'].includes(P.employmentType) ? P.employmentType : 'full-time';
   const months = Math.max(0, Number(P.minExperienceMonths) || 0);
 
+  // Optional "apply by" date. Must be today or later when set.
+  let deadline: string | null = null;
+  if (P.deadline) {
+    const d = String(P.deadline).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return fail(res, 'The application deadline looks wrong — use the date picker.');
+    if (d < new Date().toISOString().slice(0, 10)) return fail(res, "The application deadline can't be in the past.");
+    deadline = d;
+  }
+
   const conn = await db().getConnection();
   try {
     await conn.beginTransaction();
@@ -73,14 +115,14 @@ router.post('/save', async (req, res) => {
         return fail(res, "You can only edit your own company's openings.", 403);
       }
       await conn.query(
-        'UPDATE job_postings SET title=?, department=?, employment_type=?, description=?, education_level=?, min_experience_months=? WHERE posting_id=?',
-        [title, dept, type, desc, edu, months, id],
+        'UPDATE job_postings SET title=?, department=?, employment_type=?, description=?, education_level=?, min_experience_months=?, application_deadline=? WHERE posting_id=?',
+        [title, dept, type, desc, edu, months, deadline, id],
       );
     } else {
       const [insResult]: any = await conn.query(
-        `INSERT INTO job_postings (company_id, created_by, title, department, employment_type, description, education_level, min_experience_months, status)
-         VALUES (?,?,?,?,?,?,?,?,"open")`,
-        [u.company_id, u.user_id, title, dept, type, desc, edu, months],
+        `INSERT INTO job_postings (company_id, created_by, title, department, employment_type, description, education_level, min_experience_months, application_deadline, status)
+         VALUES (?,?,?,?,?,?,?,?,?,"open")`,
+        [u.company_id, u.user_id, title, dept, type, desc, edu, months, deadline],
       );
       id = insResult.insertId;
     }
@@ -92,6 +134,10 @@ router.post('/save', async (req, res) => {
     }
 
     await conn.commit();
+
+    // Brand-new opening → job alerts for seekers whose active resume fits.
+    if (!P.id) alertMatchingSeekers(id).catch((e) => console.error('job alerts failed:', e?.message || e));
+
     const saved = await fetchPosting(id);
     ok(res, { posting: await serializePosting(saved!) });
   } catch (e) {

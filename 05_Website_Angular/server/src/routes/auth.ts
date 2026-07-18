@@ -11,7 +11,7 @@ import { ok, fail } from '../lib/http';
 import { currentUser, requireUser } from '../lib/auth';
 import { serializeUser, serializeResume, serializeApplication } from '../lib/serializers';
 import { UPLOAD_DIR, DEBUG } from '../config';
-import { mailConfigured, sendCodeEmail, CodePurpose } from '../lib/mailer';
+import { mailConfigured, sendCodeEmail, sendMail, CodePurpose } from '../lib/mailer';
 import { issueCode, checkCode } from '../lib/email-codes';
 import { passwordProblem } from '../lib/password';
 import { loginLimiter, sendCodeLimiter, authWriteLimiter } from '../lib/rate-limit';
@@ -192,6 +192,75 @@ router.post('/set-notifications', async (req, res) => {
   if (!u) return;
   const enabled = req.body?.enabled ? 1 : 0;
   await exec('UPDATE users SET email_notifications = ? WHERE user_id = ?', [enabled, u.user_id]);
+  const updated = await queryOne<UserRow>('SELECT * FROM users WHERE user_id = ?', [u.user_id]);
+  ok(res, { user: serializeUser(updated) });
+});
+
+/* ---- Change email: same proof-of-inbox flow as registration. ----
+   Step 1 checks the password and emails a code to the NEW address;
+   step 2 confirms the code and switches the account over, with a
+   courtesy security notice to the old address. */
+router.post('/change-email-start', sendCodeLimiter, async (req, res) => {
+  const u = await requireUser(req, res);
+  if (!u) return;
+  const newEmail = String(req.body?.newEmail ?? '').trim().toLowerCase();
+  const pass = String(req.body?.password ?? '');
+
+  if (!EMAIL_RE.test(newEmail)) return fail(res, 'Enter a valid email address.');
+  if (newEmail === u.email.toLowerCase()) return fail(res, 'That is already your email address.');
+  if (!(await bcrypt.compare(pass, u.password_hash))) return fail(res, 'Your password is incorrect.');
+
+  const taken = await queryOne('SELECT 1 FROM users WHERE email = ? LIMIT 1', [newEmail]);
+  if (taken) return fail(res, 'Another account already uses that email.');
+
+  const issued = await issueCode(newEmail, 'verify');
+  if (!issued.ok) return fail(res, issued.error);
+
+  if (mailConfigured()) {
+    try {
+      await sendCodeEmail(newEmail, issued.code, 'verify');
+    } catch (e: any) {
+      console.error('SMTP send failed:', e?.message || e);
+      return fail(res, 'The email could not be sent right now. Try again in a moment.');
+    }
+    return ok(res, { sent: true });
+  }
+  if (DEBUG) {
+    console.log(`[email-codes] DEBUG — change-email code for ${newEmail}: ${issued.code}`);
+    return ok(res, { sent: false, devCode: issued.code, note: 'SMTP is not configured; DEBUG mode returned the code directly.' });
+  }
+  return fail(res, "Email sending isn't configured on this server. Contact the site administrators.");
+});
+
+router.post('/change-email-confirm', authWriteLimiter, async (req, res) => {
+  const u = await requireUser(req, res);
+  if (!u) return;
+  const newEmail = String(req.body?.newEmail ?? '').trim().toLowerCase();
+  const code = String(req.body?.code ?? '').trim();
+  if (!EMAIL_RE.test(newEmail)) return fail(res, 'Enter a valid email address.');
+
+  const taken = await queryOne('SELECT 1 FROM users WHERE email = ? LIMIT 1', [newEmail]);
+  if (taken) return fail(res, 'Another account already uses that email.');
+
+  const check = await checkCode(newEmail, 'verify', code);
+  if (!check.ok) return fail(res, check.error);
+
+  const oldEmail = u.email;
+  await exec('UPDATE users SET email = ? WHERE user_id = ?', [newEmail, u.user_id]);
+
+  if (mailConfigured()) {
+    sendMail(
+      oldEmail,
+      'Your ResumeMatch PH email address was changed',
+      `Security notice\n\nThe email on your account was changed to ${newEmail}. If this was you, no action is needed. If it wasn't, contact the research team through the School of Computing immediately.`,
+      `
+        <h1 style="margin:0 0 10px;font-size:22px">Security notice</h1>
+        <p style="margin:0;font-size:14.5px;line-height:1.65;color:#4C5566">The email address on your ResumeMatch PH account was changed to <b>${newEmail}</b>. If this was you, no action is needed. If it wasn’t, contact the research team through the School of Computing immediately — your password still protects the account.</p>`,
+    ).catch((e) => console.error('change-email notice failed:', e?.message || e));
+  } else if (DEBUG) {
+    console.log(`[auth] email changed: ${oldEmail} -> ${newEmail}`);
+  }
+
   const updated = await queryOne<UserRow>('SELECT * FROM users WHERE user_id = ?', [u.user_id]);
   ok(res, { user: serializeUser(updated) });
 });

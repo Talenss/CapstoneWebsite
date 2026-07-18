@@ -23,5 +23,7 @@ export class ApiService implements ApiAdapter {
   get stats() { return this.impl.stats; }
   get analyze() { return this.impl.analyze; }
   get admin() { return this.impl.admin; }
+  get saved() { return this.impl.saved; }
+  get metrics() { return this.impl.metrics; }
   resetDemo() { return this.impl.resetDemo(); }
 }

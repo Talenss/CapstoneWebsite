@@ -13,3 +13,7 @@
 .job .req b.ok{color:var(--emerald)} .job .req b.no{color:var(--gold-deep)}
 .job .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto;padding-top:4px}
 .job .foot span{font-size:12.5px;color:var(--muted)}
+.req .deadline{color:var(--gold-deep);font-weight:600}
+.bookmark{border:1px solid var(--rule);background:var(--paper);border-radius:8px;width:32px;height:30px;font-size:16px;line-height:1;cursor:pointer;color:var(--muted);transition:.15s}
+.bookmark:hover{border-color:var(--gold);color:var(--gold-deep)}
+.bookmark.on{color:var(--gold-deep);border-color:var(--gold);background:var(--gold-wash)}

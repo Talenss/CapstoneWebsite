@@ -23,6 +23,10 @@ export interface ApiAdapter {
     logout(): Promise<ApiResult<object>>;
     me(): Promise<ApiResult<{ user: User | null }>>;
     changePassword(current: string, next: string): Promise<ApiResult<object>>;
+    /** Change email, proven the same way as registration: a code goes to
+     *  the NEW address; the switch happens only when it checks out. */
+    changeEmailStart(newEmail: string, password: string): Promise<ApiResult<{ sent?: boolean; devCode?: string; simulated?: boolean; note?: string }>>;
+    changeEmailConfirm(newEmail: string, code: string): Promise<ApiResult<{ user: User }>>;
     /** Toggle application-event emails. Security codes are unaffected. */
     setEmailNotifications(enabled: boolean): Promise<ApiResult<{ user: User }>>;
     deleteAccount(password: string): Promise<ApiResult<object>>;
@@ -56,6 +60,18 @@ export interface ApiAdapter {
     mine(): Promise<ApiResult<{ applications: Application[] }>>;
     ranked(postingId: string): Promise<ApiResult<{ posting: Posting; rows: RankedRow[] }>>;
     setStatus(applicationId: string, status: string): Promise<ApiResult<{ application: Application }>>;
+    /** Recruiter's personal message to an applicant (interview invite).
+     *  Emailed with reply-to the recruiter; simulated in demo mode. */
+    invite(applicationId: string, message: string): Promise<ApiResult<{ sent?: boolean; simulated?: boolean }>>;
+  };
+  saved: {
+    /** The seeker's bookmarked openings, newest first. */
+    list(): Promise<ApiResult<{ postings: Posting[] }>>;
+    toggle(postingId: string): Promise<ApiResult<{ saved: boolean }>>;
+  };
+  metrics: {
+    /** Researcher aggregates for the study — admin only, anonymous by construction. */
+    summary(): Promise<ApiResult<{ metrics: any }>>;
   };
   match: {
     score(resumeId: string, postingId: string): Promise<ApiResult<MatchResult>>;

@@ -186,8 +186,22 @@
           </section>
         </div>
       </div>
+      @if (inviteOpen()) {
+        <div class="invite">
+          <h4>Message {{ r.seeker.name }}</h4>
+          <p class="hint" style="margin-bottom:8px">Sent to their email with <b>your address as the reply-to</b>, so their answer lands straight in your inbox. Edit freely — this is a person writing to a person.</p>
+          <textarea rows="7" [value]="inviteText()" (input)="setInviteText($event)"></textarea>
+          <div style="display:flex;gap:9px;justify-content:flex-end;margin-top:10px">
+            <button class="btn ghost sm" type="button" (click)="inviteOpen.set(false)">Cancel</button>
+            <button class="btn primary sm" type="button" [disabled]="inviteSending()" (click)="sendInvite()">
+              @if (inviteSending()) { <span class="spinner"></span> Sending… } @else { Send message }
+            </button>
+          </div>
+        </div>
+      }
       <div class="modal-foot">
         <span style="margin-right:auto;font-size:12.5px;color:var(--muted)">Status changes are recorded against your account.</span>
+        <button class="btn ghost" type="button" (click)="openInvite()">✉ Message applicant</button>
         <select [value]="modalStatus()" (change)="setModalStatus($event)" style="padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px">
           @for (k of statusOrder; track k) { <option [value]="k">{{ statusLabels[k] }}</option> }
         </select>

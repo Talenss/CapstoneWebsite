@@ -15,7 +15,51 @@
     <section class="card">
       <h2 style="font-size:22px;margin-bottom:14px">Details</h2>
       <div class="kv"><span>Name</span><b>{{ session.user()?.name }}</b></div>
-      <div class="kv"><span>Email</span><b>{{ session.user()?.email }}</b></div>
+      <div class="kv"><span>Email</span><b>{{ session.user()?.email }} <button type="button" class="linklike" style="margin-left:8px" (click)="openChangeEmail()">Change</button></b></div>
+
+      @if (emailStep() !== 'closed') {
+        <div class="change-email">
+          @if (ceError()) {
+            <div class="alert error show" role="alert">{{ ceError() }}</div>
+          }
+          @if (emailStep() === 'form') {
+            <p class="hint" style="margin-bottom:12px">We'll email a 6-digit code to the new address to prove it's yours — same as when you registered. Nothing changes until the code checks out.</p>
+            <form novalidate (ngSubmit)="onChangeEmailStart($event)">
+              <div class="field">
+                <label for="ceEmail">New email address</label>
+                <input type="email" id="ceEmail" autocomplete="email" required [(ngModel)]="ceNewEmail" name="ceEmail">
+              </div>
+              <div class="field">
+                <label for="cePw">Your password</label>
+                <input type="password" id="cePw" autocomplete="current-password" required [(ngModel)]="cePassword" name="cePw">
+              </div>
+              <div style="display:flex;gap:9px;flex-wrap:wrap">
+                <button class="btn primary" type="submit" [disabled]="ceBusy()">
+                  @if (ceBusy()) { <span class="spinner"></span> Sending… } @else { Email me a code }
+                </button>
+                <button class="btn ghost" type="button" (click)="cancelChangeEmail()">Cancel</button>
+              </div>
+            </form>
+          } @else {
+            <p class="hint" style="margin-bottom:12px">We sent a 6-digit code to <b>{{ ceNewEmail }}</b>. Enter it to switch your account over.</p>
+            @if (ceDevCode(); as code) {
+              <div class="dev-code" role="status"><b>Demo / development</b> — no real email is sent. Your code is <code>{{ code }}</code>.</div>
+            }
+            <form novalidate (ngSubmit)="onChangeEmailConfirm($event)">
+              <div class="field" style="max-width:220px">
+                <label for="ceCode">6-digit code</label>
+                <input type="text" id="ceCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" required [(ngModel)]="ceCode" name="ceCode">
+              </div>
+              <div style="display:flex;gap:9px;flex-wrap:wrap">
+                <button class="btn primary" type="submit" [disabled]="ceBusy()">
+                  @if (ceBusy()) { <span class="spinner"></span> Working… } @else { Confirm new email }
+                </button>
+                <button class="btn ghost" type="button" (click)="cancelChangeEmail()">Cancel</button>
+              </div>
+            </form>
+          }
+        </div>
+      }
       <div class="kv"><span>Account type</span><b>{{ session.user()?.role === 'seeker' ? 'Job seeker' : session.user()?.role === 'admin' ? 'Research team (admin)' : 'Recruiter / HR' }}</b></div>
       <div class="kv"><span>Member since</span><b>{{ memberSince() }}</b></div>
     </section>
@@ -49,11 +93,11 @@
       <h2 style="font-size:22px;margin-bottom:4px">Email notifications</h2>
       <p style="font-size:13.5px;color:var(--muted);margin-bottom:16px">
         @if (session.user()?.role === 'seeker') {
-          When a recruiter moves one of your applications — under review, shortlisted, hired, or not selected — we email you so you don't have to keep checking.
+          When a recruiter moves one of your applications — under review, shortlisted, hired, or not selected — we email you so you don't have to keep checking. You'll also hear when a brand-new opening scores well against your active resume.
         } @else {
           When someone applies to one of your openings, we email you so applications never sit unseen.
         }
-        Security codes (sign-up, password reset) are separate and always sent when you request them.
+        Security codes (sign-up, password reset) and personal messages from recruiters about your applications are separate — those always arrive.
       </p>
       <label class="notify-toggle">
         <input type="checkbox" [checked]="notifyOn()" [disabled]="notifySaving()" (change)="onToggleNotify($event)">

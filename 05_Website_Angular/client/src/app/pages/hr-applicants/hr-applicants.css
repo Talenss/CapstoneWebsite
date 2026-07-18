@@ -44,3 +44,6 @@
 .p-skills span{display:inline-block;border:1px solid #B9BDC6;border-radius:2px;padding:1px 6px;font-size:10px;
   margin:0 3px 3px 0;font-family:'Inter',sans-serif}
 .p-skills span.hit{border-color:var(--emerald);background:var(--emerald-wash);color:var(--emerald);font-weight:600}
+.invite{border-top:1px solid var(--rule);background:var(--paper);padding:16px 22px}
+.invite h4{font-family:var(--display);font-size:17px;margin-bottom:4px}
+.invite textarea{width:100%;padding:12px 14px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px;line-height:1.6;resize:vertical}

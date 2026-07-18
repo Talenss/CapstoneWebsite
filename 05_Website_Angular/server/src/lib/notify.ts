@@ -83,6 +83,71 @@ export async function notifyStatusChange(
   );
 }
 
+/** A recruiter's personal message to an applicant (interview invitation).
+ *  Unlike the fire-and-forget notifications, the caller needs to know
+ *  whether it went out — the recruiter is waiting on the result. */
+export async function sendInterviewInvite(
+  seekerEmail: string,
+  seekerName: string,
+  recruiterName: string,
+  recruiterEmail: string,
+  postingTitle: string,
+  companyName: string,
+  message: string,
+): Promise<{ ok: true; sent: boolean } | { ok: false; error: string }> {
+  if (!mailConfigured()) {
+    if (DEBUG) {
+      console.log(`[notify] SMTP not configured — would email ${seekerEmail} (invite from ${recruiterName}): ${message.slice(0, 80)}…`);
+      return { ok: true, sent: false };
+    }
+    return { ok: false, error: "Email sending isn't configured on this server, so the message can't be delivered." };
+  }
+  const t = esc(postingTitle);
+  try {
+    await sendMail(
+      seekerEmail,
+      `${companyName} — about your ${postingTitle} application`,
+      `A message about your application\n\nFrom ${recruiterName} (${companyName}) regarding ${postingTitle}:\n\n${message}\n\nReply to this email to answer them directly.`,
+      `
+        <h1 style="margin:0 0 10px;font-size:22px">A message about your application</h1>
+        <p style="margin:0 0 14px;font-size:14.5px;line-height:1.65;color:#4C5566">Hi ${esc(seekerName)} — <b>${esc(recruiterName)}</b> of <b>${esc(companyName)}</b> wrote to you about your application for <b>${t}</b>:</p>
+        <div style="border-left:3px solid #C9A24B;background:#FAF6EE;padding:14px 18px;border-radius:0 8px 8px 0;font-size:14.5px;line-height:1.7;color:#1E2430;white-space:pre-wrap">${esc(message)}</div>
+        <p style="margin:14px 0 0;font-size:13px;line-height:1.6;color:#8A8FA0">Reply to this email to answer ${esc(recruiterName)} directly.</p>`,
+      { replyTo: recruiterEmail },
+    );
+    return { ok: true, sent: true };
+  } catch (e: any) {
+    console.error('invite send failed:', e?.message || e);
+    return { ok: false, error: 'The email could not be sent right now. Try again in a moment.' };
+  }
+}
+
+/** Job alert: a brand-new opening scores well against the seeker's active
+ *  resume. The engine did the matching — the email just reports it. */
+export async function notifyNewPostingMatch(
+  seekerEmail: string,
+  seekerName: string,
+  postingTitle: string,
+  companyName: string,
+  score: number,
+  tier: string,
+): Promise<void> {
+  if (!deliverable('job-alert', seekerEmail, `${postingTitle} (${score}%)`)) return;
+  const t = esc(postingTitle);
+  const label = tier === 'strong' ? 'a strong match' : 'a possible match';
+  await sendMail(
+    seekerEmail,
+    `New opening that fits you: ${postingTitle} (${Math.round(score)}% match)`,
+    `A new opening fits your resume\n\n${companyName} just posted ${postingTitle}, and your active resume scores ${Math.round(score)}% against its requirements — ${label}.\n\nSee it: ${APP_URL}/browse`,
+    `
+      <h1 style="margin:0 0 10px;font-size:22px">A new opening fits your resume</h1>
+      <p style="margin:0;font-size:14.5px;line-height:1.65;color:#4C5566">Hi ${esc(seekerName)},</p>
+      <p style="margin:10px 0 0;font-size:14.5px;line-height:1.65;color:#4C5566">${esc(companyName)} just posted <b>${t}</b>, and your active resume scores <b>${Math.round(score)}%</b> against its stated requirements — ${label}. Same transparent formula as always: skills 50%, education 25%, experience 25%.</p>
+      ${btn(`${APP_URL}/browse`, 'See the opening')}
+      ${foot}`,
+  );
+}
+
 /** Email a recruiter when a new application lands on one of their postings. */
 export async function notifyNewApplication(
   recruiterEmail: string,

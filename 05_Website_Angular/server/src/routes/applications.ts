@@ -4,9 +4,9 @@ import { query, queryOne, exec } from '../db';
 import { ApplicationRow } from '../types';
 import { ok, fail } from '../lib/http';
 import { requireRole, requireUser } from '../lib/auth';
-import { fetchResume, fetchPosting, serializeResume, serializePosting, serializeApplication } from '../lib/serializers';
+import { fetchResume, fetchPosting, postingExpired, serializeResume, serializePosting, serializeApplication } from '../lib/serializers';
 import { rmScore, cacheScore } from '../lib/engine';
-import { notifyStatusChange, notifyNewApplication } from '../lib/notify';
+import { notifyStatusChange, notifyNewApplication, sendInterviewInvite } from '../lib/notify';
 import { UserRow } from '../types';
 
 const router = Router();
@@ -23,6 +23,7 @@ router.post('/apply', async (req, res) => {
   const p = await fetchPosting(pid);
   if (!p) return fail(res, 'That opening no longer exists.');
   if (p.status !== 'open') return fail(res, 'This opening is closed.');
+  if (postingExpired(p)) return fail(res, 'The application deadline for this opening has passed.');
 
   const dup = await queryOne('SELECT 1 FROM applications WHERE seeker_id=? AND posting_id=? LIMIT 1', [u.user_id, pid]);
   if (dup) return fail(res, 'You already applied to this position.');
@@ -158,6 +159,41 @@ router.post('/set-status', async (req, res) => {
 
   const updated = await queryOne<ApplicationRow>('SELECT * FROM applications WHERE application_id = ?', [aid]);
   ok(res, { application: serializeApplication(updated!) });
+});
+
+/* A recruiter's personal message to an applicant — typically the
+   interview invitation after shortlisting. Deliberately transactional:
+   it is one human writing to another about an application the seeker
+   chose to submit, so the marketing-style opt-out doesn't apply. The
+   reply-to is the recruiter, so the conversation continues over email. */
+router.post('/invite', async (req, res) => {
+  const u = await requireRole(req, res, 'recruiter');
+  if (!u) return;
+  const aid = Number(req.body?.id);
+  const message = String(req.body?.message ?? '').trim();
+  if (message.length < 10) return fail(res, 'Write the applicant a short message first.');
+  if (message.length > 2000) return fail(res, 'Keep the message under 2000 characters.');
+
+  const a = await queryOne<ApplicationRow & { company_id: number }>(
+    `SELECT a.*, p.company_id
+       FROM applications a
+       JOIN job_postings p ON p.posting_id = a.posting_id
+      WHERE a.application_id = ?`, [aid],
+  );
+  if (!a || a.company_id !== u.company_id) return fail(res, 'Application not found.');
+
+  const seeker = await queryOne<UserRow>('SELECT * FROM users WHERE user_id = ?', [a.seeker_id]);
+  const p = await fetchPosting(a.posting_id);
+  if (!seeker || !p) return fail(res, 'Application not found.');
+  const co = await queryOne<{ company_name: string }>(
+    'SELECT company_name FROM companies WHERE company_id = ?', [p.company_id]);
+
+  const sent = await sendInterviewInvite(
+    seeker.email, seeker.full_name, u.full_name, u.email,
+    p.title, co?.company_name || 'the company', message,
+  );
+  if (!sent.ok) return fail(res, sent.error);
+  ok(res, { sent: sent.sent });
 });
 
 export default router;

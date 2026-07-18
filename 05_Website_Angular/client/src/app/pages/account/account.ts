@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Header } from '../../layout/header/header';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
@@ -12,7 +13,7 @@ import { passwordOk, PASSWORD_HINT } from '../../core/engine';
 @Component({
   selector: 'app-account',
   standalone: true,
-  imports: [RouterLink, Header],
+  imports: [FormsModule, RouterLink, Header],
   templateUrl: './account.html',
   styleUrl: './account.css',
 })
@@ -35,6 +36,65 @@ export class Account {
   msg = signal<string | null>(null);
   toastMsg = signal<string | null>(null);
   readonly passwordHint = PASSWORD_HINT;
+
+  // ---- change email (code-verified, like registration) ----
+  emailStep = signal<'closed' | 'form' | 'code'>('closed');
+  ceNewEmail = '';
+  cePassword = '';
+  ceCode = '';
+  ceError = signal('');
+  ceBusy = signal(false);
+  ceDevCode = signal<string | null>(null);
+
+  openChangeEmail(): void {
+    this.emailStep.set('form');
+    this.ceNewEmail = '';
+    this.cePassword = '';
+    this.ceCode = '';
+    this.ceError.set('');
+    this.ceDevCode.set(null);
+  }
+
+  cancelChangeEmail(): void {
+    this.emailStep.set('closed');
+  }
+
+  async onChangeEmailStart(e: Event): Promise<void> {
+    e.preventDefault();
+    this.ceError.set('');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.ceNewEmail.trim())) {
+      this.ceError.set('Enter a valid email address.');
+      return;
+    }
+    this.ceBusy.set(true);
+    const res = await this.api.auth.changeEmailStart(this.ceNewEmail.trim(), this.cePassword);
+    this.ceBusy.set(false);
+    if (!res.ok) {
+      this.ceError.set(res.error);
+      return;
+    }
+    this.ceDevCode.set(res.devCode ?? null);
+    this.emailStep.set('code');
+  }
+
+  async onChangeEmailConfirm(e: Event): Promise<void> {
+    e.preventDefault();
+    this.ceError.set('');
+    if (!/^\d{6}$/.test(this.ceCode.trim())) {
+      this.ceError.set('Enter the 6-digit code from the email.');
+      return;
+    }
+    this.ceBusy.set(true);
+    const res = await this.api.auth.changeEmailConfirm(this.ceNewEmail.trim(), this.ceCode.trim());
+    this.ceBusy.set(false);
+    if (!res.ok) {
+      this.ceError.set(res.error);
+      return;
+    }
+    this.session.user.set(res.user);
+    this.emailStep.set('closed');
+    this.showToast('Email address updated.');
+  }
 
   // ---- email notifications toggle ----
   isDemo = environment.mode === 'demo';

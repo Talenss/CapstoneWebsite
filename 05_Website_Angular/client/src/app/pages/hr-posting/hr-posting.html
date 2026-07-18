@@ -95,6 +95,12 @@
         </div>
       </div>
 
+      <div class="field" style="max-width:280px">
+        <label for="deadline">Application deadline <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(optional)</span></label>
+        <input type="date" id="deadline" [min]="todayStr" [value]="deadlineVal()" (input)="setDeadline($event)">
+        <p class="hint">Past this date the opening stops accepting applications by itself — no need to close it by hand. Leave empty for no deadline.</p>
+      </div>
+
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:26px;flex-wrap:wrap">
         <a class="btn ghost" routerLink="/hr-dashboard">Cancel</a>
         <button class="btn primary" type="submit" [disabled]="saving()">

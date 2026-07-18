@@ -89,6 +89,30 @@
     }
   </div>
 
+  @if (savedPostings().length) {
+    <section class="tier" id="savedSection">
+      <div class="tier-head">
+        <h2>Saved openings</h2>
+        <span class="badge gold">{{ savedPostings().length }}</span>
+      </div>
+      <p>Bookmarked from the openings page — they stay here until you remove them, even if you haven't applied yet.</p>
+      <div class="saved-list">
+        @for (p of savedPostings(); track p.id) {
+          <div class="saved-row card">
+            <div>
+              <b>{{ p.title }}</b>
+              <span class="sub">{{ p.department }}@if (deadlineLabel(p); as dl) { · <span style="color:var(--gold-deep)">{{ dl }}</span> }@if (p.expired) { · <span style="color:var(--wine)">Deadline passed</span> }</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <a class="btn ghost sm" routerLink="/browse">Open</a>
+              <button class="btn ghost sm" type="button" (click)="unsave(p)">Remove</button>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
   <section class="tier" id="appsSection">
     <div class="tier-head">
       <h2>My applications</h2>

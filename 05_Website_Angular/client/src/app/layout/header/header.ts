@@ -54,6 +54,7 @@ export class Header {
       case 'admin':
         return [
           { key: 'admin', label: 'Recruiter requests', link: '/admin' },
+          { key: 'metrics', label: 'Study metrics', link: '/admin/metrics' },
           { key: 'account', label: 'Account', link: '/account' },
         ];
       default:

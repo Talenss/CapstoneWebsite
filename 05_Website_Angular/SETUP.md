@@ -86,6 +86,13 @@ npm run create-admin -- you@example.com "a strong password"
 Then log in at `/auth` with that email and you'll land on the admin
 panel. (Demo mode already has `admin@demo.ph` / `demo123` seeded.)
 
+The admin account also gets **Study metrics** (`/admin/metrics`):
+anonymous aggregates for the paper's evaluation chapter — score
+distribution at application time, tier counts (including how often
+people apply to below-threshold "related" roles), the status funnel,
+and average time to the first recruiter decision — with a one-click
+JSON export.
+
 #### The engine test suite
 
 The matching engine — the study's core claim — has an automated test
@@ -100,14 +107,18 @@ npm test        # no database needed — the tests run the pure engine
 
 #### Optional — email sending (`SMTP_*`): verification codes & password reset
 
-Email powers three things in server mode: the 6-digit **verification
-code** at sign-up (so every registered email is a proven, real inbox),
-the **password-reset code**, and **application notifications** — seekers
-get an email when a recruiter moves their application (under review /
-shortlisted / hired / not selected), recruiters get one when a new
-applicant arrives. Notifications are on by default and each user can
-switch them off in *My account*; the security codes only ever arrive
-when explicitly requested. Set `APP_URL` in `.env` to your public URL so
+Email powers several things in server mode: the 6-digit **verification
+code** at sign-up and when **changing your email address** (so every
+address on file is a proven, real inbox), the **password-reset code**,
+**application notifications** — seekers get an email when a recruiter
+moves their application, recruiters when a new applicant arrives —
+**job alerts** (when a brand-new posting scores as a possible-or-better
+match against a seeker's active resume, the engine emails them), and
+**recruiter messages**: the "Message applicant" button on the ranked
+list emails the applicant with the recruiter as reply-to, so interview
+scheduling continues over normal email. Notifications and alerts are on
+by default with an opt-out in *My account*; security codes and recruiter
+messages always arrive. Set `APP_URL` in `.env` to your public URL so
 the links inside these emails point at the right place.
 
 All of it needs an SMTP service. Two free options:

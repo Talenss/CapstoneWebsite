@@ -60,6 +60,7 @@ export interface PostingRow {
   description: string | null;
   education_level: string;
   min_experience_months: number;
+  application_deadline: string | null;
   status: 'open' | 'closed';
   created_at: string;
 }

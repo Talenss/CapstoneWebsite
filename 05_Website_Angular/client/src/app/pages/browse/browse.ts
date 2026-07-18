@@ -47,6 +47,27 @@ export class Browse implements OnInit {
   current = signal<BrowseRow | null>(null);
   applying = signal(false);
   toastMsg = signal<string | null>(null);
+  savedIds = signal<string[]>([]);
+
+  isSaved(postingId: string): boolean {
+    return this.savedIds().includes(postingId);
+  }
+
+  async toggleSave(row: BrowseRow): Promise<void> {
+    const res = await this.api.saved.toggle(row.posting.id);
+    if (!res.ok) {
+      this.showToast(res.error);
+      return;
+    }
+    this.savedIds.update((ids) =>
+      res.saved ? [...ids, row.posting.id] : ids.filter((id) => id !== row.posting.id));
+    this.showToast(res.saved ? 'Saved — find it on your dashboard.' : 'Removed from saved openings.');
+  }
+
+  deadlineLabel(p: Posting): string | null {
+    if (!p.deadline) return null;
+    return 'Apply by ' + new Date(p.deadline + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+  }
 
   isSeeker = computed(() => this.session.user()?.role === 'seeker');
   headerVariant = computed<'guest' | 'seeker' | 'recruiter'>(() => {
@@ -103,11 +124,12 @@ export class Browse implements OnInit {
     const user = await this.session.ensure();
 
     if (user && user.role === 'seeker') {
-      const [rRes, aRes] = await Promise.all([this.api.resumes.mine(), this.api.applications.mine()]);
+      const [rRes, aRes, sRes] = await Promise.all([this.api.resumes.mine(), this.api.applications.mine(), this.api.saved.list()]);
       const list = rRes.ok ? rRes.resumes : [];
       const active = list.find((r) => r.id === user.activeResumeId) || list[0] || null;
       this.resume.set(active);
       this.appliedTo.set(aRes.ok ? aRes.applications.map((a) => a.postingId) : []);
+      this.savedIds.set(sRes.ok ? sRes.postings.map((p) => p.id) : []);
     }
 
     const pRes = await this.api.postings.open();

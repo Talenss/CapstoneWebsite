@@ -56,10 +56,11 @@ function shell(bodyHtml: string): string {
 
 /** Generic branded email. `bodyHtml` goes inside the shell; `text` is the
  *  plain-text alternative. */
-export async function sendMail(to: string, subject: string, text: string, bodyHtml: string): Promise<void> {
+export async function sendMail(to: string, subject: string, text: string, bodyHtml: string, opts?: { replyTo?: string }): Promise<void> {
   await getTransport().sendMail({
     from: MAIL_FROM,
     to,
+    replyTo: opts?.replyTo,
     subject,
     text: `${text}\n\n— ResumeMatch PH · an academic capstone project, Holy Angel University`,
     html: shell(bodyHtml),

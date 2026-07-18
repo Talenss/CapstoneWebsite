@@ -53,7 +53,9 @@
             <div class="main">
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                 <h3>{{ p.title }}</h3>
-                @if (p.status === 'open') {
+                @if (p.status === 'open' && p.expired) {
+                  <span class="badge wine" title="The application deadline has passed — it no longer accepts applications. Edit it to extend the deadline.">Deadline passed</span>
+                } @else if (p.status === 'open') {
                   <span class="badge green">Open</span>
                 } @else {
                   <span class="badge slate">Closed</span>

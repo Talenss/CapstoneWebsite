@@ -4,7 +4,7 @@ import { Header } from '../../layout/header/header';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { AppStatus, Application, RecommendationItem, Resume } from '../../core/models';
+import { AppStatus, Application, Posting, RecommendationItem, Resume } from '../../core/models';
 import { EDU_LABELS, STATUS_LABELS, THRESHOLDS, WEIGHTS, statusBadge, tierColor, tierLabel, tierOf } from '../../core/engine';
 
 type TierKey = 'strong' | 'possible' | 'related';
@@ -49,6 +49,17 @@ export class SeekerDashboard implements OnInit {
   current = signal<RecommendationItem | null>(null);
   applying = signal(false);
   toastMsg = signal<string | null>(null);
+  savedPostings = signal<Posting[]>([]);
+
+  async unsave(p: Posting): Promise<void> {
+    const res = await this.api.saved.toggle(p.id);
+    if (res.ok) this.savedPostings.update((list) => list.filter((x) => x.id !== p.id));
+  }
+
+  deadlineLabel(p: Posting): string | null {
+    if (!p.deadline) return null;
+    return 'Apply by ' + new Date(p.deadline + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+  }
 
   hello = computed(() => {
     const name = this.session.user()?.name ?? '';
@@ -81,6 +92,7 @@ export class SeekerDashboard implements OnInit {
   }
 
   private async render(): Promise<void> {
+    this.api.saved.list().then((sRes) => { if (sRes.ok) this.savedPostings.set(sRes.postings); });
     const [rRes, meRes] = await Promise.all([this.api.resumes.mine(), this.api.auth.me()]);
     const resumes = rRes.ok ? rRes.resumes : [];
     this.resumes.set(resumes);

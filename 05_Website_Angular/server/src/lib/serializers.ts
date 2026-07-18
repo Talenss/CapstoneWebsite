@@ -99,6 +99,14 @@ export async function serializeResume(r: ResumeRow): Promise<any> {
   };
 }
 
+/** True when the posting's optional "apply by" date is in the past
+ *  (deadline day itself still accepts applications). */
+export function postingExpired(p: PostingRow): boolean {
+  if (!p.application_deadline) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  return String(p.application_deadline).slice(0, 10) < today;
+}
+
 export async function serializePosting(p: PostingRow, withCompany = true): Promise<any> {
   const st = await query<{ skill_name: string }>(
     'SELECT s.skill_name FROM posting_skills ps JOIN skills s ON s.skill_id=ps.skill_id WHERE ps.posting_id=? ORDER BY s.skill_name',
@@ -115,6 +123,10 @@ export async function serializePosting(p: PostingRow, withCompany = true): Promi
     skills: st.map((r) => r.skill_name),
     educationLevel: p.education_level,
     minExperienceMonths: Number(p.min_experience_months),
+    deadline: p.application_deadline || null,
+    // past-deadline postings stop accepting applications without anyone
+    // having to remember to close them (see postingExpired)
+    expired: postingExpired(p),
     status: p.status,
     createdAt: ts(p.created_at),
   };

@@ -47,6 +47,38 @@ export class HrApplicants {
   modalStatus = signal<AppStatus>('submitted');
   savingStatus = signal(false);
 
+  // ---- message the applicant (interview invite) ----
+  inviteOpen = signal(false);
+  inviteText = signal('');
+  inviteSending = signal(false);
+
+  openInvite(): void {
+    const r = this.current();
+    if (!r) return;
+    const first = (r.seeker.name || '').split(' ')[0] || r.seeker.name;
+    this.inviteText.set(
+      `Hi ${first},\n\nThank you for applying to ${this.posting()?.title ?? 'our opening'}. We'd like to invite you to an interview. Could you tell us which days and times work for you this coming week?\n\nWe look forward to meeting you.`,
+    );
+    this.inviteOpen.set(true);
+  }
+
+  setInviteText(e: Event): void {
+    this.inviteText.set((e.target as HTMLTextAreaElement).value);
+  }
+
+  async sendInvite(): Promise<void> {
+    const r = this.current();
+    if (!r) return;
+    this.inviteSending.set(true);
+    const res = await this.api.applications.invite(r.application.id, this.inviteText().trim());
+    this.inviteSending.set(false);
+    if (!res.ok) { this.showToast(res.error); return; }
+    this.inviteOpen.set(false);
+    this.showToast(res.simulated
+      ? `Demo mode — in the real system this message is emailed to ${r.seeker.name}, with replies going to your inbox.`
+      : `Message emailed to ${r.seeker.name}. Their reply will land in your inbox.`);
+  }
+
   toastMsg = signal<string | null>(null);
 
   filteredRows = computed(() => {

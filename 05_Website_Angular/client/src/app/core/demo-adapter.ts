@@ -5,7 +5,7 @@
    ============================================================ */
 import { ApiAdapter } from './adapter';
 import { AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, User } from './models';
-import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER } from './engine';
+import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, THRESHOLDS } from './engine';
 
 const KEY = 'rmph_v3_db';
 const SESSION = 'rmph_v3_session';
@@ -31,7 +31,15 @@ interface Db {
   applications: Application[];
   recruiterRequests: any[];
   emailCodes: EmailCode[];
+  savedJobs: { userId: string; postingId: string; createdAt: number }[];
 }
+
+/** Past-deadline postings stop accepting applications — same lazy
+ *  auto-close rule as server mode (deadline day itself still counts). */
+function isExpired(p: Posting): boolean {
+  return !!p.deadline && String(p.deadline).slice(0, 10) < new Date().toISOString().slice(0, 10);
+}
+const withExpired = (p: Posting): Posting => ({ ...p, expired: isExpired(p) });
 
 function seed(): Db {
   return {
@@ -103,7 +111,9 @@ function seed(): Db {
         skills: ['Communication', 'MS Office', 'Recruitment', 'Organization'], educationLevel: 'bachelor', minExperienceMonths: 0, status: 'open', createdAt: Date.now() - D * 4 },
       { id: 'p6', companyId: 'c1', title: 'Marketing Associate', department: 'Marketing', employmentType: 'full-time',
         description: 'Support promotions, events, and social media for the hotel and casino.',
-        skills: ['Social Media', 'Copywriting', 'Canva', 'Communication'], educationLevel: 'bachelor', minExperienceMonths: 6, status: 'open', createdAt: Date.now() - D * 3 },
+        skills: ['Social Media', 'Copywriting', 'Canva', 'Communication'], educationLevel: 'bachelor', minExperienceMonths: 6,
+        deadline: new Date(Date.now() + D * 14).toISOString().slice(0, 10), // demos the "Apply by" chip
+        status: 'open', createdAt: Date.now() - D * 3 },
       { id: 'p7', companyId: 'c1', title: 'Housekeeping Team Leader', department: 'Housekeeping', employmentType: 'full-time',
         description: 'Lead a room-attendant team across the Deluxe Building; manage schedules and quality inspections.',
         skills: ['Housekeeping Operations', 'Leadership', 'Scheduling', 'Teamwork'], educationLevel: 'highschool', minExperienceMonths: 12, status: 'open', createdAt: Date.now() - D * 2 },
@@ -121,6 +131,7 @@ function seed(): Db {
         companyId: 'c1', note: 'Verify with HR head Ms. Santos, local 214.', status: 'pending', requestedAt: Date.now() - D * 1 },
     ],
     emailCodes: [],
+    savedJobs: [],
   };
 }
 
@@ -130,6 +141,7 @@ function load(): Db {
     if (raw) {
       const db: Db = JSON.parse(raw);
       if (!db.emailCodes) db.emailCodes = []; // databases saved before this field existed
+      if (!db.savedJobs) db.savedJobs = [];
       if (!db.users.some((u) => u.role === 'admin')) {
         // databases saved before the admin panel existed get the admin account
         db.users.push({ id: 'u6', role: 'admin', name: 'Research Team', email: 'admin@demo.ph', password: 'demo123', createdAt: Date.now() } as DemoUser);
@@ -249,6 +261,33 @@ export class DemoAdapter implements ApiAdapter {
     },
     logout: () => { setSession(null); return apiOk({}); },
     me: () => apiOk({ user: pubUser(meRow(load())) }),
+    /* Change email — same proof-of-inbox flow as registration, with the
+       demo's on-screen code standing in for the real email. */
+    changeEmailStart: (newEmail: string, password: string) => {
+      const db = load(); const u = meRow(db);
+      if (!u) return apiFail('You are not signed in.');
+      const e = String(newEmail).trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return apiFail('Enter a valid email address.');
+      if (e === u.email.toLowerCase()) return apiFail('That is already your email address.');
+      if (u.password !== password) return apiFail('Your password is incorrect.');
+      if (db.users.some((x) => x.email.toLowerCase() === e)) return apiFail('Another account already uses that email.');
+      const code = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+      db.emailCodes = db.emailCodes.filter((c) => !(c.email === e && c.purpose === 'verify'));
+      db.emailCodes.push({ email: e, purpose: 'verify', code, attempts: 0, expiresAt: Date.now() + 10 * 60000 });
+      persist(db);
+      return apiOk({ sent: false, simulated: true, devCode: code });
+    },
+    changeEmailConfirm: (newEmail: string, code: string) => {
+      const db = load(); const u = meRow(db);
+      if (!u) return apiFail('You are not signed in.');
+      const e = String(newEmail).trim().toLowerCase();
+      if (db.users.some((x) => x.email.toLowerCase() === e)) return apiFail('Another account already uses that email.');
+      const err = consumeCode(db, e, 'verify', code);
+      if (err) return apiFail(err);
+      u.email = String(newEmail).trim();
+      persist(db);
+      return apiOk({ user: pubUser(u)! });
+    },
     /* Demo mode stores the preference but sends nothing — there's no mail
        server behind a pure-browser demo, and the account page says so. */
     setEmailNotifications: (enabled: boolean) => {
@@ -413,11 +452,13 @@ export class DemoAdapter implements ApiAdapter {
   };
 
   postings = {
+    // Open AND still accepting — a past deadline hides a posting without
+    // anyone closing it by hand.
     open: () => {
       const db = load();
       return apiOk({
-        postings: db.postings.filter((p) => p.status === 'open')
-          .map((p) => ({ ...p, company: db.companies.find((c) => c.id === p.companyId) })),
+        postings: db.postings.filter((p) => p.status === 'open' && !isExpired(p))
+          .map((p) => ({ ...withExpired(p), company: db.companies.find((c) => c.id === p.companyId) })),
       });
     },
     mine: () => { // recruiter: every posting of my company, open or closed
@@ -426,7 +467,7 @@ export class DemoAdapter implements ApiAdapter {
       return apiOk({
         postings: db.postings.filter((p) => p.companyId === me.companyId)
           .map((p) => ({
-            ...p,
+            ...withExpired(p),
             company: db.companies.find((c) => c.id === p.companyId),
             applicantCount: db.applications.filter((a) => a.postingId === p.id).length,
             newCount: db.applications.filter((a) => a.postingId === p.id && a.status === 'submitted').length,
@@ -438,11 +479,18 @@ export class DemoAdapter implements ApiAdapter {
       const db = load();
       const p = db.postings.find((x) => x.id === id);
       if (!p) return apiFail('That opening no longer exists.');
-      return apiOk({ posting: { ...p, company: db.companies.find((c) => c.id === p.companyId) } });
+      return apiOk({ posting: { ...withExpired(p), company: db.companies.find((c) => c.id === p.companyId) } });
     },
     save: (posting: Partial<Posting>) => {
       const db = load(); const me = meRow(db);
       if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
+      if (posting.deadline) {
+        const d = String(posting.deadline).slice(0, 10);
+        if (d < new Date().toISOString().slice(0, 10)) return apiFail("The application deadline can't be in the past.");
+        posting = { ...posting, deadline: d };
+      } else {
+        posting = { ...posting, deadline: null };
+      }
       const i = db.postings.findIndex((p) => p.id === posting.id);
       if (i >= 0) {
         if (db.postings[i].companyId !== me.companyId) return apiFail("You can only edit your own company's openings.");
@@ -471,6 +519,7 @@ export class DemoAdapter implements ApiAdapter {
       if (!r || r.userId !== me.id) return apiFail('Choose one of your own resumes.');
       const p = db.postings.find((x) => x.id === postingId);
       if (!p || p.status !== 'open') return apiFail('This opening is closed.');
+      if (isExpired(p)) return apiFail('The application deadline for this opening has passed.');
       if (db.applications.some((a) => a.seekerId === me.id && a.postingId === postingId))
         return apiFail('You already applied to this position.');
       const app: Application = { id: uid(), seekerId: me.id, resumeId, postingId, status: 'submitted', appliedAt: Date.now() };
@@ -517,6 +566,102 @@ export class DemoAdapter implements ApiAdapter {
       persist(db);
       return apiOk({ application: a });
     },
+    /* Demo mode can't send the applicant a real email — the panel shows
+       what WOULD be sent, clearly labelled. */
+    invite: (applicationId: string, message: string) => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
+      if (String(message).trim().length < 10) return apiFail('Write the applicant a short message first.');
+      const a = db.applications.find((x) => x.id === applicationId);
+      const p = a && db.postings.find((x) => x.id === a.postingId);
+      if (!a || !p || p.companyId !== me.companyId) return apiFail('Application not found.');
+      return apiOk({ sent: false, simulated: true });
+    },
+  };
+
+  saved = {
+    list: () => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'seeker') return apiFail('Sign in as a job seeker.');
+      const mine = db.savedJobs.filter((s) => s.userId === me.id).sort((a, b) => b.createdAt - a.createdAt);
+      return apiOk({
+        postings: mine
+          .map((s) => db.postings.find((p) => p.id === s.postingId))
+          .filter((p): p is Posting => !!p)
+          .map((p) => ({ ...withExpired(p), company: db.companies.find((c) => c.id === p.companyId) })),
+      });
+    },
+    toggle: (postingId: string) => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'seeker') return apiFail('Sign in as a job seeker.');
+      const i = db.savedJobs.findIndex((s) => s.userId === me.id && s.postingId === postingId);
+      if (i >= 0) {
+        db.savedJobs.splice(i, 1);
+        persist(db);
+        return apiOk({ saved: false });
+      }
+      if (!db.postings.some((p) => p.id === postingId)) return apiFail('Opening not found.');
+      db.savedJobs.push({ userId: me.id, postingId, createdAt: Date.now() });
+      persist(db);
+      return apiOk({ saved: true });
+    },
+  };
+
+  /* Researcher aggregates. Demo mode computes them live from the browser
+     database; no status history exists here, so time-to-decision is
+     approximated from updatedAt where present. */
+  metrics = {
+    summary: () => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+      const T = THRESHOLDS;
+      const scored = db.applications.map((a) => {
+        const r = db.resumes.find((x) => x.id === a.resumeId);
+        const p = db.postings.find((x) => x.id === a.postingId);
+        return r && p ? { a, score: scoreLocal(r, p).score } : null;
+      }).filter((x): x is { a: Application; score: number } => !!x);
+
+      const buckets = Array.from({ length: 10 }, (_, i) => ({
+        range: i === 9 ? '90–100' : `${i * 10}–${i * 10 + 9}`, count: 0,
+      }));
+      for (const s of scored) buckets[Math.min(Math.floor(s.score / 10), 9)].count++;
+
+      const funnel: Record<string, number> = { submitted: 0, review: 0, shortlisted: 0, rejected: 0, hired: 0 };
+      for (const a of db.applications) funnel[a.status] = (funnel[a.status] || 0) + 1;
+
+      const decided = db.applications.filter((a) => a.status !== 'submitted');
+      const withTimes = decided.filter((a) => (a as any).updatedAt && a.appliedAt);
+      const avgHours = withTimes.length
+        ? Math.round(withTimes.reduce((t, a) => t + ((a as any).updatedAt - a.appliedAt), 0) / withTimes.length / 360000) / 10
+        : null;
+
+      return apiOk({
+        metrics: {
+          generatedAt: new Date().toISOString(),
+          thresholds: T,
+          volumes: {
+            seekers: db.users.filter((u) => u.role === 'seeker').length,
+            recruiters: db.users.filter((u) => u.role === 'recruiter').length,
+            resumes: db.resumes.length,
+            postings: db.postings.length,
+            openPostings: db.postings.filter((p) => p.status === 'open' && !isExpired(p)).length,
+            applications: db.applications.length,
+            savedJobs: db.savedJobs.length,
+          },
+          scores: {
+            average: scored.length ? Math.round((scored.reduce((t, s) => t + s.score, 0) / scored.length) * 10) / 10 : null,
+            buckets,
+          },
+          tiersAtApplication: {
+            strong: scored.filter((s) => s.score >= T.strong).length,
+            possible: scored.filter((s) => s.score >= T.related && s.score < T.strong).length,
+            related: scored.filter((s) => s.score < T.related).length,
+          },
+          funnel,
+          responsiveness: { applicationsDecided: decided.length, avgHoursToFirstDecision: avgHours },
+        },
+      });
+    },
   };
 
   match = {
@@ -533,7 +678,7 @@ export class DemoAdapter implements ApiAdapter {
       const resume = db.resumes.find((r) => r.id === me.activeResumeId) || db.resumes.find((r) => r.userId === me.id);
       if (!resume) return apiOk({ resume: null, strong: [], possible: [], related: [] });
       const applied = db.applications.filter((a) => a.seekerId === me.id).map((a) => a.postingId);
-      const scored = db.postings.filter((p) => p.status === 'open').map((p) => ({
+      const scored = db.postings.filter((p) => p.status === 'open' && !isExpired(p)).map((p) => ({
         posting: p,
         company: db.companies.find((c) => c.id === p.companyId) || null,
         applied: applied.indexOf(p.id) !== -1,

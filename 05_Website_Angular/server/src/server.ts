@@ -25,6 +25,8 @@ import statsRoutes from './routes/stats';
 import fileRoutes from './routes/file';
 import analyzeRoutes from './routes/analyze';
 import adminRoutes from './routes/admin';
+import savedRoutes from './routes/saved';
+import metricsRoutes from './routes/metrics';
 import { runMigrations } from './lib/migrate';
 
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -88,6 +90,8 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/file', fileRoutes);
 app.use('/api/analyze', analyzeRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/saved', savedRoutes);
+app.use('/api/metrics', metricsRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
