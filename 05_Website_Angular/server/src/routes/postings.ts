@@ -1,6 +1,6 @@
 /* ResumeMatch PH — routes/postings.ts : list · mine · get · save · toggle */
 import { Router } from 'express';
-import { query, queryOne, exec, db } from '../db';
+import { query, queryOne, exec, withTransaction } from '../db';
 import { PostingRow, UserRow, ResumeRow } from '../types';
 import { ok, fail } from '../lib/http';
 import { requireRole } from '../lib/auth';
@@ -15,7 +15,7 @@ const router = Router();
 router.post('/list', async (_req, res) => {
   const rows = await query<PostingRow>(
     `SELECT * FROM job_postings
-      WHERE status='open' AND (application_deadline IS NULL OR application_deadline >= CURDATE())
+      WHERE status='open' AND (application_deadline IS NULL OR application_deadline >= CURRENT_DATE)
       ORDER BY created_at DESC`,
   );
   ok(res, { postings: await Promise.all(rows.map((p) => serializePosting(p))) });
@@ -58,7 +58,7 @@ router.post('/mine', async (req, res) => {
   for (const p of rows) {
     const row = await serializePosting(p);
     const n = await queryOne<{ total: number; fresh: number }>(
-      `SELECT COUNT(*) AS total, SUM(status = 'submitted') AS fresh FROM applications WHERE posting_id = ?`, [p.posting_id],
+      `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status = 'submitted') AS fresh FROM applications WHERE posting_id = ?`, [p.posting_id],
     );
     row.applicantCount = Number(n?.total ?? 0);
     row.newCount = Number(n?.fresh ?? 0);
@@ -102,38 +102,38 @@ router.post('/save', async (req, res) => {
     deadline = d;
   }
 
-  const conn = await db().getConnection();
+  // Ownership check up front so edits to another company's opening get a
+  // clean 403 rather than a generic transaction 500.
+  if (P.id) {
+    const own = await queryOne<PostingRow>('SELECT company_id FROM job_postings WHERE posting_id = ?', [Number(P.id)]);
+    if (!own || own.company_id !== u.company_id) return fail(res, "You can only edit your own company's openings.", 403);
+  }
+
   try {
-    await conn.beginTransaction();
-    let id = P.id ? Number(P.id) : 0;
+    const id = await withTransaction(async (tx) => {
+      let pid = P.id ? Number(P.id) : 0;
 
-    if (id) {
-      const [ownRows]: any = await conn.query('SELECT * FROM job_postings WHERE posting_id=?', [id]);
-      const own = ownRows[0];
-      if (!own || own.company_id !== u.company_id) {
-        await conn.rollback();
-        return fail(res, "You can only edit your own company's openings.", 403);
+      if (pid) {
+        await tx.exec(
+          'UPDATE job_postings SET title=?, department=?, employment_type=?, description=?, education_level=?, min_experience_months=?, application_deadline=? WHERE posting_id=?',
+          [title, dept, type, desc, edu, months, deadline, pid],
+        );
+      } else {
+        const ins = await tx.exec(
+          `INSERT INTO job_postings (company_id, created_by, title, department, employment_type, description, education_level, min_experience_months, application_deadline, status)
+           VALUES (?,?,?,?,?,?,?,?,?,'open') RETURNING posting_id`,
+          [u.company_id, u.user_id, title, dept, type, desc, edu, months, deadline],
+        );
+        pid = ins.insertId;
       }
-      await conn.query(
-        'UPDATE job_postings SET title=?, department=?, employment_type=?, description=?, education_level=?, min_experience_months=?, application_deadline=? WHERE posting_id=?',
-        [title, dept, type, desc, edu, months, deadline, id],
-      );
-    } else {
-      const [insResult]: any = await conn.query(
-        `INSERT INTO job_postings (company_id, created_by, title, department, employment_type, description, education_level, min_experience_months, application_deadline, status)
-         VALUES (?,?,?,?,?,?,?,?,?,"open")`,
-        [u.company_id, u.user_id, title, dept, type, desc, edu, months, deadline],
-      );
-      id = insResult.insertId;
-    }
 
-    await conn.query('DELETE FROM posting_skills WHERE posting_id = ?', [id]);
-    for (const s of skills) {
-      const sid = await skillId(s);
-      await conn.query('INSERT IGNORE INTO posting_skills (posting_id, skill_id) VALUES (?,?)', [id, sid]);
-    }
-
-    await conn.commit();
+      await tx.exec('DELETE FROM posting_skills WHERE posting_id = ?', [pid]);
+      for (const s of skills) {
+        const sid = await skillId(s);
+        await tx.exec('INSERT INTO posting_skills (posting_id, skill_id) VALUES (?,?) ON CONFLICT DO NOTHING', [pid, sid]);
+      }
+      return pid;
+    });
 
     // Brand-new opening → job alerts for seekers whose active resume fits.
     if (!P.id) alertMatchingSeekers(id).catch((e) => console.error('job alerts failed:', e?.message || e));
@@ -141,10 +141,7 @@ router.post('/save', async (req, res) => {
     const saved = await fetchPosting(id);
     ok(res, { posting: await serializePosting(saved!) });
   } catch (e) {
-    await conn.rollback();
     fail(res, "The opening couldn't be saved. Try again.", 500);
-  } finally {
-    conn.release();
   }
 });
 

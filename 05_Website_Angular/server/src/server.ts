@@ -31,11 +31,11 @@ import { runMigrations } from './lib/migrate';
 
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-// Additive schema upgrades (email_codes table, notification preference
-// column) — databases imported from the original 04_Website schema
-// upgrade themselves on first boot.
+// Idempotent, additive schema upgrades so a database created before a
+// given feature catches up on first boot (a fresh db/resumematch_ph.sql
+// has nothing to do).
 runMigrations().catch((e) =>
-  console.error('Schema migration failed (is MySQL running?):', e?.message || e));
+  console.error('Schema migration failed (is the database reachable?):', e?.message || e));
 
 const app = express();
 

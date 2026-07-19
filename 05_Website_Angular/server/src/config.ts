@@ -2,19 +2,28 @@
    ResumeMatch PH — configuration
    ------------------------------------------------------------
    The ONLY file you edit when moving between machines or hosts.
-   Mirrors 04_Website/api/config.php. Values may be overridden by
-   environment variables of the same name.
+   Values may be overridden by environment variables of the same
+   name (put them in .env).
    ============================================================ */
 import path from 'path';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
+// ---------- Database (Supabase / PostgreSQL) ----------
+// The easiest way: paste your Supabase connection string into
+// DATABASE_URL in .env (Project → Settings → Database → "Session
+// pooler" connection string). Everything else is a fallback for a
+// local Postgres during development.
+export const DATABASE_URL = process.env.DATABASE_URL || '';
 export const DB_HOST = process.env.DB_HOST || '127.0.0.1';
 export const DB_NAME = process.env.DB_NAME || 'resumematch_ph';
-export const DB_USER = process.env.DB_USER || 'root';
+export const DB_USER = process.env.DB_USER || 'postgres';
 export const DB_PASS = process.env.DB_PASS || '';
-export const DB_PORT = Number(process.env.DB_PORT || 3306);
+export const DB_PORT = Number(process.env.DB_PORT || 5432);
+// Supabase always needs SSL; a plain local Postgres usually doesn't.
+// Defaults to on whenever a DATABASE_URL is set. Override with DB_SSL.
+export const DB_SSL = (process.env.DB_SSL || (DATABASE_URL ? 'true' : 'false')) === 'true';
 
 export const PORT = Number(process.env.PORT || 4300);
 

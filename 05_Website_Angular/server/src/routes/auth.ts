@@ -132,7 +132,7 @@ router.post('/register', authWriteLimiter, async (req, res) => {
 
   const hash = await bcrypt.hash(pass, 10);
   const { insertId } = await exec(
-    'INSERT INTO users (role, full_name, email, password_hash) VALUES (?,?,?,?)',
+    'INSERT INTO users (role, full_name, email, password_hash) VALUES (?,?,?,?) RETURNING user_id',
     ['seeker', name, email, hash],
   );
 

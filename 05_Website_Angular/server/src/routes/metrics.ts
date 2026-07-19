@@ -17,20 +17,22 @@ router.post('/summary', async (req, res) => {
   const T = (await getSettings()).thresholds;
 
   // Volumes
+  // Aliases that must keep their camelCase are double-quoted, since
+  // Postgres folds unquoted identifiers to lowercase.
   const volumes = await queryOne<any>(`SELECT
     (SELECT COUNT(*) FROM users WHERE role='seeker')                       AS seekers,
     (SELECT COUNT(*) FROM users WHERE role='recruiter')                    AS recruiters,
     (SELECT COUNT(*) FROM resumes)                                         AS resumes,
     (SELECT COUNT(*) FROM job_postings)                                    AS postings,
-    (SELECT COUNT(*) FROM job_postings WHERE status='open')                AS openPostings,
+    (SELECT COUNT(*) FROM job_postings WHERE status='open')                AS "openPostings",
     (SELECT COUNT(*) FROM applications)                                    AS applications,
-    (SELECT COUNT(*) FROM saved_jobs)                                      AS savedJobs`);
+    (SELECT COUNT(*) FROM saved_jobs)                                      AS "savedJobs"`);
 
   // Distribution of scores AT THE MOMENT OF APPLYING (score_snapshot) —
   // ten buckets, 0-9 … 90-100.
   const snap = await query<{ bucket: number; n: number }>(
-    `SELECT LEAST(FLOOR(score_snapshot / 10), 9) AS bucket, COUNT(*) AS n
-       FROM applications WHERE score_snapshot IS NOT NULL GROUP BY bucket`,
+    `SELECT CAST(LEAST(FLOOR(score_snapshot / 10), 9) AS INT) AS bucket, COUNT(*) AS n
+       FROM applications WHERE score_snapshot IS NOT NULL GROUP BY 1`,
   );
   const scoreBuckets = Array.from({ length: 10 }, (_, i) => ({
     range: i === 9 ? '90–100' : `${i * 10}–${i * 10 + 9}`,
@@ -45,9 +47,9 @@ router.post('/summary', async (req, res) => {
   // people applied to "related" (below-threshold) roles anyway, which is
   // the study's no-rejection claim in action.
   const tiers = await queryOne<any>(`SELECT
-    SUM(score_snapshot >= ${Number(T.strong)})                                  AS strong,
-    SUM(score_snapshot >= ${Number(T.related)} AND score_snapshot < ${Number(T.strong)}) AS possible,
-    SUM(score_snapshot < ${Number(T.related)})                                  AS related
+    COUNT(*) FILTER (WHERE score_snapshot >= ${Number(T.strong)})                                              AS strong,
+    COUNT(*) FILTER (WHERE score_snapshot >= ${Number(T.related)} AND score_snapshot < ${Number(T.strong)})    AS possible,
+    COUNT(*) FILTER (WHERE score_snapshot < ${Number(T.related)})                                              AS related
     FROM applications WHERE score_snapshot IS NOT NULL`);
 
   // Status funnel
@@ -59,7 +61,7 @@ router.post('/summary', async (req, res) => {
   // Median-ish responsiveness: average hours from application to the
   // FIRST recruiter decision (any move out of 'submitted').
   const firstMove = await queryOne<{ avgHours: number | null; decided: number }>(
-    `SELECT AVG(TIMESTAMPDIFF(MINUTE, a.applied_at, h.first_change)) / 60 AS avgHours, COUNT(*) AS decided
+    `SELECT AVG(EXTRACT(EPOCH FROM (h.first_change - a.applied_at)) / 3600) AS "avgHours", COUNT(*) AS decided
        FROM applications a
        JOIN (SELECT application_id, MIN(changed_at) AS first_change
                FROM application_status_history WHERE new_status <> 'submitted'
