@@ -124,8 +124,10 @@ export async function cacheScore(resumeId: number, postingId: number, s: MatchRe
   await query(
     `INSERT INTO match_scores (resume_id, posting_id, compatibility_score, skills_matched, skills_required, edu_meets, exp_meets)
      VALUES (?,?,?,?,?,?,?)
-     ON DUPLICATE KEY UPDATE compatibility_score=VALUES(compatibility_score), skills_matched=VALUES(skills_matched),
-       skills_required=VALUES(skills_required), edu_meets=VALUES(edu_meets), exp_meets=VALUES(exp_meets)`,
+     ON CONFLICT (resume_id, posting_id) DO UPDATE SET
+       compatibility_score = EXCLUDED.compatibility_score, skills_matched = EXCLUDED.skills_matched,
+       skills_required = EXCLUDED.skills_required, edu_meets = EXCLUDED.edu_meets, exp_meets = EXCLUDED.exp_meets,
+       computed_at = now()`,
     [resumeId, postingId, s.score, s.matchedSkills.length, s.totalSkills, s.eduMeets ? 1 : 0, s.expMeets ? 1 : 0],
   );
 }
@@ -139,6 +141,13 @@ export async function skillId(name: string): Promise<number> {
   const norm = skillNorm(trimmed);
   const rows = await query<{ skill_id: number }>('SELECT skill_id FROM skills WHERE skill_norm = ? LIMIT 1', [norm]);
   if (rows.length) return rows[0].skill_id;
-  const result = await exec('INSERT INTO skills (skill_name, skill_norm) VALUES (?,?)', [trimmed, norm]);
+  // ON CONFLICT covers the race where two requests insert the same skill
+  // at once; the DO UPDATE (a no-op touch) makes RETURNING fire either way.
+  const result = await exec(
+    `INSERT INTO skills (skill_name, skill_norm) VALUES (?,?)
+     ON CONFLICT (skill_norm) DO UPDATE SET skill_name = skills.skill_name
+     RETURNING skill_id`,
+    [trimmed, norm],
+  );
   return result.insertId;
 }

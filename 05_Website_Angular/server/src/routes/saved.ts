@@ -26,7 +26,7 @@ router.post('/toggle', async (req, res) => {
 
   const { affectedRows } = await exec('DELETE FROM saved_jobs WHERE user_id = ? AND posting_id = ?', [u.user_id, pid]);
   if (affectedRows === 0) {
-    await exec('INSERT IGNORE INTO saved_jobs (user_id, posting_id) VALUES (?,?)', [u.user_id, pid]);
+    await exec('INSERT INTO saved_jobs (user_id, posting_id) VALUES (?,?) ON CONFLICT DO NOTHING', [u.user_id, pid]);
     return ok(res, { saved: true });
   }
   ok(res, { saved: false });

@@ -12,7 +12,7 @@ router.post('/hr', async (req, res) => {
   const cid = u.company_id;
 
   const p = await queryOne<{ total: number; open_n: number }>(
-    "SELECT COUNT(*) AS total, SUM(status='open') AS open_n FROM job_postings WHERE company_id = ?", [cid],
+    "SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status='open') AS open_n FROM job_postings WHERE company_id = ?", [cid],
   );
 
   const rows = await query<{ status: string; n: number }>(

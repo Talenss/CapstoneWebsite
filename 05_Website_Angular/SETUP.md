@@ -1,21 +1,24 @@
 # ResumeMatch PH — Angular + Node edition — Setup guide
 
-This is the Angular/Node rebuild of the original PHP + vanilla-JS site in
-`../04_Website` (kept in the repo as a reference — nothing here touches it).
-Same product, same MySQL schema, same matching engine and rules. What changed:
+This is the Angular/Node rebuild of the original PHP + vanilla-JS site.
+`../04_Website` is the original PHP version, kept only as a historical
+reference for the paper — **this folder needs nothing from it**; everything
+`05_Website_Angular` uses lives here. What changed:
 
 | | Before (`04_Website`) | Now (`05_Website_Angular`) |
 |---|---|---|
 | Frontend | Plain HTML/CSS/JS, one file per page | Angular 21 (standalone components), one app |
-| Backend | PHP 8 + PDO | Node.js + Express + TypeScript (`mysql2`) |
-| Database | MySQL, two files (`db/schema.sql` + `db/seed.sql`) | **One self-contained file**: `db/resumematch_ph.sql` |
+| Backend | PHP 8 + PDO | Node.js + Express + TypeScript (`pg`) |
+| Database | MySQL | **Supabase / PostgreSQL** — one file: `db/resumematch_ph.sql` |
 
-Like the original, there are two modes:
+There are two modes:
 
-- **Demo mode** — zero setup. The Angular app runs entirely in the browser,
-  storing data in `localStorage`. This is the default.
+- **Demo mode** — zero setup, no database, no internet. The Angular app runs
+  entirely in the browser, storing data in `localStorage`. This is the default,
+  and your always-available offline fallback for a demo.
 - **Server mode** — the real thing: Angular talking to the Node API, backed
-  by MySQL. Use this for real persistence / multiple users.
+  by a Supabase (PostgreSQL) database. Use this for real persistence /
+  multiple users.
 
 ---
 
@@ -41,44 +44,68 @@ console and run `localStorage.clear(); sessionStorage.clear();`, then refresh.
 
 ---
 
-## Part 2 — Server mode (Node + MySQL)
+## Part 2 — Server mode (Node + Supabase / PostgreSQL)
 
-### Step 1 — Database
+### Step 1 — Create the database in Supabase
 
-Everything lives in **one file** inside this folder — schema and demo
-data together, nothing borrowed from `04_Website`:
+The whole schema and demo data live in **one file**: `db/resumematch_ph.sql`.
 
-```bash
-cd 05_Website_Angular
-mysql -u root < db/resumematch_ph.sql
-```
+1. Create a free project at <https://supabase.com> (or use your existing one).
+2. In the dashboard, open **SQL Editor → New query**.
+3. Open `db/resumematch_ph.sql`, copy its entire contents into the editor,
+   and press **Run**.
 
-(Using phpMyAdmin instead? Import that single file from the *Import*
-tab — done.)
+That creates every table the Node server uses — including the newer ones
+(email codes, saved jobs, notification preferences, posting deadlines, the
+admin role) — and seeds the demo accounts above (same emails / `demo123`).
+You can browse them under **Table Editor**.
 
-This creates the `resumematch_ph` database complete with every table the
-Node server uses — including the newer ones (email codes, saved jobs,
-notification preferences, posting deadlines, the admin role) — and the
-demo accounts above already seeded, same emails/password as demo mode.
+> The file begins with `DROP TABLE IF EXISTS …`, so re-running it is a
+> clean reset. Don't run it on a database whose data you want to keep.
 
-> Already have a database from the old two-file setup? You don't need
-> this file: the server upgrades an existing database automatically at
-> startup. This one-file import is for fresh installs (note: it starts
-> with `DROP DATABASE IF EXISTS resumematch_ph`, so don't run it on a
-> database whose data you want to keep).
+### Step 2 — Point the server at Supabase
 
-### Step 2 — Start the API server
+Grab your connection string: **Supabase → Project Settings → Database →
+Connection string → "Session pooler"**, and copy the URL (it looks like
+`postgresql://postgres.abcxyz:[YOUR-PASSWORD]@aws-0-…pooler.supabase.com:5432/postgres`).
+Use the **Session pooler** one (port 5432) — it supports everything the
+server does, including transactions.
 
 ```bash
 cd 05_Website_Angular/server
 npm install
-cp .env.example .env      # edit DB_* if your MySQL isn't the default XAMPP-style root/no-password
+cp .env.example .env
+```
+
+Then edit `.env` and set one line:
+
+```
+DATABASE_URL=postgresql://postgres.abcxyz:YOUR-PASSWORD@aws-0-…pooler.supabase.com:5432/postgres
+```
+
+(`DB_SSL` defaults to on whenever `DATABASE_URL` is set, which is what
+Supabase needs — nothing else to configure.)
+
+### Step 3 — Start the API server
+
+```bash
 npm run dev                # ts-node-dev, restarts on change — or `npm run build && npm start`
 ```
 
-It listens on **http://localhost:4300** (`PORT` in `.env`). Applicant-uploaded
-files are stored in `server/uploads/`, served only through the access-checked
-`/api/file` route — never a public URL.
+It listens on **http://localhost:4300** (`PORT` in `.env`) and, on first
+boot, runs a few idempotent migrations (a no-op against a fresh
+`resumematch_ph.sql`). Applicant-uploaded files are stored in
+`server/uploads/`, served only through the access-checked `/api/file`
+route — never a public URL.
+
+> **Local PostgreSQL instead of Supabase?** Leave `DATABASE_URL` empty and
+> set `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASS` (and
+> `DB_SSL=false`) in `.env`. Create the database and import the same file:
+> `createdb resumematch_ph && psql -d resumematch_ph -f db/resumematch_ph.sql`.
+
+> **Free-tier note:** Supabase pauses a project after about a week of
+> inactivity; it wakes on the next request, so just open the app (or the
+> dashboard) a few minutes before a demo.
 
 #### The admin account — approving recruiter requests
 
@@ -215,8 +242,8 @@ npm start
 Open <http://localhost:4200>. The dev server proxies `/api/*` to
 `localhost:4300` (see `proxy.conf.json`), so the session cookie stays
 same-site with no CORS setup needed. Log in with the same demo accounts —
-this time it's really MySQL. Create a new job seeker account and you'll see
-it as a row in the `users` table.
+this time it's really Supabase. Create a new job seeker account and you'll
+see it appear in the `users` table (Supabase → Table Editor).
 
 ---
 

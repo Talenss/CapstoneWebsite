@@ -7,10 +7,12 @@
 import { query, queryOne } from '../db';
 import { UserRow, CompanyRow, ResumeRow, PostingRow, ApplicationRow } from '../types';
 
-// requires the db pool to be created with dateStrings:true (see db.ts) so
-// DATETIME/TIMESTAMP columns arrive as 'YYYY-MM-DD HH:MM:SS' local-time strings
-export function ts(v: string | null): number {
-  return v ? new Date(v.replace(' ', 'T')).getTime() : 0;
+// node-postgres returns TIMESTAMP/TIMESTAMPTZ columns as JS Date objects;
+// accept those, or a 'YYYY-MM-DD HH:MM:SS' string, and return epoch millis.
+export function ts(v: string | Date | null): number {
+  if (!v) return 0;
+  if (v instanceof Date) return v.getTime();
+  return new Date(v.replace(' ', 'T')).getTime();
 }
 
 export function serializeUser(u: UserRow | null): any {

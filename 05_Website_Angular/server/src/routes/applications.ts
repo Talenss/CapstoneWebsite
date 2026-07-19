@@ -32,11 +32,11 @@ router.post('/apply', async (req, res) => {
   const s = await rmScore(await serializeResume(r), await serializePosting(p, false));
 
   const { insertId } = await exec(
-    'INSERT INTO applications (seeker_id, resume_id, posting_id, status, score_snapshot) VALUES (?,?,?,"submitted",?)',
+    "INSERT INTO applications (seeker_id, resume_id, posting_id, status, score_snapshot) VALUES (?,?,?,'submitted',?) RETURNING application_id",
     [u.user_id, rid, pid, s.score],
   );
   await exec(
-    'INSERT INTO application_status_history (application_id, old_status, new_status, changed_by) VALUES (?,NULL,"submitted",?)',
+    "INSERT INTO application_status_history (application_id, old_status, new_status, changed_by) VALUES (?,NULL,'submitted',?)",
     [insertId, u.user_id],
   );
   await cacheScore(rid, pid, s);
