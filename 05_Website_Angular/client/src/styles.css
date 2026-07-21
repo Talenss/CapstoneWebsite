@@ -23,8 +23,9 @@
   /* accent — Royce's antique/brass gold (matched to the hotel wordmark:
      warmer and a touch deeper than a cool champagne) */
   --gold:#BE9B3D; --gold-deep:#8C6E22; --gold-wash:#F6EEDB; --gold-line:#E7D6AC;
-  /* surfaces (the desk) */
-  --ivory:#FAF8F4; --paper:#FFFFFF; --rule:#E7E2D8; --rule-2:#F0ECE4;
+  /* surfaces (the desk) — a warm hospitality cream, not a cool software grey;
+     cards stay pure --paper white so they read crisp against the warmer page */
+  --ivory:#FBF7EE; --paper:#FFFFFF; --rule:#E8E1D2; --rule-2:#F1EBDF;
   /* text */
   --text:#1E222B; --muted:#6E7484; --faint:#9AA0AE;
   /* semantics — one per match tier, no extras */
@@ -69,7 +70,7 @@ main{flex:1}
 .head-row{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
 
 /* the eyebrow is a hotel-signage device: letterspaced caps over a gold hairline */
-.eyebrow{display:inline-block;font-family:var(--body);font-size:11px;font-weight:600;letter-spacing:.22em;
+.eyebrow{display:inline-block;font-family:var(--body);font-size:11px;font-weight:600;letter-spacing:.28em;
   text-transform:uppercase;color:var(--gold-deep);padding-bottom:7px;border-bottom:1px solid var(--gold-line);margin-bottom:18px}
 .section.dark .eyebrow{color:var(--gold);border-color:var(--ink-line)}
 .lede{font-size:17px;color:var(--muted);max-width:58ch}
@@ -116,8 +117,9 @@ main{flex:1}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--body);font-weight:600;
   font-size:13.5px;border-radius:var(--r);padding:11px 20px;border:1px solid transparent;
   cursor:pointer;text-decoration:none;transition:.16s;white-space:nowrap}
-.btn.primary{background:var(--gold);color:var(--ink);border-color:var(--gold)}
-.btn.primary:hover{background:var(--gold-deep);border-color:var(--gold-deep)}
+/* brushed-gold CTA: a light-to-deep vertical sweep reads as foil, not flat paint */
+.btn.primary{background:linear-gradient(180deg,#CBAA4E,#B18B30);color:var(--ink);border-color:var(--gold-deep)}
+.btn.primary:hover{background:linear-gradient(180deg,#B18B30,#8C6E22);border-color:var(--gold-deep)}
 .btn.dark{background:var(--ink);color:#fff;border-color:var(--ink)}
 .btn.dark:hover{background:var(--ink-2)}
 .btn.good{background:var(--emerald);color:#fff;border-color:var(--emerald)}
@@ -154,7 +156,7 @@ main{flex:1}
 /* ---------- badges & chips ---------- */
 .badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--body);font-size:10.5px;font-weight:600;
   letter-spacing:.08em;text-transform:uppercase;border-radius:2px;padding:4px 9px;border:1px solid transparent;white-space:nowrap}
-.badge.gold{background:var(--gold-wash);color:var(--gold-deep);border-color:var(--gold-line)}
+.badge.gold{background:linear-gradient(180deg,#FAF3E0,#F0E3C0);color:var(--gold-deep);border-color:var(--gold-line)}
 .badge.green{background:var(--emerald-wash);color:var(--emerald);border-color:#CBE0D5}
 .badge.slate{background:var(--slate-wash);color:var(--slate);border-color:#DCE0E6}
 .badge.wine{background:var(--wine-wash);color:var(--wine);border-color:#E9D3D7}
@@ -170,7 +172,10 @@ main{flex:1}
 .score-ring{--p:0;--c:var(--emerald);width:58px;height:58px;flex:none;border-radius:50%;display:inline-grid;place-items:center;
   background:conic-gradient(var(--c) calc(var(--p)*1%), var(--rule-2) 0)}
 .score-ring b{width:44px;height:44px;border-radius:50%;background:var(--paper);display:grid;place-items:center;
-  font-family:var(--body);font-size:12.5px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  font-family:var(--body);font-size:12.5px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+  /* pressed-medallion bevel: a soft top highlight + a hair of lift, so the
+     disc reads as a struck coin rather than a flat CSS circle */
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 1px 2px rgba(18,21,28,.10)}
 .score-ring.sm{width:46px;height:46px}
 .score-ring.sm b{width:35px;height:35px;font-size:11px}
 .score-ring.lg{width:82px;height:82px}

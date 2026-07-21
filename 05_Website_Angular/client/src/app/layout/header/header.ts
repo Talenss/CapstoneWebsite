@@ -27,11 +27,23 @@ export class Header {
   private tour = inject(TourService);
   private router = inject(Router);
 
-  variant = input<'guest' | 'seeker' | 'recruiter' | 'admin' | 'auth'>('guest');
+  variant = input<'guest' | 'seeker' | 'recruiter' | 'admin' | 'auth' | 'auto'>('guest');
   active = input<string>('');
   showTour = input(false);
 
   menuOpen = false;
+
+  /** The variant actually used for the nav. `auto` lets a shared/public page
+   *  (home, learning hub, privacy, 404) inherit the signed-in user's own nav
+   *  instead of collapsing to the two guest links — so a seeker who opens the
+   *  learning hub keeps their Dashboard / My resumes / Builder links. Any
+   *  explicit variant (including 'guest' and 'auth') passes straight through. */
+  effectiveVariant = computed(() => {
+    const v = this.variant();
+    if (v !== 'auto') return v;
+    const role = this.session.user()?.role;
+    return role === 'seeker' ? 'seeker' : role === 'admin' ? 'admin' : role === 'recruiter' ? 'recruiter' : 'guest';
+  });
 
   constructor() {
     // Close the mobile menu whenever a navigation completes, so tapping a
@@ -42,10 +54,10 @@ export class Header {
   }
 
   brandSuffix = computed(() =>
-    this.variant() === 'recruiter' ? 'Recruiter' : this.variant() === 'admin' ? 'Research Team' : 'Philippines');
+    this.effectiveVariant() === 'recruiter' ? 'Recruiter' : this.effectiveVariant() === 'admin' ? 'Research Team' : 'Philippines');
 
   navItems = computed<NavItem[]>(() => {
-    switch (this.variant()) {
+    switch (this.effectiveVariant()) {
       case 'seeker':
         return [
           { key: 'dashboard', label: 'Dashboard', link: '/seeker-dashboard' },
