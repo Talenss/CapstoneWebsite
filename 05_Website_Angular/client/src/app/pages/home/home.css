@@ -50,3 +50,12 @@
 .stat cite{display:block;font-style:normal;font-size:11px;color:var(--faint);margin-top:10px}
 
 @media(max-width:860px){.partner-grid{grid-template-columns:1fr!important;gap:30px!important}}
+
+/* Royce partner name, presented in the spaced serif style of their wordmark */
+.royce-mark{margin-bottom:16px;line-height:1.05}
+.royce-mark .r-name{display:block;font-family:var(--display);font-size:42px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+  /* brushed-gold foil: a highlight-through-shadow sweep clipped to the letters */
+  background:linear-gradient(178deg,#F4E5B8 8%,#D8B85E 32%,#B8912F 60%,#E4CE86 88%);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.royce-mark .r-sub{display:block;margin-top:8px;font-family:var(--body);font-size:12px;font-weight:600;letter-spacing:.42em;text-transform:uppercase;color:var(--gold)}
+@media(max-width:640px){.royce-mark .r-name{font-size:34px;letter-spacing:.1em}.royce-mark .r-sub{letter-spacing:.3em}}

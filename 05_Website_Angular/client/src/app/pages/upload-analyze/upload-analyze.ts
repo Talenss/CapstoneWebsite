@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
+import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { AnalysisService } from '../../core/analysis.service';
 import { AnalyzedResume } from '../../core/models';
@@ -19,7 +20,7 @@ import { ALLOWED_MIME, MAX_UPLOAD } from '../../core/engine';
 @Component({
   selector: 'app-upload-analyze',
   standalone: true,
-  imports: [RouterLink, Header],
+  imports: [RouterLink, Header, Footer],
   templateUrl: './upload-analyze.html',
   styleUrl: './upload-analyze.css',
 })

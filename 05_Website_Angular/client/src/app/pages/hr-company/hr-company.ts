@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
+import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 
@@ -9,7 +10,7 @@ import { SessionService } from '../../core/session.service';
 @Component({
   selector: 'app-hr-company',
   standalone: true,
-  imports: [RouterLink, Header],
+  imports: [RouterLink, Header, Footer],
   templateUrl: './hr-company.html',
   styleUrl: './hr-company.css',
 })

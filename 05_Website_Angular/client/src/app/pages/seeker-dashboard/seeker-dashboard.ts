@@ -1,6 +1,7 @@
 import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
+import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { TourService } from '../../shared/tour/tour.service';
@@ -18,7 +19,7 @@ interface TierConfig { key: TierKey; title: string; badgeClass: string; note: st
 @Component({
   selector: 'app-seeker-dashboard',
   standalone: true,
-  imports: [RouterLink, Header],
+  imports: [RouterLink, Header, Footer],
   templateUrl: './seeker-dashboard.html',
   styleUrl: './seeker-dashboard.css',
 })

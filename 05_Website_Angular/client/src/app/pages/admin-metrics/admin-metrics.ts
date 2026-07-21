@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Header } from '../../layout/header/header';
+import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { environment } from '../../../environments/environment';
 
@@ -11,7 +12,7 @@ import { environment } from '../../../environments/environment';
 @Component({
   selector: 'app-admin-metrics',
   standalone: true,
-  imports: [Header],
+  imports: [Header, Footer],
   templateUrl: './admin-metrics.html',
   styleUrl: './admin-metrics.css',
 })
