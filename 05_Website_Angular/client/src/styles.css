@@ -20,8 +20,9 @@
 :root{
   /* chrome (the lobby) */
   --ink:#12151C; --ink-2:#1B202B; --ink-3:#2A3140; --ink-line:#333B4A;
-  /* accent (Royce champagne) */
-  --gold:#C6A664; --gold-deep:#A98B4C; --gold-wash:#F5EFE1; --gold-line:#E4D7B8;
+  /* accent — Royce's antique/brass gold (matched to the hotel wordmark:
+     warmer and a touch deeper than a cool champagne) */
+  --gold:#BE9B3D; --gold-deep:#8C6E22; --gold-wash:#F6EEDB; --gold-line:#E7D6AC;
   /* surfaces (the desk) */
   --ivory:#FAF8F4; --paper:#FFFFFF; --rule:#E7E2D8; --rule-2:#F0ECE4;
   /* text */
@@ -136,7 +137,7 @@ main{flex:1}
 .hero .btn.ghost:hover,
 .section.dark .btn.ghost:hover,
 .aside .btn.ghost:hover,
-.footer .btn.ghost:hover{color:#fff;border-color:var(--gold);background:rgba(198,166,100,.09)}
+.footer .btn.ghost:hover{color:#fff;border-color:var(--gold);background:rgba(190,155,61,.10)}
 .btn.sm{padding:7px 13px;font-size:12.5px}
 .btn.block{width:100%}
 .btn[disabled]{opacity:.5;cursor:not-allowed}
