@@ -1,6 +1,7 @@
 import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
+import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { Company, MatchResult, Posting, Resume } from '../../core/models';
@@ -22,7 +23,7 @@ type SortKey = 'score' | 'new' | 'az';
 @Component({
   selector: 'app-browse',
   standalone: true,
-  imports: [RouterLink, Header],
+  imports: [RouterLink, Header, Footer],
   templateUrl: './browse.html',
   styleUrl: './browse.css',
 })

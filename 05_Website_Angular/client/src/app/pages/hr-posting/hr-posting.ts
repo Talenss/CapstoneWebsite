@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Header } from '../../layout/header/header';
+import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { EduLevel, EmploymentType, Posting, Resume } from '../../core/models';
 import { EDU_LABELS, THRESHOLDS, WEIGHTS, scoreLocal, tierColor } from '../../core/engine';
@@ -14,7 +15,7 @@ import { EDU_LABELS, THRESHOLDS, WEIGHTS, scoreLocal, tierColor } from '../../co
 @Component({
   selector: 'app-hr-posting',
   standalone: true,
-  imports: [RouterLink, Header],
+  imports: [RouterLink, Header, Footer],
   templateUrl: './hr-posting.html',
   styleUrl: './hr-posting.css',
 })

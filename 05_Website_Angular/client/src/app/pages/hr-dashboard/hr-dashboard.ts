@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
+import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { TourService } from '../../shared/tour/tour.service';
@@ -13,7 +14,7 @@ import { STATUS_LABELS, STATUS_ORDER } from '../../core/engine';
 @Component({
   selector: 'app-hr-dashboard',
   standalone: true,
-  imports: [RouterLink, Header],
+  imports: [RouterLink, Header, Footer],
   templateUrl: './hr-dashboard.html',
   styleUrl: './hr-dashboard.css',
 })

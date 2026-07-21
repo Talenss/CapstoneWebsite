@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Header } from '../../layout/header/header';
+import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { AdminRecruiter, RecruiterRequest } from '../../core/models';
@@ -13,7 +14,7 @@ import { environment } from '../../../environments/environment';
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [Header],
+  imports: [Header, Footer],
   templateUrl: './admin.html',
   styleUrl: './admin.css',
 })

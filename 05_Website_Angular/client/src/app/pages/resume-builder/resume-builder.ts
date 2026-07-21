@@ -2,6 +2,7 @@ import { Component, HostListener, OnInit, computed, inject, signal } from '@angu
 import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
+import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { AnalysisService } from '../../core/analysis.service';
@@ -37,7 +38,7 @@ const esc = (s: unknown): string => String(s ?? '').replace(/[&<>"']/g, (c) => E
 @Component({
   selector: 'app-resume-builder',
   standalone: true,
-  imports: [Header, NgTemplateOutlet, RouterLink],
+  imports: [Header, Footer, NgTemplateOutlet, RouterLink],
   templateUrl: './resume-builder.html',
   styleUrl: './resume-builder.css',
 })

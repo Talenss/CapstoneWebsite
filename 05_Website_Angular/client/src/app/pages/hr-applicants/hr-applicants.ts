@@ -3,6 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl, SafeUrl } from '@angular/platform-browser';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Header } from '../../layout/header/header';
+import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { AppStatus, Personal, Posting, RankedRow, Tier } from '../../core/models';
 import { EDU_LABELS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
@@ -14,7 +15,7 @@ import { EDU_LABELS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColo
 @Component({
   selector: 'app-hr-applicants',
   standalone: true,
-  imports: [RouterLink, Header],
+  imports: [RouterLink, Header, Footer],
   templateUrl: './hr-applicants.html',
   styleUrl: './hr-applicants.css',
 })

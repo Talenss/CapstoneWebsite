@@ -16,6 +16,9 @@
         @if (session.user(); as u) {
           <span class="who">{{ u.name }}</span>
           <a class="btn ghost sm" [routerLink]="session.homeFor(u)">My dashboard</a>
+          @if (showTour()) {
+            <button class="btn ghost sm" type="button" data-tour (click)="replayTour()">Show me around</button>
+          }
           <button class="btn primary sm" type="button" (click)="logout()">Log out</button>
         } @else if (variant() !== 'auth') {
           <a class="btn ghost sm" routerLink="/auth">Log in</a>

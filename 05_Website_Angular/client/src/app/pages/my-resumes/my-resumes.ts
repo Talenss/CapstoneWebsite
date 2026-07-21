@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
+import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { Resume, Template } from '../../core/models';
 
@@ -10,7 +11,7 @@ import { Resume, Template } from '../../core/models';
 @Component({
   selector: 'app-my-resumes',
   standalone: true,
-  imports: [RouterLink, Header],
+  imports: [RouterLink, Header, Footer],
   templateUrl: './my-resumes.html',
   styleUrl: './my-resumes.css',
 })

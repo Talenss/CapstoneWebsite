@@ -1,5 +1,7 @@
 import { Component, computed, inject, input } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { filter } from 'rxjs';
 import { SessionService } from '../../core/session.service';
 import { TourService } from '../../shared/tour/tour.service';
 
@@ -23,12 +25,21 @@ export interface NavItem {
 export class Header {
   session = inject(SessionService);
   private tour = inject(TourService);
+  private router = inject(Router);
 
   variant = input<'guest' | 'seeker' | 'recruiter' | 'admin' | 'auth'>('guest');
   active = input<string>('');
   showTour = input(false);
 
   menuOpen = false;
+
+  constructor() {
+    // Close the mobile menu whenever a navigation completes, so tapping a
+    // link never leaves the open menu covering the page.
+    this.router.events
+      .pipe(filter((e) => e instanceof NavigationEnd), takeUntilDestroyed())
+      .subscribe(() => (this.menuOpen = false));
+  }
 
   brandSuffix = computed(() =>
     this.variant() === 'recruiter' ? 'Recruiter' : this.variant() === 'admin' ? 'Research Team' : 'Philippines');
@@ -70,7 +81,10 @@ export class Header {
   }
 
   replayTour(): void {
-    this.tour.start(true);
+    // Close the mobile menu first so it doesn't sit on top of the tour,
+    // then start on the next tick once the menu has actually collapsed.
+    this.menuOpen = false;
+    setTimeout(() => this.tour.start(true), 50);
   }
 
   async logout(): Promise<void> {
