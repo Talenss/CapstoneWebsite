@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter } from 'rxjs';
@@ -32,6 +32,20 @@ export class Header {
   showTour = input(false);
 
   menuOpen = false;
+
+  /** Light/dark theme. The no-flash init script in index.html sets the
+   *  data-theme attribute before Angular boots; this just mirrors and
+   *  toggles it. */
+  theme = signal<'light' | 'dark'>(
+    typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
+  );
+
+  toggleTheme(): void {
+    const next = this.theme() === 'dark' ? 'light' : 'dark';
+    this.theme.set(next);
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('rmph-theme', next); } catch { /* private mode */ }
+  }
 
   /** The variant actually used for the nav. `auto` lets a shared/public page
    *  (home, learning hub, privacy, 404) inherit the signed-in user's own nav

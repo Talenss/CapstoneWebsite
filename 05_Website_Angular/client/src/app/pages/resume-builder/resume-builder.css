@@ -20,7 +20,7 @@
   white-space: nowrap; display: flex; gap: 7px; align-items: center;
 }
 .rail button .n { font-family: var(--display); font-size: 15px; color: var(--faint); }
-.rail button[aria-current="true"] { color: var(--ink); border-bottom-color: var(--gold); }
+.rail button[aria-current="true"] { color:var(--text); border-bottom-color: var(--gold); }
 .rail button[aria-current="true"] .n { color: var(--gold-deep); }
 .rail button.done .n { color: var(--emerald); }
 
@@ -68,7 +68,7 @@
 .tpl label { border: 1px solid var(--rule); border-radius: var(--r); padding: 14px; cursor: pointer; background: var(--paper); transition: .15s; position: relative; }
 .tpl label:has(input:checked) { border-color: var(--gold); background: var(--gold-wash); }
 .tpl input { position: absolute; opacity: 0; }
-.tpl b { display: block; font-size: 13.5px; color: var(--ink); }
+.tpl b { display: block; font-size: 13.5px; color:var(--text); }
 .tpl small { display: block; font-size: 11.5px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
 
 .checks { list-style: none; display: grid; gap: 9px; margin-top: 6px; }
@@ -108,7 +108,7 @@
   border: 1px solid var(--rule); border-radius: var(--r); background: var(--paper); cursor: pointer; transition: .14s; }
 .design-opt:hover { border-color: var(--gold); }
 .design-opt.on { border-color: var(--gold); background: var(--gold-wash); box-shadow: 0 0 0 1px var(--gold); }
-.design-opt b { font-size: 12.5px; color: var(--ink); }
+.design-opt b { font-size: 12.5px; color:var(--text); }
 .design-opt small { font-size: 10.5px; color: var(--muted); }
 
 /* ---- live preview reflects the chosen design (echoes resume-print skins) ---- */

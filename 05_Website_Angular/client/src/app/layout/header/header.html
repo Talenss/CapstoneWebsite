@@ -13,6 +13,7 @@
       }
 
       <div class="nav-mob">
+        <button class="btn ghost sm" type="button" (click)="toggleTheme()">{{ theme() === 'dark' ? '☀ Light mode' : '☾ Dark mode' }}</button>
         @if (session.user(); as u) {
           <span class="who">{{ u.name }}</span>
           <a class="btn ghost sm" [routerLink]="session.homeFor(u)">My dashboard</a>
@@ -28,9 +29,10 @@
     </nav>
 
     @if (effectiveVariant() === 'auth') {
-      <div class="nav-cta"><a class="btn ghost sm" routerLink="/">&larr; Home</a></div>
+      <div class="nav-cta"><button class="theme-btn" type="button" (click)="toggleTheme()" [attr.aria-label]="theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'" title="Toggle light / dark">{{ theme() === 'dark' ? '☀' : '☾' }}</button><a class="btn ghost sm" routerLink="/">&larr; Home</a></div>
     } @else if (session.user(); as u) {
       <div class="nav-cta">
+        <button class="theme-btn" type="button" (click)="toggleTheme()" [attr.aria-label]="theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'" title="Toggle light / dark">{{ theme() === 'dark' ? '☀' : '☾' }}</button>
         <span class="whoami">{{ u.name }}</span>
         @if (showTour()) {
           <button class="btn ghost sm" type="button" data-tour (click)="replayTour()">Show me around</button>
@@ -39,6 +41,7 @@
       </div>
     } @else {
       <div class="nav-cta">
+        <button class="theme-btn" type="button" (click)="toggleTheme()" [attr.aria-label]="theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'" title="Toggle light / dark">{{ theme() === 'dark' ? '☀' : '☾' }}</button>
         <a class="btn ghost sm" routerLink="/auth">Log in</a>
         <a class="btn primary sm" routerLink="/auth" fragment="register">Create free account</a>
       </div>

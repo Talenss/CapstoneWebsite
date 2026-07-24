@@ -24,7 +24,7 @@
 .pane{border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
 .pane > header{padding:11px 14px;background:var(--ivory);border-bottom:1px solid var(--rule-2);
   display:flex;justify-content:space-between;align-items:center;gap:8px}
-.pane > header b{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
+.pane > header b{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--text)}
 .pane.scored{border-top:2px solid var(--emerald)}
 .pane.human{border-top:2px solid var(--gold)}
 .pane .inner{padding:20px;font-family:Georgia,serif;font-size:12.5px;line-height:1.55;max-height:460px;overflow:auto;flex:1;background:#fff}

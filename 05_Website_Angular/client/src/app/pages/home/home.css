@@ -8,7 +8,7 @@
 /* ---- hero ---- */
 .hero{padding:60px 40px 0;position:relative}
 .hero-top{display:grid;gap:16px;max-width:760px;margin:0 auto;text-align:center}
-.hero-top h1{font-size:clamp(36px,5vw,60px);font-weight:560;line-height:1.03;color:var(--ink)}
+.hero-top h1{font-size:clamp(36px,5vw,60px);font-weight:560;line-height:1.03;color:var(--text)}
 .hero-top h1 .hl{color:var(--gold);font-style:italic}
 .hero-top .lede{margin:0 auto;text-align:center}
 .hero-top .acts{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px}
@@ -25,7 +25,7 @@
 
 .board{padding:22px 24px 18px}
 .board-head{display:flex;justify-content:space-between;margin-bottom:14px}
-.board-head b{font-size:13px;color:var(--ink)}
+.board-head b{font-size:13px;color:var(--text)}
 .board-head .dim{color:var(--muted);font-size:11px}
 .board-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--rule-2)}
 .board-row:first-of-type{border-top:0}
@@ -34,7 +34,7 @@
 .meter .fill{height:100%;border-radius:3px}
 .meter .pct{font-family:var(--mono);font-size:11px;font-weight:600;min-width:26px;text-align:right;color:var(--text)}
 .board-row .who{flex:1;min-width:0}
-.board-row .who b{font-size:12px;display:block;color:var(--ink)}
+.board-row .who b{font-size:12px;display:block;color:var(--text)}
 .board-row .who span{font-size:10.5px;color:var(--muted)}
 .mini-tag{font-family:var(--mono);font-size:9px;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px;font-weight:700}
 .board-foot{margin-top:14px;padding-top:14px;border-top:1px solid var(--rule-2);font-size:11px;color:var(--muted)}
@@ -52,7 +52,7 @@
 .p-section{padding:74px 40px}
 .p-section.paper{background:var(--paper)}
 .shead{text-align:center;max-width:640px;margin:0 auto 40px}
-.shead h2{font-size:clamp(26px,3.4vw,34px);font-weight:560;color:var(--ink)}
+.shead h2{font-size:clamp(26px,3.4vw,34px);font-weight:560;color:var(--text)}
 .shead .lede{margin:10px auto 0;text-align:center}
 
 /* ---- icon tiles ---- */
@@ -60,7 +60,7 @@
 .tile{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r);padding:26px 22px}
 .tile .ic{width:42px;height:42px;border-radius:11px;background:var(--gold);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
 .tile .ic svg{width:20px;height:20px}
-.tile h3{font-size:16px;font-weight:560;color:var(--ink)}
+.tile h3{font-size:16px;font-weight:560;color:var(--text)}
 .tile p{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.6}
 
 /* ---- pill tabs + two-doc comparison ---- */
@@ -73,7 +73,7 @@
 .doc.scored{border-color:var(--gold)}
 .doc.scored .tag{background:var(--gold-wash);color:var(--gold-deep)}
 .doc.never .tag{background:var(--slate-wash);color:var(--slate)}
-.doc h4{font-size:16px;font-weight:560;margin-top:14px;color:var(--ink)}
+.doc h4{font-size:16px;font-weight:560;margin-top:14px;color:var(--text)}
 .doc p{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.6}
 .plus{font-family:var(--mono);font-size:22px;color:var(--faint);text-align:center}
 
@@ -83,7 +83,7 @@
 .role-card.dark{background:var(--ink);color:#EDEBE4;border-color:var(--ink)}
 .role-card.dark h3{color:#fff}
 .role-card.dark .sub{color:#9C9FA8}
-.role-card h3{font-size:23px;font-weight:560;color:var(--ink)}
+.role-card h3{font-size:23px;font-weight:560;color:var(--text)}
 .role-card .sub{font-size:13.5px;color:var(--muted);margin-top:6px}
 .role-card ul{list-style:none;margin:22px 0 26px;padding:0;display:flex;flex-direction:column;gap:11px}
 .role-card li{display:flex;gap:10px;font-size:13.5px;line-height:1.5}
@@ -93,7 +93,7 @@
 /* ---- cited stats ---- */
 .stats3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:980px;margin:0 auto}
 .stat3{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r);padding:28px 26px;text-align:center}
-.stat3 b{font-family:var(--mono);font-size:36px;color:var(--ink);display:block;font-weight:700}
+.stat3 b{font-family:var(--mono);font-size:36px;color:var(--text);display:block;font-weight:700}
 .stat3 p{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.55}
 .stat3 cite{font-style:normal;font-size:11px;color:var(--faint);display:block;margin-top:10px;font-family:var(--mono)}
 
