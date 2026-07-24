@@ -1,190 +1,140 @@
 <app-header variant="auto" />
 
-<main id="main">
+<main id="main" class="screen">
 
   <!-- ============ HERO ============ -->
   <section class="hero">
-    <div class="container">
-      <div>
-        <span class="eyebrow">Pilot partner &middot; Royce Hotel &amp; Casino, Clark</span>
-        <h1>Every applicant<br>gets a <em>seat</em>.</h1>
-        <p class="lead">Build a structured, ATS-friendly resume in a guided wizard. See your honest compatibility score against every real opening at our partner hotel. Score too low? You get pointed to roles that fit your skills — never a closed door.</p>
-        <div class="acts">
-          <a class="btn primary" routerLink="/auth" fragment="register">Build my resume — free</a>
-          <a class="btn ghost" routerLink="/auth" fragment="register-hr">I'm Royce HR — request access</a>
-        </div>
-        <p class="fine"><b>Free, always.</b> No premium tier, no paywall, and no automatic rejections.</p>
+    <div class="hero-top">
+      <span class="eyebrow">Pilot partner · Royce Hotel &amp; Casino, Clark</span>
+      <h1>Every applicant gets <span class="hl">a seat</span>.</h1>
+      <p class="lede">Build a structured, ATS-friendly resume in a guided wizard. See your honest compatibility score against every real opening at our partner hotel — and if it's low, you're pointed to a role that fits, never turned away.</p>
+      <div class="acts">
+        <a class="btn dark" routerLink="/auth" fragment="register">Build my resume — free</a>
+        <a class="btn ghost" routerLink="/auth" fragment="register-hr">I'm Royce HR — request access</a>
       </div>
+      <p class="fine"><b>Free, always.</b> No premium tier, no paywall, and no automatic rejections.</p>
+    </div>
 
-      <!-- SIGNATURE: the arrivals board.
-           Everyone who applied is on it. That's the whole argument. -->
-      <div class="arrivals" role="img" aria-label="Example ranked applicant list for a Junior Web Developer opening: Juan Dela Cruz 92 percent strong match, Ana Reyes 74 percent possible match with an uploaded file, Marco Garcia 48 percent with a related role suggested. All three remain visible to the recruiter.">
-        <div class="board-head">
-          <span>Junior Web Developer</span>
-          <span class="dim">Royce Hotel &amp; Casino</span>
+    <!-- device mockup: the arrivals board, everyone on it -->
+    <div class="laptop-wrap">
+      <div class="laptop">
+        <div class="cam"></div>
+        <div class="screen-inner">
+          <div class="board" role="img" aria-label="Ranked applicant list for a Junior Web Developer opening: Dela Cruz 92 percent strong, Reyes 74 percent possible with an attached file, Garcia 48 percent with a related role suggested — all three visible to the recruiter.">
+            <div class="board-head"><b>Junior Web Developer</b><span class="dim">Royce Hotel &amp; Casino</span></div>
+            <div class="board-row">
+              <div class="meter"><div class="track"><div class="fill" style="width:92%;background:var(--emerald)"></div></div><span class="pct">92%</span></div>
+              <div class="who"><b>J. Dela Cruz</b><span>4 of 4 required skills</span></div>
+              <span class="mini-tag" style="background:var(--emerald-wash);color:var(--emerald)">Strong</span>
+            </div>
+            <div class="board-row">
+              <div class="meter"><div class="track"><div class="fill" style="width:74%;background:var(--gold)"></div></div><span class="pct">74%</span></div>
+              <div class="who"><b>A. Reyes</b><span>3 of 4 skills · own file attached</span></div>
+              <span class="mini-tag" style="background:var(--gold-wash);color:var(--gold-deep)">Possible</span>
+            </div>
+            <div class="board-row">
+              <div class="meter"><div class="track"><div class="fill" style="width:48%;background:var(--slate)"></div></div><span class="pct">48%</span></div>
+              <div class="who"><b>M. Garcia</b><span>suggested: F&amp;B Attendant</span></div>
+              <span class="mini-tag" style="background:var(--slate-wash);color:var(--slate)">Related</span>
+            </div>
+            <div class="board-foot">Three applied. Three are here. <b>The system ranks — the recruiter decides.</b></div>
+          </div>
         </div>
-        <div class="line reveal" style="animation-delay:.05s">
-          <span class="score-ring" style="--p:92;--c:var(--emerald)"><b>92%</b></span>
-          <span class="who"><b>J. Dela Cruz</b><span>4 of 4 required skills &middot; education meets</span></span>
-          <span class="badge green">Strong</span>
-        </div>
-        <div class="line reveal" style="animation-delay:.18s">
-          <span class="score-ring" style="--p:74;--c:var(--gold)"><b>74%</b></span>
-          <span class="who"><b>A. Reyes <span class="clip">&#128206;</span></b><span>3 of 4 skills &middot; attached her own resume file</span></span>
-          <span class="badge gold">Possible</span>
-        </div>
-        <div class="line reveal" style="animation-delay:.31s">
-          <span class="score-ring" style="--p:48;--c:var(--slate)"><b>48%</b></span>
-          <span class="who"><b>M. Garcia</b><span>2 transferable skills &rarr; suggested: F&amp;B Service Attendant</span></span>
-          <span class="badge slate">Related role</span>
-        </div>
-        <div class="foot">Three applied. Three are here. <b>The system ranks — the recruiter decides.</b></div>
       </div>
+      <div class="base"></div>
     </div>
   </section>
 
-  <div class="container">
-    <div class="promise">
-      <div><b>50 / 25 / 25</b><span>Skills, education, experience. The weights are published, not hidden — you see the same breakdown the recruiter sees.</span></div>
-      <div><b>Zero</b><span>Applicants auto-rejected by the system. Every hiring decision is made by a person.</span></div>
-      <div><b>Two resumes</b><span>The structured one we score, and your own file — which recruiters read with their own eyes.</span></div>
+  <!-- ============ STAT BAND ============ -->
+  <section class="stat-band">
+    <svg class="lion-wm" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50.0,13.14 68.84,14.11 81.64,28.16 90.95,45.03 88.81,64.72 73.07,76.04 58.17,83.17 39.46,92.77 25.39,77.78 15.58,63.05 4.39,44.46 17.37,27.48 29.53,11.01" fill="#C9A227"/></svg>
+    <div class="pcontainer">
+      <div class="stat-row">
+        <div class="stat-cell"><b>7</b><span>Open roles at Royce, live from day one</span></div>
+        <div class="stat-cell"><b>3</b><span>Match tiers — strong, possible, related</span></div>
+        <div class="stat-cell"><b>0</b><span>Applicants ever auto-rejected</span></div>
+        <div class="stat-cell"><b>50/25/25</b><span>Skills, education, experience — published, not hidden</span></div>
+      </div>
     </div>
-  </div>
+  </section>
 
   <!-- ============ HOW IT WORKS ============ -->
-  <section class="section" id="how">
-    <div class="container">
-      <span class="eyebrow">How it works</span>
-      <h2 style="font-size:36px;margin-bottom:8px">One profile. Four steps.</h2>
-      <p class="lede" style="margin-bottom:34px">You fill in your details once. Everything after that is automatic — except the decision, which stays human.</p>
-
-      <div class="flow">
-        <div class="step">
-          <span class="n"></span>
-          <div>
-            <h3>Start it your way — build or upload</h3>
-            <p>Two doors in: a guided wizard that walks you through each section with writing tips and ATS guidance built in, or — if you already have a resume — upload it and the system's AI reads it into the builder for you. Either way, you review every field before anything is saved.</p>
-          </div>
-        </div>
-        <div class="step">
-          <span class="n"></span>
-          <div>
-            <h3>See your real score</h3>
-            <p>The engine reads the structured data you entered and compares it against each opening's stated requirements: skills at 50%, education at 25%, experience at 25%. You get a number and the full breakdown behind it.</p>
-          </div>
-        </div>
-        <div class="step">
-          <span class="n"></span>
-          <div>
-            <h3>Apply, and follow it</h3>
-            <p>Apply in one click, then watch it move: Submitted &rarr; Under review &rarr; Shortlisted &rarr; Hired. Or Not selected — decided by a person at the hotel, never by the software.</p>
-          </div>
-        </div>
-        <div class="step">
-          <span class="n"></span>
-          <div>
-            <h3>A recruiter reads it</h3>
-            <p>Royce's HR sees a ranked list with every score broken down, alongside both your system-built resume and the file you uploaded. The ranking is a starting point for their judgment, not a substitute for it.</p>
-          </div>
-        </div>
+  <section class="p-section" id="how">
+    <div class="pcontainer">
+      <div class="shead">
+        <span class="eyebrow">How it works</span>
+        <h2>One profile. Four steps.</h2>
+        <p class="lede">You fill in your details once. Everything after that is automatic — except the decision, which stays human.</p>
+      </div>
+      <div class="tiles4">
+        <div class="tile"><div class="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20V6a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" stroke="#fff" stroke-width="1.8"/><path d="M8 12h8M8 16h5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></div><h3>Build it, step by step</h3><p>A guided wizard with writing tips and ATS formatting built in.</p></div>
+        <div class="tile"><div class="ic"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#fff" stroke-width="1.8"/><path d="M12 8v4l3 2" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></div><h3>See your real score</h3><p>Skills at 50%, education at 25%, experience at 25% — shown in full.</p></div>
+        <div class="tile"><div class="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h3>Apply, and follow it</h3><p>Submitted → Under review → Shortlisted → Hired, or Not selected by a person.</p></div>
+        <div class="tile"><div class="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19v-1a5 5 0 0 1 5-5h1a5 5 0 0 1 5 5v1M13.5 4.5a3 3 0 1 1-4 4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="9" cy="8" r="3" stroke="#fff" stroke-width="1.8"/></svg></div><h3>A recruiter reads it</h3><p>Royce's HR sees the ranked list, and both resumes side by side.</p></div>
       </div>
     </div>
   </section>
 
-  <!-- ============ DUAL RESUME ============ -->
-  <section class="section paper">
-    <div class="container">
-      <span class="eyebrow">The two-resume model</span>
-      <h2 style="font-size:34px;margin-bottom:8px">A machine reads one. A human reads both.</h2>
-      <p class="lede" style="margin-bottom:28px">Automated screening fails people when a parser misreads their formatting. So we don't parse files at all — we score only what you typed in yourself, and hand your actual document straight to the recruiter.</p>
+  <!-- ============ TWO-RESUME MODEL ============ -->
+  <section class="p-section paper">
+    <div class="pcontainer">
+      <div class="shead">
+        <span class="eyebrow">The two-résumé model</span>
+        <h2>A machine reads one. A human reads both.</h2>
+      </div>
+      <div class="pills-row">
+        <span class="pill-tab on">Structured resume</span>
+        <span class="pill-tab">Your own file</span>
+      </div>
       <div class="dual">
-        <div class="doc scored">
-          <h4>The structured resume</h4>
-          <p><b>Scored.</b> Built in the wizard, field by field. Because you entered it directly, nothing gets lost to a parsing error — the engine reads exactly what you meant to say.</p>
-        </div>
+        <div class="doc scored"><span class="tag">Scored</span><h4>The structured resume</h4><p>Built in the wizard, field by field — nothing gets lost to a parsing error.</p></div>
         <div class="plus">+</div>
-        <div class="doc human">
-          <h4>Your own file</h4>
-          <p><b>Never scored.</b> Optional PDF, Word, or image. It goes to the recruiter for review and verification — read by a person, weighed by a person, and never touched by the matching engine.</p>
+        <div class="doc never"><span class="tag">Never scored</span><h4>Your own file</h4><p>Optional PDF, Word, or image — read by a person, weighed by a person.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WHO IT'S FOR ============ -->
+  <section class="p-section" id="roles">
+    <div class="pcontainer">
+      <div class="shead"><span class="eyebrow">Who it's for</span><h2>Two doors. Same front desk.</h2></div>
+      <div class="roles">
+        <div class="role-card">
+          <h3>Job seekers</h3><p class="sub">Students, fresh graduates, and anyone writing a first resume.</p>
+          <ul><li>Guided builder with several ATS-friendly templates</li><li>Matches in three tiers: strong, possible, and related</li><li>Track every application through all five statuses</li></ul>
+          <a class="btn dark" routerLink="/auth" fragment="register">Start my resume</a>
+        </div>
+        <div class="role-card dark">
+          <h3>Recruiters &amp; HR</h3><p class="sub">Verified personnel of our partner company.</p>
+          <ul><li>Applications arrive scored and ranked — with the maths shown</li><li>See both résumés side by side: structured and uploaded</li><li>No auto-reject — the whole applicant pool stays visible</li></ul>
+          <a class="btn ghost-dark" routerLink="/auth" fragment="register-hr">Request recruiter access</a>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ============ TWO SIDES ============ -->
-  <section class="section roles" id="roles">
-    <div class="container">
-      <span class="eyebrow">Who it's for</span>
-      <h2 style="font-size:34px;margin-bottom:30px">Two doors. Same front desk.</h2>
-      <div class="grid cols-2">
-        <div class="card crest">
-          <h3 style="font-size:24px">Job seekers</h3>
-          <p style="color:var(--muted);font-size:14px;margin-top:6px">Students, fresh graduates, and anyone writing a first resume.</p>
-          <ul>
-            <li>Guided builder with three ATS-friendly templates</li>
-            <li>Upload your existing resume — AI fills the builder in for you</li>
-            <li>Save and manage as many resume versions as you want</li>
-            <li>Attach your own resume file — PDF, Word, or image</li>
-            <li>Export to PDF, Word, or plain text</li>
-            <li>Matches in three tiers: strong, possible, and related</li>
-            <li>Track every application through all five statuses</li>
-          </ul>
-          <a class="btn primary" routerLink="/auth" fragment="register">Start my resume</a>
-        </div>
-        <div class="card" style="border-top:2px solid var(--ink)">
-          <h3 style="font-size:24px">Recruiters &amp; HR</h3>
-          <p style="color:var(--muted);font-size:14px;margin-top:6px">Verified personnel of our partner company.</p>
-          <ul>
-            <li>Post openings with structured, explicit requirements</li>
-            <li>Applications arrive scored and ranked — with the maths shown</li>
-            <li>See both resumes side by side: structured and uploaded</li>
-            <li>Filter by skill, education, score, or status</li>
-            <li>No auto-reject — the whole applicant pool stays visible</li>
-            <li>Accounts provisioned with your HR department directly</li>
-          </ul>
-          <a class="btn dark" routerLink="/auth" fragment="register-hr">Request recruiter access</a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ WHY ============ -->
-  <section class="section paper">
-    <div class="container">
-      <span class="eyebrow">Why this exists</span>
-      <h2 style="font-size:34px;margin-bottom:34px">The mismatch runs both ways.</h2>
-      <div class="grid cols-3">
-        <div class="stat"><b>67%</b><p>of medium and large Philippine employers already screen applications with ATS software.</p><cite>Philippine Institute for Development Studies, 2020</cite></div>
-        <div class="stat"><b>75%</b><p>of resumes that don't align with a posting's keywords never reach a human reviewer.</p><cite>Jobscan, 2022</cite></div>
-        <div class="stat"><b>43%</b><p>of the unemployed are new graduates, still navigating the move from school to work.</p><cite>Philippine Statistics Authority, 2023</cite></div>
+  <!-- ============ WHY THIS EXISTS ============ -->
+  <section class="p-section paper">
+    <div class="pcontainer">
+      <div class="shead"><span class="eyebrow">Why this exists</span><h2>The mismatch runs both ways.</h2></div>
+      <div class="stats3">
+        <div class="stat3"><b>67%</b><p>of medium and large Philippine employers already screen with ATS software.</p><cite>PIDS, 2020</cite></div>
+        <div class="stat3"><b>75%</b><p>of resumes that don't align with a posting's keywords never reach a reviewer.</p><cite>Jobscan, 2022</cite></div>
+        <div class="stat3"><b>43%</b><p>of the unemployed are new graduates, still navigating school to work.</p><cite>PSA, 2023</cite></div>
       </div>
     </div>
   </section>
 
   <!-- ============ PARTNER ============ -->
-  <section class="section dark" id="partner">
-    <div class="container">
-      <div class="partner-grid" style="display:grid;grid-template-columns:1.4fr 1fr;gap:44px;align-items:center">
-        <div>
-          <span class="eyebrow">The pilot partner</span>
-          <h2 class="royce-mark"><span class="r-name">Royce</span><span class="r-sub">Hotel &amp; Casino</span></h2>
-          <p style="color:#9BA2B1;font-size:15px;max-width:60ch;line-height:1.75">Every opening on this platform is a real position at Royce Hotel &amp; Casino in Clark Freeport Zone — front office, food and beverage, housekeeping, IT, human resources, and marketing — posted and reviewed by their own verified HR personnel. The platform is built to take on more partner companies as it grows.</p>
-          <div style="display:flex;gap:12px;margin-top:26px;flex-wrap:wrap">
-            <a class="btn primary" routerLink="/browse">See the openings</a>
-            <a class="btn ghost" routerLink="/learning-hub">Read the resume guides</a>
-          </div>
-        </div>
-        <div class="card" style="background:var(--ink-2);border-color:var(--ink-line)">
-          <h4 style="font-family:var(--display);font-size:20px;color:#fff;margin-bottom:12px">Where the jobs are</h4>
-          <ul style="list-style:none;display:grid;gap:11px;font-size:13.5px;color:#9BA2B1">
-            <li>Front Office &mdash; 500 rooms, two buildings</li>
-            <li>Food &amp; Beverage &mdash; ten dining venues</li>
-            <li>Housekeeping &mdash; Premium and Deluxe</li>
-            <li>IT &mdash; web, systems, and floor support</li>
-            <li>Human Resources &mdash; recruitment and onboarding</li>
-            <li>Marketing &mdash; events, promotions, social</li>
-          </ul>
-        </div>
+  <section class="company-band" id="partner">
+    <svg class="lion-wm" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50.0,13.14 68.84,14.11 81.64,28.16 90.95,45.03 88.81,64.72 73.07,76.04 58.17,83.17 39.46,92.77 25.39,77.78 15.58,63.05 4.39,44.46 17.37,27.48 29.53,11.01" fill="#fff"/></svg>
+    <div class="inner">
+      <span class="eyebrow" style="color:var(--gold-bright)">Pilot partner</span>
+      <h2>Royce Hotel &amp; Casino</h2>
+      <p>Every opening on this platform is a real position at Royce Hotel &amp; Casino in Clark Freeport Zone — front office, food &amp; beverage, housekeeping, IT, human resources, and marketing — posted and reviewed by their own verified HR personnel.</p>
+      <div class="acts">
+        <a class="btn primary" routerLink="/browse">See the openings</a>
+        <a class="btn ghost-dark" routerLink="/learning-hub">Read the resume guides</a>
       </div>
     </div>
   </section>
