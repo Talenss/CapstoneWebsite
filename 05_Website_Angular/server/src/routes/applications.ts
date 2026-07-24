@@ -11,6 +11,49 @@ import { UserRow } from '../types';
 
 const router = Router();
 
+/** Decide who is emailed about a new application, then send it.
+ *  Department has an assigned HR owner → only that person is emailed (nobody
+ *  else). Department has no owner → every verified recruiter is emailed (the
+ *  safe fallback). The email_notifications opt-out is always respected, so a
+ *  muted recruiter is skipped either way. This only picks the email
+ *  recipient(s); who can *see* the applicant is unchanged. */
+async function routeNewApplication(
+  companyId: number,
+  department: string | null,
+  postingTitle: string,
+  seekerName: string,
+  score: number,
+): Promise<void> {
+  const dept = (department ?? '').trim();
+  const owner = dept
+    ? await queryOne<UserRow>(
+        `SELECT u.* FROM department_assignments da
+           JOIN users u ON u.user_id = da.user_id
+          WHERE da.company_id = ? AND LOWER(TRIM(da.department)) = LOWER(?)
+            AND u.role = 'recruiter' AND u.verified = 1
+          LIMIT 1`,
+        [companyId, dept],
+      )
+    : null;
+
+  const targets = owner
+    ? [owner]
+    : await query<UserRow>(
+        `SELECT * FROM users
+          WHERE role = 'recruiter' AND company_id = ? AND verified = 1`,
+        [companyId],
+      );
+
+  await Promise.all(
+    targets
+      .filter((r) => r.email_notifications)
+      .map((r) =>
+        notifyNewApplication(r.email, r.full_name, postingTitle, seekerName, score)
+          .catch((e) => console.error('new-application notify failed:', e?.message || e)),
+      ),
+  );
+}
+
 router.post('/apply', async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
   if (!u) return;
@@ -41,17 +84,15 @@ router.post('/apply', async (req, res) => {
   );
   await cacheScore(rid, pid, s);
 
-  // Tell the posting's recruiters — fire-and-forget, and only those who
-  // keep email notifications on.
-  query<UserRow>(
-    `SELECT * FROM users
-      WHERE role = 'recruiter' AND company_id = ? AND verified = 1 AND email_notifications = 1`,
-    [p.company_id],
-  ).then((recruiters) =>
-    recruiters.forEach((r) =>
-      notifyNewApplication(r.email, r.full_name, p.title, u.full_name, s.score)
-        .catch((e) => console.error('new-application notify failed:', e?.message || e))),
-  ).catch((e) => console.error('new-application notify failed:', e?.message || e));
+  // Route the "new applicant" email by department. If an HR person owns this
+  // posting's department, the notice goes straight to them (nobody else is
+  // emailed). If the department has no owner, every verified recruiter hears
+  // about it — the safe default, so an application is never silently lost.
+  // Either way the applicant stays visible in every recruiter's list; this
+  // only decides who gets the email. Fire-and-forget — a mail failure must
+  // never fail the application.
+  routeNewApplication(p.company_id, p.department, p.title, u.full_name, s.score)
+    .catch((e) => console.error('new-application notify failed:', e?.message || e));
 
   const app = await queryOne<ApplicationRow>('SELECT * FROM applications WHERE application_id = ?', [insertId]);
   ok(res, { application: serializeApplication(app!) });

@@ -8,7 +8,7 @@
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ApiAdapter } from './adapter';
-import { AdminRecruiter, AnalyzedResume, Application, ApiResult, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, User } from './models';
+import { AdminRecruiter, AnalyzedResume, Application, ApiResult, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, User } from './models';
 import { MAX_UPLOAD, ALLOWED_MIME } from './engine';
 
 export class HttpAdapter implements ApiAdapter {
@@ -111,6 +111,9 @@ export class HttpAdapter implements ApiAdapter {
     approve: (id: string) => this.call<{ requests: RecruiterRequest[] }>('admin', 'approve', { id }),
     decline: (id: string) => this.call<{ requests: RecruiterRequest[] }>('admin', 'decline', { id }),
     recruiters: () => this.call<{ recruiters: AdminRecruiter[] }>('admin', 'recruiters'),
+    deptAssignments: () => this.call<{ companies: RoutingCompany[] }>('admin', 'dept-assignments'),
+    assignDepartment: (companyId: string, department: string, userId: string | null) =>
+      this.call<{ companies: RoutingCompany[] }>('admin', 'assign-department', { companyId, department, userId }),
   };
 
   analyze = {
