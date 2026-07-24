@@ -121,6 +121,7 @@ CREATE TABLE resumes (
   user_id       INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   title         VARCHAR(120) NOT NULL,
   template_type TEXT NOT NULL DEFAULT 'chronological' CHECK (template_type IN ('chronological','functional','combination')),
+  design        TEXT NOT NULL DEFAULT 'classic' CHECK (design IN ('classic','modern','minimal','executive','banner','split','bar','categorized')),
   full_name     VARCHAR(120),
   email         VARCHAR(160),
   phone         VARCHAR(40),

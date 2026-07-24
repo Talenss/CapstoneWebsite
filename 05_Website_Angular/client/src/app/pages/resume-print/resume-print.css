@@ -19,6 +19,48 @@
 .sheet .item i{font-style:italic;color:#4d525c;font-size:10pt}
 .sheet .item p{margin-top:2px;font-size:10.5pt}
 .sheet .skills{font-size:11pt}
+
+/* ============================================================
+   ATS-safe design skins. Section ORDER stays with the template;
+   these only skin the sheet (font, header, heading treatment).
+   Every one is single-column with real headings and real text.
+   ============================================================ */
+.sheet .rhead{margin:0}
+/* 1 · Classic — serif, centered */
+.sheet.rz-classic{font-family:Georgia,'Times New Roman',serif}
+.sheet.rz-classic .rhead{text-align:center}
+.sheet.rz-classic h2{text-align:center;font-family:Georgia,serif;letter-spacing:1.5px;border-bottom-width:1.5px}
+/* 2 · Modern — sans, gold left-bar headings */
+.sheet.rz-modern,.sheet.rz-modern h1{font-family:'Manrope',Arial,sans-serif}
+.sheet.rz-modern .rhead{border-bottom:3px solid #AD7F2C;padding-bottom:9px}
+.sheet.rz-modern h2{border-bottom:none;padding-left:12px;position:relative;letter-spacing:1.4px}
+.sheet.rz-modern h2::before{content:"";position:absolute;left:0;top:1px;bottom:1px;width:4px;background:#AD7F2C}
+/* 3 · Minimal — light, airy, hairline headings */
+.sheet.rz-minimal,.sheet.rz-minimal h1{font-family:'Helvetica Neue',Arial,sans-serif}
+.sheet.rz-minimal h1{font-weight:300}
+.sheet.rz-minimal h2{border-bottom:1px solid #e6e6e6;color:#8a8a8a;letter-spacing:2.5px}
+/* 4 · Executive — serif, double header rule */
+.sheet.rz-executive{font-family:Georgia,'Times New Roman',serif}
+.sheet.rz-executive .rhead{border-bottom:3px double #1a1a1a;padding-bottom:8px}
+.sheet.rz-executive h2{font-family:Georgia,serif;letter-spacing:.6px;border-bottom:1px solid #bbb}
+/* 5 · Banner — dark header block */
+.sheet.rz-banner,.sheet.rz-banner h1{font-family:'Manrope',Arial,sans-serif}
+.sheet.rz-banner .rhead{background:#191510;padding:18px 22px;border-radius:6px}
+.sheet.rz-banner .rhead h1{color:#fff}
+.sheet.rz-banner .rhead .contact{color:#cdd0d7}
+.sheet.rz-banner h2{color:#7A5B1E;border-bottom-color:#e4dcc6;letter-spacing:1.4px}
+/* 6 · Split — name left, contact right; centered headings */
+.sheet.rz-split .rhead{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;border-bottom:2px solid #1a1a1a;padding-bottom:8px}
+.sheet.rz-split .rhead .contact{text-align:right;margin-top:0}
+.sheet.rz-split h2{text-align:center;border-bottom:none;letter-spacing:2px}
+/* 7 · Bar — filled heading bands */
+.sheet.rz-bar,.sheet.rz-bar h1{font-family:'Manrope',Arial,sans-serif}
+.sheet.rz-bar h2{background:#F3E9CE;border-bottom:none;padding:4px 10px;color:#1a1a1a;letter-spacing:1.2px}
+/* 8 · Categorized — left accent rail */
+.sheet.rz-categorized,.sheet.rz-categorized h1{font-family:'Helvetica Neue',Arial,sans-serif}
+.sheet.rz-categorized{border-left:4px solid #AD7F2C}
+.sheet.rz-categorized h2{color:#7A5B1E;border-bottom:none;letter-spacing:2px}
+
 @media print{
   .toolbar{display:none!important}
   body{background:#fff}

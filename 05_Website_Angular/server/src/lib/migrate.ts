@@ -18,6 +18,10 @@ export async function runMigrations(): Promise<void> {
   await exec('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check');
   await exec("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('seeker','recruiter','admin'))");
 
+  // resumes.design — the visual style of the printed resume (ATS-safe skins).
+  // Section order still lives in template_type; this only skins the sheet.
+  await exec("ALTER TABLE resumes ADD COLUMN IF NOT EXISTS design TEXT NOT NULL DEFAULT 'classic'");
+
   // job_postings.application_deadline — optional "apply by" date; past it,
   // the posting stops accepting applications (lazy auto-close, no cron)
   await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS application_deadline DATE');

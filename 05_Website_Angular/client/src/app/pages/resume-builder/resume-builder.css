@@ -100,6 +100,45 @@
 .p-item b { display: block; font-size: 12.5px; }
 .p-item i { font-style: italic; color: #5A5F6B; font-size: 11.5px; }
 .p-item p { margin-top: 3px; font-size: 11.5px; }
+
+/* ---- design picker ---- */
+.designs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+@media (max-width: 520px) { .designs { grid-template-columns: repeat(2, 1fr); } }
+.design-opt { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 10px 12px;
+  border: 1px solid var(--rule); border-radius: var(--r); background: var(--paper); cursor: pointer; transition: .14s; }
+.design-opt:hover { border-color: var(--gold); }
+.design-opt.on { border-color: var(--gold); background: var(--gold-wash); box-shadow: 0 0 0 1px var(--gold); }
+.design-opt b { font-size: 12.5px; color: var(--ink); }
+.design-opt small { font-size: 10.5px; color: var(--muted); }
+
+/* ---- live preview reflects the chosen design (echoes resume-print skins) ---- */
+.paper .rhead { margin: 0; }
+.paper.rz-classic { font-family: Georgia, serif; }
+.paper.rz-classic .rhead { text-align: center; }
+.paper.rz-classic .p-sec h4 { text-align: center; font-family: Georgia, serif; letter-spacing: 1px; border-bottom-width: 1.5px; }
+.paper.rz-modern, .paper.rz-modern .p-name { font-family: 'Manrope', Arial, sans-serif; }
+.paper.rz-modern .rhead { border-bottom: 3px solid var(--gold); padding-bottom: 7px; }
+.paper.rz-modern .p-sec h4 { border-bottom: none; padding-left: 11px; position: relative; }
+.paper.rz-modern .p-sec h4::before { content: ""; position: absolute; left: 0; top: 1px; bottom: 1px; width: 3px; background: var(--gold); }
+.paper.rz-minimal, .paper.rz-minimal .p-name { font-family: 'Helvetica Neue', Arial, sans-serif; }
+.paper.rz-minimal .p-name { font-weight: 300; }
+.paper.rz-minimal .p-sec h4 { border-bottom: 1px solid #e6e6e6; color: #8a8a8a; }
+.paper.rz-executive { font-family: Georgia, serif; }
+.paper.rz-executive .rhead { border-bottom: 3px double #1a1a1a; padding-bottom: 7px; }
+.paper.rz-executive .p-sec h4 { font-family: Georgia, serif; border-bottom: 1px solid #bbb; }
+.paper.rz-banner, .paper.rz-banner .p-name { font-family: 'Manrope', Arial, sans-serif; }
+.paper.rz-banner .rhead { background: #191510; padding: 14px 16px; border-radius: 6px; }
+.paper.rz-banner .rhead .p-name { color: #fff; }
+.paper.rz-banner .rhead .p-contact { color: #cdd0d7; }
+.paper.rz-banner .p-sec h4 { color: var(--gold-deep); border-bottom-color: #e4dcc6; }
+.paper.rz-split .rhead { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; border-bottom: 2px solid #1a1a1a; padding-bottom: 7px; }
+.paper.rz-split .rhead .p-contact { text-align: right; margin-top: 0; }
+.paper.rz-split .p-sec h4 { text-align: center; border-bottom: none; }
+.paper.rz-bar, .paper.rz-bar .p-name { font-family: 'Manrope', Arial, sans-serif; }
+.paper.rz-bar .p-sec h4 { background: #F3E9CE; border-bottom: none; padding: 3px 9px; color: #1a1a1a; }
+.paper.rz-categorized, .paper.rz-categorized .p-name { font-family: 'Helvetica Neue', Arial, sans-serif; }
+.paper.rz-categorized { border-left: 4px solid var(--gold); }
+.paper.rz-categorized .p-sec h4 { color: var(--gold-deep); border-bottom: none; }
 .p-skills span { display: inline-block; border: 1px solid #B9BDC6; border-radius: 2px; padding: 1px 7px; font-size: 10.5px; margin: 0 4px 4px 0; font-family: 'Inter', sans-serif; }
 .p-empty { color: #A9AEB8; font-style: italic; }
 .exports { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 14px; }

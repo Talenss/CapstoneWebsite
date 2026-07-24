@@ -50,6 +50,10 @@ export interface RoutingCompany {
 }
 export type EduLevel = 'none' | 'highschool' | 'vocational' | 'associate' | 'bachelor' | 'master';
 export type Template = 'chronological' | 'functional' | 'combination';
+/** Visual style of the rendered/printed resume. Section ORDER stays with
+ *  Template; this only skins the sheet. Every design is single-column and
+ *  ATS-safe. */
+export type ResumeDesign = 'classic' | 'modern' | 'minimal' | 'executive' | 'banner' | 'split' | 'bar' | 'categorized';
 export type EmploymentType = 'full-time' | 'part-time' | 'contract' | 'internship';
 export type AppStatus = 'submitted' | 'review' | 'shortlisted' | 'rejected' | 'hired';
 export type Tier = 'strong' | 'possible' | 'related';
@@ -119,6 +123,7 @@ export interface Resume {
   userId?: string;
   title: string;
   template: Template;
+  design: ResumeDesign;
   personal: Personal;
   education: Education[];
   experience: Experience[];
@@ -199,6 +204,7 @@ export interface HrStats {
 export interface AnalyzedResume {
   title: string;
   template: Template;
+  design?: ResumeDesign;
   personal: Personal;
   education: Education[];
   experience: Experience[];

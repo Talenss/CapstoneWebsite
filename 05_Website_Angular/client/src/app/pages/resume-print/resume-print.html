@@ -8,14 +8,16 @@
   </div>
 </div>
 
-<div class="sheet" id="sheet">
+<div [class]="'sheet rz-' + (resume()?.design || 'classic')" id="sheet">
   @if (loading()) {
     <p style="color:#888">Loading…</p>
   } @else if (error()) {
     <p>{{ error() }}</p>
   } @else if (resume(); as r) {
-    <h1>{{ r.personal.fullName }}</h1>
-    <p class="contact">{{ contactLine() }}</p>
+    <header class="rhead">
+      <h1>{{ r.personal.fullName }}</h1>
+      <p class="contact">{{ contactLine() }}</p>
+    </header>
     @if (r.personal.summary) {
       <section><h2>Summary</h2><p style="font-size:10.5pt">{{ r.personal.summary }}</p></section>
     }
