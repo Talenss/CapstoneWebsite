@@ -133,6 +133,105 @@ router.post('/decline', async (req, res) => {
   ok(res, { requests: await listRequests() });
 });
 
+/* ---------- department routing ----------
+   Which HR person owns each company department. Assigning an owner means a
+   new application for that department emails only them; leaving it unassigned
+   means every verified recruiter is emailed (the safe default). Viewing the
+   applicant list is unaffected — this only routes the notification. */
+
+interface RoutingCompany {
+  id: string;
+  name: string;
+  departments: string[];
+  recruiters: { id: string; name: string }[];
+  assignments: { department: string; userId: string; userName: string }[];
+}
+
+async function listDeptRouting(): Promise<RoutingCompany[]> {
+  // Companies that actually have postings (so there are departments to route).
+  const companies = await query<{ company_id: number; company_name: string }>(
+    `SELECT DISTINCT c.company_id, c.company_name
+       FROM companies c JOIN job_postings jp ON jp.company_id = c.company_id
+      ORDER BY c.company_name`,
+  );
+
+  const out: RoutingCompany[] = [];
+  for (const c of companies) {
+    // Departments from live postings, plus any that still carry an assignment
+    // even though their posting was removed (so nothing dangles invisibly).
+    const depts = await query<{ department: string }>(
+      `SELECT DISTINCT department FROM (
+         SELECT department FROM job_postings
+           WHERE company_id = ? AND department IS NOT NULL AND TRIM(department) <> ''
+         UNION
+         SELECT department FROM department_assignments WHERE company_id = ?
+       ) d ORDER BY department`,
+      [c.company_id, c.company_id],
+    );
+    const recruiters = await query<{ user_id: number; full_name: string }>(
+      `SELECT user_id, full_name FROM users
+        WHERE role = 'recruiter' AND company_id = ? AND verified = 1
+        ORDER BY full_name`,
+      [c.company_id],
+    );
+    const assigns = await query<{ department: string; user_id: number; full_name: string }>(
+      `SELECT da.department, da.user_id, u.full_name
+         FROM department_assignments da JOIN users u ON u.user_id = da.user_id
+        WHERE da.company_id = ?`,
+      [c.company_id],
+    );
+    out.push({
+      id: String(c.company_id),
+      name: c.company_name,
+      departments: depts.map((d) => d.department),
+      recruiters: recruiters.map((r) => ({ id: String(r.user_id), name: r.full_name })),
+      assignments: assigns.map((a) => ({ department: a.department, userId: String(a.user_id), userName: a.full_name })),
+    });
+  }
+  return out;
+}
+
+router.post('/dept-assignments', async (req, res) => {
+  const u = await requireRole(req, res, 'admin');
+  if (!u) return;
+  ok(res, { companies: await listDeptRouting() });
+});
+
+router.post('/assign-department', async (req, res) => {
+  const u = await requireRole(req, res, 'admin');
+  if (!u) return;
+  const companyId = Number(req.body?.companyId);
+  const department = String(req.body?.department ?? '').trim();
+  const rawUser = req.body?.userId;
+  if (!companyId || !department) return fail(res, 'Pick a company and a department.');
+
+  const company = await queryOne('SELECT 1 FROM companies WHERE company_id = ? LIMIT 1', [companyId]);
+  if (!company) return fail(res, 'That company no longer exists.');
+
+  // No user id (or an explicit "unassign") clears the owner — the department
+  // falls back to notifying every verified recruiter.
+  if (rawUser === null || rawUser === undefined || rawUser === '' || rawUser === 0 || rawUser === '0') {
+    await exec('DELETE FROM department_assignments WHERE company_id = ? AND LOWER(TRIM(department)) = LOWER(?)', [companyId, department]);
+    return ok(res, { companies: await listDeptRouting() });
+  }
+
+  const userId = Number(rawUser);
+  const owner = await queryOne(
+    "SELECT 1 FROM users WHERE user_id = ? AND role = 'recruiter' AND company_id = ? AND verified = 1 LIMIT 1",
+    [userId, companyId],
+  );
+  if (!owner) return fail(res, 'Pick a verified recruiter from that company.');
+
+  await exec(
+    `INSERT INTO department_assignments (company_id, department, user_id)
+       VALUES (?,?,?)
+     ON CONFLICT (company_id, department)
+       DO UPDATE SET user_id = EXCLUDED.user_id, assigned_at = now()`,
+    [companyId, department, userId],
+  );
+  ok(res, { companies: await listDeptRouting() });
+});
+
 router.post('/recruiters', async (req, res) => {
   const u = await requireRole(req, res, 'admin');
   if (!u) return;

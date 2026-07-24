@@ -5,7 +5,7 @@
    ApiService without caring which mode is active.
    ============================================================ */
 import {
-  AdminRecruiter, AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, User,
+  AdminRecruiter, AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, User,
 } from './models';
 
 export interface ApiAdapter {
@@ -88,6 +88,11 @@ export interface ApiAdapter {
     approve(id: string): Promise<ApiResult<{ requests: RecruiterRequest[] }>>;
     decline(id: string): Promise<ApiResult<{ requests: RecruiterRequest[] }>>;
     recruiters(): Promise<ApiResult<{ recruiters: AdminRecruiter[] }>>;
+    /** Department routing table: each company's departments, its recruiters,
+     *  and who currently owns each department. Admin only. */
+    deptAssignments(): Promise<ApiResult<{ companies: RoutingCompany[] }>>;
+    /** Set (or, with a null userId, clear) the HR owner of one department. */
+    assignDepartment(companyId: string, department: string, userId: string | null): Promise<ApiResult<{ companies: RoutingCompany[] }>>;
   };
   analyze: {
     /** Opt-in AI extraction of an uploaded resume file. Returns a structured

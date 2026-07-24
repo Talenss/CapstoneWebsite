@@ -32,6 +32,22 @@ export interface AdminRecruiter {
   createdAt: number;
   lastLoginAt: number | null;
 }
+
+/** Department routing: which HR person owns each of a company's departments.
+ *  An owned department emails only its owner on a new application; an
+ *  unassigned one falls back to notifying every verified recruiter. */
+export interface DeptAssignment {
+  department: string;
+  userId: string;
+  userName: string;
+}
+export interface RoutingCompany {
+  id: string;
+  name: string;
+  departments: string[];
+  recruiters: { id: string; name: string }[];
+  assignments: DeptAssignment[];
+}
 export type EduLevel = 'none' | 'highschool' | 'vocational' | 'associate' | 'bachelor' | 'master';
 export type Template = 'chronological' | 'functional' | 'combination';
 export type EmploymentType = 'full-time' | 'part-time' | 'contract' | 'internship';

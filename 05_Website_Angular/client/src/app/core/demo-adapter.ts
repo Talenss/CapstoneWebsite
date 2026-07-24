@@ -32,6 +32,7 @@ interface Db {
   recruiterRequests: any[];
   emailCodes: EmailCode[];
   savedJobs: { userId: string; postingId: string; createdAt: number }[];
+  deptAssignments: { companyId: string; department: string; userId: string }[];
 }
 
 /** Past-deadline postings stop accepting applications — same lazy
@@ -56,6 +57,7 @@ function seed(): Db {
       { id: 'u4', role: 'seeker', name: 'Marco Garcia', email: 'marco@demo.ph', password: 'demo123', activeResumeId: 'r3', createdAt: Date.now() - D * 15 },
       { id: 'u5', role: 'seeker', name: 'Liza Cruz', email: 'liza@demo.ph', password: 'demo123', activeResumeId: 'r4', createdAt: Date.now() - D * 10 },
       { id: 'u6', role: 'admin', name: 'Research Team', email: 'admin@demo.ph', password: 'demo123', createdAt: Date.now() - D * 90 },
+      { id: 'u7', role: 'recruiter', name: 'Grace Lopez', email: 'grace@demo.ph', password: 'demo123', companyId: 'c1', position: 'HR Officer — Front Office', verified: true, createdAt: Date.now() - D * 55 },
     ] as DemoUser[],
     resumes: [
       { id: 'r1', userId: 'u1', title: 'IT — fresh graduate', template: 'chronological',
@@ -132,6 +134,12 @@ function seed(): Db {
     ],
     emailCodes: [],
     savedJobs: [],
+    // Example routing: Santos owns IT, Lopez owns Front Office. Every other
+    // department is unassigned and falls back to notifying all recruiters.
+    deptAssignments: [
+      { companyId: 'c1', department: 'IT', userId: 'u2' },
+      { companyId: 'c1', department: 'Front Office', userId: 'u7' },
+    ],
   };
 }
 
@@ -142,6 +150,7 @@ function load(): Db {
       const db: Db = JSON.parse(raw);
       if (!db.emailCodes) db.emailCodes = []; // databases saved before this field existed
       if (!db.savedJobs) db.savedJobs = [];
+      if (!db.deptAssignments) db.deptAssignments = []; // databases saved before department routing existed
       if (!db.users.some((u) => u.role === 'admin')) {
         // databases saved before the admin panel existed get the admin account
         db.users.push({ id: 'u6', role: 'admin', name: 'Research Team', email: 'admin@demo.ph', password: 'demo123', createdAt: Date.now() } as DemoUser);
@@ -762,7 +771,52 @@ export class DemoAdapter implements ApiAdapter {
         })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
       });
     },
+    deptAssignments: () => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+      return apiOk({ companies: this.routingList(db) });
+    },
+    assignDepartment: (companyId: string, department: string, userId: string | null) => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+      const dept = (department || '').trim();
+      if (!companyId || !dept) return apiFail('Pick a company and a department.');
+      if (!db.companies.some((c) => c.id === companyId)) return apiFail('That company no longer exists.');
+      // clear any existing owner for this department first
+      db.deptAssignments = db.deptAssignments.filter(
+        (a) => !(a.companyId === companyId && a.department.trim().toLowerCase() === dept.toLowerCase()),
+      );
+      if (userId) {
+        const owner = db.users.find(
+          (u) => u.id === userId && u.role === 'recruiter' && u.companyId === companyId && u.verified,
+        );
+        if (!owner) return apiFail('Pick a verified recruiter from that company.');
+        db.deptAssignments.push({ companyId, department: dept, userId });
+      }
+      persist(db);
+      return apiOk({ companies: this.routingList(db) });
+    },
   };
+
+  /** Build the per-company department-routing view the admin panel renders. */
+  private routingList(db: Db) {
+    const companyIds = Array.from(new Set(db.postings.map((p) => p.companyId)));
+    return companyIds.map((cid) => ({
+      id: cid,
+      name: db.companies.find((c) => c.id === cid)?.name || '—',
+      departments: Array.from(new Set([
+        ...db.postings.filter((p) => p.companyId === cid).map((p) => (p.department || '').trim()).filter(Boolean),
+        ...db.deptAssignments.filter((a) => a.companyId === cid).map((a) => a.department),
+      ])).sort(),
+      recruiters: db.users
+        .filter((u) => u.role === 'recruiter' && u.companyId === cid && u.verified)
+        .map((u) => ({ id: u.id, name: u.name }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+      assignments: db.deptAssignments
+        .filter((a) => a.companyId === cid)
+        .map((a) => ({ department: a.department, userId: a.userId, userName: db.users.find((u) => u.id === a.userId)?.name || '—' })),
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  }
 
   private reqList(db: Db) {
     return db.recruiterRequests.map((r) => ({

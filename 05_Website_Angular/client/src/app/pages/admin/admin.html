@@ -78,6 +78,49 @@
     </section>
 
     <section class="block">
+      <h2>Department routing <span class="count">{{ totalAssigned() }}</span></h2>
+      <p style="color:var(--muted);font-size:14px;margin:-4px 0 18px;max-width:74ch">
+        Assign the HR person who handles each department. A new application for that department emails <b>only its owner</b> — for example, IT applications go straight to whoever owns IT. Departments left as <b>All recruiters</b> notify everyone, the safe default so nothing is missed. This routes the email only; every recruiter still sees every applicant.
+      </p>
+      @if (!routing().length) {
+        <div class="card empty"><p>No departments yet — they appear once a company has posted openings.</p></div>
+      } @else {
+        @for (co of routing(); track co.id) {
+          <div class="card" style="padding:0;margin-bottom:16px">
+            <div style="padding:16px 20px 2px"><h3 style="font-size:17px">{{ co.name }}</h3></div>
+            @if (!co.departments.length) {
+              <p style="padding:0 20px 18px;color:var(--muted);font-size:13px">No departments posted yet.</p>
+            } @else {
+              <div style="overflow-x:auto">
+                <table>
+                  <thead><tr><th>Department</th><th>Application notice goes to</th></tr></thead>
+                  <tbody>
+                    @for (d of co.departments; track d) {
+                      <tr>
+                        <td><b>{{ d }}</b></td>
+                        <td>
+                          <select aria-label="Owner for {{ d }}" (change)="assign(co, d, $event)" [disabled]="busyDept() === co.id + '::' + d">
+                            <option value="" [selected]="ownerOf(co, d) === ''">All recruiters (unassigned)</option>
+                            @for (r of co.recruiters; track r.id) {
+                              <option [value]="r.id" [selected]="ownerOf(co, d) === r.id">{{ r.name }}</option>
+                            }
+                          </select>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              @if (!co.recruiters.length) {
+                <p class="note" style="margin:0 20px 18px">This company has no verified recruiters yet, so every department falls back to no one. Approve a recruiter request first.</p>
+              }
+            }
+          </div>
+        }
+      }
+    </section>
+
+    <section class="block">
       <h2>Handled requests <span class="count">{{ handled().length }}</span></h2>
       @if (!handled().length) {
         <div class="card empty"><p>No approved or declined requests yet.</p></div>
