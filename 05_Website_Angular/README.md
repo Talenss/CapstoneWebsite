@@ -1,0 +1,119 @@
+# ResumeMatch PH — Angular + Node edition
+
+A free résumé builder + transparent, rule-based job-matching platform for
+Filipino job seekers, piloted with **Royce Hotel & Casino** (Clark Freeport
+Zone). This folder (`05_Website_Angular`) is the current app — an **Angular 21**
+front end + **Node/Express (TypeScript)** back end on a **Supabase / PostgreSQL**
+database. `../04_Website` is the old PHP version, kept only as a reference;
+**this folder needs nothing from it.**
+
+> This README is the "start here". For the full server / Supabase / email / AI
+> setup and the going-live checklist, see **[SETUP.md](./SETUP.md)**.
+
+---
+
+## What's in the app right now
+
+**For job seekers**
+- Guided résumé wizard with live preview, plus "upload & analyze" (AI reads a
+  file into the builder; scoring stays with the rule-based engine).
+- **8 ATS-safe résumé designs** to choose from (Classic, Modern, Minimal,
+  Executive, Banner, Split, Bar, Categorized) — single-column, parser-safe,
+  applied to the on-screen preview and the printed / PDF export.
+- Honest match scores against every real opening (**skills 50 / education 25 /
+  experience 25**, weights published), in three tiers — strong, possible,
+  related. No one is auto-rejected.
+- Save openings, track applications through all five statuses, job alerts.
+
+**For recruiters / HR**
+- Applications arrive scored and ranked with the maths shown; both résumés
+  (structured + uploaded file) side by side; message an applicant by email.
+- **Department-based routing:** a new application's email goes to the HR person
+  who owns that posting's department; unowned departments notify all recruiters.
+
+**For the research team (admin)**
+- Recruiter-access approval, department-routing assignment, and anonymous
+  **study metrics** with JSON export.
+
+**Site-wide**
+- Royce-branded **HR-SaaS UI** (Fraunces + Manrope + JetBrains Mono, lion crest).
+- **Light / dark mode** — a toggle in the header, applied on every page, saved
+  to the browser, and respecting your OS preference on first visit.
+- Fully responsive (works down to 390 px), onboarding tour, email verification,
+  password reset, security hardening.
+
+---
+
+## Quick start — demo mode (zero setup)
+
+No database, no internet, no keys. Runs entirely in the browser (localStorage).
+
+```bash
+cd 05_Website_Angular/client
+npm install
+npm start
+```
+
+Open <http://localhost:4200>. Sign in with any of these (password `demo123`):
+
+| Role | Email |
+|---|---|
+| Job seeker | `seeker@demo.ph` |
+| Recruiter (Royce HR) | `hr@demo.ph` |
+| Admin (research team) | `admin@demo.ph` |
+
+To wipe demo data: open the browser console → `localStorage.clear()` → refresh.
+
+---
+
+## Full mode — Node API + Supabase (real persistence)
+
+The short version (full details in **[SETUP.md](./SETUP.md)**):
+
+1. **Database:** create a free Supabase project → SQL Editor → paste and run
+   `db/resumematch_ph.sql` (the whole schema + demo data in one file).
+2. **Server:** `cd server && npm install && cp .env.example .env`, then set
+   `DATABASE_URL` to your Supabase **Session pooler** connection string.
+   Start it: `npm run dev` (listens on `http://localhost:4300`).
+3. **Client:** in `client/src/environments/environment.ts` set `mode: 'api'`,
+   then `cd client && npm start`.
+
+### Environment variables (`server/.env`) — all optional except the database
+
+| Variable | Needed for | If unset |
+|---|---|---|
+| `DATABASE_URL` | Supabase/Postgres connection | server mode won't run (demo mode still works) |
+| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` | verification codes, password reset, notifications | codes print to the server console in `DEBUG` mode |
+| `GEMINI_API_KEY` | "upload & analyze" AI extraction | that one feature shows "not configured"; everything else works |
+| `SESSION_SECRET`, `DEBUG`, `TRUST_PROXY`, `COOKIE_SECURE`, `APP_URL` | production hardening | sensible dev defaults (see SETUP.md → going-live checklist) |
+
+`db/resumematch_ph.sql` is a full reset (it drops tables first) — don't run it
+on a database whose data you want to keep. New tables/columns added over time
+are also applied automatically by idempotent migrations on server start.
+
+---
+
+## Handy commands
+
+```bash
+# client (from client/)
+npm start           # dev server on :4200
+npm run build       # production build
+
+# server (from server/)
+npm run dev         # API on :4300, restarts on change
+npm run build && npm start   # production; also serves the built Angular app
+npm test            # matching-engine tests (25, no database needed)
+npm run create-admin -- you@example.com "a strong password"
+```
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push to `main` and every pull request:
+it builds the Angular client, type-checks the server, and runs the engine
+tests. All jobs are database-free, so CI goes green with no secrets configured.
+
+## The one switch that matters
+
+`client/src/environments/environment.ts` → `mode: 'demo' | 'api'`. Demo runs in
+the browser; `api` talks to the Node server. Nothing else changes between them.

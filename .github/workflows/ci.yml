@@ -1,0 +1,51 @@
+name: CI
+
+# Builds the Angular client and type-checks + tests the Node server on every
+# push to main and every pull request. All jobs are database-free (the engine
+# tests don't touch a DB), so nothing external is needed to go green.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  client:
+    name: Client — build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: 05_Website_Angular/client/package-lock.json
+      - name: Install dependencies
+        working-directory: 05_Website_Angular/client
+        run: npm ci
+      - name: Build (production)
+        working-directory: 05_Website_Angular/client
+        run: npm run build
+
+  server:
+    name: Server — type-check & tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: 05_Website_Angular/server/package-lock.json
+      - name: Install dependencies
+        working-directory: 05_Website_Angular/server
+        run: npm ci
+      - name: Type-check
+        working-directory: 05_Website_Angular/server
+        run: npx tsc -p tsconfig.json --noEmit
+      - name: Matching-engine tests
+        working-directory: 05_Website_Angular/server
+        run: npm test
