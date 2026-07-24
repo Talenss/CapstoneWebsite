@@ -36,6 +36,7 @@ export interface ResumeRow {
   user_id: number;
   title: string;
   template_type: 'chronological' | 'functional' | 'combination';
+  design: 'classic' | 'modern' | 'minimal' | 'executive' | 'banner' | 'split' | 'bar' | 'categorized';
   full_name: string | null;
   email: string | null;
   phone: string | null;

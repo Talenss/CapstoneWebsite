@@ -93,6 +93,7 @@ export async function serializeResume(r: ResumeRow): Promise<any> {
     userId: String(r.user_id),
     title: r.title,
     template: r.template_type,
+    design: r.design ?? 'classic',
     personal: {
       fullName: r.full_name, email: r.email, phone: r.phone, address: r.address, summary: r.summary,
     },

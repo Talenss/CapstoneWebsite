@@ -46,6 +46,7 @@ router.post('/save', async (req, res) => {
 
   const title = String(R.title ?? '').trim() || 'Untitled resume';
   const template = ['chronological', 'functional', 'combination'].includes(R.template) ? R.template : 'chronological';
+  const design = ['classic', 'modern', 'minimal', 'executive', 'banner', 'split', 'bar', 'categorized'].includes(R.design) ? R.design : 'classic';
   const p = R.personal && typeof R.personal === 'object' ? R.personal : {};
 
   // Ownership check up front so we can send a clean 403 (an error thrown
@@ -61,13 +62,13 @@ router.post('/save', async (req, res) => {
 
       if (id) {
         await tx.exec(
-          'UPDATE resumes SET title=?, template_type=?, full_name=?, email=?, phone=?, address=?, summary=? WHERE resume_id=?',
-          [title, template, p.fullName ?? '', p.email ?? '', p.phone ?? '', p.address ?? '', p.summary ?? '', id],
+          'UPDATE resumes SET title=?, template_type=?, design=?, full_name=?, email=?, phone=?, address=?, summary=? WHERE resume_id=?',
+          [title, template, design, p.fullName ?? '', p.email ?? '', p.phone ?? '', p.address ?? '', p.summary ?? '', id],
         );
       } else {
         const ins = await tx.exec(
-          'INSERT INTO resumes (user_id, title, template_type, full_name, email, phone, address, summary) VALUES (?,?,?,?,?,?,?,?) RETURNING resume_id',
-          [u.user_id, title, template, p.fullName ?? '', p.email ?? '', p.phone ?? '', p.address ?? '', p.summary ?? ''],
+          'INSERT INTO resumes (user_id, title, template_type, design, full_name, email, phone, address, summary) VALUES (?,?,?,?,?,?,?,?,?) RETURNING resume_id',
+          [u.user_id, title, template, design, p.fullName ?? '', p.email ?? '', p.phone ?? '', p.address ?? '', p.summary ?? ''],
         );
         id = ins.insertId;
         if (u.active_resume_id === null) {
@@ -162,8 +163,8 @@ router.post('/duplicate', async (req, res) => {
     const newId = await withTransaction(async (tx) => {
       // the uploaded file is deliberately NOT copied — one file, one resume
       const ins = await tx.exec(
-        `INSERT INTO resumes (user_id, title, template_type, full_name, email, phone, address, summary)
-         SELECT user_id, title || ' (copy)', template_type, full_name, email, phone, address, summary
+        `INSERT INTO resumes (user_id, title, template_type, design, full_name, email, phone, address, summary)
+         SELECT user_id, title || ' (copy)', template_type, design, full_name, email, phone, address, summary
            FROM resumes WHERE resume_id = ? RETURNING resume_id`, [id],
       );
       const nid = ins.insertId;

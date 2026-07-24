@@ -8,7 +8,7 @@ import { SessionService } from '../../core/session.service';
 import { AnalysisService } from '../../core/analysis.service';
 import { TourService } from '../../shared/tour/tour.service';
 import { EDU_LABELS } from '../../core/engine';
-import { Education, EduLevel, Experience, Resume, Template } from '../../core/models';
+import { Education, EduLevel, Experience, Resume, ResumeDesign, Template } from '../../core/models';
 
 const STEPS = ['Details', 'Education', 'Experience', 'Skills', 'Certifications', 'Finish'];
 
@@ -17,6 +17,7 @@ function blankResume(id: string | null = null): Resume {
     id,
     title: '',
     template: 'chronological',
+    design: 'classic',
     personal: { fullName: '', email: '', phone: '', address: '', summary: '' },
     education: [],
     experience: [],
@@ -134,6 +135,7 @@ export class ResumeBuilder implements OnInit {
         ...blankResume(),
         title: d.title || 'Uploaded resume',
         template: d.template || 'chronological',
+        design: d.design || 'classic',
         personal: {
           fullName: d.personal.fullName || user.name,
           email: d.personal.email || user.email,
@@ -298,9 +300,26 @@ export class ResumeBuilder implements OnInit {
     }
   }
 
-  // ---------- template ----------
+  // ---------- template (section order) ----------
   setTemplate(t: Template): void {
     this.resume.update((r) => ({ ...r, template: t }));
+    this.markDirty();
+  }
+
+  // ---------- design (visual style) — every option is single-column, ATS-safe ----------
+  readonly designs: { id: ResumeDesign; label: string; note: string }[] = [
+    { id: 'classic', label: 'Classic', note: 'Serif, centered' },
+    { id: 'modern', label: 'Modern', note: 'Sans, gold accent' },
+    { id: 'minimal', label: 'Minimal', note: 'Airy, light' },
+    { id: 'executive', label: 'Executive', note: 'Serif, formal' },
+    { id: 'banner', label: 'Banner', note: 'Dark header band' },
+    { id: 'split', label: 'Split', note: 'Name / contact split' },
+    { id: 'bar', label: 'Bar', note: 'Filled headings' },
+    { id: 'categorized', label: 'Rail', note: 'Left accent rail' },
+  ];
+
+  setDesign(d: ResumeDesign): void {
+    this.resume.update((r) => ({ ...r, design: d }));
     this.markDirty();
   }
 

@@ -258,6 +258,16 @@
               </label>
             </div>
 
+            <h3 style="font-size:20px;margin:32px 0 4px">Design</h3>
+            <p class="sub" style="margin-bottom:16px">Pick the look you like — every design is single-column and ATS-safe, so your score is identical. See it in full on <b>Preview / print</b>.</p>
+            <div class="designs">
+              @for (d of designs; track d.id) {
+                <button type="button" class="design-opt" [class.on]="resume().design === d.id" (click)="setDesign(d.id)">
+                  <b>{{ d.label }}</b><small>{{ d.note }}</small>
+                </button>
+              }
+            </div>
+
             <h3 style="font-size:20px;margin:32px 0 10px">Before you save</h3>
             <ul class="checks">
               @for (row of checklist(); track row.label) {
@@ -288,12 +298,14 @@
           <h3>Live preview</h3>
           <span class="badge slate">{{ templateLabel() }}</span>
         </div>
-        <div class="paper" id="paper">
-          <div class="p-name">
-            @if (resume().personal.fullName) { {{ resume().personal.fullName }} } @else { <span class="p-empty">Your name</span> }
-          </div>
-          <div class="p-contact">
-            @if (contactLine()) { {{ contactLine() }} } @else { <span class="p-empty">email &middot; phone &middot; city</span> }
+        <div [class]="'paper rz-' + resume().design" id="paper">
+          <div class="rhead">
+            <div class="p-name">
+              @if (resume().personal.fullName) { {{ resume().personal.fullName }} } @else { <span class="p-empty">Your name</span> }
+            </div>
+            <div class="p-contact">
+              @if (contactLine()) { {{ contactLine() }} } @else { <span class="p-empty">email &middot; phone &middot; city</span> }
+            </div>
           </div>
           @if (resume().personal.summary) {
             <div class="p-sec"><h4>Summary</h4><p style="font-size:11.5px">{{ resume().personal.summary }}</p></div>

@@ -33,6 +33,7 @@ const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingm
 interface AnalyzedResume {
   title: string;
   template: 'chronological' | 'functional' | 'combination';
+  design: 'classic';
   personal: { fullName: string; email: string; phone: string; address: string; summary: string };
   education: { school: string; degree: string; level: string; year: string }[];
   experience: { position: string; company: string; months: number; description: string }[];
@@ -76,6 +77,7 @@ function sanitize(raw: any, fileName: string): AnalyzedResume {
   return {
     title: str(raw?.title) || fileName.replace(/\.[^.]+$/, '') || 'Uploaded resume',
     template: 'chronological',
+    design: 'classic',
     personal: {
       fullName: str(p?.fullName, 120),
       email: str(p?.email, 160),
