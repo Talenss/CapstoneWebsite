@@ -15,8 +15,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { scoreWith, DEFAULT_SETTINGS, skillNorm, EDU_RANK, MatchSettings } from '../src/lib/engine';
-import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, EDU_RANK as CLIENT_EDU_RANK } from '../../client/src/app/core/engine';
+import { scoreWith, DEFAULT_SETTINGS, skillNorm, SKILL_ALIASES, EDU_RANK, MatchSettings } from '../src/lib/engine';
+import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK } from '../../client/src/app/core/engine';
 
 // ---------- helpers ----------
 
@@ -90,6 +90,44 @@ test('skill matching ignores case, spacing, and punctuation', () => {
   assert.equal(normSkill('Node.js'), skillNorm('NodeJS')); // client norm == server norm
   const s = score(resume(['my-sql', ' JAVASCRIPT ', 'node.js']), posting(['MySQL', 'JavaScript', 'NodeJS']));
   assert.equal(s.score, 100);
+});
+
+test('skill aliases: equivalent wording scores the same (no vocabulary false negatives)', () => {
+  // The unfairness this guards against: writing "JS" instead of
+  // "JavaScript" used to score 0 for that requirement.
+  assert.equal(skillNorm('JS'), skillNorm('JavaScript'));
+  assert.equal(skillNorm('MS Office'), skillNorm('Microsoft Office'));
+  assert.equal(skillNorm('Customer Support'), skillNorm('Customer Service'));
+  assert.equal(skillNorm('F&B'), skillNorm('Food and Beverage'));
+  assert.equal(skillNorm('Front Desk'), skillNorm('Front Office'));
+
+  // …and it changes the actual score, on both engines (score() asserts parity).
+  const abbreviated = score(resume(['JS', 'MS Office']), posting(['JavaScript', 'Microsoft Office']));
+  assert.equal(abbreviated.score, 100);
+  assert.deepEqual(abbreviated.missingSkills, []);
+});
+
+test('skill aliases are conservative — different skills stay different', () => {
+  // Folding synonyms must never credit a skill the applicant didn't claim.
+  assert.notEqual(skillNorm('JavaScript'), skillNorm('Java'));
+  assert.notEqual(skillNorm('Excel'), skillNorm('Word'));
+  assert.notEqual(skillNorm('Housekeeping'), skillNorm('Front Office'));
+  const s = score(resume(['Java']), posting(['JavaScript']));
+  assert.equal(s.score, 50); // education + experience only; skills earn nothing
+  assert.deepEqual(s.missingSkills, ['JavaScript']);
+});
+
+test('the alias table is self-consistent (every target is itself canonical)', () => {
+  // A value that is also a key would make normalization order-dependent.
+  for (const [variant, canonical] of Object.entries(SKILL_ALIASES)) {
+    assert.equal(SKILL_ALIASES[canonical] ?? canonical, canonical,
+      `alias "${variant}" points at "${canonical}", which is itself an alias`);
+    assert.equal(skillNorm(variant), canonical);
+  }
+});
+
+test('client and server ship the SAME alias table', () => {
+  assert.deepEqual(CLIENT_SKILL_ALIASES, SKILL_ALIASES);
 });
 
 test('matched/missing lists keep the POSTING’s original casing', () => {
