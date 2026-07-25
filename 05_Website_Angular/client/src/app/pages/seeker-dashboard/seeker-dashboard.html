@@ -188,6 +188,22 @@
           </div>
           <div class="row"><span><b>What happens to a low score</b></span><b style="font-weight:500;color:var(--muted)">Nothing automatic. A recruiter still sees you.</b></div>
         </div>
+
+        @if (projectedScore(item); as goal) {
+          <div class="coach">
+            <b>How to raise this score</b>
+            <p>
+              You can apply right now — this is guidance, not a requirement. But if you genuinely have
+              @if (item.missingSkills.length === 1) { <b>{{ item.missingSkills[0] }}</b> }
+              @else { these {{ item.missingSkills.length }} skills — @for (s of item.missingSkills; track s; let last = $last) { <b>{{ s }}</b>{{ last ? '' : ', ' }} } }
+              and simply haven't listed
+              {{ item.missingSkills.length === 1 ? 'it' : 'them' }} yet, adding
+              {{ item.missingSkills.length === 1 ? 'it' : 'them' }} to your resume would take this from
+              <b>{{ item.score }}%</b> to <b>{{ goal }}%</b> — {{ projectedTier(item) }}.
+            </p>
+            <a class="btn ghost sm" routerLink="/resume-builder" [queryParams]="{ id: activeId() }">Edit my resume</a>
+          </div>
+        }
         <p style="font-size:12.5px;color:var(--muted)">Applying sends the resume above, plus your uploaded file if you attached one. A recruiter reads both.</p>
       </div>
       <div class="modal-foot">
@@ -200,4 +216,4 @@
   }
 </div>
 
-<div class="toast" [class.show]="!!toastMsg()">{{ toastMsg() }}</div>
+<div class="toast" [class.show]="!!toastMsg()" role="status" aria-live="polite">{{ toastMsg() }}</div>

@@ -6,7 +6,7 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { TourService } from '../../shared/tour/tour.service';
 import { AppStatus, Application, Posting, RecommendationItem, Resume } from '../../core/models';
-import { EDU_LABELS, STATUS_LABELS, THRESHOLDS, WEIGHTS, statusBadge, tierColor, tierLabel, tierOf } from '../../core/engine';
+import { EDU_LABELS, STATUS_LABELS, THRESHOLDS, WEIGHTS, scoreLocal, statusBadge, tierColor, tierLabel, tierOf } from '../../core/engine';
 
 type TierKey = 'strong' | 'possible' | 'related';
 interface Reco { strong: RecommendationItem[]; possible: RecommendationItem[]; related: RecommendationItem[] }
@@ -68,6 +68,28 @@ export class SeekerDashboard implements OnInit {
   });
 
   activeResume = computed(() => this.resumes().find((r) => r.id === this.activeId()) ?? null);
+
+  /** Where this score COULD go if the missing skills were on the resume.
+   *  Run through the same engine (not an estimate) with the missing
+   *  skills added to a copy of the active resume, so the number shown is
+   *  exactly what the seeker would score. Returns null when there's
+   *  nothing to gain — never nags someone who already matches. */
+  projectedScore(item: RecommendationItem): number | null {
+    const r = this.activeResume();
+    if (!r || !item.missingSkills.length) return null;
+    const projected = scoreLocal(
+      { ...r, skills: [...r.skills, ...item.missingSkills] },
+      item.posting,
+    ).score;
+    return projected > item.score ? projected : null;
+  }
+
+  /** The tier that projected score would land in — so the advice can say
+   *  "…which would make this a strong match", not just a bigger number. */
+  projectedTier(item: RecommendationItem): string {
+    const p = this.projectedScore(item);
+    return p === null ? '' : tierLabel(p).toLowerCase();
+  }
   activeResumeTitle = computed(() => this.activeResume()?.title ?? '');
   activeResumeHasFile = computed(() => !!this.activeResume()?.ownFile);
 
