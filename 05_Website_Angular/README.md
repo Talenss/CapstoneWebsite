@@ -103,15 +103,18 @@ npm run build       # production build
 # server (from server/)
 npm run dev         # API on :4300, restarts on change
 npm run build && npm start   # production; also serves the built Angular app
-npm test            # matching-engine tests (25, no database needed)
+npm test            # matching-engine tests (29, no database needed)
+npm run test:api    # API integration tests (16) — needs a local PostgreSQL;
+                    # creates and drops its own throwaway database
 npm run create-admin -- you@example.com "a strong password"
 ```
 
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push to `main` and every pull request:
-it builds the Angular client, type-checks the server, and runs the engine
-tests. All jobs are database-free, so CI goes green with no secrets configured.
+it builds the Angular client, type-checks the server, runs the engine tests,
+and runs the API integration tests against a throwaway PostgreSQL service. No
+secrets are needed, so CI goes green out of the box.
 
 ## The one switch that matters
 
