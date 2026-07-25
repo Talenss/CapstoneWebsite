@@ -40,8 +40,57 @@ export const ALLOWED_MIME = [
   'image/jpeg', 'image/png',
 ];
 
+/* ------------------------------------------------------------
+   SKILL ALIASES — mirrored 1:1 in server/src/lib/engine.ts.
+
+   Without this, matching is literal: a seeker who writes "JS" gets
+   zero credit for a posting asking for "JavaScript", and "MS Office"
+   never matches "Microsoft Office". That is a false negative created
+   purely by vocabulary, which is the exact unfairness this project
+   argues against — so equivalent terms are folded to one canonical
+   form before they are compared.
+
+   Keys and values are already normalized (lowercase, alphanumeric).
+   This only unifies genuine synonyms; it never guesses at related-
+   but-different skills, so nothing is credited that wasn't claimed.
+   ------------------------------------------------------------ */
+export const SKILL_ALIASES: Record<string, string> = {
+  // tech
+  js: 'javascript', ecmascript: 'javascript',
+  ts: 'typescript',
+  html: 'htmlcss', css: 'htmlcss', htmlandcss: 'htmlcss', html5: 'htmlcss', css3: 'htmlcss',
+  msoffice: 'microsoftoffice', microsoftofficesuite: 'microsoftoffice', officesuite: 'microsoftoffice',
+  msexcel: 'excel', microsoftexcel: 'excel',
+  msword: 'word', microsoftword: 'word',
+  mssql: 'sql', sqlserver: 'sql', mysqldatabase: 'mysql',
+  photoshop: 'adobephotoshop',
+  troubleshoot: 'troubleshooting', technicalsupport: 'troubleshooting', techsupport: 'troubleshooting',
+  networking: 'computernetworking', network: 'computernetworking',
+  // hospitality / service (the pilot partner's world)
+  customersupport: 'customerservice', clientservice: 'customerservice', guestservice: 'customerservice',
+  guestrelations: 'customerservice',
+  frontdesk: 'frontoffice', receptionist: 'frontoffice',
+  fnb: 'foodandbeverage', fb: 'foodandbeverage', foodbeverage: 'foodandbeverage',
+  foodsafety: 'foodsafety', servsafe: 'foodsafety',
+  pointofsale: 'pos', possystem: 'pos',
+  housekeeper: 'housekeeping', roomattendant: 'housekeeping',
+  // general
+  communicationskills: 'communication', oralcommunication: 'communication',
+  teamplayer: 'teamwork', collaboration: 'teamwork',
+  timemanagementskills: 'timemanagement',
+  problemsolvingskills: 'problemsolving',
+  leadershipskills: 'leadership',
+  english: 'englishproficiency', englishcommunication: 'englishproficiency',
+  socmed: 'socialmedia', socialmediamanagement: 'socialmedia',
+};
+
+/** Normalize a skill to its canonical comparable form: strip case and
+ *  punctuation, then fold known synonyms together. Used for BOTH sides
+ *  of every comparison, so a resume and a posting that mean the same
+ *  thing land on it. */
 export function normSkill(s: string): string {
-  return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const base = String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return SKILL_ALIASES[base] ?? base;
 }
 
 /** Mirrored 1:1 in server/src/lib/engine.ts (rmScore()). Rule-based
