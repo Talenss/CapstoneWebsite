@@ -145,4 +145,4 @@
 
 <app-footer />
 
-<div class="toast" [class.show]="!!toastMsg()">{{ toastMsg() }}</div>
+<div class="toast" [class.show]="!!toastMsg()" role="status" aria-live="polite">{{ toastMsg() }}</div>
