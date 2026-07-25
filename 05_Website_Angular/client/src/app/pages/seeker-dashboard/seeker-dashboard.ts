@@ -69,6 +69,28 @@ export class SeekerDashboard implements OnInit {
 
   activeResume = computed(() => this.resumes().find((r) => r.id === this.activeId()) ?? null);
 
+  withdrawingId = signal<string | null>(null);
+
+  /** Withdrawing is offered only while the outcome is still open — once a
+   *  person has decided (hired / not selected) there's nothing to withdraw. */
+  canWithdraw(a: Application): boolean {
+    return a.status !== 'withdrawn' && a.status !== 'hired' && a.status !== 'rejected';
+  }
+
+  async withdraw(a: Application): Promise<void> {
+    const title = a.posting?.title ?? 'this position';
+    if (!confirm(`Withdraw your application for ${title}?\n\nThe recruiter will see that you withdrew, and you can apply again later if the opening is still accepting applications.`)) return;
+    this.withdrawingId.set(a.id);
+    const res = await this.api.applications.withdraw(a.id);
+    this.withdrawingId.set(null);
+    if (!res.ok) {
+      this.showToast(res.error);
+      return;
+    }
+    this.applications.update((list) => list.map((x) => (x.id === a.id ? { ...x, status: res.application.status } : x)));
+    this.showToast(`Withdrawn from ${title}.`);
+  }
+
   /** Where this score COULD go if the missing skills were on the resume.
    *  Run through the same engine (not an estimate) with the missing
    *  skills added to a copy of the active resume, so the number shown is

@@ -18,6 +18,20 @@ export async function runMigrations(): Promise<void> {
   await exec('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check');
   await exec("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('seeker','recruiter','admin'))");
 
+  // applications.status gains 'withdrawn' — a seeker-only action, so the
+  // privacy notice's promise that consent can be withdrawn has a real
+  // mechanism per application (not just deleting the whole account).
+  // The status columns are TEXT + CHECK; widen the constraints in place.
+  await exec('ALTER TABLE applications DROP CONSTRAINT IF EXISTS applications_status_check');
+  await exec(`ALTER TABLE applications ADD CONSTRAINT applications_status_check
+    CHECK (status IN ('submitted','review','shortlisted','rejected','hired','withdrawn'))`);
+  await exec('ALTER TABLE application_status_history DROP CONSTRAINT IF EXISTS application_status_history_old_status_check');
+  await exec(`ALTER TABLE application_status_history ADD CONSTRAINT application_status_history_old_status_check
+    CHECK (old_status IN ('submitted','review','shortlisted','rejected','hired','withdrawn'))`);
+  await exec('ALTER TABLE application_status_history DROP CONSTRAINT IF EXISTS application_status_history_new_status_check');
+  await exec(`ALTER TABLE application_status_history ADD CONSTRAINT application_status_history_new_status_check
+    CHECK (new_status IN ('submitted','review','shortlisted','rejected','hired','withdrawn'))`);
+
   // resumes.design — the visual style of the printed resume (ATS-safe skins).
   // Section order still lives in template_type; this only skins the sheet.
   await exec("ALTER TABLE resumes ADD COLUMN IF NOT EXISTS design TEXT NOT NULL DEFAULT 'classic'");

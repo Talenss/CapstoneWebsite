@@ -55,7 +55,7 @@ export type Template = 'chronological' | 'functional' | 'combination';
  *  ATS-safe. */
 export type ResumeDesign = 'classic' | 'modern' | 'minimal' | 'executive' | 'banner' | 'split' | 'bar' | 'categorized';
 export type EmploymentType = 'full-time' | 'part-time' | 'contract' | 'internship';
-export type AppStatus = 'submitted' | 'review' | 'shortlisted' | 'rejected' | 'hired';
+export type AppStatus = 'submitted' | 'review' | 'shortlisted' | 'rejected' | 'hired' | 'withdrawn';
 export type Tier = 'strong' | 'possible' | 'related';
 
 export interface User {

@@ -176,6 +176,9 @@ router.post('/set-status', async (req, res) => {
       WHERE a.application_id = ?`, [aid],
   );
   if (!a || a.company_id !== u.company_id) return fail(res, 'Application not found.');
+  // A withdrawn application is the applicant's decision, not the recruiter's
+  // to reverse. It stays visible in the list, but its status is frozen.
+  if (a.status === 'withdrawn') return fail(res, 'This applicant withdrew their application.');
 
   await exec('UPDATE applications SET status = ? WHERE application_id = ?', [status, aid]);
   await exec(
@@ -197,6 +200,34 @@ router.post('/set-status', async (req, res) => {
       await notifyStatusChange(seeker.email, seeker.full_name, p.title, co?.company_name || 'the company', status);
     })().catch((e) => console.error('status notify failed:', e?.message || e));
   }
+
+  const updated = await queryOne<ApplicationRow>('SELECT * FROM applications WHERE application_id = ?', [aid]);
+  ok(res, { application: serializeApplication(updated!) });
+});
+
+/* The applicant's own exit. The privacy notice promises consent can be
+   withdrawn; before this, the only mechanism was deleting the whole
+   account. Withdrawing marks the application (rather than deleting it)
+   so the recruiter sees an honest "Withdrawn" instead of a row that
+   silently vanishes mid-process — and the audit trail stays intact. */
+router.post('/withdraw', async (req, res) => {
+  const u = await requireRole(req, res, 'seeker');
+  if (!u) return;
+  const aid = Number(req.body?.id);
+
+  const a = await queryOne<ApplicationRow>('SELECT * FROM applications WHERE application_id = ?', [aid]);
+  if (!a || a.seeker_id !== u.user_id) return fail(res, 'You can only withdraw your own applications.');
+  if (a.status === 'withdrawn') return fail(res, 'This application is already withdrawn.');
+  // Once a person has decided, there is nothing left to withdraw from.
+  if (a.status === 'hired' || a.status === 'rejected') {
+    return fail(res, 'This application already has a final decision, so it can no longer be withdrawn.');
+  }
+
+  await exec("UPDATE applications SET status = 'withdrawn' WHERE application_id = ?", [aid]);
+  await exec(
+    "INSERT INTO application_status_history (application_id, old_status, new_status, changed_by) VALUES (?,?,'withdrawn',?)",
+    [aid, a.status, u.user_id],
+  );
 
   const updated = await queryOne<ApplicationRow>('SELECT * FROM applications WHERE application_id = ?', [aid]);
   ok(res, { application: serializeApplication(updated!) });

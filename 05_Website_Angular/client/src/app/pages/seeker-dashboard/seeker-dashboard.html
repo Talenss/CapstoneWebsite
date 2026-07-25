@@ -130,7 +130,7 @@
     <div class="card flush" style="margin-top:18px">
       <div class="wrap-x">
         <table class="tbl" id="apps">
-          <thead><tr><th>Position</th><th>Company</th><th>Resume sent</th><th>Applied</th><th>Status</th></tr></thead>
+          <thead><tr><th>Position</th><th>Company</th><th>Resume sent</th><th>Applied</th><th>Status</th><th></th></tr></thead>
           <tbody>
             @for (a of applications(); track a.id) {
               <tr>
@@ -139,6 +139,13 @@
                 <td>{{ a.resumeTitle || '—' }}</td>
                 <td style="white-space:nowrap">{{ day(a.appliedAt) }}</td>
                 <td><span class="badge {{ statusBadge(a.status) }}">{{ STATUS_LABELS[a.status] }}</span></td>
+                <td style="text-align:right">
+                  @if (canWithdraw(a)) {
+                    <button class="btn ghost sm" type="button" [disabled]="withdrawingId() === a.id" (click)="withdraw(a)">
+                      @if (withdrawingId() === a.id) { <span class="spinner"></span> } @else { Withdraw }
+                    </button>
+                  }
+                </td>
               </tr>
             }
           </tbody>
