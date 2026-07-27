@@ -105,19 +105,29 @@ await step('SEEKER · my resumes + account load', async () => {
   await go('/my-resumes'); if ((await body()).length < 300) throw new Error('my-resumes empty');
   await go('/account');    if ((await body()).length < 300) throw new Error('account empty');
 });
-await step('SEEKER · applying records a score snapshot', async () => {
+await step('SEEKER · applying records the score at that moment', async () => {
   await go('/seeker-dashboard');
-  const apply = page.locator('button:has-text("Apply")').first();
-  if (await apply.count()) {
-    await apply.click(); await page.waitForTimeout(1400);
-  }
-  const snap = await page.evaluate(() => {
-    const db = JSON.parse(localStorage.getItem('rmph-demo-db') || '{}');
-    const apps = db.applications || [];
-    return apps.length ? apps[apps.length - 1].scoreSnapshot : 'no-applications';
-  });
-  if (snap === 'no-applications') return;              // nothing to apply to
-  if (typeof snap !== 'number') throw new Error('scoreSnapshot not recorded: ' + JSON.stringify(snap));
+  const before = await page.evaluate(() =>
+    (JSON.parse(localStorage.getItem('rmph_v3_db') || '{}').applications || []).length);
+
+  // "View & apply" only opens the modal — the real apply is inside it.
+  const open = page.locator('button:has-text("View & apply"):visible').first();
+  if (!(await open.count())) return;             // already applied to everything
+  await open.click();
+  await page.waitForTimeout(700);
+  const confirm = page.locator('button:has-text("Apply now"):visible').first();
+  if (!(await confirm.count())) throw new Error('the apply modal did not open');
+  await confirm.click();
+  await page.waitForTimeout(1600);
+
+  const apps = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('rmph_v3_db') || '{}').applications || []);
+  if (apps.length !== before + 1) throw new Error(`no application was created (${before} -> ${apps.length})`);
+  const created = apps[apps.length - 1];
+  if (typeof created.scoreSnapshot !== 'number')
+    throw new Error('scoreSnapshot not recorded: ' + JSON.stringify(created.scoreSnapshot));
+  if (created.scoreSnapshot < 0 || created.scoreSnapshot > 100)
+    throw new Error('implausible snapshot: ' + created.scoreSnapshot);
 });
 
 await step('RECRUITER · signs in', async () => {

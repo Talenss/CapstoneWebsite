@@ -94,6 +94,12 @@ export const COOKIE_SECURE = COOKIE_SECURE_RAW;
 // https://aistudio.google.com/apikey and put it in .env.
 export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+/* The API host. Overridable so the extraction route can be tested against a
+   local stand-in — the value of those tests is in OUR code (the multipart
+   handling, the MIME check, and the coercion of whatever the model returns),
+   none of which should require a paid key or a network round trip to verify. */
+export const GEMINI_BASE_URL =
+  process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com';
 
 // ---------- Email sending (verification codes, password reset) ----------
 // Any SMTP service works: Gmail with an "app password", Brevo's free tier,

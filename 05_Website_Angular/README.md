@@ -107,8 +107,24 @@ npm run build && npm start   # production; also serves the built Angular app
 npm test            # engine + file-type tests (30, no database needed)
 npm run test:api    # API integration tests (26) — needs a local PostgreSQL;
                     # creates and drops its own throwaway database
+npm run test:email  # email delivery (10) — real SMTP dialogue, local sink
+npm run test:analyze # AI extraction (10) — local stand-in for Gemini
+npm run test:all    # all 76 server tests
 npm run create-admin -- you@example.com "a strong password"
 ```
+
+## Browser walkthroughs
+
+Unit tests cannot catch a page that renders blank or a button that quietly
+stops saving. Two scripts drive the real thing:
+
+```bash
+cd client && npm start -- --port 4210      # then, in another terminal:
+node ../e2e/demo-walkthrough.mjs    # all three roles, every page, dark mode, 390px
+node ../e2e/upload-walkthrough.mjs  # the own-file upload, its limits, and the AI disclosure
+```
+
+Run the first one on the morning of a demo. If it reports 17/17, the demo works.
 
 ## Continuous integration
 

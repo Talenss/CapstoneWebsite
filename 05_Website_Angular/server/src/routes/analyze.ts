@@ -21,7 +21,7 @@ import { query } from '../db';
 import { ok, fail } from '../lib/http';
 import { requireRole } from '../lib/auth';
 import { EDU_RANK } from '../lib/engine';
-import { GEMINI_API_KEY, GEMINI_MODEL, MAX_UPLOAD } from '../config';
+import { GEMINI_API_KEY, GEMINI_MODEL, GEMINI_BASE_URL, MAX_UPLOAD } from '../config';
 
 const router = asyncRouter();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_UPLOAD } });
@@ -90,7 +90,7 @@ function sanitize(raw: any, fileName: string): AnalyzedResume {
 }
 
 async function callGemini(parts: any[]): Promise<any> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
+  const url = `${GEMINI_BASE_URL}/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 90_000);
   try {

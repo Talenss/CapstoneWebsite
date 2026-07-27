@@ -4,7 +4,7 @@
 import { asyncRouter } from '../lib/async-router';
 import { query, queryOne } from '../db';
 import { PostingRow } from '../types';
-import { ok, fail } from '../lib/http';
+import { ok, fail, idOf } from '../lib/http';
 import { requireUser, requireRole } from '../lib/auth';
 import { fetchResume, fetchPosting, serializeResume, serializePosting, recruiterMayReadResume } from '../lib/serializers';
 import { rmScore, cacheScore, getSettings } from '../lib/engine';
@@ -25,8 +25,8 @@ router.post('/settings', async (_req, res) => {
 router.post('/score', async (req, res) => {
   const u = await requireUser(req, res);
   if (!u) return;
-  const r = await fetchResume(Number(req.body?.resumeId));
-  const p = await fetchPosting(Number(req.body?.postingId));
+  const r = await fetchResume(idOf(req.body?.resumeId));
+  const p = await fetchPosting(idOf(req.body?.postingId));
   if (!r || !p) return fail(res, 'Not found.');
 
   // Same rule as resumes/get: a seeker may only score their own resume, and

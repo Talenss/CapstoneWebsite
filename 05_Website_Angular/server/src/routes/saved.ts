@@ -2,7 +2,7 @@
 import { asyncRouter } from '../lib/async-router';
 import { query, queryOne, exec } from '../db';
 import { PostingRow } from '../types';
-import { ok, fail } from '../lib/http';
+import { ok, fail, idOf } from '../lib/http';
 import { requireRole } from '../lib/auth';
 import { serializePosting } from '../lib/serializers';
 
@@ -21,8 +21,8 @@ router.post('/list', async (req, res) => {
 router.post('/toggle', async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
   if (!u) return;
-  const pid = Number(req.body?.postingId);
-  if (!Number.isInteger(pid) || pid <= 0) return fail(res, 'Opening not found.');
+  const pid = idOf(req.body?.postingId);
+  if (!pid) return fail(res, 'Opening not found.');
 
   // The posting must exist before we insert. saved_jobs has a foreign key to
   // job_postings, and ON CONFLICT DO NOTHING does not suppress a foreign-key

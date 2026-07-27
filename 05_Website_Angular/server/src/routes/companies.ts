@@ -2,7 +2,7 @@
 import { asyncRouter } from '../lib/async-router';
 import { query, queryOne, exec } from '../db';
 import { CompanyRow } from '../types';
-import { ok, fail } from '../lib/http';
+import { ok, fail, idOf } from '../lib/http';
 import { requireRole } from '../lib/auth';
 import { serializeCompany } from '../lib/serializers';
 
@@ -14,7 +14,7 @@ router.post('/list', async (_req, res) => {
 });
 
 router.post('/get', async (req, res) => {
-  const c = await queryOne<CompanyRow>('SELECT * FROM companies WHERE company_id = ?', [Number(req.body?.id)]);
+  const c = await queryOne<CompanyRow>('SELECT * FROM companies WHERE company_id = ?', [idOf(req.body?.id)]);
   if (!c) return fail(res, 'Company not found.');
   ok(res, { company: serializeCompany(c) });
 });
@@ -22,7 +22,7 @@ router.post('/get', async (req, res) => {
 router.post('/update', async (req, res) => {
   const u = await requireRole(req, res, 'recruiter');
   if (!u) return;
-  const id = Number(req.body?.id);
+  const id = idOf(req.body?.id);
   // A recruiter may only edit their OWN company.
   if (id !== u.company_id) return fail(res, 'You can only edit your own company profile.', 403);
 

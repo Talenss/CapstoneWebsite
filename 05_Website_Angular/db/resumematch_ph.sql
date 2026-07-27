@@ -330,10 +330,23 @@ INSERT INTO companies (company_id, company_name, industry, location, about, webs
      'https://www.roycehotelandcasino.com');
 
 -- ---------- users ----------
--- Two provisioned & verified recruiters (so department routing has
--- someone to route to) + four job seekers.
--- To create the research-team ADMIN account, run:
+-- Two provisioned & verified recruiters (so department routing has someone
+-- to route to), four job seekers, and the research-team admin.
+--
+-- ⚠  EVERY account below shares the same demo password (demo123). This file
+--    is DEMO DATA — before exposing the site to anyone real, delete these
+--    accounts or change their passwords. The admin one matters most: it
+--    approves recruiter access.
+--
+-- For a real deployment, create your own admin instead:
 --   cd server && npm run create-admin -- you@example.com "a strong password"
+--
+-- The admin IS seeded here because demo mode has one, the README documents
+-- one, and without it a fresh full-mode install cannot approve a single
+-- recruiter — which is the first thing the study needs to do.
+INSERT INTO users (user_id, role, full_name, email, password_hash, verified) VALUES
+ (7, 'admin', 'Research Team', 'admin@demo.ph', '$2y$12$99r3f85tx.CU49v3eRoKE.DXfHiRQ9YNUyCliZfGvjnARdtwGpZO6', 1);
+
 INSERT INTO users (user_id, role, full_name, email, password_hash, company_id, position_title, verified) VALUES
  (2, 'recruiter', 'Maria Santos', 'hr@demo.ph',    '$2y$12$99r3f85tx.CU49v3eRoKE.DXfHiRQ9YNUyCliZfGvjnARdtwGpZO6', 1, 'HR Officer', 1),
  (6, 'recruiter', 'Grace Lopez',  'grace@demo.ph', '$2y$12$99r3f85tx.CU49v3eRoKE.DXfHiRQ9YNUyCliZfGvjnARdtwGpZO6', 1, 'HR Officer — Front Office', 1);

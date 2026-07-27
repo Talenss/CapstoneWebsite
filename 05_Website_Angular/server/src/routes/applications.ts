@@ -2,7 +2,7 @@
 import { asyncRouter } from '../lib/async-router';
 import { query, queryOne, exec, withTransaction } from '../db';
 import { ApplicationRow } from '../types';
-import { ok, fail } from '../lib/http';
+import { ok, fail, idOf } from '../lib/http';
 import { requireRole, requireUser } from '../lib/auth';
 import { fetchResume, fetchPosting, postingExpired, serializeResume, serializePosting, serializeApplication } from '../lib/serializers';
 import { rmScore, cacheScore } from '../lib/engine';
@@ -57,8 +57,8 @@ async function routeNewApplication(
 router.post('/apply', async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
   if (!u) return;
-  const rid = Number(req.body?.resumeId);
-  const pid = Number(req.body?.postingId);
+  const rid = idOf(req.body?.resumeId);
+  const pid = idOf(req.body?.postingId);
 
   const r = await fetchResume(rid);
   if (!r || r.user_id !== u.user_id) return fail(res, 'Choose one of your own resumes.');
@@ -140,7 +140,7 @@ router.post('/mine', async (req, res) => {
 router.post('/ranked', async (req, res) => {
   const u = await requireRole(req, res, 'recruiter');
   if (!u) return;
-  const pid = Number(req.body?.postingId);
+  const pid = idOf(req.body?.postingId);
   const p = await fetchPosting(pid);
   if (!p || p.company_id !== u.company_id) return fail(res, 'Opening not found.');
 
@@ -197,7 +197,7 @@ router.post('/ranked', async (req, res) => {
 router.post('/set-status', async (req, res) => {
   const u = await requireRole(req, res, 'recruiter');
   if (!u) return;
-  const aid = Number(req.body?.id);
+  const aid = idOf(req.body?.id);
   const status = String(req.body?.status ?? '');
 
   if (!['submitted', 'review', 'shortlisted', 'rejected', 'hired'].includes(status)) return fail(res, 'Unknown status.');
@@ -250,7 +250,7 @@ router.post('/set-status', async (req, res) => {
 router.post('/withdraw', async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
   if (!u) return;
-  const aid = Number(req.body?.id);
+  const aid = idOf(req.body?.id);
 
   const a = await queryOne<ApplicationRow>('SELECT * FROM applications WHERE application_id = ?', [aid]);
   if (!a || a.seeker_id !== u.user_id) return fail(res, 'You can only withdraw your own applications.');
@@ -280,7 +280,7 @@ router.post('/withdraw', async (req, res) => {
 router.post('/invite', async (req, res) => {
   const u = await requireRole(req, res, 'recruiter');
   if (!u) return;
-  const aid = Number(req.body?.id);
+  const aid = idOf(req.body?.id);
   const message = String(req.body?.message ?? '').trim();
   if (message.length < 10) return fail(res, 'Write the applicant a short message first.');
   if (message.length > 2000) return fail(res, 'Keep the message under 2000 characters.');

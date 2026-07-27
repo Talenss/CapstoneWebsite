@@ -7,7 +7,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { query, queryOne, exec, withTransaction } from '../db';
 import { ResumeRow } from '../types';
-import { ok, fail } from '../lib/http';
+import { ok, fail, idOf } from '../lib/http';
 import { requireUser, requireRole } from '../lib/auth';
 import { fetchResume, serializeResume, recruiterMayReadResume } from '../lib/serializers';
 import { EDU_RANK, skillId } from '../lib/engine';
@@ -27,7 +27,7 @@ router.post('/list', async (req, res) => {
 router.post('/get', async (req, res) => {
   const u = await requireUser(req, res);
   if (!u) return;
-  const id = Number(req.body?.id);
+  const id = idOf(req.body?.id);
   const r = await fetchResume(id);
   if (!r) return fail(res, 'Resume not found.');
 
@@ -137,7 +137,7 @@ router.post('/save', async (req, res) => {
 router.post('/delete', async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
   if (!u) return;
-  const id = Number(req.body?.id);
+  const id = idOf(req.body?.id);
   const r = await fetchResume(id);
   if (!r || r.user_id !== u.user_id) return fail(res, 'Resume not found.');
 
@@ -167,7 +167,7 @@ router.post('/delete', async (req, res) => {
 router.post('/duplicate', async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
   if (!u) return;
-  const id = Number(req.body?.id);
+  const id = idOf(req.body?.id);
   const r = await fetchResume(id);
   if (!r || r.user_id !== u.user_id) return fail(res, 'Resume not found.');
 
@@ -210,7 +210,7 @@ router.post('/duplicate', async (req, res) => {
 router.post('/set-active', async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
   if (!u) return;
-  const id = Number(req.body?.id);
+  const id = idOf(req.body?.id);
   const r = await fetchResume(id);
   if (!r || r.user_id !== u.user_id) return fail(res, 'Resume not found.');
   await exec('UPDATE users SET active_resume_id = ? WHERE user_id = ?', [id, u.user_id]);
@@ -235,7 +235,7 @@ router.post('/upload', requireSeekerBeforeUpload, upload.single('file'), async (
     if (req.file) fs.unlink(req.file.path, () => {});
     return;
   }
-  const id = Number(req.body?.resume_id ?? 0);
+  const id = idOf(req.body?.resume_id);
   const r = await fetchResume(id);
   if (!r || r.user_id !== u.user_id) {
     if (req.file) fs.unlink(req.file.path, () => {});
@@ -281,7 +281,7 @@ router.post('/upload', requireSeekerBeforeUpload, upload.single('file'), async (
 router.post('/remove-file', async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
   if (!u) return;
-  const id = Number(req.body?.id);
+  const id = idOf(req.body?.id);
   const r = await fetchResume(id);
   if (!r || r.user_id !== u.user_id) return fail(res, 'Resume not found.');
 

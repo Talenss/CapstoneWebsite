@@ -2,7 +2,7 @@
 import { asyncRouter } from '../lib/async-router';
 import { query, queryOne, exec, withTransaction } from '../db';
 import { PostingRow, UserRow, ResumeRow } from '../types';
-import { ok, fail } from '../lib/http';
+import { ok, fail, idOf } from '../lib/http';
 import { requireRole, currentUser } from '../lib/auth';
 import { fetchPosting, fetchResume, serializePosting, serializeResume } from '../lib/serializers';
 import { EDU_RANK, skillId, rmScore, getSettings } from '../lib/engine';
@@ -85,7 +85,7 @@ router.post('/mine', async (req, res) => {
 });
 
 router.post('/get', async (req, res) => {
-  const p = await fetchPosting(Number(req.body?.id));
+  const p = await fetchPosting(idOf(req.body?.id));
   if (!p) return fail(res, 'That opening no longer exists.');
 
   // Public, so it must show only what /list already shows. Without this an
@@ -181,7 +181,7 @@ router.post('/save', async (req, res) => {
 router.post('/toggle', async (req, res) => {
   const u = await requireRole(req, res, 'recruiter');
   if (!u) return;
-  const id = Number(req.body?.id);
+  const id = idOf(req.body?.id);
   const p = await fetchPosting(id);
   if (!p || p.company_id !== u.company_id) return fail(res, 'Opening not found.');
 
