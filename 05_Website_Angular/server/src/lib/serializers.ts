@@ -149,6 +149,10 @@ export function serializeApplication(a: ApplicationRow): any {
     postingId: String(a.posting_id),
     status: a.status,
     appliedAt: ts(a.applied_at),
+    // The score as it stood when they applied. Exposed so the client model
+    // matches demo mode, and so the interface can show the applicant the
+    // same number they saw rather than one recomputed since.
+    scoreSnapshot: a.score_snapshot == null ? null : Number(a.score_snapshot),
   };
 }
 

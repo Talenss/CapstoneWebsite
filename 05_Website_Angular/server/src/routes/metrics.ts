@@ -46,11 +46,15 @@ router.post('/summary', async (req, res) => {
   // Tier of each application when it was submitted — including how often
   // people applied to "related" (below-threshold) roles anyway, which is
   // the study's no-rejection claim in action.
+  // Bound, not interpolated. These come from the match_settings table, and a
+  // non-numeric row there used to emit `>= NaN` — invalid SQL, which before
+  // the async-router fix took the whole process down.
   const tiers = await queryOne<any>(`SELECT
-    COUNT(*) FILTER (WHERE score_snapshot >= ${Number(T.strong)})                                              AS strong,
-    COUNT(*) FILTER (WHERE score_snapshot >= ${Number(T.related)} AND score_snapshot < ${Number(T.strong)})    AS possible,
-    COUNT(*) FILTER (WHERE score_snapshot < ${Number(T.related)})                                              AS related
-    FROM applications WHERE score_snapshot IS NOT NULL`);
+    COUNT(*) FILTER (WHERE score_snapshot >= ?)             AS strong,
+    COUNT(*) FILTER (WHERE score_snapshot >= ? AND score_snapshot < ?) AS possible,
+    COUNT(*) FILTER (WHERE score_snapshot < ?)              AS related
+    FROM applications WHERE score_snapshot IS NOT NULL`,
+  [T.strong, T.related, T.strong, T.related]);
 
   // Status funnel
   const funnelRows = await query<{ status: string; n: number }>(

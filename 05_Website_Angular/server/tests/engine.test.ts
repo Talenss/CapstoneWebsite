@@ -286,3 +286,49 @@ test('500 randomized cases: server rmScore core and client scoreLocal agree exac
     score(r, p); // asserts parity internally
   }
 });
+
+/* ============================================================
+   FILE TYPE SNIFFING
+   The multipart Content-Type is supplied by the client, so it is a
+   claim rather than a fact. These prove we check the actual bytes.
+   ============================================================ */
+test('a file is identified by its bytes, not its declared type', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const { sniffFileType, typeMatches } = require('../src/lib/file-type');
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rmph-sniff-'));
+  const write = (name: string, bytes: number[] | string) => {
+    const p = path.join(dir, name);
+    fs.writeFileSync(p, Buffer.from(typeof bytes === 'string' ? bytes : bytes));
+    return p;
+  };
+
+  try {
+    // real signatures are recognised
+    assert.equal(sniffFileType(write('a.pdf', '%PDF-1.7\n...')), 'pdf');
+    assert.equal(sniffFileType(write('b.png', [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])), 'png');
+    assert.equal(sniffFileType(write('c.jpg', [0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0])), 'jpg');
+    assert.equal(sniffFileType(write('d.doc', [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])), 'doc');
+    assert.equal(sniffFileType(write('e.docx', [0x50, 0x4b, 0x03, 0x04, 0, 0, 0, 0])), 'docx');
+
+    // a text file claiming to be a PDF is not a PDF
+    assert.equal(sniffFileType(write('f.pdf', 'this is not a pdf at all')), null);
+    // nor is an executable
+    assert.equal(sniffFileType(write('g.pdf', [0x4d, 0x5a, 0x90, 0x00])), null);
+    // an empty file has nothing to identify
+    assert.equal(sniffFileType(write('h.pdf', '')), null);
+    // a missing file must not throw
+    assert.equal(sniffFileType(path.join(dir, 'does-not-exist.pdf')), null);
+
+    // .doc and .docx are interchangeable; nothing else is
+    assert.equal(typeMatches('docx', 'doc'), true);
+    assert.equal(typeMatches('doc', 'docx'), true);
+    assert.equal(typeMatches('pdf', 'pdf'), true);
+    assert.equal(typeMatches('png', 'pdf'), false, 'a PNG must never pass as a PDF');
+    assert.equal(typeMatches('docx', 'pdf'), false);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

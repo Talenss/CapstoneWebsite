@@ -49,9 +49,15 @@ export const STATUS_LABELS: Record<AppStatus, string> = {
   submitted: 'Submitted', review: 'Under review', shortlisted: 'Shortlisted', rejected: 'Not selected', hired: 'Hired',
   withdrawn: 'Withdrawn',
 };
-/** The statuses a RECRUITER may set. 'withdrawn' is deliberately absent:
- *  only the applicant can withdraw their own application. */
+/** The statuses a RECRUITER may set, in pipeline order. 'withdrawn' is
+ *  deliberately absent: only the applicant can withdraw their own
+ *  application, so it is never an option in a recruiter's status picker. */
 export const STATUS_ORDER: AppStatus[] = ['submitted', 'review', 'shortlisted', 'rejected', 'hired'];
+
+/* Every status a row can actually hold. Counts and breakdowns must use this
+   one — building them from STATUS_ORDER left 'withdrawn' out entirely, so a
+   withdrawn application simply vanished from the recruiter's totals. */
+export const ALL_STATUSES: AppStatus[] = [...STATUS_ORDER, 'withdrawn'];
 
 export const EDU_RANK: Record<EduLevel, number> = {
   none: 0, highschool: 1, vocational: 2, associate: 3, bachelor: 4, master: 5,

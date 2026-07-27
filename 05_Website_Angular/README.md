@@ -104,8 +104,8 @@ npm run build:demo  # browser-only build (demo mode, no server needed)
 # server (from server/)
 npm run dev         # API on :4300, restarts on change
 npm run build && npm start   # production; also serves the built Angular app
-npm test            # matching-engine tests (29, no database needed)
-npm run test:api    # API integration tests (22) — needs a local PostgreSQL;
+npm test            # engine + file-type tests (30, no database needed)
+npm run test:api    # API integration tests (26) — needs a local PostgreSQL;
                     # creates and drops its own throwaway database
 npm run create-admin -- you@example.com "a strong password"
 ```

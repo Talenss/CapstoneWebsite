@@ -5,7 +5,7 @@
    ============================================================ */
 import { ApiAdapter } from './adapter';
 import { AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, User } from './models';
-import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, THRESHOLDS } from './engine';
+import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME } from './engine';
 
 const KEY = 'rmph_v3_db';
 const SESSION = 'rmph_v3_session';
@@ -242,7 +242,11 @@ export class DemoAdapter implements ApiAdapter {
         return Promise.resolve({ ok: false, exists: true, error: 'An account already uses this email. Log in instead.' } as any);
       const err = consumeCode(db, e, 'verify', code);
       if (err) return apiFail(err);
-      const user: DemoUser = { id: uid(), role: 'seeker', name: String(name).trim(), email: String(email).trim(), password, activeResumeId: null, createdAt: Date.now() };
+      const nm = String(name).trim();
+      const em = String(email).trim().toLowerCase();
+      if (nm.length < 2) return apiFail('Enter your full name.');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return apiFail('Enter a valid email address.');
+      const user: DemoUser = { id: uid(), role: 'seeker', name: nm, email: em, password, activeResumeId: null, createdAt: Date.now() };
       db.users.push(user); persist(db); setSession(user.id);
       return apiOk({ user: pubUser(user)! });
     },
@@ -376,7 +380,22 @@ export class DemoAdapter implements ApiAdapter {
     },
     save: (resume: Resume) => {
       const db = load(); const me = meRow(db);
-      if (!me) return apiFail('You are not signed in.');
+      // Seeker-only and validated, mirroring routes/resumes.ts. A recruiter
+      // could build a resume here but gets a 403 from the server, and an
+      // invalid design persisted in demo while the server coerced it.
+      if (!me || me.role !== 'seeker') return apiFail('You are not signed in.');
+      resume = {
+        ...resume,
+        title: (String(resume.title ?? '').trim() || 'Untitled resume').slice(0, 120),
+        template: ['chronological', 'functional', 'combination'].includes(resume.template as string)
+          ? resume.template : 'chronological',
+        design: ['classic', 'modern', 'minimal', 'executive', 'banner', 'split', 'bar', 'categorized']
+          .includes(resume.design as string) ? resume.design : 'classic',
+        education: (Array.isArray(resume.education) ? resume.education : []).slice(0, 20),
+        experience: (Array.isArray(resume.experience) ? resume.experience : []).slice(0, 30),
+        certifications: (Array.isArray(resume.certifications) ? resume.certifications : []).slice(0, 30),
+        skills: (Array.isArray(resume.skills) ? resume.skills : []).slice(0, 100),
+      } as Resume;
       const i = db.resumes.findIndex((r) => r.id === resume.id);
       try {
         if (i >= 0) {
@@ -429,10 +448,10 @@ export class DemoAdapter implements ApiAdapter {
       const db = load(); const me = meRow(db);
       const r = db.resumes.find((x) => x.id === resumeId);
       if (!me || !r || r.userId !== me.id) return apiFail('Resume not found.');
-      if (file.size > 2 * 1024 * 1024) return apiFail('That file is larger than 2 MB. Save it at a smaller size and try again.');
-      const allowed = ['application/pdf', 'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png'];
-      if (!allowed.includes(file.type)) return apiFail('Upload a PDF, Word document, or image (JPG or PNG).');
+      // Shared constants, not re-declared literals — the duplicates here
+      // meant changing the rule in engine.ts silently left demo mode behind.
+      if (file.size > MAX_UPLOAD) return apiFail('That file is larger than 2 MB. Save it at a smaller size and try again.');
+      if (!ALLOWED_MIME.includes(file.type)) return apiFail('Upload a PDF, Word document, or image (JPG or PNG).');
       return new Promise((resolve) => {
         const fr = new FileReader();
         fr.onload = () => {
@@ -493,6 +512,28 @@ export class DemoAdapter implements ApiAdapter {
     save: (posting: Partial<Posting>) => {
       const db = load(); const me = meRow(db);
       if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
+
+      // Mirrors routes/postings.ts. Without these the demo accepted an empty
+      // posting that the server rejects, and a negative minExperienceMonths
+      // made reqMonths <= 0, which scores EVERYONE 100% on experience.
+      const title = String(posting.title ?? '').trim();
+      const dept = String(posting.department ?? '').trim();
+      const desc = String(posting.description ?? '').trim();
+      const skills = (Array.isArray(posting.skills) ? posting.skills : [])
+        .map((x: any) => String(x).trim()).filter(Boolean);
+      if (title.length < 2) return apiFail('Give the opening a title.');
+      if (dept === '') return apiFail('Which department is this for?');
+      if (desc.length < 10) return apiFail('Describe the role in a sentence or two.');
+      if (!skills.length) return apiFail("Add at least one required skill — it's half the score.");
+      posting = {
+        ...posting, title, department: dept, description: desc, skills,
+        educationLevel: (EDU_RANK as any)[posting.educationLevel as string] !== undefined
+          ? posting.educationLevel : 'bachelor',
+        employmentType: ['full-time', 'part-time', 'contract', 'internship']
+          .includes(posting.employmentType as string) ? posting.employmentType : 'full-time',
+        minExperienceMonths: Math.max(0, Number(posting.minExperienceMonths) || 0),
+      };
+
       if (posting.deadline) {
         const d = String(posting.deadline).slice(0, 10);
         if (d < new Date().toISOString().slice(0, 10)) return apiFail("The application deadline can't be in the past.");
@@ -505,7 +546,9 @@ export class DemoAdapter implements ApiAdapter {
         if (db.postings[i].companyId !== me.companyId) return apiFail("You can only edit your own company's openings.");
         db.postings[i] = { ...db.postings[i], ...posting } as Posting;
       } else {
-        posting = { ...posting, id: uid(), companyId: me.companyId!, status: posting.status || 'open', createdAt: Date.now() };
+        // Always 'open', like the server — a caller must not create a
+        // posting that is already closed.
+        posting = { ...posting, id: uid(), companyId: me.companyId!, status: 'open', createdAt: Date.now() };
         db.postings.push(posting as Posting);
       }
       persist(db);
@@ -531,7 +574,16 @@ export class DemoAdapter implements ApiAdapter {
       if (isExpired(p)) return apiFail('The application deadline for this opening has passed.');
       if (db.applications.some((a) => a.seekerId === me.id && a.postingId === postingId))
         return apiFail('You already applied to this position.');
-      const app: Application = { id: uid(), seekerId: me.id, resumeId, postingId, status: 'submitted', appliedAt: Date.now() };
+      // Record the score AS IT WAS at the moment of applying, like the
+      // server's score_snapshot. Without it, demo metrics recomputed every
+      // historical score from the CURRENT resume — so a seeker editing their
+      // resume silently rewrote the study's own past data. `r` and `p` are
+      // the resume and posting already validated above.
+      const app: Application = {
+        id: uid(), seekerId: me.id, resumeId, postingId, status: 'submitted',
+        appliedAt: Date.now(),
+        scoreSnapshot: r && p ? scoreLocal(r, p).score : null,
+      };
       db.applications.push(app); persist(db);
       return apiOk({ application: app });
     },
@@ -598,7 +650,11 @@ export class DemoAdapter implements ApiAdapter {
     invite: (applicationId: string, message: string) => {
       const db = load(); const me = meRow(db);
       if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
-      if (String(message).trim().length < 10) return apiFail('Write the applicant a short message first.');
+      const msg = String(message).trim();
+      if (msg.length < 10) return apiFail('Write the applicant a short message first.');
+      // The server caps this too; without the cap a 5000-character message
+      // "sent" in demo and failed in api mode.
+      if (msg.length > 2000) return apiFail('That message is too long — keep it under 2000 characters.');
       const a = db.applications.find((x) => x.id === applicationId);
       const p = a && db.postings.find((x) => x.id === a.postingId);
       if (!a || !p || p.companyId !== me.companyId) return apiFail('Application not found.');
@@ -643,6 +699,10 @@ export class DemoAdapter implements ApiAdapter {
       if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
       const T = THRESHOLDS;
       const scored = db.applications.map((a) => {
+        // Prefer the snapshot taken when they applied. Older demo databases
+        // predate it, so fall back to a live score rather than dropping the
+        // row entirely — the number is then approximate, not wrong.
+        if (typeof a.scoreSnapshot === 'number') return { a, score: a.scoreSnapshot };
         const r = db.resumes.find((x) => x.id === a.resumeId);
         const p = db.postings.find((x) => x.id === a.postingId);
         return r && p ? { a, score: scoreLocal(r, p).score } : null;
@@ -693,15 +753,25 @@ export class DemoAdapter implements ApiAdapter {
 
   match = {
     score: (resumeId: string, postingId: string) => {
-      const db = load();
+      const db = load(); const me = meRow(db);
+      // Mirrors routes/match.ts. This had no check at all, so a signed-out
+      // visitor could score any resume against any posting.
+      if (!me) return apiFail('You are not signed in.');
       const r = db.resumes.find((x) => x.id === resumeId), p = db.postings.find((x) => x.id === postingId);
       if (!r || !p) return apiFail('Not found.');
+      if (me.role === 'recruiter') {
+        const submitted = db.applications.some((a) => a.resumeId === resumeId
+          && db.postings.find((x) => x.id === a.postingId)?.companyId === me.companyId);
+        if (!submitted) return apiFail('You can only score resumes submitted to your company.');
+      } else if (r.userId !== me.id) {
+        return apiFail('You can only score your own resumes.');
+      }
       return apiOk(scoreLocal(r, p) as unknown as MatchResult);
     },
     // Three tiers. The third exists so a low score is a redirection, not a rejection.
     recommendations: () => {
       const db = load(); const me = meRow(db);
-      if (!me) return apiFail('You are not signed in.');
+      if (!me || me.role !== 'seeker') return apiFail('You are not signed in.');
       const resume = db.resumes.find((r) => r.id === me.activeResumeId) || db.resumes.find((r) => r.userId === me.id);
       if (!resume) return apiOk({ resume: null, strong: [], possible: [], related: [] });
       const applied = db.applications.filter((a) => a.seekerId === me.id).map((a) => a.postingId);
@@ -728,7 +798,7 @@ export class DemoAdapter implements ApiAdapter {
       const mine = db.postings.filter((p) => p.companyId === me.companyId);
       const ids = mine.map((p) => p.id);
       const apps = db.applications.filter((a) => ids.indexOf(a.postingId) !== -1);
-      const byStatus: any = {}; STATUS_ORDER.forEach((s) => byStatus[s] = apps.filter((a) => a.status === s).length);
+      const byStatus: any = {}; ALL_STATUSES.forEach((s) => byStatus[s] = apps.filter((a) => a.status === s).length);
       return apiOk({
         stats: {
           openPostings: mine.filter((p) => p.status === 'open').length,

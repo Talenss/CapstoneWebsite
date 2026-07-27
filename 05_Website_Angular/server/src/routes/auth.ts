@@ -20,6 +20,15 @@ const router = asyncRouter();
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Promisified session.regenerate. Rotating the session id on every
+ *  privilege change is what stops session fixation, so a failure here has to
+ *  reject rather than be swallowed by a callback nobody awaits. */
+function regenerateSession(req: import('express').Request): Promise<void> {
+  return new Promise((resolve, reject) => {
+    req.session.regenerate((err) => (err ? reject(err) : resolve()));
+  });
+}
+
 // Compared against when the email has no account, so "user not found" and
 // "wrong password" take the same time — no timing-based email discovery.
 const DUMMY_HASH = bcrypt.hashSync('rmph-timing-equalizer', 10);
@@ -107,12 +116,19 @@ router.post('/login', loginLimiter, async (req, res) => {
   if (u.role === 'recruiter' && !u.verified)
     return fail(res, "This recruiter account isn't active yet. Accounts are activated by the research team together with the partner company's HR.", 403);
 
-  req.session.regenerate(async (err) => {
-    if (err) return fail(res, 'Login failed. Try again.', 500);
-    req.session.uid = u.user_id;
+  // regenerate() takes a callback and ignores whatever it returns, so an
+  // async callback's rejection escapes the request entirely: the caller
+  // hangs with no response. Await the regeneration first, then do the work
+  // in the handler where asyncRouter can forward any failure.
+  await regenerateSession(req);
+  req.session.uid = u.user_id;
+  // A failed last-login stamp must not cost the user their session.
+  try {
     await exec('UPDATE users SET last_login_at = NOW() WHERE user_id = ?', [u.user_id]);
-    ok(res, { user: serializeUser(u) });
-  });
+  } catch (e: any) {
+    console.error('last_login_at update failed (login still succeeded):', e?.message || e);
+  }
+  ok(res, { user: serializeUser(u) });
 });
 
 router.post('/register', authWriteLimiter, async (req, res) => {
@@ -140,12 +156,10 @@ router.post('/register', authWriteLimiter, async (req, res) => {
     ['seeker', name, email, hash],
   );
 
-  req.session.regenerate(async (err) => {
-    if (err) return fail(res, 'Registration failed. Try again.', 500);
-    req.session.uid = insertId;
-    const u = await queryOne<UserRow>('SELECT * FROM users WHERE user_id = ?', [insertId]);
-    ok(res, { user: serializeUser(u) });
-  });
+  await regenerateSession(req);
+  req.session.uid = insertId;
+  const u = await queryOne<UserRow>('SELECT * FROM users WHERE user_id = ?', [insertId]);
+  ok(res, { user: serializeUser(u) });
 });
 
 // Recruiters do NOT self-register. A request lands here and a human

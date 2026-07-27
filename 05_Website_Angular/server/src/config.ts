@@ -42,9 +42,41 @@ export const ALLOWED_MIME: Record<string, string> = {
 // The Angular dev server origin, so cookie-based sessions work cross-origin in dev.
 export const ALLOW_ORIGIN = process.env.ALLOW_ORIGIN || 'http://localhost:4200';
 
-export const DEBUG = (process.env.DEBUG || 'true') === 'true';
+/* NODE_ENV=production is the signal that this is a real deployment rather
+   than someone's laptop. It flips the two defaults that are convenient in
+   development and dangerous in the open. */
+const IS_PROD = process.env.NODE_ENV === 'production';
 
-export const SESSION_SECRET = process.env.SESSION_SECRET || 'rmph-dev-secret-change-in-production';
+/* DEBUG echoes raw error text to clients AND returns live email
+   verification codes in API responses — with it on, anyone could register
+   or take over any address without access to the inbox. It must never
+   default to on in production. */
+export const DEBUG = (process.env.DEBUG || (IS_PROD ? 'false' : 'true')) === 'true';
+
+const DEV_SESSION_SECRET = 'rmph-dev-secret-change-in-production';
+export const SESSION_SECRET = process.env.SESSION_SECRET || DEV_SESSION_SECRET;
+
+const COOKIE_SECURE_RAW = process.env.COOKIE_SECURE === 'true';
+
+/* Deployments forget .env files. Refusing to start is the only thing loud
+   enough to be noticed — a warning in a log nobody reads is not. Signed
+   sessions with a secret published in a public repository are forgeable, so
+   this is not a configuration nicety. */
+if (IS_PROD) {
+  const problems: string[] = [];
+  if (SESSION_SECRET === DEV_SESSION_SECRET)
+    problems.push('SESSION_SECRET is still the development default — session cookies would be forgeable. Set it to a long random string.');
+  if (DEBUG)
+    problems.push('DEBUG is on in production — it returns email verification codes in API responses. Set DEBUG=false.');
+  if (!COOKIE_SECURE_RAW)
+    problems.push('COOKIE_SECURE is not set — the session cookie would be sent over plain HTTP. Set COOKIE_SECURE=true when serving over HTTPS.');
+  if (problems.length) {
+    console.error('\nRefusing to start in production with an unsafe configuration:\n');
+    for (const p of problems) console.error('  · ' + p);
+    console.error('\nSee SETUP.md, "Going live checklist".\n');
+    process.exit(1);
+  }
+}
 
 // ---------- production hardening (see SETUP.md, "Going live checklist") ----------
 // Behind an HTTPS reverse proxy set BOTH to true: TRUST_PROXY makes
@@ -52,7 +84,7 @@ export const SESSION_SECRET = process.env.SESSION_SECRET || 'rmph-dev-secret-cha
 // rate limiting, https detection), COOKIE_SECURE marks the session cookie
 // HTTPS-only. Leave false for plain-http local development.
 export const TRUST_PROXY = (process.env.TRUST_PROXY || 'false') === 'true';
-export const COOKIE_SECURE = (process.env.COOKIE_SECURE || 'false') === 'true';
+export const COOKIE_SECURE = COOKIE_SECURE_RAW;
 
 // ---------- AI resume analysis (optional) ----------
 // The "Upload & analyze" feature reads an uploaded resume with Google's

@@ -1,6 +1,6 @@
 /* ResumeMatch PH — routes/applications.ts : apply · mine · ranked · set-status */
 import { asyncRouter } from '../lib/async-router';
-import { query, queryOne, exec } from '../db';
+import { query, queryOne, exec, withTransaction } from '../db';
 import { ApplicationRow } from '../types';
 import { ok, fail } from '../lib/http';
 import { requireRole, requireUser } from '../lib/auth';
@@ -74,14 +74,28 @@ router.post('/apply', async (req, res) => {
   // record the score AS IT WAS at the moment of applying
   const s = await rmScore(await serializeResume(r), await serializePosting(p, false));
 
-  const { insertId } = await exec(
-    "INSERT INTO applications (seeker_id, resume_id, posting_id, status, score_snapshot) VALUES (?,?,?,'submitted',?) RETURNING application_id",
-    [u.user_id, rid, pid, s.score],
-  );
-  await exec(
-    "INSERT INTO application_status_history (application_id, old_status, new_status, changed_by) VALUES (?,NULL,'submitted',?)",
-    [insertId, u.user_id],
-  );
+  // One unit of work. The schema's promise — that every status a row has
+  // ever held is attributable to a named human — cannot survive an
+  // application row existing without its opening history entry.
+  let insertId: number;
+  try {
+    insertId = await withTransaction(async (tx) => {
+      const ins = await tx.exec(
+        "INSERT INTO applications (seeker_id, resume_id, posting_id, status, score_snapshot) VALUES (?,?,?,'submitted',?) RETURNING application_id",
+        [u.user_id, rid, pid, s.score],
+      );
+      await tx.exec(
+        "INSERT INTO application_status_history (application_id, old_status, new_status, changed_by) VALUES (?,NULL,'submitted',?)",
+        [ins.insertId, u.user_id],
+      );
+      return ins.insertId;
+    });
+  } catch (e: any) {
+    // The UNIQUE (seeker_id, posting_id) constraint is the real guard against
+    // two simultaneous applies; the check above only catches the common case.
+    if (String(e?.code) === '23505') return fail(res, 'You already applied to this position.');
+    throw e;
+  }
   await cacheScore(rid, pid, s);
 
   // Route the "new applicant" email by department. If an HR person owns this
@@ -142,7 +156,26 @@ router.post('/ranked', async (req, res) => {
   const out: any[] = [];
   for (const a of rows) {
     const r = await fetchResume(a.resume_id);
-    if (!r) continue;
+
+    // An applicant whose resume row has gone must still appear. Skipping the
+    // iteration used to drop them from the list silently, which contradicts
+    // the promise above that everyone who applied is returned — the recruiter
+    // would never know an application had been received at all. Show the row
+    // with the score recorded when they applied, and say the resume is gone.
+    if (!r) {
+      out.push({
+        score: a.score_snapshot ?? 0,
+        matchedSkills: [], missingSkills: [], totalSkills: 0,
+        eduMeets: false, expMeets: false, seekerMonths: 0,
+        tier: 'related',
+        application: serializeApplication(a),
+        resume: null,
+        resumeUnavailable: true,
+        seeker: { id: String(a.s_id), name: a.s_name, email: a.s_email, role: 'seeker' },
+      });
+      continue;
+    }
+
     const resume = await serializeResume(r);
     const s = await rmScore(resume, posting);
     await cacheScore(a.resume_id, pid, s);
@@ -180,11 +213,15 @@ router.post('/set-status', async (req, res) => {
   // to reverse. It stays visible in the list, but its status is frozen.
   if (a.status === 'withdrawn') return fail(res, 'This applicant withdrew their application.');
 
-  await exec('UPDATE applications SET status = ? WHERE application_id = ?', [status, aid]);
-  await exec(
-    'INSERT INTO application_status_history (application_id, old_status, new_status, changed_by) VALUES (?,?,?,?)',
-    [aid, a.status, status, u.user_id],
-  );
+  // Atomic for the same reason as apply: a status change that leaves no
+  // history row would be a decision with nobody's name on it.
+  await withTransaction(async (tx) => {
+    await tx.exec('UPDATE applications SET status = ? WHERE application_id = ?', [status, aid]);
+    await tx.exec(
+      'INSERT INTO application_status_history (application_id, old_status, new_status, changed_by) VALUES (?,?,?,?)',
+      [aid, a.status, status, u.user_id],
+    );
+  });
 
   // Tell the seeker — unless they opted out, nothing actually changed, or
   // the "change" is back to submitted (their own starting state).
@@ -223,11 +260,13 @@ router.post('/withdraw', async (req, res) => {
     return fail(res, 'This application already has a final decision, so it can no longer be withdrawn.');
   }
 
-  await exec("UPDATE applications SET status = 'withdrawn' WHERE application_id = ?", [aid]);
-  await exec(
-    "INSERT INTO application_status_history (application_id, old_status, new_status, changed_by) VALUES (?,?,'withdrawn',?)",
-    [aid, a.status, u.user_id],
-  );
+  await withTransaction(async (tx) => {
+    await tx.exec("UPDATE applications SET status = 'withdrawn' WHERE application_id = ?", [aid]);
+    await tx.exec(
+      "INSERT INTO application_status_history (application_id, old_status, new_status, changed_by) VALUES (?,?,'withdrawn',?)",
+      [aid, a.status, u.user_id],
+    );
+  });
 
   const updated = await queryOne<ApplicationRow>('SELECT * FROM applications WHERE application_id = ?', [aid]);
   ok(res, { application: serializeApplication(updated!) });

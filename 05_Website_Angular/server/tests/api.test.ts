@@ -423,3 +423,65 @@ test('recommendations never include a posting that can no longer be applied to',
     }
   }
 });
+
+// ---------- second audit pass ----------
+
+test('a closed or expired posting is not readable by the public', async () => {
+  // postings/get had no auth and no status filter, so anyone could walk
+  // posting ids and read every company's closed openings, department and all.
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const mine = (await hr('postings/mine')).body.postings;
+  const target = mine[0];
+  await hr('postings/toggle', { id: target.id }); // close it
+
+  const anon = client();
+  const { body } = await anon('postings/get', { id: target.id });
+  assert.equal(body.ok, false, 'a closed posting must not be public');
+
+  // the owning recruiter can still read it
+  const owner = await hr('postings/get', { id: target.id });
+  assert.equal(owner.body.ok, true, 'the owning recruiter must still see their closed posting');
+
+  await hr('postings/toggle', { id: target.id }); // restore
+});
+
+test('company update is a real partial update, and is length-clamped', async () => {
+  // This overwrote all five columns with '' for anything omitted, so a client
+  // sending only { name } silently blanked industry, location, about and site.
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const me = (await hr('auth/me')).body.user;
+  const before = (await hr('companies/get', { id: me.companyId })).body.company;
+
+  const r = await hr('companies/update', { id: me.companyId, name: 'x'.repeat(400) });
+  assert.equal(r.body.ok, true, 'an over-long name must be clamped, not fatal');
+
+  const after = (await hr('companies/get', { id: me.companyId })).body.company;
+  assert.ok(after.name.length <= 160, 'name must be clamped to the column width');
+  assert.equal(after.industry, before.industry, 'an omitted field must be left alone');
+  assert.equal(after.location, before.location, 'an omitted field must be left alone');
+
+  await hr('companies/update', { id: me.companyId, name: before.name });
+});
+
+test('an application carries the score it had when it was submitted', async () => {
+  // Demo mode recomputed historical scores from the CURRENT resume, so a
+  // seeker editing their resume rewrote the study's own past data. Both modes
+  // must expose the frozen snapshot instead.
+  const api = client();
+  await api('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const mine = (await api('applications/mine')).body.applications;
+  if (mine.length) {
+    assert.ok('scoreSnapshot' in mine[0], 'applications must expose scoreSnapshot');
+    if (mine[0].scoreSnapshot !== null) {
+      assert.equal(typeof mine[0].scoreSnapshot, 'number');
+      assert.ok(mine[0].scoreSnapshot >= 0 && mine[0].scoreSnapshot <= 100);
+    }
+  }
+});
+
+test('the server survives every malformed request in this suite', async () => {
+  const health = await fetch(`http://127.0.0.1:${PORT}/api/health`);
+  assert.equal(health.status, 200, 'the process must still be serving');
+});

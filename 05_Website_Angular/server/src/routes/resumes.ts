@@ -12,6 +12,7 @@ import { requireUser, requireRole } from '../lib/auth';
 import { fetchResume, serializeResume, recruiterMayReadResume } from '../lib/serializers';
 import { EDU_RANK, skillId } from '../lib/engine';
 import { UPLOAD_DIR, MAX_UPLOAD, ALLOWED_MIME } from '../config';
+import { sniffFileType, typeMatches } from '../lib/file-type';
 
 const router = asyncRouter();
 const upload = multer({ dest: UPLOAD_DIR, limits: { fileSize: MAX_UPLOAD } });
@@ -218,7 +219,17 @@ router.post('/set-active', async (req, res) => {
 
 /* ---- the dual-resume model: the applicant's OWN file.
         Stored outside the web root. Never parsed. Never scored. ---- */
-router.post('/upload', upload.single('file'), async (req, res) => {
+/* requireSeekerBeforeUpload runs BEFORE multer, so an anonymous caller is
+   turned away without ever writing a 2 MB temp file to disk. Multer used to
+   run first, which let an unauthenticated script churn the upload directory
+   for free on every request. */
+const requireSeekerBeforeUpload: import('express').RequestHandler = async (req, res, next) => {
+  const u = await requireRole(req, res, 'seeker');
+  if (!u) return; // requireRole has already answered 401/403
+  next();
+};
+
+router.post('/upload', requireSeekerBeforeUpload, upload.single('file'), async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
   if (!u) {
     if (req.file) fs.unlink(req.file.path, () => {});
@@ -238,6 +249,15 @@ router.post('/upload', upload.single('file'), async (req, res) => {
   if (!ext) {
     fs.unlink(f.path, () => {});
     return fail(res, 'Upload a PDF, Word document, or image (JPG or PNG).');
+  }
+
+  // The declared Content-Type is the CLIENT's claim. Confirm it against the
+  // file's actual leading bytes, so an arbitrary blob cannot be stored as a
+  // .pdf and served back later under a PDF content type.
+  const actual = sniffFileType(f.path);
+  if (!actual || !typeMatches(actual, ext)) {
+    fs.unlink(f.path, () => {});
+    return fail(res, "That file isn't a readable PDF, Word document, or image. Try saving it again and re-uploading.");
   }
 
   // random name: the original filename never touches the filesystem
