@@ -60,6 +60,9 @@ export interface ApiAdapter {
     mine(): Promise<ApiResult<{ applications: Application[] }>>;
     ranked(postingId: string): Promise<ApiResult<{ posting: Posting; rows: RankedRow[] }>>;
     setStatus(applicationId: string, status: string): Promise<ApiResult<{ application: Application }>>;
+    /** The applicant withdraws their own application. Seeker-only, and
+     *  refused once a final decision (hired/not selected) has been made. */
+    withdraw(applicationId: string): Promise<ApiResult<{ application: Application }>>;
     /** Recruiter's personal message to an applicant (interview invite).
      *  Emailed with reply-to the recruiter; simulated in demo mode. */
     invite(applicationId: string, message: string): Promise<ApiResult<{ sent?: boolean; simulated?: boolean }>>;

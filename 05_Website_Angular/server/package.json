@@ -10,7 +10,8 @@
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "test": "node -r ts-node/register/transpile-only --test tests/engine.test.ts",
-    "create-admin": "node -r ts-node/register/transpile-only scripts/create-admin.ts"
+    "create-admin": "node -r ts-node/register/transpile-only scripts/create-admin.ts",
+    "test:api": "node -r ts-node/register/transpile-only --test tests/api.test.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

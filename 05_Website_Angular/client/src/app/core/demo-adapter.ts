@@ -571,7 +571,25 @@ export class DemoAdapter implements ApiAdapter {
       if (!a) return apiFail('Application not found.');
       const p = db.postings.find((x) => x.id === a.postingId);
       if (!p || p.companyId !== me.companyId) return apiFail('Application not found.');
+      // withdrawing is the applicant's call; a recruiter can't reverse it
+      if (a.status === 'withdrawn') return apiFail('This applicant withdrew their application.');
       a.status = status as any; a.updatedAt = Date.now(); (a as any).decidedBy = me.id; // a human made this call
+      persist(db);
+      return apiOk({ application: a });
+    },
+    /* The applicant's own exit — mirrors server routes/applications.ts.
+       Marked, not deleted, so the recruiter sees an honest "Withdrawn"
+       rather than a row that silently disappears mid-process. */
+    withdraw: (applicationId: string) => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'seeker') return apiFail('Sign in as a job seeker to withdraw an application.');
+      const a = db.applications.find((x) => x.id === applicationId);
+      if (!a || a.seekerId !== me.id) return apiFail('You can only withdraw your own applications.');
+      if (a.status === 'withdrawn') return apiFail('This application is already withdrawn.');
+      if (a.status === 'hired' || a.status === 'rejected') {
+        return apiFail('This application already has a final decision, so it can no longer be withdrawn.');
+      }
+      a.status = 'withdrawn'; a.updatedAt = Date.now();
       persist(db);
       return apiOk({ application: a });
     },

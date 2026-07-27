@@ -13,7 +13,10 @@ export const THRESHOLDS = { strong: 80, related: 50 };
 
 export const STATUS_LABELS: Record<AppStatus, string> = {
   submitted: 'Submitted', review: 'Under review', shortlisted: 'Shortlisted', rejected: 'Not selected', hired: 'Hired',
+  withdrawn: 'Withdrawn',
 };
+/** The statuses a RECRUITER may set. 'withdrawn' is deliberately absent:
+ *  only the applicant can withdraw their own application. */
 export const STATUS_ORDER: AppStatus[] = ['submitted', 'review', 'shortlisted', 'rejected', 'hired'];
 
 export const EDU_RANK: Record<EduLevel, number> = {
@@ -136,5 +139,5 @@ export function tierLabel(n: number): string {
   return t === 'strong' ? 'Strong match' : t === 'possible' ? 'Possible match' : 'Related role';
 }
 export function statusBadge(s: AppStatus): string {
-  return { submitted: 'slate', review: 'gold', shortlisted: 'green', hired: 'solid', rejected: 'wine' }[s] || 'slate';
+  return { submitted: 'slate', review: 'gold', shortlisted: 'green', hired: 'solid', rejected: 'wine', withdrawn: 'slate' }[s] || 'slate';
 }

@@ -87,6 +87,7 @@ export class HttpAdapter implements ApiAdapter {
     mine: () => this.call<{ applications: Application[] }>('applications', 'mine'),
     ranked: (postingId: string) => this.call<{ posting: Posting; rows: RankedRow[] }>('applications', 'ranked', { postingId }),
     setStatus: (id: string, status: string) => this.call<{ application: Application }>('applications', 'set-status', { id, status }),
+    withdraw: (id: string) => this.call<{ application: Application }>('applications', 'withdraw', { id }),
     invite: (id: string, message: string) => this.call<{ sent?: boolean; simulated?: boolean }>('applications', 'invite', { id, message }),
   };
 
