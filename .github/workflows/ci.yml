@@ -51,7 +51,7 @@ jobs:
         run: npm test
 
   api:
-    name: Server — API integration tests
+    name: Server — API, email & extraction tests
     runs-on: ubuntu-latest
     # Boots the real server against a throwaway PostgreSQL and drives it
     # over HTTP, so guards, sessions and SQL are exercised as deployed.
@@ -84,3 +84,24 @@ jobs:
           DB_USER: postgres
           DB_PASS: postgres
         run: npm run test:api
+
+      # Delivery is proven against a local SMTP sink, and extraction against a
+      # local stand-in for the Gemini API — no credentials, no network, and
+      # nothing that costs money to run on every pull request.
+      - name: Email delivery tests
+        working-directory: 05_Website_Angular/server
+        env:
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_USER: postgres
+          DB_PASS: postgres
+        run: npm run test:email
+
+      - name: AI extraction tests
+        working-directory: 05_Website_Angular/server
+        env:
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_USER: postgres
+          DB_PASS: postgres
+        run: npm run test:analyze

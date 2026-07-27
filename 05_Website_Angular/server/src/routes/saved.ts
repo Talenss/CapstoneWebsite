@@ -1,12 +1,12 @@
 /* ResumeMatch PH — routes/saved.ts : a seeker's bookmarked openings. */
-import { Router } from 'express';
-import { query, exec } from '../db';
+import { asyncRouter } from '../lib/async-router';
+import { query, queryOne, exec } from '../db';
 import { PostingRow } from '../types';
-import { ok, fail } from '../lib/http';
+import { ok, fail, idOf } from '../lib/http';
 import { requireRole } from '../lib/auth';
 import { serializePosting } from '../lib/serializers';
 
-const router = Router();
+const router = asyncRouter();
 
 router.post('/list', async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
@@ -21,8 +21,15 @@ router.post('/list', async (req, res) => {
 router.post('/toggle', async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
   if (!u) return;
-  const pid = Number(req.body?.postingId);
+  const pid = idOf(req.body?.postingId);
   if (!pid) return fail(res, 'Opening not found.');
+
+  // The posting must exist before we insert. saved_jobs has a foreign key to
+  // job_postings, and ON CONFLICT DO NOTHING does not suppress a foreign-key
+  // violation — so a bookmark of a non-existent id used to reject inside the
+  // handler and take the whole process down with it.
+  const exists = await queryOne('SELECT 1 FROM job_postings WHERE posting_id = ? LIMIT 1', [pid]);
+  if (!exists) return fail(res, 'Opening not found.');
 
   const { affectedRows } = await exec('DELETE FROM saved_jobs WHERE user_id = ? AND posting_id = ?', [u.user_id, pid]);
   if (affectedRows === 0) {

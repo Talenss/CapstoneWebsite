@@ -8,16 +8,56 @@
    ============================================================ */
 import { AppStatus, EduLevel, MatchResult, Posting, Resume, Tier } from './models';
 
+/* The study's published defaults. The SERVER is the authority — it reads
+   these from the match_settings table, so an admin can retune them without a
+   redeploy. These objects are MUTATED (never reassigned) by applyMatchSettings()
+   at startup in api mode, so every call site below keeps working while the
+   live score a seeker sees stays equal to the score the server stores.
+   Without that, editing match_settings would show the seeker one number and
+   the recruiter another for the very same application. */
 export const WEIGHTS = { skills: 0.5, education: 0.25, experience: 0.25 };
 export const THRESHOLDS = { strong: 80, related: 50 };
+
+/** Adopt the server's weights and thresholds. Ignores anything malformed, so
+ *  a bad row in match_settings degrades to the published defaults rather than
+ *  producing NaN scores across the whole interface. */
+export function applyMatchSettings(s: {
+  weights?: Partial<typeof WEIGHTS>;
+  thresholds?: Partial<typeof THRESHOLDS>;
+} | null | undefined): void {
+  const num = (v: unknown): number | null =>
+    typeof v === 'number' && Number.isFinite(v) ? v : null;
+
+  const w = s?.weights;
+  if (w) {
+    const sk = num(w.skills), ed = num(w.education), ex = num(w.experience);
+    // All three or none — a partial set would silently change the total scale.
+    if (sk !== null && ed !== null && ex !== null && sk >= 0 && ed >= 0 && ex >= 0) {
+      WEIGHTS.skills = sk; WEIGHTS.education = ed; WEIGHTS.experience = ex;
+    }
+  }
+  const th = s?.thresholds;
+  if (th) {
+    const st = num(th.strong), rl = num(th.related);
+    if (st !== null && rl !== null && st > rl && rl >= 0 && st <= 100) {
+      THRESHOLDS.strong = st; THRESHOLDS.related = rl;
+    }
+  }
+}
 
 export const STATUS_LABELS: Record<AppStatus, string> = {
   submitted: 'Submitted', review: 'Under review', shortlisted: 'Shortlisted', rejected: 'Not selected', hired: 'Hired',
   withdrawn: 'Withdrawn',
 };
-/** The statuses a RECRUITER may set. 'withdrawn' is deliberately absent:
- *  only the applicant can withdraw their own application. */
+/** The statuses a RECRUITER may set, in pipeline order. 'withdrawn' is
+ *  deliberately absent: only the applicant can withdraw their own
+ *  application, so it is never an option in a recruiter's status picker. */
 export const STATUS_ORDER: AppStatus[] = ['submitted', 'review', 'shortlisted', 'rejected', 'hired'];
+
+/* Every status a row can actually hold. Counts and breakdowns must use this
+   one — building them from STATUS_ORDER left 'withdrawn' out entirely, so a
+   withdrawn application simply vanished from the recruiter's totals. */
+export const ALL_STATUSES: AppStatus[] = [...STATUS_ORDER, 'withdrawn'];
 
 export const EDU_RANK: Record<EduLevel, number> = {
   none: 0, highschool: 1, vocational: 2, associate: 3, bachelor: 4, master: 5,

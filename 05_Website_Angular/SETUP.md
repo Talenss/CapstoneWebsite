@@ -277,6 +277,27 @@ Before exposing the site publicly, set these in `server/.env`:
 …and put a real HTTPS reverse proxy (nginx, Caddy, or your cloud host's)
 in front of the Node process. No code edits needed — it's all `.env`.
 
+**Set `NODE_ENV=production` too.** With it set, the server checks the three
+settings that are dangerous to forget and **refuses to start** if any is
+wrong — rather than running with a signing key that is published in this
+repository, or with `DEBUG` returning live email verification codes in API
+responses. It also flips `DEBUG` off by default. You will see exactly what
+is missing:
+
+```
+Refusing to start in production with an unsafe configuration:
+
+  · SESSION_SECRET is still the development default — session cookies
+    would be forgeable. Set it to a long random string.
+  · DEBUG is on in production — it returns email verification codes in
+    API responses. Set DEBUG=false.
+```
+
+Also build the client with `npm run build` (**not** `build:demo`). The
+plain `build` produces the `api`-mode bundle that talks to this server;
+`build:demo` produces a browser-only bundle that keeps every visitor's data
+in their own `localStorage` and never calls the API at all.
+
 Protections that are always on, no configuration required:
 
 - **Security headers** (helmet) including a content-security-policy

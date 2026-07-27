@@ -109,7 +109,26 @@ if (fs.existsSync(clientDist)) {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
+  // Multer reports an oversized upload here rather than in the route, so it
+  // needs its own message — otherwise a 2 MB file reads as a server outage.
+  if (err?.code === 'LIMIT_FILE_SIZE')
+    return res.status(413).json({ ok: false, error: 'That file is too large. The limit is 2 MB.' });
+  if (res.headersSent) return;
   res.status(500).json({ ok: false, error: DEBUG ? String(err?.message || err) : 'The service is unavailable. Try again shortly.' });
+});
+
+/* Last line of defence. Routers use asyncRouter(), so a rejected handler is
+   already forwarded to the error middleware above — but a rejection raised
+   outside a request (a fire-and-forget notification, a callback that Express
+   never awaits) would otherwise reach Node's default handler, which since
+   v15 EXITS THE PROCESS. Logging and staying up is the right trade for a
+   pilot deployment: one broken request must not take the API down for
+   everyone. */
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection] request survived, server staying up:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException] server staying up:', err);
 });
 
 app.listen(PORT, () => {

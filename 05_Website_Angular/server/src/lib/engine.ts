@@ -68,27 +68,40 @@ export interface MatchSettings {
 }
 
 let cachedSettings: MatchSettings | null = null;
+let cachedAt = 0;
+/* Cached, but not forever. The whole point of holding the weights in a table
+   is that they can be retuned during testing; a permanent cache would have
+   meant a process restart before an edit took effect, and two processes
+   started at different times could serve different weights at once. */
+const SETTINGS_TTL_MS = 60_000;
 
 /** Weights and thresholds come from the DB, so "refined iteratively"
  *  means editing a row — not redeploying code. */
 export async function getSettings(): Promise<MatchSettings> {
-  if (cachedSettings) return cachedSettings;
+  if (cachedSettings && Date.now() - cachedAt < SETTINGS_TTL_MS) return cachedSettings;
   const rows = await query<{ setting_key: string; setting_value: string }>(
     'SELECT setting_key, setting_value FROM match_settings',
   );
   const map: Record<string, number> = {};
   for (const r of rows) map[r.setting_key] = Number(r.setting_value);
+  /* A non-numeric or missing row must fall back to the published default,
+     never to NaN: the thresholds are interpolated into the metrics query, so
+     a NaN there produced invalid SQL and — before the async-router fix —
+     took the process down with it. */
+  const n = (v: number | undefined, fallback: number): number =>
+    typeof v === 'number' && Number.isFinite(v) ? v : fallback;
   cachedSettings = {
     weights: {
-      skills: map.weight_skills ?? 0.5,
-      education: map.weight_education ?? 0.25,
-      experience: map.weight_experience ?? 0.25,
+      skills: n(map.weight_skills, DEFAULT_SETTINGS.weights.skills),
+      education: n(map.weight_education, DEFAULT_SETTINGS.weights.education),
+      experience: n(map.weight_experience, DEFAULT_SETTINGS.weights.experience),
     },
     thresholds: {
-      strong: map.threshold_strong ?? 80,
-      related: map.threshold_related ?? 50,
+      strong: n(map.threshold_strong, DEFAULT_SETTINGS.thresholds.strong),
+      related: n(map.threshold_related, DEFAULT_SETTINGS.thresholds.related),
     },
   };
+  cachedAt = Date.now();
   return cachedSettings;
 }
 

@@ -299,3 +299,189 @@ test('scores come only from structured data — the uploaded file is not read', 
   assert.ok(Array.isArray(body.matchedSkills) && Array.isArray(body.missingSkills));
   assert.ok(!('ownFile' in body), 'the scoring response must not involve the uploaded file');
 });
+
+/* ============================================================
+   REGRESSION TESTS — each of these reproduces a defect that was
+   found in the code audit and fixed. They exist so the same bug
+   cannot return quietly.
+   ============================================================ */
+
+// ---------- the server must survive a bad request ----------
+
+test('a bookmark for a posting that does not exist is refused, not fatal', async () => {
+  // saved_jobs has a foreign key to job_postings and ON CONFLICT DO NOTHING
+  // does NOT suppress a foreign-key violation. The rejection escaped the
+  // async handler, and Node terminated the whole process mid-request.
+  const api = client();
+  await api('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+
+  for (const postingId of [999999, -1, 0, 'abc']) {
+    const { status, body } = await api('saved/toggle', { postingId });
+    assert.equal(body.ok, false, `postingId ${postingId} must be refused`);
+    // Not merely "an error": the handler must VALIDATE and answer 400, rather
+    // than letting the database reject it and relying on the crash-safety net
+    // to turn that into a 500. A 500 here means the guard was lost again.
+    assert.notEqual(status, 500,
+      `postingId ${postingId} must be validated in the handler, not caught as a server fault`);
+  }
+  // and the process is still answering
+  const health = await fetch(`http://127.0.0.1:${PORT}/api/health`);
+  assert.equal(health.status, 200, 'the server must still be up after a bad request');
+});
+
+// ---------- email case ----------
+
+test('an email is matched case-insensitively at login', async () => {
+  // /register lowercases before storing but /login did not before comparing,
+  // and Postgres compares TEXT case-sensitively — so an account created as
+  // "Juan@Example.com" could never be signed into with the address typed.
+  const api = client();
+  const { body } = await api('auth/login', { email: 'SEEKER@DEMO.PH', password: 'demo123' });
+  assert.equal(body.ok, true, 'a mixed-case address must still sign in');
+  assert.equal(body.user.email, 'seeker@demo.ph');
+});
+
+// ---------- cross-account scoring ----------
+
+test('a recruiter cannot score a resume never submitted to their company', async () => {
+  // The ownership check here was gated on role === 'seeker', so any recruiter
+  // could walk resume ids and harvest every seeker's skills, gaps and total
+  // months of experience.
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const resumes = (await seeker('resumes/list')).body.resumes;
+
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const postingId = (await hr('postings/mine')).body.postings[0].id;
+
+  // find a resume with no application to this recruiter's company
+  const ranked = (await hr('applications/ranked', { postingId })).body;
+  const submitted = new Set((ranked.applicants ?? []).map((a: any) => String(a.resume?.id ?? a.resumeId)));
+  const unsubmitted = resumes.find((r: any) => !submitted.has(String(r.id)));
+
+  if (unsubmitted) {
+    const { status, body } = await hr('match/score', { resumeId: unsubmitted.id, postingId });
+    assert.equal(body.ok, false, 'a recruiter must not score an unsubmitted resume');
+    assert.equal(status, 403);
+  }
+});
+
+// ---------- input bounds ----------
+
+test('resume sections are clamped instead of accepted unbounded', async () => {
+  // Every skill costs a round trip through skillId(), so an unbounded array
+  // held a pooled connection open for tens of thousands of queries and
+  // permanently polluted the canonical skills table.
+  const api = client();
+  await api('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const { body } = await api('resumes/save', {
+    resume: {
+      title: 'x'.repeat(400),
+      personal: {},
+      education: [], experience: [], certifications: [],
+      skills: Array.from({ length: 3000 }, (_, i) => `bulkskill${i}`),
+    },
+  });
+  assert.equal(body.ok, true);
+  assert.ok(body.resume.skills.length <= 100, `skills must be capped, got ${body.resume.skills.length}`);
+  assert.ok(body.resume.title.length <= 120, 'title must be capped to the column width');
+});
+
+// ---------- the client and the server must agree on the weights ----------
+
+test('the server publishes the weights the client scores with', async () => {
+  // The browser keeps its own copy of the weights so it can show a live score
+  // without a round trip. If an admin edits match_settings and the client
+  // keeps the compiled-in values, a seeker is shown one number and the
+  // recruiter sees another for the same application.
+  const api = client();
+  const { body } = await api('match/settings');
+  assert.equal(body.ok, true);
+  const w = body.weights, t = body.thresholds;
+  for (const v of [w.skills, w.education, w.experience, t.strong, t.related]) {
+    assert.equal(typeof v, 'number');
+    assert.ok(Number.isFinite(v), 'a malformed settings row must never yield NaN');
+  }
+  assert.ok(Math.abs(w.skills + w.education + w.experience - 1) < 1e-9, 'weights must total 1');
+  assert.ok(t.strong > t.related, 'the strong threshold must sit above the related one');
+});
+
+// ---------- expired postings ----------
+
+test('recommendations never include a posting that can no longer be applied to', async () => {
+  // The dashboard recommended openings past their deadline, which /apply then
+  // refused — the system saying "strong match" and then turning the seeker away.
+  const api = client();
+  await api('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const rec = (await api('match/recommendations')).body;
+  const open = (await api('postings/list')).body.postings.map((p: any) => String(p.id));
+  for (const group of ['strong', 'possible', 'related'] as const) {
+    for (const item of rec[group] ?? []) {
+      assert.ok(open.includes(String(item.posting.id)),
+        `${group} recommended posting ${item.posting.id}, which is not open for applications`);
+    }
+  }
+});
+
+// ---------- second audit pass ----------
+
+test('a closed or expired posting is not readable by the public', async () => {
+  // postings/get had no auth and no status filter, so anyone could walk
+  // posting ids and read every company's closed openings, department and all.
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const mine = (await hr('postings/mine')).body.postings;
+  const target = mine[0];
+  await hr('postings/toggle', { id: target.id }); // close it
+
+  const anon = client();
+  const { body } = await anon('postings/get', { id: target.id });
+  assert.equal(body.ok, false, 'a closed posting must not be public');
+
+  // the owning recruiter can still read it
+  const owner = await hr('postings/get', { id: target.id });
+  assert.equal(owner.body.ok, true, 'the owning recruiter must still see their closed posting');
+
+  await hr('postings/toggle', { id: target.id }); // restore
+});
+
+test('company update is a real partial update, and is length-clamped', async () => {
+  // This overwrote all five columns with '' for anything omitted, so a client
+  // sending only { name } silently blanked industry, location, about and site.
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const me = (await hr('auth/me')).body.user;
+  const before = (await hr('companies/get', { id: me.companyId })).body.company;
+
+  const r = await hr('companies/update', { id: me.companyId, name: 'x'.repeat(400) });
+  assert.equal(r.body.ok, true, 'an over-long name must be clamped, not fatal');
+
+  const after = (await hr('companies/get', { id: me.companyId })).body.company;
+  assert.ok(after.name.length <= 160, 'name must be clamped to the column width');
+  assert.equal(after.industry, before.industry, 'an omitted field must be left alone');
+  assert.equal(after.location, before.location, 'an omitted field must be left alone');
+
+  await hr('companies/update', { id: me.companyId, name: before.name });
+});
+
+test('an application carries the score it had when it was submitted', async () => {
+  // Demo mode recomputed historical scores from the CURRENT resume, so a
+  // seeker editing their resume rewrote the study's own past data. Both modes
+  // must expose the frozen snapshot instead.
+  const api = client();
+  await api('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const mine = (await api('applications/mine')).body.applications;
+  if (mine.length) {
+    assert.ok('scoreSnapshot' in mine[0], 'applications must expose scoreSnapshot');
+    if (mine[0].scoreSnapshot !== null) {
+      assert.equal(typeof mine[0].scoreSnapshot, 'number');
+      assert.ok(mine[0].scoreSnapshot >= 0 && mine[0].scoreSnapshot <= 100);
+    }
+  }
+});
+
+test('the server survives every malformed request in this suite', async () => {
+  const health = await fetch(`http://127.0.0.1:${PORT}/api/health`);
+  assert.equal(health.status, 200, 'the process must still be serving');
+});

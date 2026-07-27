@@ -1,7 +1,7 @@
 /* ResumeMatch PH — routes/auth.ts
    Port of api/auth.php: login · register · request-access · logout · me
    · change-password · delete-account · export (RA 10173 right of access) */
-import { Router } from 'express';
+import { asyncRouter } from '../lib/async-router';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
@@ -16,9 +16,18 @@ import { issueCode, checkCode } from '../lib/email-codes';
 import { passwordProblem } from '../lib/password';
 import { loginLimiter, sendCodeLimiter, authWriteLimiter } from '../lib/rate-limit';
 
-const router = Router();
+const router = asyncRouter();
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Promisified session.regenerate. Rotating the session id on every
+ *  privilege change is what stops session fixation, so a failure here has to
+ *  reject rather than be swallowed by a callback nobody awaits. */
+function regenerateSession(req: import('express').Request): Promise<void> {
+  return new Promise((resolve, reject) => {
+    req.session.regenerate((err) => (err ? reject(err) : resolve()));
+  });
+}
 
 // Compared against when the email has no account, so "user not found" and
 // "wrong password" take the same time — no timing-based email discovery.
@@ -87,7 +96,11 @@ router.post('/reset-password', authWriteLimiter, async (req, res) => {
 });
 
 router.post('/login', loginLimiter, async (req, res) => {
-  const email = String(req.body?.email ?? '').trim();
+  // Lowercased to match how /register, /send-code and /reset-password store
+  // and look up addresses. Postgres compares TEXT case-sensitively, so
+  // without this an account created as "Juan@Example.com" could never be
+  // signed into with the address its owner actually typed.
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
   const pass = String(req.body?.password ?? '');
   if (!email || !pass) return fail(res, 'Enter your email and password.');
 
@@ -103,12 +116,19 @@ router.post('/login', loginLimiter, async (req, res) => {
   if (u.role === 'recruiter' && !u.verified)
     return fail(res, "This recruiter account isn't active yet. Accounts are activated by the research team together with the partner company's HR.", 403);
 
-  req.session.regenerate(async (err) => {
-    if (err) return fail(res, 'Login failed. Try again.', 500);
-    req.session.uid = u.user_id;
+  // regenerate() takes a callback and ignores whatever it returns, so an
+  // async callback's rejection escapes the request entirely: the caller
+  // hangs with no response. Await the regeneration first, then do the work
+  // in the handler where asyncRouter can forward any failure.
+  await regenerateSession(req);
+  req.session.uid = u.user_id;
+  // A failed last-login stamp must not cost the user their session.
+  try {
     await exec('UPDATE users SET last_login_at = NOW() WHERE user_id = ?', [u.user_id]);
-    ok(res, { user: serializeUser(u) });
-  });
+  } catch (e: any) {
+    console.error('last_login_at update failed (login still succeeded):', e?.message || e);
+  }
+  ok(res, { user: serializeUser(u) });
 });
 
 router.post('/register', authWriteLimiter, async (req, res) => {
@@ -136,26 +156,31 @@ router.post('/register', authWriteLimiter, async (req, res) => {
     ['seeker', name, email, hash],
   );
 
-  req.session.regenerate(async (err) => {
-    if (err) return fail(res, 'Registration failed. Try again.', 500);
-    req.session.uid = insertId;
-    const u = await queryOne<UserRow>('SELECT * FROM users WHERE user_id = ?', [insertId]);
-    ok(res, { user: serializeUser(u) });
-  });
+  await regenerateSession(req);
+  req.session.uid = insertId;
+  const u = await queryOne<UserRow>('SELECT * FROM users WHERE user_id = ?', [insertId]);
+  ok(res, { user: serializeUser(u) });
 });
 
 // Recruiters do NOT self-register. A request lands here and a human
 // approves it with the partner company's HR before it becomes an account.
-router.post('/request-access', async (req, res) => {
+router.post('/request-access', authWriteLimiter, async (req, res) => {
   const name = String(req.body?.name ?? '').trim();
-  const email = String(req.body?.email ?? '').trim();
+  // Lowercased for the same reason as /login. An approved recruiter is told
+  // to set their password via "Forgot password", and /send-code looks the
+  // address up lowercased — a mixed-case row there could never be found, so
+  // the recruiter would wait forever for an email that never sends.
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
   const pos = String(req.body?.position ?? '').trim();
   const co = req.body?.companyId;
-  const note = String(req.body?.note ?? '').trim();
+  // Clamped: this row is written by an UNAUTHENTICATED caller and is later
+  // read back in full by the admin panel. Without a cap, one request could
+  // carry the whole 2 MB JSON body limit.
+  const note = String(req.body?.note ?? '').trim().slice(0, 1000);
 
-  if (name.length < 2) return fail(res, 'Enter your full name.');
+  if (name.length < 2 || name.length > 120) return fail(res, 'Enter your full name.');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail(res, 'Enter a valid email address.');
-  if (pos === '') return fail(res, 'Enter your position.');
+  if (pos === '' || pos.length > 120) return fail(res, 'Enter your position.');
   if (!co) return fail(res, 'Choose your partner company.');
 
   const exists = await queryOne('SELECT 1 FROM users WHERE email = ? LIMIT 1', [email]);

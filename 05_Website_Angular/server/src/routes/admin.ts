@@ -4,18 +4,18 @@
    recruiter form creates, and approving one is what actually creates the
    verified recruiter account. Admin accounts are made with
    `npm run create-admin` — there is deliberately no self-serve path. */
-import { Router } from 'express';
+import { asyncRouter } from '../lib/async-router';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { query, queryOne, exec } from '../db';
 import { UserRow } from '../types';
-import { ok, fail } from '../lib/http';
+import { ok, fail, idOf } from '../lib/http';
 import { requireRole } from '../lib/auth';
 import { ts } from '../lib/serializers';
 import { APP_URL, DEBUG } from '../config';
 import { mailConfigured, sendMail } from '../lib/mailer';
 
-const router = Router();
+const router = asyncRouter();
 
 interface RequestRow {
   request_id: number;
@@ -63,7 +63,7 @@ router.post('/requests', async (req, res) => {
 router.post('/approve', async (req, res) => {
   const u = await requireRole(req, res, 'admin');
   if (!u) return;
-  const id = Number(req.body?.id);
+  const id = idOf(req.body?.id);
 
   const r = await queryOne<RequestRow>(
     `SELECT r.*, c.company_name FROM recruiter_requests r
@@ -108,7 +108,7 @@ router.post('/approve', async (req, res) => {
 router.post('/decline', async (req, res) => {
   const u = await requireRole(req, res, 'admin');
   if (!u) return;
-  const id = Number(req.body?.id);
+  const id = idOf(req.body?.id);
 
   const r = await queryOne<RequestRow>('SELECT * FROM recruiter_requests WHERE request_id = ? LIMIT 1', [id]);
   if (!r) return fail(res, 'Request not found.');
@@ -200,7 +200,7 @@ router.post('/dept-assignments', async (req, res) => {
 router.post('/assign-department', async (req, res) => {
   const u = await requireRole(req, res, 'admin');
   if (!u) return;
-  const companyId = Number(req.body?.companyId);
+  const companyId = idOf(req.body?.companyId);
   const department = String(req.body?.department ?? '').trim();
   const rawUser = req.body?.userId;
   if (!companyId || !department) return fail(res, 'Pick a company and a department.');

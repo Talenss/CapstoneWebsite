@@ -161,6 +161,11 @@ export interface Application {
   postingId: string;
   status: AppStatus;
   appliedAt: number;
+  /** The match score at the MOMENT of applying (the server's
+   *  applications.score_snapshot). Frozen deliberately: a résumé and a
+   *  posting can both change afterwards, and the study needs to report the
+   *  number the applicant actually saw, not one recomputed later. */
+  scoreSnapshot?: number | null;
   updatedAt?: number;
   posting?: Posting | null;
   company?: Company | null;

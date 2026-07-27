@@ -9,14 +9,14 @@
    Port of api/file.php. Uploads live outside the web root — a
    resume file must never be reachable by guessing a URL.
    ============================================================ */
-import { Router } from 'express';
+import { asyncRouter } from '../lib/async-router';
 import fs from 'fs';
 import path from 'path';
 import { currentUser } from '../lib/auth';
 import { fetchResume, recruiterMayReadResume } from '../lib/serializers';
 import { UPLOAD_DIR } from '../config';
 
-const router = Router();
+const router = asyncRouter();
 
 router.get('/', async (req, res) => {
   const u = await currentUser(req);

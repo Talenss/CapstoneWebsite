@@ -1,19 +1,20 @@
 /* ResumeMatch PH — routes/resumes.ts
    list · get · save · delete · duplicate · set-active · upload · remove-file */
-import { Router } from 'express';
+import { asyncRouter } from '../lib/async-router';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { query, queryOne, exec, withTransaction } from '../db';
 import { ResumeRow } from '../types';
-import { ok, fail } from '../lib/http';
+import { ok, fail, idOf } from '../lib/http';
 import { requireUser, requireRole } from '../lib/auth';
 import { fetchResume, serializeResume, recruiterMayReadResume } from '../lib/serializers';
 import { EDU_RANK, skillId } from '../lib/engine';
 import { UPLOAD_DIR, MAX_UPLOAD, ALLOWED_MIME } from '../config';
+import { sniffFileType, typeMatches } from '../lib/file-type';
 
-const router = Router();
+const router = asyncRouter();
 const upload = multer({ dest: UPLOAD_DIR, limits: { fileSize: MAX_UPLOAD } });
 
 router.post('/list', async (req, res) => {
@@ -26,7 +27,7 @@ router.post('/list', async (req, res) => {
 router.post('/get', async (req, res) => {
   const u = await requireUser(req, res);
   if (!u) return;
-  const id = Number(req.body?.id);
+  const id = idOf(req.body?.id);
   const r = await fetchResume(id);
   if (!r) return fail(res, 'Resume not found.');
 
@@ -44,10 +45,21 @@ router.post('/save', async (req, res) => {
   const R = req.body?.resume;
   if (!R || typeof R !== 'object') return fail(res, 'Nothing to save.');
 
-  const title = String(R.title ?? '').trim() || 'Untitled resume';
+  const title = (String(R.title ?? '').trim() || 'Untitled resume').slice(0, 120);
   const template = ['chronological', 'functional', 'combination'].includes(R.template) ? R.template : 'chronological';
   const design = ['classic', 'modern', 'minimal', 'executive', 'banner', 'split', 'bar', 'categorized'].includes(R.design) ? R.design : 'classic';
   const p = R.personal && typeof R.personal === 'object' ? R.personal : {};
+
+  // Section arrays are clamped before they reach the transaction. Each skill
+  // costs one or two round trips through skillId(), so an unbounded array
+  // would hold a pooled connection open for tens of thousands of queries and
+  // permanently pollute the canonical skills table. These ceilings are far
+  // above any real resume; the builder's own UI never approaches them.
+  const cap = <T,>(v: unknown, n: number): T[] => (Array.isArray(v) ? v.slice(0, n) : []) as T[];
+  const education = cap<any>(R.education, 20);
+  const experience = cap<any>(R.experience, 30);
+  const certifications = cap<any>(R.certifications, 30);
+  const skills = cap<any>(R.skills, 100);
 
   // Ownership check up front so we can send a clean 403 (an error thrown
   // inside the transaction surfaces only as a generic 500).
@@ -83,29 +95,29 @@ router.post('/save', async (req, res) => {
       await tx.exec('DELETE FROM resume_skills WHERE resume_id = ?', [id]);
 
       let i = 0;
-      for (const e of R.education ?? []) {
+      for (const e of education) {
         const lvl = Object.keys(EDU_RANK).includes(e.level) ? e.level : 'bachelor';
         await tx.exec(
           'INSERT INTO education (resume_id, school, degree, level, year_grad, sort_order) VALUES (?,?,?,?,?,?)',
-          [id, e.school ?? '', e.degree ?? '', lvl, e.year ?? '', i++],
+          [id, String(e.school ?? '').slice(0, 160), String(e.degree ?? '').slice(0, 160), lvl, String(e.year ?? '').slice(0, 20), i++],
         );
       }
       i = 0;
-      for (const e of R.experience ?? []) {
+      for (const e of experience) {
         await tx.exec(
           'INSERT INTO work_experience (resume_id, position, company, months, description, sort_order) VALUES (?,?,?,?,?,?)',
-          [id, e.position ?? '', e.company ?? '', Number(e.months) || 0, e.description ?? '', i++],
+          [id, String(e.position ?? '').slice(0, 160), String(e.company ?? '').slice(0, 160), Math.max(0, Math.min(720, Number(e.months) || 0)), String(e.description ?? '').slice(0, 2000), i++],
         );
       }
       i = 0;
-      for (const c of R.certifications ?? []) {
+      for (const c of certifications) {
         await tx.exec(
           'INSERT INTO certifications (resume_id, cert_name, year_taken, sort_order) VALUES (?,?,?,?)',
-          [id, c.name ?? '', c.year ?? '', i++],
+          [id, String(c.name ?? '').slice(0, 160), String(c.year ?? '').slice(0, 20), i++],
         );
       }
-      for (const s of R.skills ?? []) {
-        const trimmed = String(s).trim();
+      for (const s of skills) {
+        const trimmed = String(s).trim().slice(0, 80);
         if (!trimmed) continue;
         const sid = await skillId(trimmed);
         await tx.exec('INSERT INTO resume_skills (resume_id, skill_id) VALUES (?,?) ON CONFLICT DO NOTHING', [id, sid]);
@@ -125,7 +137,7 @@ router.post('/save', async (req, res) => {
 router.post('/delete', async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
   if (!u) return;
-  const id = Number(req.body?.id);
+  const id = idOf(req.body?.id);
   const r = await fetchResume(id);
   if (!r || r.user_id !== u.user_id) return fail(res, 'Resume not found.');
 
@@ -155,7 +167,7 @@ router.post('/delete', async (req, res) => {
 router.post('/duplicate', async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
   if (!u) return;
-  const id = Number(req.body?.id);
+  const id = idOf(req.body?.id);
   const r = await fetchResume(id);
   if (!r || r.user_id !== u.user_id) return fail(res, 'Resume not found.');
 
@@ -198,7 +210,7 @@ router.post('/duplicate', async (req, res) => {
 router.post('/set-active', async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
   if (!u) return;
-  const id = Number(req.body?.id);
+  const id = idOf(req.body?.id);
   const r = await fetchResume(id);
   if (!r || r.user_id !== u.user_id) return fail(res, 'Resume not found.');
   await exec('UPDATE users SET active_resume_id = ? WHERE user_id = ?', [id, u.user_id]);
@@ -207,13 +219,23 @@ router.post('/set-active', async (req, res) => {
 
 /* ---- the dual-resume model: the applicant's OWN file.
         Stored outside the web root. Never parsed. Never scored. ---- */
-router.post('/upload', upload.single('file'), async (req, res) => {
+/* requireSeekerBeforeUpload runs BEFORE multer, so an anonymous caller is
+   turned away without ever writing a 2 MB temp file to disk. Multer used to
+   run first, which let an unauthenticated script churn the upload directory
+   for free on every request. */
+const requireSeekerBeforeUpload: import('express').RequestHandler = async (req, res, next) => {
+  const u = await requireRole(req, res, 'seeker');
+  if (!u) return; // requireRole has already answered 401/403
+  next();
+};
+
+router.post('/upload', requireSeekerBeforeUpload, upload.single('file'), async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
   if (!u) {
     if (req.file) fs.unlink(req.file.path, () => {});
     return;
   }
-  const id = Number(req.body?.resume_id ?? 0);
+  const id = idOf(req.body?.resume_id);
   const r = await fetchResume(id);
   if (!r || r.user_id !== u.user_id) {
     if (req.file) fs.unlink(req.file.path, () => {});
@@ -227,6 +249,15 @@ router.post('/upload', upload.single('file'), async (req, res) => {
   if (!ext) {
     fs.unlink(f.path, () => {});
     return fail(res, 'Upload a PDF, Word document, or image (JPG or PNG).');
+  }
+
+  // The declared Content-Type is the CLIENT's claim. Confirm it against the
+  // file's actual leading bytes, so an arbitrary blob cannot be stored as a
+  // .pdf and served back later under a PDF content type.
+  const actual = sniffFileType(f.path);
+  if (!actual || !typeMatches(actual, ext)) {
+    fs.unlink(f.path, () => {});
+    return fail(res, "That file isn't a readable PDF, Word document, or image. Try saving it again and re-uploading.");
   }
 
   // random name: the original filename never touches the filesystem
@@ -250,7 +281,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 router.post('/remove-file', async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
   if (!u) return;
-  const id = Number(req.body?.id);
+  const id = idOf(req.body?.id);
   const r = await fetchResume(id);
   if (!r || r.user_id !== u.user_id) return fail(res, 'Resume not found.');
 

@@ -1,10 +1,10 @@
 /* ResumeMatch PH — routes/stats.ts : hr (dashboard counters) */
-import { Router } from 'express';
+import { asyncRouter } from '../lib/async-router';
 import { queryOne, query } from '../db';
 import { ok } from '../lib/http';
 import { requireRole } from '../lib/auth';
 
-const router = Router();
+const router = asyncRouter();
 
 router.post('/hr', async (req, res) => {
   const u = await requireRole(req, res, 'recruiter');
@@ -23,7 +23,13 @@ router.post('/hr', async (req, res) => {
       GROUP BY a.status`, [cid],
   );
 
-  const byStatus: Record<string, number> = { submitted: 0, review: 0, shortlisted: 0, rejected: 0, hired: 0 };
+  // All six statuses seeded to zero, including withdrawn — building this
+  // from the five pipeline statuses left withdrawn out unless a row happened
+  // to have it, so the shape the client typed as Record<AppStatus, number>
+  // was sometimes missing a key.
+  const byStatus: Record<string, number> = {
+    submitted: 0, review: 0, shortlisted: 0, rejected: 0, hired: 0, withdrawn: 0,
+  };
   let total = 0;
   for (const r of rows) { byStatus[r.status] = Number(r.n); total += Number(r.n); }
 

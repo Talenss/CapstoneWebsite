@@ -15,15 +15,15 @@
    This is separate from the dual-resume "own file" attachment,
    which remains never-parsed and visible to recruiters only.
    ============================================================ */
-import { Router } from 'express';
+import { asyncRouter } from '../lib/async-router';
 import multer from 'multer';
 import { query } from '../db';
 import { ok, fail } from '../lib/http';
 import { requireRole } from '../lib/auth';
 import { EDU_RANK } from '../lib/engine';
-import { GEMINI_API_KEY, GEMINI_MODEL, MAX_UPLOAD } from '../config';
+import { GEMINI_API_KEY, GEMINI_MODEL, GEMINI_BASE_URL, MAX_UPLOAD } from '../config';
 
-const router = Router();
+const router = asyncRouter();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_UPLOAD } });
 
 // Mime types Gemini can read directly as inline document/image data.
@@ -90,7 +90,7 @@ function sanitize(raw: any, fileName: string): AnalyzedResume {
 }
 
 async function callGemini(parts: any[]): Promise<any> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
+  const url = `${GEMINI_BASE_URL}/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 90_000);
   try {
