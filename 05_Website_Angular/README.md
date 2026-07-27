@@ -98,13 +98,14 @@ are also applied automatically by idempotent migrations on server start.
 ```bash
 # client (from client/)
 npm start           # dev server on :4200
-npm run build       # production build
+npm run build       # production build (api mode — talks to the server)
+npm run build:demo  # browser-only build (demo mode, no server needed)
 
 # server (from server/)
 npm run dev         # API on :4300, restarts on change
 npm run build && npm start   # production; also serves the built Angular app
 npm test            # matching-engine tests (29, no database needed)
-npm run test:api    # API integration tests (16) — needs a local PostgreSQL;
+npm run test:api    # API integration tests (22) — needs a local PostgreSQL;
                     # creates and drops its own throwaway database
 npm run create-admin -- you@example.com "a strong password"
 ```

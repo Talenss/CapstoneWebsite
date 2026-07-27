@@ -1,7 +1,7 @@
 /* ResumeMatch PH — routes/auth.ts
    Port of api/auth.php: login · register · request-access · logout · me
    · change-password · delete-account · export (RA 10173 right of access) */
-import { Router } from 'express';
+import { asyncRouter } from '../lib/async-router';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
@@ -16,7 +16,7 @@ import { issueCode, checkCode } from '../lib/email-codes';
 import { passwordProblem } from '../lib/password';
 import { loginLimiter, sendCodeLimiter, authWriteLimiter } from '../lib/rate-limit';
 
-const router = Router();
+const router = asyncRouter();
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -87,7 +87,11 @@ router.post('/reset-password', authWriteLimiter, async (req, res) => {
 });
 
 router.post('/login', loginLimiter, async (req, res) => {
-  const email = String(req.body?.email ?? '').trim();
+  // Lowercased to match how /register, /send-code and /reset-password store
+  // and look up addresses. Postgres compares TEXT case-sensitively, so
+  // without this an account created as "Juan@Example.com" could never be
+  // signed into with the address its owner actually typed.
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
   const pass = String(req.body?.password ?? '');
   if (!email || !pass) return fail(res, 'Enter your email and password.');
 
@@ -146,16 +150,23 @@ router.post('/register', authWriteLimiter, async (req, res) => {
 
 // Recruiters do NOT self-register. A request lands here and a human
 // approves it with the partner company's HR before it becomes an account.
-router.post('/request-access', async (req, res) => {
+router.post('/request-access', authWriteLimiter, async (req, res) => {
   const name = String(req.body?.name ?? '').trim();
-  const email = String(req.body?.email ?? '').trim();
+  // Lowercased for the same reason as /login. An approved recruiter is told
+  // to set their password via "Forgot password", and /send-code looks the
+  // address up lowercased — a mixed-case row there could never be found, so
+  // the recruiter would wait forever for an email that never sends.
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
   const pos = String(req.body?.position ?? '').trim();
   const co = req.body?.companyId;
-  const note = String(req.body?.note ?? '').trim();
+  // Clamped: this row is written by an UNAUTHENTICATED caller and is later
+  // read back in full by the admin panel. Without a cap, one request could
+  // carry the whole 2 MB JSON body limit.
+  const note = String(req.body?.note ?? '').trim().slice(0, 1000);
 
-  if (name.length < 2) return fail(res, 'Enter your full name.');
+  if (name.length < 2 || name.length > 120) return fail(res, 'Enter your full name.');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail(res, 'Enter a valid email address.');
-  if (pos === '') return fail(res, 'Enter your position.');
+  if (pos === '' || pos.length > 120) return fail(res, 'Enter your position.');
   if (!co) return fail(res, 'Choose your partner company.');
 
   const exists = await queryOne('SELECT 1 FROM users WHERE email = ? LIMIT 1', [email]);

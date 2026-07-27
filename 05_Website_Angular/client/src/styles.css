@@ -84,9 +84,8 @@ main{flex:1}
 .grid{display:grid;gap:20px}
 .cols-2{grid-template-columns:1fr 1fr}
 .cols-3{grid-template-columns:repeat(3,1fr)}
-.cols-4{grid-template-columns:repeat(4,1fr)}
-@media(max-width:940px){.cols-3,.cols-4{grid-template-columns:1fr 1fr}}
-@media(max-width:660px){.cols-2,.cols-3,.cols-4{grid-template-columns:1fr}}
+@media(max-width:940px){.cols-3{grid-template-columns:1fr 1fr}}
+@media(max-width:660px){.cols-2,.cols-3{grid-template-columns:1fr}}
 .section{padding:78px 0}
 .section.tight{padding:48px 0}
 .section.paper{background:var(--paper);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
@@ -175,10 +174,6 @@ main{flex:1}
 .card{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r-lg);padding:24px;box-shadow:var(--shadow)}
 .card.flush{padding:0;overflow:hidden}
 .card.crest{border-top:2px solid var(--gold)}
-.card-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
-  padding:16px 20px;border-bottom:1px solid var(--rule-2);background:var(--ivory)}
-.card-head h2,.card-head h3{font-size:19px}
-.card-body{padding:20px}
 
 /* ---------- badges & chips ---------- */
 .badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--body);font-size:10.5px;font-weight:600;

@@ -2,13 +2,13 @@
    Researcher-facing aggregates for the study's evaluation chapter.
    Admin only, and everything is anonymous by construction — counts,
    distributions, and durations, never a name or an email. */
-import { Router } from 'express';
+import { asyncRouter } from '../lib/async-router';
 import { query, queryOne } from '../db';
 import { ok } from '../lib/http';
 import { requireRole } from '../lib/auth';
 import { getSettings } from '../lib/engine';
 
-const router = Router();
+const router = asyncRouter();
 
 router.post('/summary', async (req, res) => {
   const u = await requireRole(req, res, 'admin');

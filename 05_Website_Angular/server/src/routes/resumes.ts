@@ -1,6 +1,6 @@
 /* ResumeMatch PH — routes/resumes.ts
    list · get · save · delete · duplicate · set-active · upload · remove-file */
-import { Router } from 'express';
+import { asyncRouter } from '../lib/async-router';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
@@ -13,7 +13,7 @@ import { fetchResume, serializeResume, recruiterMayReadResume } from '../lib/ser
 import { EDU_RANK, skillId } from '../lib/engine';
 import { UPLOAD_DIR, MAX_UPLOAD, ALLOWED_MIME } from '../config';
 
-const router = Router();
+const router = asyncRouter();
 const upload = multer({ dest: UPLOAD_DIR, limits: { fileSize: MAX_UPLOAD } });
 
 router.post('/list', async (req, res) => {
@@ -44,10 +44,21 @@ router.post('/save', async (req, res) => {
   const R = req.body?.resume;
   if (!R || typeof R !== 'object') return fail(res, 'Nothing to save.');
 
-  const title = String(R.title ?? '').trim() || 'Untitled resume';
+  const title = (String(R.title ?? '').trim() || 'Untitled resume').slice(0, 120);
   const template = ['chronological', 'functional', 'combination'].includes(R.template) ? R.template : 'chronological';
   const design = ['classic', 'modern', 'minimal', 'executive', 'banner', 'split', 'bar', 'categorized'].includes(R.design) ? R.design : 'classic';
   const p = R.personal && typeof R.personal === 'object' ? R.personal : {};
+
+  // Section arrays are clamped before they reach the transaction. Each skill
+  // costs one or two round trips through skillId(), so an unbounded array
+  // would hold a pooled connection open for tens of thousands of queries and
+  // permanently pollute the canonical skills table. These ceilings are far
+  // above any real resume; the builder's own UI never approaches them.
+  const cap = <T,>(v: unknown, n: number): T[] => (Array.isArray(v) ? v.slice(0, n) : []) as T[];
+  const education = cap<any>(R.education, 20);
+  const experience = cap<any>(R.experience, 30);
+  const certifications = cap<any>(R.certifications, 30);
+  const skills = cap<any>(R.skills, 100);
 
   // Ownership check up front so we can send a clean 403 (an error thrown
   // inside the transaction surfaces only as a generic 500).
@@ -83,29 +94,29 @@ router.post('/save', async (req, res) => {
       await tx.exec('DELETE FROM resume_skills WHERE resume_id = ?', [id]);
 
       let i = 0;
-      for (const e of R.education ?? []) {
+      for (const e of education) {
         const lvl = Object.keys(EDU_RANK).includes(e.level) ? e.level : 'bachelor';
         await tx.exec(
           'INSERT INTO education (resume_id, school, degree, level, year_grad, sort_order) VALUES (?,?,?,?,?,?)',
-          [id, e.school ?? '', e.degree ?? '', lvl, e.year ?? '', i++],
+          [id, String(e.school ?? '').slice(0, 160), String(e.degree ?? '').slice(0, 160), lvl, String(e.year ?? '').slice(0, 20), i++],
         );
       }
       i = 0;
-      for (const e of R.experience ?? []) {
+      for (const e of experience) {
         await tx.exec(
           'INSERT INTO work_experience (resume_id, position, company, months, description, sort_order) VALUES (?,?,?,?,?,?)',
-          [id, e.position ?? '', e.company ?? '', Number(e.months) || 0, e.description ?? '', i++],
+          [id, String(e.position ?? '').slice(0, 160), String(e.company ?? '').slice(0, 160), Math.max(0, Math.min(720, Number(e.months) || 0)), String(e.description ?? '').slice(0, 2000), i++],
         );
       }
       i = 0;
-      for (const c of R.certifications ?? []) {
+      for (const c of certifications) {
         await tx.exec(
           'INSERT INTO certifications (resume_id, cert_name, year_taken, sort_order) VALUES (?,?,?,?)',
-          [id, c.name ?? '', c.year ?? '', i++],
+          [id, String(c.name ?? '').slice(0, 160), String(c.year ?? '').slice(0, 20), i++],
         );
       }
-      for (const s of R.skills ?? []) {
-        const trimmed = String(s).trim();
+      for (const s of skills) {
+        const trimmed = String(s).trim().slice(0, 80);
         if (!trimmed) continue;
         const sid = await skillId(trimmed);
         await tx.exec('INSERT INTO resume_skills (resume_id, skill_id) VALUES (?,?) ON CONFLICT DO NOTHING', [id, sid]);

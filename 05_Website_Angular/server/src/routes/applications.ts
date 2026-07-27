@@ -1,5 +1,5 @@
 /* ResumeMatch PH — routes/applications.ts : apply · mine · ranked · set-status */
-import { Router } from 'express';
+import { asyncRouter } from '../lib/async-router';
 import { query, queryOne, exec } from '../db';
 import { ApplicationRow } from '../types';
 import { ok, fail } from '../lib/http';
@@ -9,7 +9,7 @@ import { rmScore, cacheScore } from '../lib/engine';
 import { notifyStatusChange, notifyNewApplication, sendInterviewInvite } from '../lib/notify';
 import { UserRow } from '../types';
 
-const router = Router();
+const router = asyncRouter();
 
 /** Decide who is emailed about a new application, then send it.
  *  Department has an assigned HR owner → only that person is emailed (nobody

@@ -4,7 +4,7 @@
    recruiter form creates, and approving one is what actually creates the
    verified recruiter account. Admin accounts are made with
    `npm run create-admin` — there is deliberately no self-serve path. */
-import { Router } from 'express';
+import { asyncRouter } from '../lib/async-router';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { query, queryOne, exec } from '../db';
@@ -15,7 +15,7 @@ import { ts } from '../lib/serializers';
 import { APP_URL, DEBUG } from '../config';
 import { mailConfigured, sendMail } from '../lib/mailer';
 
-const router = Router();
+const router = asyncRouter();
 
 interface RequestRow {
   request_id: number;

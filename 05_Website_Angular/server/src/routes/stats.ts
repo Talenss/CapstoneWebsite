@@ -1,10 +1,10 @@
 /* ResumeMatch PH — routes/stats.ts : hr (dashboard counters) */
-import { Router } from 'express';
+import { asyncRouter } from '../lib/async-router';
 import { queryOne, query } from '../db';
 import { ok } from '../lib/http';
 import { requireRole } from '../lib/auth';
 
-const router = Router();
+const router = asyncRouter();
 
 router.post('/hr', async (req, res) => {
   const u = await requireRole(req, res, 'recruiter');

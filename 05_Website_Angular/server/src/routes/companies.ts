@@ -1,12 +1,12 @@
 /* ResumeMatch PH — routes/companies.ts : list · get · update */
-import { Router } from 'express';
+import { asyncRouter } from '../lib/async-router';
 import { query, queryOne, exec } from '../db';
 import { CompanyRow } from '../types';
 import { ok, fail } from '../lib/http';
 import { requireRole } from '../lib/auth';
 import { serializeCompany } from '../lib/serializers';
 
-const router = Router();
+const router = asyncRouter();
 
 router.post('/list', async (_req, res) => {
   const rows = await query<CompanyRow>('SELECT * FROM companies ORDER BY company_name');

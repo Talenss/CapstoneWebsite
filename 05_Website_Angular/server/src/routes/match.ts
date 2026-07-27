@@ -1,15 +1,26 @@
 /* ResumeMatch PH — routes/match.ts : score · recommendations
    The three-tier output. The third tier is the point of the whole
    system: below the threshold you get REDIRECTED, not rejected.   */
-import { Router } from 'express';
+import { asyncRouter } from '../lib/async-router';
 import { query, queryOne } from '../db';
 import { PostingRow } from '../types';
 import { ok, fail } from '../lib/http';
 import { requireUser, requireRole } from '../lib/auth';
-import { fetchResume, fetchPosting, serializeResume, serializePosting } from '../lib/serializers';
-import { rmScore, cacheScore } from '../lib/engine';
+import { fetchResume, fetchPosting, serializeResume, serializePosting, recruiterMayReadResume } from '../lib/serializers';
+import { rmScore, cacheScore, getSettings } from '../lib/engine';
 
-const router = Router();
+const router = asyncRouter();
+
+/* The weights and thresholds the SERVER is scoring with. The browser keeps
+   its own copy so it can show a live score without a round trip, and the two
+   must not drift: if an admin edits match_settings and the client keeps the
+   compiled-in 50/25/25, a seeker is shown one number and the recruiter sees
+   another for the same application. The client fetches this once at startup.
+   Public because the study publishes these values anyway. */
+router.post('/settings', async (_req, res) => {
+  const s = await getSettings();
+  ok(res, { weights: s.weights, thresholds: s.thresholds });
+});
 
 router.post('/score', async (req, res) => {
   const u = await requireUser(req, res);
@@ -18,7 +29,16 @@ router.post('/score', async (req, res) => {
   const p = await fetchPosting(Number(req.body?.postingId));
   if (!r || !p) return fail(res, 'Not found.');
 
-  if (u.role === 'seeker' && r.user_id !== u.user_id) return fail(res, 'You can only score your own resumes.', 403);
+  // Same rule as resumes/get: a seeker may only score their own resume, and
+  // a recruiter only one actually submitted to their company's openings.
+  // Gating this on role === 'seeker' alone let any recruiter or admin walk
+  // resume ids and harvest every seeker's skills, gaps and total experience.
+  if (u.role === 'recruiter') {
+    if (!(await recruiterMayReadResume(u, r.resume_id)))
+      return fail(res, 'You can only score resumes submitted to your company.', 403);
+  } else if (r.user_id !== u.user_id) {
+    return fail(res, 'You can only score your own resumes.', 403);
+  }
 
   ok(res, await rmScore(await serializeResume(r), await serializePosting(p, false)));
 });
@@ -43,7 +63,13 @@ router.post('/recommendations', async (req, res) => {
   const appliedRows = await query<{ posting_id: number }>('SELECT posting_id FROM applications WHERE seeker_id = ?', [u.user_id]);
   const applied = appliedRows.map((a) => String(a.posting_id));
 
-  const rows = await query<PostingRow>("SELECT * FROM job_postings WHERE status='open'");
+  // Same filter as postings/list. Without the deadline clause the dashboard
+  // recommended openings that /apply then refused as past their deadline —
+  // the system telling a seeker "strong match" and then turning them away.
+  const rows = await query<PostingRow>(
+    `SELECT * FROM job_postings
+      WHERE status='open' AND (application_deadline IS NULL OR application_deadline >= CURRENT_DATE)`,
+  );
 
   const strong: any[] = [], possible: any[] = [], related: any[] = [];
   for (const p of rows) {

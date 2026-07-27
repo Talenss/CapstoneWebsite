@@ -1,5 +1,5 @@
 /* ResumeMatch PH — routes/postings.ts : list · mine · get · save · toggle */
-import { Router } from 'express';
+import { asyncRouter } from '../lib/async-router';
 import { query, queryOne, exec, withTransaction } from '../db';
 import { PostingRow, UserRow, ResumeRow } from '../types';
 import { ok, fail } from '../lib/http';
@@ -8,7 +8,7 @@ import { fetchPosting, fetchResume, serializePosting, serializeResume } from '..
 import { EDU_RANK, skillId, rmScore, getSettings } from '../lib/engine';
 import { notifyNewPostingMatch } from '../lib/notify';
 
-const router = Router();
+const router = asyncRouter();
 
 // Public: every open position still accepting applications (a past
 // application deadline hides a posting without anyone closing it).
