@@ -85,7 +85,7 @@
 
 <!-- applicant detail: both resumes, side by side -->
 <div class="modal-back" [class.show]="current()" (click)="onBackdropClick($event)">
-  <div class="modal wide">
+  <div appFocusTrap class="modal wide">
     <button class="close-x" type="button" aria-label="Close" (click)="closeModal()">&times;</button>
     @if (current(); as r) {
       <div class="modal-head">

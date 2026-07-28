@@ -7,6 +7,7 @@ import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { AppStatus, Personal, Posting, RankedRow, Tier } from '../../core/models';
 import { EDU_LABELS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
+import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 
 /** Port of 04_Website/app/hr-applicants.html — the ranked-applicant list
  *  for a single posting (?id=), with a search/filter bar and a dual-resume
@@ -15,7 +16,7 @@ import { EDU_LABELS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColo
 @Component({
   selector: 'app-hr-applicants',
   standalone: true,
-  imports: [RouterLink, Header, Footer],
+  imports: [RouterLink, Header, Footer, FocusTrapDirective],
   templateUrl: './hr-applicants.html',
   styleUrl: './hr-applicants.css',
 })

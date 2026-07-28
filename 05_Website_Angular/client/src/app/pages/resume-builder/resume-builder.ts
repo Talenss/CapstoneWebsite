@@ -374,6 +374,12 @@ export class ResumeBuilder implements OnInit {
     }
 
     this.saving.set(true);
+    // What we are actually sending. Compared against the live signal after
+    // the round trip: anything typed WHILE the request was in flight is not
+    // in this payload, so marking the form clean would discard those
+    // characters silently — and the unsaved-changes guard would not fire
+    // either, because it only watches `dirty`.
+    const sent = JSON.stringify(r);
     const res = await this.api.resumes.save(r);
     this.saving.set(false);
 
@@ -383,7 +389,12 @@ export class ResumeBuilder implements OnInit {
     }
 
     this.resume.update((cur) => ({ ...cur, id: res.resume.id, ownFile: res.resume.ownFile }));
-    this.dirty.set(false);
+    // Only clean if nothing changed under us. If it did, the newer edits are
+    // still unsaved and the form must keep saying so.
+    const changedDuringSave = JSON.stringify({
+      ...this.resume(), id: r.id, ownFile: r.ownFile,
+    }) !== sent;
+    this.dirty.set(changedDuringSave);
     this.savedFlag.set(true);
     this.router.navigate([], { relativeTo: this.route, queryParams: { id: res.resume.id }, replaceUrl: true });
 

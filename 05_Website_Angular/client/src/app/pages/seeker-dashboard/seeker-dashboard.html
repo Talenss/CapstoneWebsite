@@ -165,7 +165,7 @@
 <!-- apply -->
 <div class="modal-back" [class.show]="!!current()" (click)="onBackdropClick($event)">
   @if (current(); as item) {
-    <div class="modal">
+    <div appFocusTrap class="modal">
       <button class="close-x" type="button" aria-label="Close" (click)="closeApply()">&times;</button>
       <div class="modal-head">
         <h3>{{ item.posting.title }}</h3>
