@@ -272,6 +272,68 @@ router.post('/withdraw', async (req, res) => {
   ok(res, { application: serializeApplication(updated!) });
 });
 
+/* The applicant's own audit trail.
+
+   Every status change has been written to application_status_history since
+   the first version — apply, set-status and withdraw all record one, inside
+   the same transaction as the change itself, precisely so that no decision
+   exists without a record of who made it and when. Until now the only thing
+   that ever READ those rows was the researcher metrics page.
+
+   So the person the record is about could see that they were "Shortlisted"
+   but not when it happened, nor how long it sat in review, nor that anything
+   had changed at all if they missed the email. A study that argues applicant
+   ranking should be transparent cannot keep the applicant's own history from
+   them; this closes that gap using data already being captured.
+
+   Visible to the applicant (their own application only) and to recruiters at
+   the company that owns the posting. Deliberately NOT included: the name of
+   the individual who made each change. The applicant learns what was decided
+   and when, which is what affects them; naming a particular HR staff member
+   to an applicant is a different disclosure with a different risk, and this
+   feature does not need it to be honest. `by` is therefore a role, not a
+   person. */
+router.post('/history', async (req, res) => {
+  const u = await requireUser(req, res);
+  if (!u) return;
+  const aid = idOf(req.body?.id);
+
+  const a = await queryOne<ApplicationRow & { company_id: number }>(
+    `SELECT a.*, p.company_id
+       FROM applications a
+       JOIN job_postings p ON p.posting_id = a.posting_id
+      WHERE a.application_id = ?`, [aid],
+  );
+
+  /* One message for "no such application" and for "not yours", so this
+     cannot be used to probe which application ids exist. */
+  const mine = !!a && a.seeker_id === u.user_id;
+  const atMyCompany = !!a
+    && (u.role === 'recruiter' || u.role === 'admin')
+    && a.company_id === u.company_id;
+  if (!a || !(mine || atMyCompany)) return fail(res, 'Application not found.');
+
+  const rows = await query<{
+    old_status: string | null; new_status: string; changed_at: unknown; changed_by: number | null;
+  }>(
+    `SELECT old_status, new_status, changed_at, changed_by
+       FROM application_status_history
+      WHERE application_id = ?
+      ORDER BY changed_at ASC, history_id ASC`, [aid],
+  );
+
+  ok(res, {
+    events: rows.map((r) => ({
+      from: r.old_status,
+      to: r.new_status,
+      at: new Date(r.changed_at as string | number | Date).getTime(),
+      // 'you' when the applicant did it themselves (only withdrawal, today),
+      // otherwise the employer. Never an individual's name — see above.
+      by: r.changed_by === a.seeker_id ? 'applicant' : 'employer',
+    })),
+  });
+});
+
 /* A recruiter's personal message to an applicant — typically the
    interview invitation after shortlisting. Deliberately transactional:
    it is one human writing to another about an application the seeker

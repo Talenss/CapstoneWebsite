@@ -159,6 +159,31 @@ await t('SEEKER · a builder save round-trips through SQL', async () => {
     throw new Error('the saved title did not come back from the server');
 });
 
+/* The applicant's own audit trail. These rows were always written; this
+   checks the applicant can now actually read them, and that reading them
+   does not disclose which member of HR made each decision. */
+await t('SEEKER · can read the recorded history of an application', async () => {
+  await login('marco@demo.ph', 'demo123');
+  await page.goto(B + '/seeker-dashboard', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(1800);
+  const btn = page.locator('#apps button:has-text("History")').first();
+  if (!(await btn.count())) throw new Error('no History control on any application row');
+  await btn.click();
+  await page.waitForTimeout(1500);
+  const events = await page.locator('.timeline li').count();
+  if (!events) throw new Error('timeline rendered no recorded events');
+  const txt = await page.locator('.hist-panel').first().innerText();
+  if (!/You applied/.test(txt)) throw new Error('the earliest event is not the applicant applying');
+  if (!/\d{4}/.test(txt)) throw new Error('events carry no date');
+});
+
+await t('the timeline never names the individual who decided', async () => {
+  const txt = await page.locator('.hist-panel').first().innerText();
+  for (const name of ['Santos', 'Maria', 'Grace', 'Lopez']) {
+    if (txt.includes(name)) throw new Error('leaked a recruiter name to the applicant: ' + name);
+  }
+});
+
 await t('RECRUITER · logs in and the dashboard loads from the database', async () => {
   await login('hr@demo.ph', 'demo123');
   await page.goto(B + '/hr-dashboard', { waitUntil: 'networkidle' });

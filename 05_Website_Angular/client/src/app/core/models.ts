@@ -172,6 +172,22 @@ export interface Application {
   resumeTitle?: string | null;
 }
 
+/** One recorded change of an application's status.
+ *
+ *  These rows have always been written (inside the same transaction as the
+ *  change itself, so a decision can never exist without a record of it) but
+ *  were previously readable only by the researcher metrics page. `by` is a
+ *  ROLE, never a person: the applicant is told what was decided and when,
+ *  which is what affects them, without naming the individual HR staff member
+ *  who did it. */
+export interface StatusEvent {
+  /** null for the first event — applying has no previous status. */
+  from: AppStatus | null;
+  to: AppStatus;
+  at: number;
+  by: 'applicant' | 'employer';
+}
+
 export interface MatchResult {
   score: number;
   matchedSkills: string[];

@@ -5,7 +5,7 @@ import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { AppStatus, Application, Posting, RecommendationItem, Resume } from '../../core/models';
+import { AppStatus, Application, Posting, RecommendationItem, Resume, StatusEvent } from '../../core/models';
 import { EDU_LABELS, STATUS_LABELS, THRESHOLDS, WEIGHTS, scoreLocal, statusBadge, tierColor, tierLabel, tierOf } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 
@@ -72,6 +72,73 @@ export class SeekerDashboard implements OnInit {
 
   withdrawingId = signal<string | null>(null);
 
+  /* ---- the applicant's own audit trail -------------------------------
+     Every status change has always been recorded, but only the researcher
+     metrics page ever read those rows. So an applicant could see that they
+     were "Shortlisted" without knowing when it happened, how long it sat in
+     review, or — if they missed the email — that anything had changed at
+     all. The record is about them; they should be able to read it.
+
+     Loaded on demand rather than with the table: most people open at most
+     one, and fetching a timeline for every row would be a request per
+     application on every dashboard load for something usually unread. */
+  openHistoryId = signal<string | null>(null);
+  historyLoading = signal(false);
+  historyEvents = signal<StatusEvent[]>([]);
+  historyError = signal('');
+
+  /** The application the open panel belongs to, so the panel can name it —
+   *  it sits below the table rather than inside the row, so "which one is
+   *  this?" has to be answered in the panel itself. */
+  historyOpenApp = computed(() => this.applications().find((a) => a.id === this.openHistoryId()) ?? null);
+
+  async toggleHistory(a: Application): Promise<void> {
+    if (this.openHistoryId() === a.id) { this.openHistoryId.set(null); return; }
+    this.openHistoryId.set(a.id);
+    this.historyEvents.set([]);
+    this.historyError.set('');
+    this.historyLoading.set(true);
+    const res = await this.api.applications.history(a.id);
+    this.historyLoading.set(false);
+    // Another row may have been opened while this was in flight.
+    if (this.openHistoryId() !== a.id) return;
+    if (!res.ok) { this.historyError.set(res.error); return; }
+    this.historyEvents.set(res.events);
+  }
+
+  /** What the applicant reads on each line. The first event is applying —
+   *  which the applicant did — so it is phrased in their own voice rather
+   *  than as something done to them. */
+  historyLabel(e: StatusEvent): string {
+    if (e.from === null) return 'You applied';
+    if (e.to === 'withdrawn') return 'You withdrew this application';
+    return 'Moved to ' + STATUS_LABELS[e.to].toLowerCase();
+  }
+
+  /** Attribution, deliberately at the level of the employer rather than a
+   *  named individual — see the note on the server route. */
+  historyBy(e: StatusEvent): string {
+    if (e.by === 'applicant') return '';
+    return 'by the hiring team';
+  }
+
+  /** Gap since the previous event, so "sat in review for three weeks" is
+   *  visible rather than something the applicant has to work out. */
+  historyGap(i: number): string {
+    const ev = this.historyEvents();
+    if (i === 0) return '';
+    const days = Math.round((ev[i].at - ev[i - 1].at) / 86400000);
+    if (days < 1) return 'same day';
+    if (days === 1) return '1 day later';
+    return days + ' days later';
+  }
+
+  historyMoment(ts: number): string {
+    return new Date(ts).toLocaleString(undefined, {
+      year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+    });
+  }
+
   /** Withdrawing is offered only while the outcome is still open — once a
    *  person has decided (hired / not selected) there's nothing to withdraw. */
   canWithdraw(a: Application): boolean {
@@ -89,6 +156,13 @@ export class SeekerDashboard implements OnInit {
       return;
     }
     this.applications.update((list) => list.map((x) => (x.id === a.id ? { ...x, status: res.application.status } : x)));
+    // Withdrawing writes a history row. If this application's timeline is
+    // open, it is now one event short of the truth — refetch rather than
+    // leave the applicant reading a record that omits what they just did.
+    if (this.openHistoryId() === a.id) {
+      this.openHistoryId.set(null);
+      await this.toggleHistory(a);
+    }
     this.showToast(`Withdrawn from ${title}.`);
   }
 
