@@ -8,7 +8,7 @@
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ApiAdapter } from './adapter';
-import { AdminRecruiter, AnalyzedResume, Application, ApiResult, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, User } from './models';
+import { AdminRecruiter, AnalyzedResume, Application, ApiResult, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, StatusEvent, User } from './models';
 import { MAX_UPLOAD, ALLOWED_MIME } from './engine';
 
 export class HttpAdapter implements ApiAdapter {
@@ -89,6 +89,7 @@ export class HttpAdapter implements ApiAdapter {
     setStatus: (id: string, status: string) => this.call<{ application: Application }>('applications', 'set-status', { id, status }),
     withdraw: (id: string) => this.call<{ application: Application }>('applications', 'withdraw', { id }),
     invite: (id: string, message: string) => this.call<{ sent?: boolean; simulated?: boolean }>('applications', 'invite', { id, message }),
+    history: (id: string) => this.call<{ events: StatusEvent[] }>('applications', 'history', { id }),
   };
 
   saved = {

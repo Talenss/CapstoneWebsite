@@ -24,6 +24,10 @@ database. `../04_Website` is the old PHP version, kept only as a reference;
   experience 25**, weights published), in three tiers — strong, possible,
   related. No one is auto-rejected.
 - Save openings, track applications through all five statuses, job alerts.
+- **Application history** — every application keeps a dated record of each
+  status it has held, and the applicant can read it: when they applied, when a
+  recruiter moved it, and how long each step took. Attributed to the employer,
+  never to a named individual.
 
 **For recruiters / HR**
 - Applications arrive scored and ranked with the maths shown; both résumés
@@ -105,26 +109,42 @@ npm run build:demo  # browser-only build (demo mode, no server needed)
 npm run dev         # API on :4300, restarts on change
 npm run build && npm start   # production; also serves the built Angular app
 npm test            # engine + file-type tests (30, no database needed)
-npm run test:api    # API integration tests (26) — needs a local PostgreSQL;
+npm run test:api    # API integration tests (33) — needs a local PostgreSQL;
                     # creates and drops its own throwaway database
 npm run test:email  # email delivery (10) — real SMTP dialogue, local sink
 npm run test:analyze # AI extraction (10) — local stand-in for Gemini
-npm run test:all    # all 76 server tests
+npm run test:all    # all 83 server tests
 npm run create-admin -- you@example.com "a strong password"
 ```
 
 ## Browser walkthroughs
 
 Unit tests cannot catch a page that renders blank or a button that quietly
-stops saving. Two scripts drive the real thing:
+stops saving. Four scripts drive the real thing.
+
+**Demo mode** (dev server, no database):
 
 ```bash
 cd client && npm start -- --port 4210      # then, in another terminal:
 node ../e2e/demo-walkthrough.mjs    # all three roles, every page, dark mode, 390px
 node ../e2e/upload-walkthrough.mjs  # the own-file upload, its limits, and the AI disclosure
+node ../e2e/a11y-walkthrough.mjs    # modal focus traps and score attribution
 ```
 
 Run the first one on the morning of a demo. If it reports 17/17, the demo works.
+
+**API mode** (production bundle, real server, real PostgreSQL):
+
+```bash
+cd client && npm run build
+cd ../server && npm run build && node dist/server.js   # then, in another terminal:
+node ../e2e/api-walkthrough.mjs
+```
+
+Run this one before deploying. It is the only check that sees the **production
+build** and the server's Content-Security-Policy together — the combination that
+once shipped a site rendering on critical CSS alone, with every button an
+unstyled browser default, while all the demo-mode checks stayed green.
 
 ## Continuous integration
 

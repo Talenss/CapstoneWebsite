@@ -481,6 +481,124 @@ test('an application carries the score it had when it was submitted', async () =
   }
 });
 
+// ---------- the applicant's own audit trail ----------
+
+test('an applicant can read the recorded history of their own application', async () => {
+  // ana@demo.ph owns application 1, which the seed gives a real two-step
+  // history (submitted → review). seeker@demo.ph has no applications at all.
+  const api = client();
+  await api('auth/login', { email: 'ana@demo.ph', password: 'demo123' });
+  const app = (await api('applications/mine')).body.applications[0];
+  assert.ok(app, 'expected the seed to give this seeker an application');
+
+  const { body } = await api('applications/history', { id: app.id });
+  assert.equal(body.ok, true);
+  assert.ok(Array.isArray(body.events) && body.events.length >= 1, 'expected at least the submission event');
+
+  // Applying is the first thing that ever happens, so the earliest event
+  // must have no previous status.
+  assert.equal(body.events[0].from, null);
+  assert.equal(body.events[0].to, 'submitted');
+
+  // Oldest first, and every entry timestamped.
+  for (let i = 1; i < body.events.length; i++) {
+    assert.ok(body.events[i].at >= body.events[i - 1].at, 'events must be ordered oldest first');
+  }
+  for (const e of body.events) assert.equal(typeof e.at, 'number');
+});
+
+test('a status change by the recruiter appears in the applicant’s history', async () => {
+  // The point of the feature: the applicant learns WHEN something changed,
+  // not merely what it currently is.
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const ranked = (await hr('applications/ranked', { postingId: '1' })).body;
+  const row = ranked.rows.find((r: any) => r.application.status !== 'withdrawn');
+  assert.ok(row, 'expected a non-withdrawn applicant on posting 1');
+
+  const seekerEmail = row.seeker.email;
+  const before = await (async () => {
+    const s = client();
+    await s('auth/login', { email: seekerEmail, password: 'demo123' });
+    return (await s('applications/history', { id: row.application.id })).body.events.length;
+  })();
+
+  const set = await hr('applications/set-status', { id: row.application.id, status: 'shortlisted' });
+  assert.equal(set.body.ok, true);
+
+  const s = client();
+  await s('auth/login', { email: seekerEmail, password: 'demo123' });
+  const after = (await s('applications/history', { id: row.application.id })).body.events;
+  assert.equal(after.length, before + 1, 'the change must add exactly one recorded event');
+
+  const last = after[after.length - 1];
+  assert.equal(last.to, 'shortlisted');
+  assert.equal(last.by, 'employer', 'a recruiter decision is attributed to the employer');
+});
+
+test('history never names the individual who made the decision', async () => {
+  // The applicant is told what was decided and when. Naming a particular HR
+  // staff member to an applicant is a different disclosure this feature does
+  // not need, so `by` is a role and no user id or name is serialized.
+  const api = client();
+  await api('auth/login', { email: 'ana@demo.ph', password: 'demo123' });
+  const app = (await api('applications/mine')).body.applications[0];
+  const { body } = await api('applications/history', { id: app.id });
+  assert.ok(body.events.length, 'expected recorded events to inspect');
+
+  for (const e of body.events) {
+    assert.ok(['applicant', 'employer'].includes(e.by), '`by` must be a role, got ' + e.by);
+    assert.deepEqual(Object.keys(e).sort(), ['at', 'by', 'from', 'to'], 'no extra identifying fields');
+  }
+  assert.ok(!JSON.stringify(body).toLowerCase().includes('santos'), 'must not leak a recruiter name');
+});
+
+test('a seeker cannot read another seeker’s application history', async () => {
+  const victim = client();
+  await victim('auth/login', { email: 'liza@demo.ph', password: 'demo123' });
+  const theirs = (await victim('applications/mine')).body.applications[0];
+  assert.ok(theirs, 'expected the seed to give liza an application');
+
+  const attacker = client();
+  await attacker('auth/login', { email: 'ana@demo.ph', password: 'demo123' });
+  const { body } = await attacker('applications/history', { id: theirs.id });
+  assert.equal(body.ok, false, 'another seeker must not read this history');
+});
+
+test('history does not reveal which application ids exist', async () => {
+  // "Not yours" and "no such application" must be indistinguishable,
+  // otherwise the endpoint enumerates the table.
+  const api = client();
+  await api('auth/login', { email: 'ana@demo.ph', password: 'demo123' });
+
+  const victim = client();
+  await victim('auth/login', { email: 'liza@demo.ph', password: 'demo123' });
+  const real = (await victim('applications/mine')).body.applications[0];
+
+  const existing = await api('applications/history', { id: real.id });
+  const absent = await api('applications/history', { id: 987654 });
+  assert.equal(existing.body.ok, false);
+  assert.equal(absent.body.ok, false);
+  assert.equal(existing.body.error, absent.body.error, 'the two refusals must read identically');
+});
+
+test('a recruiter can read the history of an application to their own company', async () => {
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const ranked = (await hr('applications/ranked', { postingId: '1' })).body;
+  assert.ok(ranked.rows.length, 'expected applicants on posting 1');
+
+  const { body } = await hr('applications/history', { id: ranked.rows[0].application.id });
+  assert.equal(body.ok, true);
+  assert.ok(Array.isArray(body.events));
+});
+
+test('an anonymous caller cannot read any application history', async () => {
+  const anon = client();
+  const { body } = await anon('applications/history', { id: 1 });
+  assert.equal(body.ok, false);
+});
+
 test('the server survives every malformed request in this suite', async () => {
   const health = await fetch(`http://127.0.0.1:${PORT}/api/health`);
   assert.equal(health.status, 200, 'the process must still be serving');

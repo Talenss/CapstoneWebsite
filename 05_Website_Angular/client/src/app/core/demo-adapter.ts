@@ -4,7 +4,7 @@
    departments so all three match tiers actually demonstrate.
    ============================================================ */
 import { ApiAdapter } from './adapter';
-import { AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, User } from './models';
+import { AnalyzedResume, ApiResult, AppStatus, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, StatusEvent, User } from './models';
 import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME } from './engine';
 
 const KEY = 'rmph_v3_db';
@@ -33,6 +33,10 @@ interface Db {
   emailCodes: EmailCode[];
   savedJobs: { userId: string; postingId: string; createdAt: number }[];
   deptAssignments: { companyId: string; department: string; userId: string }[];
+  /** Mirrors the server's application_status_history table. Written on
+   *  every status change so demo mode can show the same applicant-facing
+   *  timeline as api mode rather than a feature that only half exists. */
+  statusHistory: { applicationId: string; from: AppStatus | null; to: AppStatus; at: number; by: 'applicant' | 'employer' }[];
 }
 
 /** Past-deadline postings stop accepting applications — same lazy
@@ -140,6 +144,26 @@ function seed(): Db {
       { companyId: 'c1', department: 'IT', userId: 'u2' },
       { companyId: 'c1', department: 'Front Office', userId: 'u7' },
     ],
+    /* Seeded so the applicant timeline has something real to show on a
+       fresh demo. Each seeded application's history ends at the status the
+       application actually carries above, so the timeline and the badge can
+       never disagree — a2 and a5 are still 'submitted', so they have only
+       the one event that applying creates. */
+    statusHistory: [
+      { applicationId: 'a1', from: null, to: 'submitted', at: Date.now() - D * 3, by: 'applicant' },
+      { applicationId: 'a1', from: 'submitted', to: 'review', at: Date.now() - D * 1, by: 'employer' },
+
+      { applicationId: 'a2', from: null, to: 'submitted', at: Date.now() - D * 2, by: 'applicant' },
+
+      { applicationId: 'a3', from: null, to: 'submitted', at: Date.now() - D * 4, by: 'applicant' },
+      { applicationId: 'a3', from: 'submitted', to: 'review', at: Date.now() - D * 3, by: 'employer' },
+      { applicationId: 'a3', from: 'review', to: 'shortlisted', at: Date.now() - D * 1, by: 'employer' },
+
+      { applicationId: 'a4', from: null, to: 'submitted', at: Date.now() - D * 3, by: 'applicant' },
+      { applicationId: 'a4', from: 'submitted', to: 'review', at: Date.now() - D * 2, by: 'employer' },
+
+      { applicationId: 'a5', from: null, to: 'submitted', at: Date.now() - D * 1, by: 'applicant' },
+    ],
   };
 }
 
@@ -151,6 +175,17 @@ function load(): Db {
       if (!db.emailCodes) db.emailCodes = []; // databases saved before this field existed
       if (!db.savedJobs) db.savedJobs = [];
       if (!db.deptAssignments) db.deptAssignments = []; // databases saved before department routing existed
+      if (!db.statusHistory) {
+        /* Saved before the applicant timeline existed. Back-fill the one
+           event we can state truthfully — that the application was
+           submitted, on its recorded date. Inventing the intermediate
+           steps would put fabricated dates in front of an applicant, which
+           is worse than a short history. */
+        db.statusHistory = db.applications.map((a) => ({
+          applicationId: a.id, from: null, to: 'submitted' as AppStatus, at: a.appliedAt, by: 'applicant' as const,
+        }));
+        persist(db);
+      }
       if (!db.users.some((u) => u.role === 'admin')) {
         // databases saved before the admin panel existed get the admin account
         db.users.push({ id: 'u6', role: 'admin', name: 'Research Team', email: 'admin@demo.ph', password: 'demo123', createdAt: Date.now() } as DemoUser);
@@ -584,7 +619,9 @@ export class DemoAdapter implements ApiAdapter {
         appliedAt: Date.now(),
         scoreSnapshot: r && p ? scoreLocal(r, p).score : null,
       };
-      db.applications.push(app); persist(db);
+      db.applications.push(app);
+      db.statusHistory.push({ applicationId: app.id, from: null, to: 'submitted', at: app.appliedAt, by: 'applicant' });
+      persist(db);
       return apiOk({ application: app });
     },
     mine: () => {
@@ -625,7 +662,11 @@ export class DemoAdapter implements ApiAdapter {
       if (!p || p.companyId !== me.companyId) return apiFail('Application not found.');
       // withdrawing is the applicant's call; a recruiter can't reverse it
       if (a.status === 'withdrawn') return apiFail('This applicant withdrew their application.');
+      const wasStatus = a.status;
       a.status = status as any; a.updatedAt = Date.now(); (a as any).decidedBy = me.id; // a human made this call
+      if (wasStatus !== a.status) {
+        db.statusHistory.push({ applicationId: a.id, from: wasStatus, to: a.status, at: a.updatedAt!, by: 'employer' });
+      }
       persist(db);
       return apiOk({ application: a });
     },
@@ -641,7 +682,9 @@ export class DemoAdapter implements ApiAdapter {
       if (a.status === 'hired' || a.status === 'rejected') {
         return apiFail('This application already has a final decision, so it can no longer be withdrawn.');
       }
+      const priorStatus = a.status;
       a.status = 'withdrawn'; a.updatedAt = Date.now();
+      db.statusHistory.push({ applicationId: a.id, from: priorStatus, to: 'withdrawn', at: a.updatedAt!, by: 'applicant' });
       persist(db);
       return apiOk({ application: a });
     },
@@ -659,6 +702,24 @@ export class DemoAdapter implements ApiAdapter {
       const p = a && db.postings.find((x) => x.id === a.postingId);
       if (!a || !p || p.companyId !== me.companyId) return apiFail('Application not found.');
       return apiOk({ sent: false, simulated: true });
+    },
+    /* The applicant's own audit trail — mirrors server routes/applications.ts.
+       Visible to the applicant it belongs to and to recruiters at the company
+       that owns the posting; one identical message for "no such application"
+       and "not yours", so it cannot be used to probe which ids exist. */
+    history: (applicationId: string) => {
+      const db = load(); const me = meRow(db);
+      if (!me) return apiFail('You are not signed in.');
+      const a = db.applications.find((x) => x.id === applicationId);
+      const p = a && db.postings.find((x) => x.id === a.postingId);
+      const mine = !!a && a.seekerId === me.id;
+      const atMyCompany = !!p && (me.role === 'recruiter' || me.role === 'admin') && p.companyId === me.companyId;
+      if (!a || !(mine || atMyCompany)) return apiFail('Application not found.');
+      const events: StatusEvent[] = db.statusHistory
+        .filter((h) => h.applicationId === applicationId)
+        .sort((x, y) => x.at - y.at)
+        .map((h) => ({ from: h.from, to: h.to, at: h.at, by: h.by }));
+      return apiOk({ events });
     },
   };
 

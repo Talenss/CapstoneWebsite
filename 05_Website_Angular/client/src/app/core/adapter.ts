@@ -5,7 +5,7 @@
    ApiService without caring which mode is active.
    ============================================================ */
 import {
-  AdminRecruiter, AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, User,
+  AdminRecruiter, AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, StatusEvent, User,
 } from './models';
 
 export interface ApiAdapter {
@@ -66,6 +66,10 @@ export interface ApiAdapter {
     /** Recruiter's personal message to an applicant (interview invite).
      *  Emailed with reply-to the recruiter; simulated in demo mode. */
     invite(applicationId: string, message: string): Promise<ApiResult<{ sent?: boolean; simulated?: boolean }>>;
+    /** The recorded status changes for one application, oldest first.
+     *  Readable by the applicant it belongs to and by recruiters at the
+     *  company that owns the posting. */
+    history(applicationId: string): Promise<ApiResult<{ events: StatusEvent[] }>>;
   };
   saved: {
     /** The seeker's bookmarked openings, newest first. */

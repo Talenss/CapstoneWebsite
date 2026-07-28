@@ -13,7 +13,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
 import fs from 'fs';
-import { PORT, ALLOW_ORIGIN, SESSION_SECRET, UPLOAD_DIR, DEBUG, TRUST_PROXY, COOKIE_SECURE } from './config';
+import { PORT, ALLOW_ORIGIN, SESSION_SECRET, UPLOAD_DIR, DEBUG, TRUST_PROXY, COOKIE_SECURE, IS_PROD } from './config';
 
 import authRoutes from './routes/auth';
 import companiesRoutes from './routes/companies';
@@ -30,12 +30,6 @@ import metricsRoutes from './routes/metrics';
 import { runMigrations } from './lib/migrate';
 
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-// Idempotent, additive schema upgrades so a database created before a
-// given feature catches up on first boot (a fresh db/resumematch_ph.sql
-// has nothing to do).
-runMigrations().catch((e) =>
-  console.error('Schema migration failed (is the database reachable?):', e?.message || e));
 
 const app = express();
 
@@ -131,6 +125,42 @@ process.on('uncaughtException', (err) => {
   console.error('[uncaughtException] server staying up:', err);
 });
 
-app.listen(PORT, () => {
-  console.log(`ResumeMatch PH API listening on http://localhost:${PORT}`);
-});
+/* Idempotent, additive schema upgrades so a database created before a given
+   feature catches up on first boot (a fresh db/resumematch_ph.sql has nothing
+   to do).
+
+   This is deliberately AWAITED before the port opens. Previously it was
+   fire-and-forget, which had two consequences worth stating plainly:
+
+     · Requests arriving during the migration hit a half-upgraded schema —
+       a real race on a cold start, not a theoretical one.
+     · A FAILED migration was logged and then ignored, so the server went on
+       serving against a schema it had just failed to correct. The symptom
+       is not an obvious outage but a scattering of confusing 500s much
+       later — e.g. a seeker withdrawing an application against a CHECK
+       constraint that was never widened to allow 'withdrawn'.
+
+   In production a schema we could not verify is a reason not to start: a
+   deployment that fails loudly at boot is far cheaper to diagnose than one
+   that half-works for a week. In development we warn and continue, so the
+   demo bundle still serves on a laptop with no database configured. */
+runMigrations().then(
+  () => listen(),
+  (e) => {
+    const why = e?.message || e;
+    if (IS_PROD) {
+      console.error('Schema migration FAILED — refusing to start:', why);
+      console.error('The database is unreachable or the connecting role cannot alter the schema.');
+      process.exit(1);
+    }
+    console.error('Schema migration failed (is the database reachable?):', why);
+    console.error('Continuing in development — API routes that touch these tables may fail.');
+    listen();
+  },
+);
+
+function listen(): void {
+  app.listen(PORT, () => {
+    console.log(`ResumeMatch PH API listening on http://localhost:${PORT}`);
+  });
+}

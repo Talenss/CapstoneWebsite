@@ -45,7 +45,7 @@ export const ALLOW_ORIGIN = process.env.ALLOW_ORIGIN || 'http://localhost:4200';
 /* NODE_ENV=production is the signal that this is a real deployment rather
    than someone's laptop. It flips the two defaults that are convenient in
    development and dangerous in the open. */
-const IS_PROD = process.env.NODE_ENV === 'production';
+export const IS_PROD = process.env.NODE_ENV === 'production';
 
 /* DEBUG echoes raw error text to clients AND returns live email
    verification codes in API responses — with it on, anyone could register
