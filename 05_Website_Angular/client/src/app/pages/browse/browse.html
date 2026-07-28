@@ -35,6 +35,19 @@
     <span class="count">{{ filteredRows().length }} of {{ rows().length }} shown</span>
   </div>
 
+  <!-- Which resume these scores come from. Without this the page shows a
+       score against every opening with no attribution — and if the active
+       resume is unset or stale it silently falls back to the most recently
+       edited one, so the numbers would be computed from a resume the seeker
+       did not choose, with no way to tell. A system whose argument is that
+       scoring should be transparent cannot be vague about its own input. -->
+  @if (isSeeker() && resume(); as r) {
+    <p class="scored-from">
+      Scored from <b>{{ r.title }}</b>.
+      <a routerLink="/my-resumes">Use a different resume</a>
+    </p>
+  }
+
   <div id="list">
     @if (!loaded()) {
       <div class="loading"><span class="spinner"></span> Loading openings…</div>
@@ -94,7 +107,7 @@
 <!-- detail / apply -->
 <div class="modal-back" [class.show]="!!current()" (click)="onBackdropClick($event)">
   @if (current(); as row) {
-    <div class="modal">
+    <div appFocusTrap class="modal">
       <button class="close-x" type="button" aria-label="Close" (click)="closeDetail()">&times;</button>
       <div class="modal-head">
         <h3>{{ row.posting.title }}</h3>

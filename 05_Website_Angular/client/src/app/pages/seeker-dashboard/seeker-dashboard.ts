@@ -7,6 +7,7 @@ import { SessionService } from '../../core/session.service';
 import { TourService } from '../../shared/tour/tour.service';
 import { AppStatus, Application, Posting, RecommendationItem, Resume } from '../../core/models';
 import { EDU_LABELS, STATUS_LABELS, THRESHOLDS, WEIGHTS, scoreLocal, statusBadge, tierColor, tierLabel, tierOf } from '../../core/engine';
+import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 
 type TierKey = 'strong' | 'possible' | 'related';
 interface Reco { strong: RecommendationItem[]; possible: RecommendationItem[]; related: RecommendationItem[] }
@@ -19,7 +20,7 @@ interface TierConfig { key: TierKey; title: string; badgeClass: string; note: st
 @Component({
   selector: 'app-seeker-dashboard',
   standalone: true,
-  imports: [RouterLink, Header, Footer],
+  imports: [RouterLink, Header, Footer, FocusTrapDirective],
   templateUrl: './seeker-dashboard.html',
   styleUrl: './seeker-dashboard.css',
 })

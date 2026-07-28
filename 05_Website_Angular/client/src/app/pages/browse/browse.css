@@ -17,3 +17,11 @@
 .bookmark{border:1px solid var(--rule);background:var(--paper);border-radius:8px;width:32px;height:30px;font-size:16px;line-height:1;cursor:pointer;color:var(--muted);transition:.15s}
 .bookmark:hover{border-color:var(--gold);color:var(--gold-deep)}
 .bookmark.on{color:var(--gold-deep);border-color:var(--gold);background:var(--gold-wash)}
+
+/* Attribution for the scores in the list — see browse.html. Deliberately
+   quiet: it is a statement of fact, not a call to action. */
+.scored-from{
+  margin:0 0 14px; font-size:13px; color:var(--muted);
+}
+.scored-from b{ color:var(--text); font-weight:600 }
+.scored-from a{ color:var(--gold-deep); margin-left:6px }

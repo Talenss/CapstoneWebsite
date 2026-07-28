@@ -6,6 +6,7 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { Company, MatchResult, Posting, Resume } from '../../core/models';
 import { EDU_LABELS, WEIGHTS, scoreLocal, tierColor, tierLabel, tierOf } from '../../core/engine';
+import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 
 interface BrowseRow {
   posting: Posting;
@@ -23,7 +24,7 @@ type SortKey = 'score' | 'new' | 'az';
 @Component({
   selector: 'app-browse',
   standalone: true,
-  imports: [RouterLink, Header, Footer],
+  imports: [RouterLink, Header, Footer, FocusTrapDirective],
   templateUrl: './browse.html',
   styleUrl: './browse.css',
 })
