@@ -4,10 +4,11 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "ng build && npm run check:csp",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "build:demo": "ng build --configuration demo"
+    "build:demo": "ng build --configuration demo && npm run check:csp",
+    "check:csp": "node scripts/check-csp-safe.mjs"
   },
   "private": true,
   "packageManager": "npm@10.9.7",

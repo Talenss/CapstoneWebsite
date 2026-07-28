@@ -26,7 +26,12 @@ jobs:
       - name: Install dependencies
         working-directory: 05_Website_Angular/client
         run: npm ci
-      - name: Build (production)
+      # `npm run build` ends with the CSP guard (scripts/check-csp-safe.mjs),
+      # which fails if the shipped index.html carries an inline event handler
+      # or a stylesheet pinned to media="print". Both are silently fatal under
+      # the server's Content-Security-Policy: the site renders with critical
+      # CSS only, and no dev-server check can see it.
+      - name: Build (production) + CSP guard
         working-directory: 05_Website_Angular/client
         run: npm run build
 
