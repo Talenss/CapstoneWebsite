@@ -83,6 +83,13 @@ export class HrApplicants {
 
   toastMsg = signal<string | null>(null);
 
+  /** Shown only on the printed sheet, so a page found on a desk later can be
+   *  dated. Fixed at load rather than computed per render — a value that
+   *  changes during change detection would be a needless re-render. */
+  readonly printedOn = new Date().toLocaleDateString('en-PH', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+
   filteredRows = computed(() => {
     const q = this.q().trim().toLowerCase();
     const fs = this.fStatus();
@@ -208,6 +215,73 @@ export class HrApplicants {
     const id = this.postingId();
     if (id) await this.load(id);
     this.showToast(name + ' → ' + STATUS_LABELS[next] + '. They’ll see it on their dashboard.');
+  }
+
+  /* ---------- taking the shortlist off the screen ----------
+     Both of these act on filteredRows(), never on rows(): what leaves is
+     exactly what the recruiter is looking at. Neither adds any data the
+     recruiter cannot already see on this page — they change the format,
+     not the access. */
+
+  /** RFC 4180 quoting: double the quotes, wrap anything containing a comma,
+   *  quote or newline. Without this a skill list ("Excel, Word") silently
+   *  becomes two columns and every row after it is misaligned. */
+  private csvCell(v: unknown): string {
+    const s = String(v ?? '');
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  private slugify(s: string): string {
+    return (s || 'applicants').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
+  }
+
+  exportCsv(): void {
+    const rows = this.filteredRows();
+    if (!rows.length) return;
+    const p = this.posting();
+
+    const header = [
+      'Rank', 'Name', 'Email', 'Score', 'Match level', 'Status',
+      'Skills matched', 'Skills required', 'Missing skills',
+      'Meets education', 'Meets experience', 'Months experience',
+      'Own file attached', 'Applied on',
+    ];
+
+    const body = rows.map((r, i) => [
+      i + 1,
+      r.seeker.name,
+      r.seeker.email,
+      r.score,
+      tierLabel(r.score),
+      STATUS_LABELS[r.application.status],
+      r.matchedSkills.length,
+      r.totalSkills,
+      r.missingSkills.join('; '),
+      r.eduMeets ? 'Yes' : 'No',
+      r.expMeets ? 'Yes' : 'No',
+      r.seekerMonths,
+      r.resume.ownFile ? 'Yes' : 'No',
+      new Date(r.application.appliedAt).toISOString().slice(0, 10),
+    ].map((c) => this.csvCell(c)).join(','));
+
+    // A BOM, so Excel opens UTF-8 correctly instead of mangling accents —
+    // which matters for Filipino names.
+    const csv = '﻿' + [header.join(','), ...body].join('\r\n');
+    const name = this.slugify(p?.title || 'applicants') + '-applicants.csv';
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    this.showToast(rows.length + ' applicant' + (rows.length === 1 ? '' : 's') + ' exported to ' + name);
+  }
+
+  /** Print the ranked list. print.css hides the page chrome and the filters,
+   *  so the sheet carries the posting, the ranking and the reasoning — the
+   *  thing a recruiter actually takes into a shortlisting meeting. */
+  printList(): void {
+    window.print();
   }
 
   private showToast(msg: string): void {

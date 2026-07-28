@@ -47,3 +47,51 @@
 .invite{border-top:1px solid var(--rule);background:var(--paper);padding:16px 22px}
 .invite h4{font-family:var(--display);font-size:17px;margin-bottom:4px}
 .invite textarea{width:100%;padding:12px 14px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px;line-height:1.6;resize:vertical}
+
+/* Print-only banner — see hr-applicants.html. */
+.printed-note{ display:none }
+
+/* ---------- the two toolbar actions ---------- */
+.bar-actions{ display:flex; gap:8px; margin-left:auto }
+@media(max-width:660px){
+  .bar-actions{ margin-left:0; width:100%; }
+  .bar-actions .btn{ flex:1 }
+}
+
+/* ---------- printing the ranked list ----------
+   The global print rules already drop the header, footer and toasts. These
+   handle what is specific to this page: the filter controls and the row
+   actions are interactive things with no meaning on paper, the modal must
+   never print over the list, and a row must not be split across a page
+   break in the middle of someone's score. */
+@media print{
+  /* Every interactive control, by what it actually is rather than a class
+     that does not exist. Buttons and .btn links do nothing on paper, and
+     each row's "Open both resumes" cost a third of the row's width. */
+  .bar, .modal-back, .no-print,
+  button, .btn, a.btn{ display:none !important }
+
+  /* Tighter rows: the on-screen spacing is generous for clicking, which
+     wastes most of a sheet when nobody is clicking anything. */
+  .head{ margin-bottom:4mm }
+  .note{ margin-bottom:4mm !important; padding:2mm 3mm; font-size:9pt }
+  .side{ text-align:right }
+
+  .sub, h1{ margin:0 }
+  h1{ font-size:16pt }
+
+  /* Say what the sheet IS, since the on-screen context is gone. */
+  .printed-note{ display:block !important; margin:2mm 0 4mm; font-size:9pt; color:#333 }
+
+  #list{ border:none }
+  .card.flush{ border:none; box-shadow:none }
+
+  table{ width:100%; border-collapse:collapse }
+  thead{ display:table-header-group }      /* repeat the header on every page */
+  tr{ page-break-inside:avoid; break-inside:avoid }
+  th, td{ border-bottom:1px solid #ccc; padding:4pt 3pt; font-size:9.5pt }
+
+  /* Tier colour survives greyscale printing as a text label, not a swatch. */
+  .badge{ border:none !important; background:none !important; padding:0 !important;
+          color:#000 !important; font-weight:600 }
+}
