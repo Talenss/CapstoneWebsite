@@ -1,0 +1,15 @@
+# Netlify SPA fallback.
+#
+# Angular routes in the browser, so /browse and /auth are not files on disk.
+# Without this every route except "/" returns 404 on a static host — every
+# deep link, and every page refresh. Verified: /browse and /auth return 404
+# on a plain static server without this rule, 200 with it.
+#
+# This duplicates the rule in the repo-root netlify.toml on purpose. This file
+# is copied into the build output as an asset, so routing keeps working even
+# if the site's base directory is configured differently in the Netlify UI and
+# netlify.toml is never read.
+#
+# 200 = rewrite, not redirect: the typed URL stays in the address bar so
+# Angular can read the route from it.
+/*    /index.html   200
