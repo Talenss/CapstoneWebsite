@@ -105,25 +105,65 @@ main{flex:1}
 /* ---------- header ("the front desk") — white SaaS nav with the lion crest ---------- */
 .site-header{background:var(--paper);border-bottom:1px solid var(--rule);position:sticky;top:0;z-index:60}
 .site-header .bar{display:none}
-.site-header .container{display:flex;align-items:center;gap:28px;height:68px}
+.site-header .container{display:flex;align-items:center;gap:14px;height:68px}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;flex:none}
 .brand .mark{width:30px;height:30px;flex:none;display:grid;place-items:center}
 .brand .mark svg{width:28px;height:28px;display:block}
 .brand .word{font-family:var(--display);font-size:20px;font-weight:560;color:var(--text);line-height:1}
 .brand .word em{font-style:normal;color:var(--gold)}
 .brand .word small{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin-top:3px;font-weight:600}
-.nav-links{display:flex;gap:28px;flex:1;list-style:none;padding-left:18px}
-.nav-links a{color:var(--muted);text-decoration:none;font-size:13.5px;font-weight:600;padding:24px 0;border-bottom:2px solid transparent;transition:.15s}
+/* The nav row has to survive the widest case: six links, the visitor's name,
+   and — on the seeker dashboard only, because that page passes showTour —
+   an extra "Show me around" button. Measured on the dashboard at 1366px, the
+   links needed 603px and were allotted 560px, so "My resumes" and "Learning
+   hub" broke across two lines and the header looked ragged. Every other
+   seeker page had 84px to spare; the tour button costs 165px, which is the
+   whole difference. Widening the window does not help — the container is
+   max-width capped, so the shortfall was identical from 920px to 1600px.
+
+   Three things keep it tidy now, in order of importance:
+     · white-space:nowrap — a nav label must never split mid-phrase. This is
+       the actual defect; the rest is making sure nowrap has room.
+     · a smaller gap, which buys back more than the shortfall.
+     · flex-basis:auto rather than the flex:1 shorthand's 0%. With a zero
+       basis the row contributed nothing to the flex calculation, so there
+       was always positive free space, flex-shrink never engaged, and the
+       row simply took whatever the CTA left over — 8px short with a long
+       name. With an auto basis the links' own width is reserved first.
+     · overflow-x on the row as the last resort, so if a future label or a
+       long name ever exceeds the space the row scrolls instead of wrapping.
+       It can no longer look broken, only scrolled. The scrollbar is hidden
+       because on a nav it would be visual noise. */
+.nav-links{display:flex;gap:14px;flex:1 1 auto;min-width:0;list-style:none;padding-left:4px;
+  overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+.nav-links::-webkit-scrollbar{display:none}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:13.5px;font-weight:600;padding:24px 0;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap;flex:none}
 .nav-links a:hover{color:var(--text)}
 .nav-links a.active{color:var(--text);border-bottom-color:var(--gold)}
-.nav-cta{display:flex;gap:10px;align-items:center;flex:none}
-.whoami{font-size:12.5px;color:var(--muted);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* The CTA yields before the nav does. It used to be flex:none, so when a long
+   name needed more room the only thing that could give was the links row —
+   and a clipped NAV label looks broken, while a truncated name does not. The
+   name is the single flexible element here: the theme toggle and the buttons
+   keep their size, and .whoami ellipses instead. Verified with a 31-character
+   name, which clipped the nav by 8px before this. */
+.nav-cta{display:flex;gap:8px;align-items:center;flex:0 1 auto;min-width:0}
+.nav-cta > .btn,.nav-cta > .theme-btn{flex:none}
+/* Capped tighter than the links it competes with: the visitor already knows
+   their own name, whereas a truncated NAV label is a broken-looking site. A
+   long name ("Maria Cristina Dela Cruz-Santos") used to claim 150px and push
+   the nav over its budget; it now ellipses instead. 96px is not arbitrary —
+   it is the largest cap at which the longest realistic name still leaves the
+   six nav labels uncut on the dashboard, which is the tightest page. */
+.whoami{font-size:12.5px;color:var(--muted);max-width:96px;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .menu-btn{display:none;margin-left:auto;background:none;border:1px solid var(--rule);color:var(--text);border-radius:var(--r);padding:7px 11px;cursor:pointer;font-size:15px}
 .theme-btn{width:38px;height:38px;flex:none;padding:0;border-radius:var(--r-pill);border:1.5px solid var(--rule);background:transparent;color:var(--text);cursor:pointer;font-size:15px;line-height:1;display:inline-grid;place-items:center;transition:.15s}
 .theme-btn:hover{border-color:var(--gold);color:var(--gold-deep)}
 @media(max-width:900px){
   .site-header .container{gap:12px}
-  .nav-links{display:none;position:absolute;top:68px;left:0;right:0;background:var(--paper);flex-direction:column;gap:0;padding:6px 22px 16px;border-bottom:1px solid var(--rule);box-shadow:var(--shadow);z-index:61}
+  /* overflow-x is reset here: in the dropdown the links are a COLUMN, so a
+     horizontal scroll container would serve no purpose and could clip the
+     focus ring on the last item. */
+  .nav-links{display:none;position:absolute;top:68px;left:0;right:0;background:var(--paper);flex-direction:column;gap:0;padding:6px 22px 16px;border-bottom:1px solid var(--rule);box-shadow:var(--shadow);z-index:61;overflow-x:visible}
   .nav-links.open{display:flex}
   .nav-links a{padding:13px 0;border-bottom:1px solid var(--rule-2);width:100%}
   .menu-btn{display:block}
