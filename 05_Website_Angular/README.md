@@ -128,7 +128,7 @@ npm run create-admin -- you@example.com "a strong password"
 ## Browser walkthroughs
 
 Unit tests cannot catch a page that renders blank or a button that quietly
-stops saving. Five scripts drive the real thing.
+stops saving. Six scripts drive the real thing.
 
 **Demo mode** (dev server, no database):
 
@@ -138,6 +138,7 @@ node ../e2e/demo-walkthrough.mjs    # all three roles, every page, dark mode, 39
 node ../e2e/upload-walkthrough.mjs  # the own-file upload, its limits, and the AI disclosure
 node ../e2e/a11y-walkthrough.mjs    # modal focus traps and score attribution
 node ../e2e/anchors-walkthrough.mjs # in-page links: learning-hub guides, skip link
+node ../e2e/reference-walkthrough.mjs # dangling aria/label refs, dead links, unnamed dialogs
 ```
 
 Run the first one on the morning of a demo. If it reports 17/17, the demo works.

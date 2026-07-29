@@ -105,10 +105,24 @@
 <app-footer />
 
 <!-- applicant detail: both resumes, side by side -->
-<div class="modal-back" [class.show]="current()" (click)="onBackdropClick($event)">
-  <div appFocusTrap class="modal wide">
-    <button class="close-x" type="button" aria-label="Close" (click)="closeModal()">&times;</button>
-    @if (current(); as r) {
+<!-- appFocusTrap sits INSIDE the @if, matching the browse and dashboard
+     modals. It used to wrap the @if, which meant the directive was created
+     once when the PAGE loaded — with no applicant selected and nothing in the
+     panel — and never again. Three consequences, all measured:
+       · role="dialog" aria-modal="true" was in the document permanently,
+         announcing a modal that was not open;
+       · the directive labels the dialog from its own heading, and at page
+         load there was no heading, so the dialog had NO accessible name —
+         a screen reader announced just "dialog";
+       · opening it did not move focus inside, because the one focus call had
+         already run at page load. Focus stayed on the button that was
+         clicked.
+     Constructed per open, the directive does what it was written to do —
+     verified against /browse, where it was already correct. -->
+<div class="modal-back" [class.show]="!!current()" (click)="onBackdropClick($event)">
+  @if (current(); as r) {
+    <div appFocusTrap class="modal wide">
+      <button class="close-x" type="button" aria-label="Close" (click)="closeModal()">&times;</button>
       <div class="modal-head">
         <h3>{{ r.seeker.name }}</h3>
         <p class="sub">Applied {{ day(r.application.appliedAt) }} · {{ posting()?.title }} · resume: {{ r.resume.title }}</p>
@@ -265,8 +279,8 @@
           @if (savingStatus()) { <span class="spinner"></span> Saving… } @else { Update status }
         </button>
       </div>
-    }
-  </div>
+    </div>
+  }
 </div>
 
 <div class="toast" [class.show]="toastMsg()" role="status" aria-live="polite">{{ toastMsg() }}</div>
