@@ -39,6 +39,16 @@
 }
 .add:hover { border-color: var(--gold); color: var(--gold-deep); background: var(--gold-wash); }
 
+/* "optional" marker inside a label, which is uppercase + letterspaced */
+.opt { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--muted); }
+/* a checkbox that has to sit at the same height as the input beside it */
+.check { display: flex; align-items: center; gap: 9px; min-height: 40px; cursor: pointer; }
+.check input { width: 16px; height: 16px; flex: none; margin: 0; }
+.check span { font-size: 13px; color: var(--muted); }
+/* group heading inside the "More sections" step */
+.grp { font-size: 19px; margin: 30px 0 4px; }
+.grp:first-of-type { margin-top: 6px; }
+
 .tags { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0; }
 .tag {
   display: inline-flex; align-items: center; gap: 8px; background: var(--gold-wash); border: 1px solid var(--gold-line);
@@ -80,29 +90,51 @@
 
 .nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
 
-/* live preview — the actual document */
-.preview { position: sticky; top: 88px; }
+/* live preview — the actual document.
+
+   The sticky column is given the whole height the viewport can spare and
+   scrolls inside itself, so a long resume is readable without leaving the
+   form. `min-height` on the paper is a clamp rather than a fixed number: it
+   grows the sheet to fill that space on a tall screen (the page previously
+   stopped at 520px and looked stunted next to the form) while never forcing
+   a scrollbar on a short one. */
+.preview {
+  position: sticky; top: 88px; display: flex; flex-direction: column;
+  max-height: calc(100vh - 104px); overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+/* Below the two-column breakpoint the preview sits under the form and must
+   flow with the page — a capped, self-scrolling box there would trap the
+   phone's scroll gesture inside the sheet. */
+@media (max-width: 1000px) { .preview { position: static; max-height: none; overflow: visible; } }
 .pv-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
 .pv-head h3 { font-size: 17px; }
 .paper {
-  background: #fff; border: 1px solid var(--rule); border-radius: var(--r); padding: 34px 36px; min-height: 520px;
+  background: #fff; border: 1px solid var(--rule); border-radius: var(--r); padding: 34px 36px;
+  min-height: clamp(560px, calc(100vh - 260px), 1040px); flex: none;
   font-family: Georgia, 'Times New Roman', serif; font-size: 12.5px; line-height: 1.55; color: #22252C; box-shadow: var(--shadow);
 }
+@media (max-width: 1000px) { .paper { min-height: 560px; } }
 @media (max-width: 520px) { .paper { padding: 24px 22px; } }
 .p-name { font-size: 22px; font-weight: 700; letter-spacing: .2px; line-height: 1.1; }
+.p-headline { font-size: 12px; color: #3E434D; margin-top: 3px; }
 .p-contact { font-size: 11px; color: #5A5F6B; margin-top: 5px; }
 .p-sec { margin-top: 18px; }
 .p-sec h4 {
-  font-family: 'Inter', sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
-  border-bottom: 1px solid #22252C; padding-bottom: 4px; margin-bottom: 9px; font-weight: 600;
+  font-family: Arial, Helvetica, sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+  border-bottom: 1px solid #22252C; padding-bottom: 4px; margin-bottom: 9px; font-weight: 700;
 }
 .p-item { margin-bottom: 9px; }
 .p-item b { display: block; font-size: 12.5px; }
 .p-item i { font-style: italic; color: #5A5F6B; font-size: 11.5px; }
 .p-item p { margin-top: 3px; font-size: 11.5px; }
+/* Real list markers — the printed sheet uses the same, because a bullet
+   drawn with a decorative glyph is one more thing a parser can mangle. */
+.p-item ul { margin: 4px 0 0 16px; padding: 0; list-style: disc; }
+.p-item li { font-size: 11.5px; margin-bottom: 2px; }
 
 /* ---- design picker ---- */
-.designs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.designs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-height: 320px; overflow-y: auto; padding-right: 2px; }
 @media (max-width: 520px) { .designs { grid-template-columns: repeat(2, 1fr); } }
 .design-opt { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 10px 12px;
   border: 1px solid var(--rule); border-radius: var(--r); background: var(--paper); cursor: pointer; transition: .14s; }
@@ -111,34 +143,73 @@
 .design-opt b { font-size: 12.5px; color:var(--text); }
 .design-opt small { font-size: 10.5px; color: var(--muted); }
 
-/* ---- live preview reflects the chosen design (echoes resume-print skins) ---- */
+/* ---- live preview reflects the chosen design (echoes resume-print skins) ----
+   Font stacks here are the ATS-safe ones only — Arial/Helvetica, Georgia,
+   Times New Roman. A downloaded face (Manrope, Inter) renders beautifully on
+   screen and is then substituted at print time anyway, so the preview would
+   have been showing a document nobody receives. */
 .paper .rhead { margin: 0; }
-.paper.rz-classic { font-family: Georgia, serif; }
+.paper.rz-classic { font-family: Georgia, 'Times New Roman', serif; }
 .paper.rz-classic .rhead { text-align: center; }
 .paper.rz-classic .p-sec h4 { text-align: center; font-family: Georgia, serif; letter-spacing: 1px; border-bottom-width: 1.5px; }
-.paper.rz-modern, .paper.rz-modern .p-name { font-family: 'Manrope', Arial, sans-serif; }
+.paper.rz-modern, .paper.rz-modern .p-name { font-family: Arial, Helvetica, sans-serif; }
 .paper.rz-modern .rhead { border-bottom: 3px solid var(--gold); padding-bottom: 7px; }
 .paper.rz-modern .p-sec h4 { border-bottom: none; padding-left: 11px; position: relative; }
 .paper.rz-modern .p-sec h4::before { content: ""; position: absolute; left: 0; top: 1px; bottom: 1px; width: 3px; background: var(--gold); }
-.paper.rz-minimal, .paper.rz-minimal .p-name { font-family: 'Helvetica Neue', Arial, sans-serif; }
-.paper.rz-minimal .p-name { font-weight: 300; }
-.paper.rz-minimal .p-sec h4 { border-bottom: 1px solid #e6e6e6; color: #8a8a8a; }
-.paper.rz-executive { font-family: Georgia, serif; }
+.paper.rz-minimal, .paper.rz-minimal .p-name { font-family: Helvetica, Arial, sans-serif; }
+.paper.rz-minimal .p-name { font-weight: 400; }
+.paper.rz-minimal .p-sec h4 { border-bottom: 1px solid #e6e6e6; color: #6b6b6b; }
+.paper.rz-executive { font-family: Georgia, 'Times New Roman', serif; }
 .paper.rz-executive .rhead { border-bottom: 3px double #1a1a1a; padding-bottom: 7px; }
 .paper.rz-executive .p-sec h4 { font-family: Georgia, serif; border-bottom: 1px solid #bbb; }
-.paper.rz-banner, .paper.rz-banner .p-name { font-family: 'Manrope', Arial, sans-serif; }
+.paper.rz-banner, .paper.rz-banner .p-name { font-family: Arial, Helvetica, sans-serif; }
 .paper.rz-banner .rhead { background: #191510; padding: 14px 16px; border-radius: 6px; }
-.paper.rz-banner .rhead .p-name { color: #fff; }
+.paper.rz-banner .rhead .p-name, .paper.rz-banner .rhead .p-headline { color: #fff; }
 .paper.rz-banner .rhead .p-contact { color: #cdd0d7; }
 .paper.rz-banner .p-sec h4 { color: var(--gold-deep); border-bottom-color: #e4dcc6; }
-.paper.rz-split .rhead { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; border-bottom: 2px solid #1a1a1a; padding-bottom: 7px; }
+.paper.rz-split .rhead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 14px; border-bottom: 2px solid #1a1a1a; padding-bottom: 7px; }
 .paper.rz-split .rhead .p-contact { text-align: right; margin-top: 0; }
 .paper.rz-split .p-sec h4 { text-align: center; border-bottom: none; }
-.paper.rz-bar, .paper.rz-bar .p-name { font-family: 'Manrope', Arial, sans-serif; }
+.paper.rz-bar, .paper.rz-bar .p-name { font-family: Arial, Helvetica, sans-serif; }
 .paper.rz-bar .p-sec h4 { background: #F3E9CE; border-bottom: none; padding: 3px 9px; color: #1a1a1a; }
-.paper.rz-categorized, .paper.rz-categorized .p-name { font-family: 'Helvetica Neue', Arial, sans-serif; }
+.paper.rz-categorized, .paper.rz-categorized .p-name { font-family: Helvetica, Arial, sans-serif; }
 .paper.rz-categorized { border-left: 4px solid var(--gold); }
 .paper.rz-categorized .p-sec h4 { color: var(--gold-deep); border-bottom: none; }
-.p-skills span { display: inline-block; border: 1px solid #B9BDC6; border-radius: 2px; padding: 1px 7px; font-size: 10.5px; margin: 0 4px 4px 0; font-family: 'Inter', sans-serif; }
+
+/* ---- the six added designs ---- */
+/* Traditional — the most conservative sheet here: Georgia throughout,
+   centred name, hairline rules and nothing else. */
+.paper.rz-traditional { font-family: Georgia, 'Times New Roman', serif; }
+.paper.rz-traditional .rhead { text-align: center; padding-bottom: 8px; border-bottom: 1px solid #1a1a1a; }
+.paper.rz-traditional .p-sec h4 { font-family: Georgia, serif; letter-spacing: .12em; border-bottom: 1px solid #999; font-weight: 700; }
+/* Clean — no rules at all; the spacing does the work. */
+.paper.rz-clean, .paper.rz-clean .p-name { font-family: Arial, Helvetica, sans-serif; }
+.paper.rz-clean .p-sec { margin-top: 24px; }
+.paper.rz-clean .p-sec h4 { border-bottom: none; letter-spacing: .26em; color: #3E434D; padding-bottom: 0; }
+/* Compact — same skeleton, tuned to fit more on one page. */
+.paper.rz-compact, .paper.rz-compact .p-name { font-family: Arial, Helvetica, sans-serif; }
+.paper.rz-compact { font-size: 11.5px; line-height: 1.4; }
+.paper.rz-compact .p-name { font-size: 19px; }
+.paper.rz-compact .p-sec { margin-top: 12px; }
+.paper.rz-compact .p-sec h4 { margin-bottom: 6px; padding-bottom: 2px; letter-spacing: .12em; }
+.paper.rz-compact .p-item { margin-bottom: 6px; }
+.paper.rz-compact .p-item li { margin-bottom: 0; }
+/* Senior — big name block with the headline under it, heavy full-width rules. */
+.paper.rz-senior { font-family: Georgia, 'Times New Roman', serif; }
+.paper.rz-senior .p-name { font-size: 27px; letter-spacing: .4px; }
+.paper.rz-senior .p-headline { font-size: 13px; margin-top: 5px; }
+.paper.rz-senior .rhead { padding-bottom: 11px; border-bottom: 2px solid #1a1a1a; }
+.paper.rz-senior .p-sec { margin-top: 22px; }
+.paper.rz-senior .p-sec h4 { font-family: Arial, Helvetica, sans-serif; font-weight: 700; border-bottom: 2px solid #1a1a1a; letter-spacing: .14em; }
+/* Graduate — education leads (see DESIGN_ORDER); warm, plain, readable. */
+.paper.rz-graduate, .paper.rz-graduate .p-name { font-family: Arial, Helvetica, sans-serif; }
+.paper.rz-graduate .rhead { border-bottom: 2px solid var(--gold); padding-bottom: 8px; }
+.paper.rz-graduate .p-sec h4 { border-bottom: 1px solid #d8d8d8; color: #4a4a4a; letter-spacing: .16em; }
+/* Technical — skills and projects lead; monospaced-feeling but still Arial. */
+.paper.rz-technical, .paper.rz-technical .p-name { font-family: Helvetica, Arial, sans-serif; }
+.paper.rz-technical .rhead { border-bottom: 1px solid #1a1a1a; padding-bottom: 7px; }
+.paper.rz-technical .p-sec h4 { border-bottom: none; border-left: 3px solid #1a1a1a; padding: 0 0 0 9px; letter-spacing: .14em; }
+
+.p-skills span { display: inline-block; border: 1px solid #B9BDC6; border-radius: 2px; padding: 1px 7px; font-size: 10.5px; margin: 0 4px 4px 0; font-family: Arial, Helvetica, sans-serif; }
 .p-empty { color: #A9AEB8; font-style: italic; }
 .exports { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 14px; }

@@ -326,6 +326,107 @@ test('recruiter-side rules are enforced identically', async () => {
     api('postings/save', { posting: { title: '', department: 'IT', description: 'x', skills: [], educationLevel: 'bachelor' } }));
 });
 
+/* The optional sections (projects, languages, references) and the extra
+   fields on the existing ones are stored one way in Postgres and another in
+   the browser. What must agree is what comes BACK: the same keys, the same
+   values, and — the part that is easy to get wrong — nothing at all where a
+   section is empty, because an empty array is truthy in a template and would
+   print a heading with no content under it. */
+test('the optional sections round-trip identically in both modes', async () => {
+  await demo.auth.login('marco@demo.ph', 'demo123');
+  await api('auth/login', { email: 'marco@demo.ph', password: 'demo123' });
+
+  const payload = (id: string | number | null) => ({
+    id,
+    title: 'Parity — optional sections',
+    template: 'chronological',
+    design: 'technical',
+    personal: {
+      fullName: 'Marco Garcia', email: 'marco@demo.ph', phone: '0917 222 2222', address: 'Angeles City',
+      summary: 'A resume built by the parity suite.',
+      headline: 'Hospitality Management graduate',
+      linkedin: 'linkedin.com/in/marcogarcia',
+      portfolio: '',                       // blank must come back ABSENT, not ''
+    },
+    education: [{ school: 'Holy Angel University', degree: 'BS Hospitality Management', level: 'bachelor', year: '2025',
+      field: 'Hospitality Management', location: 'Angeles City', honors: '' }],
+    experience: [{ position: 'F&B Intern', company: 'Clark hotel', months: 6, description: 'Front of house.',
+      location: 'Clark Freeport Zone', startDate: 'Jan 2025', endDate: '', current: true,
+      bullets: ['Served 60+ covers per shift', '', '   ', 'Handled POS billing'] }],  // blanks dropped
+    skills: ['Customer Service', 'POS'],
+    certifications: [{ name: 'Food Safety Training', year: '2025', issuer: 'TESDA', credentialId: '' }],
+    projects: [
+      { name: 'Banquet checklist app', role: 'Builder', startDate: 'Aug 2025', endDate: '', description: 'A checklist.', link: 'github.com/mg/banquet' },
+      { name: '   ', role: 'dropped' },    // nameless entries are dropped by both
+    ],
+    languages: [{ name: 'Filipino', proficiency: 'Native' }, { name: 'English', proficiency: '' }],
+    references: [],                        // empty section must vanish entirely
+  });
+
+  const d: any = await demo.resumes.save(payload(null) as any);
+  const a: any = await api('resumes/save', { resume: payload(null) });
+  assert.equal(d.ok, true, `demo save failed: ${d.error ?? ''}`);
+  assert.equal(a.ok, true, `api save failed: ${a.error ?? ''}`);
+
+  // Read back through the same path the builder and the print sheet use.
+  const dGot: any = await demo.resumes.get(d.resume.id);
+  const aGot: any = await api('resumes/get', { id: a.resume.id });
+  assert.equal(dGot.ok, true);
+  assert.equal(aGot.ok, true);
+  const dr = dGot.resume;
+  const ar = aGot.resume;
+
+  assert.equal(dr.design, 'technical', 'demo mode rejected a design the picker offers');
+  assert.equal(ar.design, 'technical', 'api mode rejected a design the picker offers');
+
+  assert.equal(dr.personal.headline, ar.personal.headline);
+  assert.equal(dr.personal.linkedin, ar.personal.linkedin);
+  assert.equal('portfolio' in dr.personal, false, 'demo kept an empty portfolio');
+  assert.equal('portfolio' in ar.personal, false, 'api kept an empty portfolio');
+
+  assert.equal(dr.education[0].field, ar.education[0].field);
+  assert.equal('honors' in dr.education[0], false, 'demo kept an empty honors field');
+  assert.equal('honors' in ar.education[0], false, 'api kept an empty honors field');
+
+  const de = dr.experience[0];
+  const ae = ar.experience[0];
+  assert.equal(de.months, ae.months);
+  assert.equal(de.startDate, ae.startDate);
+  assert.equal(de.current, true);
+  assert.equal(ae.current, true);
+  assert.equal('endDate' in de, false, 'demo kept an empty end date');
+  assert.equal('endDate' in ae, false, 'api kept an empty end date');
+  assert.deepEqual(de.bullets, ['Served 60+ covers per shift', 'Handled POS billing']);
+  assert.deepEqual(ae.bullets, de.bullets, 'bullets differ between modes');
+
+  assert.equal(dr.certifications[0].issuer, ar.certifications[0].issuer);
+  assert.equal('credentialId' in dr.certifications[0], false);
+  assert.equal('credentialId' in ar.certifications[0], false);
+
+  assert.equal(dr.projects.length, 1, 'demo kept a nameless project');
+  assert.equal(ar.projects.length, 1, 'api kept a nameless project');
+  assert.equal(dr.projects[0].name, ar.projects[0].name);
+  assert.equal(dr.projects[0].link, ar.projects[0].link);
+  assert.equal('endDate' in dr.projects[0], false);
+  assert.equal('endDate' in ar.projects[0], false);
+
+  assert.deepEqual(dr.languages, ar.languages, 'languages differ between modes');
+  assert.equal('proficiency' in dr.languages[1], false, 'demo kept an empty proficiency');
+
+  assert.equal('references' in dr, false, 'demo returned an empty references section');
+  assert.equal('references' in ar, false, 'api returned an empty references section');
+
+  // And a saved resume still scores — the engine reads only skills, level and
+  // months, so none of the above may change the number.
+  const dP: any = await demo.postings.open();
+  const aP: any = await api('postings/list');
+  const dPost = dP.postings[0];
+  const aPost = aP.postings.find((p: any) => p.title === dPost.title);
+  const dS: any = await demo.match.score(dr.id, dPost.id);
+  const aS: any = await api('match/score', { resumeId: ar.id, postingId: aPost.id });
+  assert.equal(dS.score, aS.score, 'a resume with the new sections scores differently between modes');
+});
+
 test('the password policy is the same in both modes', async () => {
   await demo.auth.login('liza@demo.ph', 'demo123');
   await api('auth/login', { email: 'liza@demo.ph', password: 'demo123' });

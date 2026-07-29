@@ -73,7 +73,11 @@
         <div class="f-sec">
           <h3>Who you are</h3>
           <p><b>{{ result()!.personal.fullName || '—' }}</b></p>
-          <p class="sub">{{ [result()!.personal.email, result()!.personal.phone, result()!.personal.address].join(' · ') }}</p>
+          @if (result()!.personal.headline) { <p class="sub">{{ result()!.personal.headline }}</p> }
+          <p class="sub">{{ join([result()!.personal.email, result()!.personal.phone, result()!.personal.address]) }}</p>
+          @if (join([result()!.personal.linkedin, result()!.personal.portfolio])) {
+            <p class="sub">{{ join([result()!.personal.linkedin, result()!.personal.portfolio]) }}</p>
+          }
           @if (result()!.personal.summary) { <p class="sum">{{ result()!.personal.summary }}</p> }
         </div>
 
@@ -97,14 +101,38 @@
           <h3>Experience <span class="n">({{ result()!.experience.length }})</span></h3>
           @for (e of result()!.experience; track $index) {
             <p><b>{{ e.position || 'Position' }}</b> — {{ e.company }}{{ e.months ? ' · ' + monthsLabel(e.months) : '' }}</p>
+            @if (e.bullets?.length) {
+              <ul class="bul">
+                @for (b of e.bullets; track $index) { <li>{{ b }}</li> }
+              </ul>
+            }
           } @empty { <p class="sub">None found — plenty of openings ask for zero months.</p> }
         </div>
+
+        <!-- Everything extracted has to be visible here: the consent text
+             promises a review step, and a section shown only after saving
+             would not be one. -->
+        @if (result()!.projects?.length) {
+          <div class="f-sec">
+            <h3>Projects <span class="n">({{ result()!.projects!.length }})</span></h3>
+            @for (p of result()!.projects; track $index) {
+              <p><b>{{ p.name }}</b>{{ p.role ? ' — ' + p.role : '' }}</p>
+            }
+          </div>
+        }
+
+        @if (result()!.languages?.length) {
+          <div class="f-sec">
+            <h3>Languages <span class="n">({{ result()!.languages!.length }})</span></h3>
+            <p>{{ languageLine() }}</p>
+          </div>
+        }
 
         @if (result()!.certifications.length) {
           <div class="f-sec">
             <h3>Certifications <span class="n">({{ result()!.certifications.length }})</span></h3>
             @for (c of result()!.certifications; track $index) {
-              <p><b>{{ c.name }}</b>{{ c.year ? ' · ' + c.year : '' }}</p>
+              <p><b>{{ c.name }}</b>{{ join([c.issuer, c.year]) ? ' · ' + join([c.issuer, c.year]) : '' }}</p>
             }
           </div>
         }

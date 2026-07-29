@@ -22,11 +22,12 @@ where the manuscript and the implementation had diverged:
    users type everything by hand. The optional upload-and-extract feature
    contradicts both. Scoring *is* rule-based; the revision says so precisely
    instead of denying that AI is used at all.
-4. **Scoring inputs** — skills, education and experience only. Certifications
-   are stored and shown but not scored; there is no Projects section.
+4. **Scoring inputs** — skills, education and experience only. Certifications,
+   projects, languages and references are stored, printed and shown to the
+   recruiter, but never scored.
 5. **Published weights** — skills 50 / education 25 / experience 25, tiers at
    80 and 50, stored as database configuration.
-6. **Three content formats × eight parser-safe designs.**
+6. **Three content formats × fourteen parser-safe designs.**
 7. **Two resumes per applicant** — the structured one is scored; the uploaded
    file is forwarded but never parsed.
 8. **Six application statuses**, including applicant withdrawal, with an audit

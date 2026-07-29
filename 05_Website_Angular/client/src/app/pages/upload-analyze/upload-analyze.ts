@@ -89,4 +89,15 @@ export class UploadAnalyze {
   monthsLabel(m: number): string {
     return m === 1 ? '1 month' : `${m} months`;
   }
+
+  /** Joins the parts of a line, dropping the empty ones. Template
+   *  expressions can't reach the global `Boolean`, so it lives here. */
+  join(parts: (string | undefined | null)[], sep = ' · '): string {
+    return parts.map((x) => (x ?? '').trim()).filter((x) => x !== '').join(sep);
+  }
+
+  languageLine(): string {
+    return (this.result()?.languages ?? [])
+      .map((l) => this.join([l.name, l.proficiency], ' — ')).join('  ·  ');
+  }
 }

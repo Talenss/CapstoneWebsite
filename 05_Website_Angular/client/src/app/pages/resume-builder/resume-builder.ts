@@ -7,10 +7,24 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { AnalysisService } from '../../core/analysis.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { EDU_LABELS } from '../../core/engine';
-import { Education, EduLevel, Experience, Resume, ResumeDesign, Template } from '../../core/models';
+import { DESIGN_ORDER, EDU_LABELS } from '../../core/engine';
+import { Education, EduLevel, Experience, Language, Project, Reference, Resume, ResumeDesign, Template } from '../../core/models';
 
-const STEPS = ['Details', 'Education', 'Experience', 'Skills', 'Certifications', 'Finish'];
+const STEPS = ['Details', 'Education', 'Experience', 'Skills', 'Certifications', 'More sections', 'Finish'];
+
+type SectionKind = 'education' | 'experience' | 'skills' | 'projects' | 'certifications';
+
+/** Skills that no Royce opening happens to ask for right now, offered so the
+ *  list isn't limited to what the demand pool contains. They score nothing
+ *  today and the copy says so — but a resume is read by people too, and next
+ *  month's opening may well ask for one of them. */
+const OTHER_SKILLS = [
+  'Cash Handling', 'Inventory', 'Bartending', 'Barista Skills', 'Housekeeping', 'Front Desk',
+  'Event Coordination', 'Booking Systems', 'Bookkeeping', 'Payroll', 'Data Entry', 'Filing',
+  'Google Workspace', 'Excel', 'Canva', 'Photoshop', 'Photography', 'Video Editing',
+  'Copywriting', 'Public Speaking', 'Tutoring', 'Driving (Professional License)',
+  'Basic Electrical', 'Carpentry', 'Sewing', 'Baking', 'First Aid', 'Sign Language',
+];
 
 function blankResume(id: string | null = null): Resume {
   return {
@@ -91,9 +105,34 @@ export class ResumeBuilder implements OnInit {
   visibleEducation = computed(() => this.resume().education.filter((e) => e.school || e.degree));
   visibleExperience = computed(() => this.resume().experience.filter((e) => e.position || e.company));
   visibleCertifications = computed(() => this.resume().certifications.filter((c) => c.name));
+  visibleProjects = computed(() => (this.resume().projects ?? []).filter((p) => !!p.name));
+  visibleLanguages = computed(() => (this.resume().languages ?? []).filter((l) => !!l.name));
+  visibleReferences = computed(() => (this.resume().references ?? []).filter((r) => !!r.name));
   poolSuggestions = computed(() => {
     const have = new Set(this.resume().skills.map((s) => s.toLowerCase()));
     return this.poolAll().filter((s) => !have.has(s.toLowerCase()));
+  });
+  /** The second pool: not in demand today, not already on the list. */
+  otherSuggestions = computed(() => {
+    const have = new Set([
+      ...this.resume().skills.map((s) => s.toLowerCase()),
+      ...this.poolAll().map((s) => s.toLowerCase()),
+    ]);
+    return OTHER_SKILLS.filter((s) => !have.has(s.toLowerCase()));
+  });
+
+  /** Section order for the live preview. Normally the Template decides; the
+   *  'graduate' and 'technical' designs exist for the order they impose, so
+   *  they win — and `designReorders` drives the on-screen note that says so,
+   *  rather than leaving the Template radio looking live when it isn't. */
+  designReorders = computed(() => !!DESIGN_ORDER[this.resume().design]);
+  sectionOrder = computed<SectionKind[]>(() => {
+    const forced = DESIGN_ORDER[this.resume().design];
+    if (forced) return forced as SectionKind[];
+    const t = this.resume().template;
+    if (t === 'functional') return ['skills', 'experience', 'education', 'projects', 'certifications'];
+    if (t === 'combination') return ['skills', 'education', 'experience', 'projects', 'certifications'];
+    return ['education', 'experience', 'skills', 'projects', 'certifications'];
   });
   checklist = computed(() => {
     const r = this.resume();
@@ -103,6 +142,7 @@ export class ResumeBuilder implements OnInit {
       { label: 'At least one education entry', done: r.education.length > 0, optional: false },
       { label: 'At least three skills', done: r.skills.length >= 3, optional: false },
       { label: 'Experience (optional — many openings ask for none)', done: r.experience.length > 0, optional: true },
+      { label: 'Projects, languages or references (optional)', done: !!(r.projects?.length || r.languages?.length || r.references?.length), optional: true },
       { label: 'Your own resume file (optional)', done: !!r.ownFile, optional: true },
     ];
   });
@@ -142,11 +182,19 @@ export class ResumeBuilder implements OnInit {
           phone: d.personal.phone || '',
           address: d.personal.address || '',
           summary: d.personal.summary || '',
+          ...(d.personal.headline ? { headline: d.personal.headline } : {}),
+          ...(d.personal.linkedin ? { linkedin: d.personal.linkedin } : {}),
+          ...(d.personal.portfolio ? { portfolio: d.personal.portfolio } : {}),
         },
         education: d.education,
         experience: d.experience,
         skills: d.skills,
         certifications: d.certifications,
+        // Only what the upload actually contained — an absent section stays
+        // absent so the builder doesn't open on an empty heading to delete.
+        ...(d.projects?.length ? { projects: d.projects } : {}),
+        ...(d.languages?.length ? { languages: d.languages } : {}),
+        ...(d.references?.length ? { references: d.references } : {}),
       });
       this.pendingAnalysisFile = pending.file;
       this.dirty.set(true);
@@ -173,7 +221,7 @@ export class ResumeBuilder implements OnInit {
     this.tour.init(
       'builder',
       [
-        { sel: '#rail', title: 'Six steps, in order', text: 'Move with Next, or jump straight to any step. Nothing is scored until you save, and you can come back and edit forever.' },
+        { sel: '#rail', title: 'Seven steps, in order', text: 'Move with Next, or jump straight to any step. Steps 1–5 are the resume itself; “More sections” is optional extras. Nothing is scored until you save, and you can come back and edit forever.' },
         { sel: '#paper', title: 'It builds as you type', text: 'This is the actual document a recruiter reads. Change a field on the left and watch it appear here.' },
         { sel: '#s0 .field', title: 'Start with the basics', text: 'Name, contact, and two or three plain sentences about yourself. Skip adjectives like "hardworking" — say what you did instead.' },
         { sel: '[data-tour]', title: 'This tour is always here', text: 'Stuck on a step? Reopen this from any page. There’s also a Learning hub with full guides on ATS formatting.' },
@@ -235,23 +283,87 @@ export class ResumeBuilder implements OnInit {
     this.resume.update((r) => ({ ...r, experience: [...r.experience, { position: '', company: '', months: 0, description: '' }] }));
     this.markDirty();
   }
-  updateExperience(i: number, field: 'position' | 'company' | 'months' | 'description', v: string): void {
+  updateExperience(
+    i: number,
+    field: 'position' | 'company' | 'months' | 'description' | 'location' | 'startDate' | 'endDate',
+    v: string,
+  ): void {
     this.resume.update((r) => ({
       ...r,
       experience: r.experience.map((exp, idx): Experience => {
         if (idx !== i) return exp;
-        switch (field) {
-          case 'months': return { ...exp, months: Number(v) || 0 };
-          case 'position': return { ...exp, position: v };
-          case 'company': return { ...exp, company: v };
-          case 'description': return { ...exp, description: v };
-        }
+        if (field === 'months') return { ...exp, months: Number(v) || 0 };
+        return { ...exp, [field]: v };
       }),
+    }));
+    this.markDirty();
+  }
+  /** "I still work here" — clears the end date, since the sheet prints
+   *  "Present" for it and two answers would contradict each other. */
+  toggleCurrent(i: number, on: boolean): void {
+    this.resume.update((r) => ({
+      ...r,
+      experience: r.experience.map((exp, idx) => (idx === i ? { ...exp, current: on, endDate: on ? '' : exp.endDate } : exp)),
+    }));
+    this.markDirty();
+  }
+  /** Bullets are edited as one textarea, one line each — the same shape they
+   *  are stored and printed in, so nothing can be lost in translation. */
+  bulletText(e: Experience): string {
+    return (e.bullets ?? []).join('\n');
+  }
+  updateBullets(i: number, v: string): void {
+    const bullets = v.split('\n').map((b) => b.trim()).filter(Boolean);
+    this.resume.update((r) => ({
+      ...r,
+      experience: r.experience.map((exp, idx) => (idx === i ? { ...exp, bullets } : exp)),
     }));
     this.markDirty();
   }
   removeExperience(i: number): void {
     this.resume.update((r) => ({ ...r, experience: r.experience.filter((_, idx) => idx !== i) }));
+    this.markDirty();
+  }
+
+  // ---------- projects / languages / references ----------
+  // All three are optional. An empty list is stored as no list at all, so a
+  // resume that has none prints no heading — matching what the server returns.
+  addProject(): void {
+    this.resume.update((r) => ({ ...r, projects: [...(r.projects ?? []), { name: '' } as Project] }));
+    this.markDirty();
+  }
+  updateProject(i: number, field: string, v: string): void {
+    this.resume.update((r) => ({ ...r, projects: (r.projects ?? []).map((p, idx) => (idx === i ? { ...p, [field]: v } : p)) }));
+    this.markDirty();
+  }
+  removeProject(i: number): void {
+    this.resume.update((r) => ({ ...r, projects: (r.projects ?? []).filter((_, idx) => idx !== i) }));
+    this.markDirty();
+  }
+
+  addLanguage(): void {
+    this.resume.update((r) => ({ ...r, languages: [...(r.languages ?? []), { name: '' } as Language] }));
+    this.markDirty();
+  }
+  updateLanguage(i: number, field: string, v: string): void {
+    this.resume.update((r) => ({ ...r, languages: (r.languages ?? []).map((l, idx) => (idx === i ? { ...l, [field]: v } : l)) }));
+    this.markDirty();
+  }
+  removeLanguage(i: number): void {
+    this.resume.update((r) => ({ ...r, languages: (r.languages ?? []).filter((_, idx) => idx !== i) }));
+    this.markDirty();
+  }
+
+  addReference(): void {
+    this.resume.update((r) => ({ ...r, references: [...(r.references ?? []), { name: '' } as Reference] }));
+    this.markDirty();
+  }
+  updateReference(i: number, field: string, v: string): void {
+    this.resume.update((r) => ({ ...r, references: (r.references ?? []).map((x, idx) => (idx === i ? { ...x, [field]: v } : x)) }));
+    this.markDirty();
+  }
+  removeReference(i: number): void {
+    this.resume.update((r) => ({ ...r, references: (r.references ?? []).filter((_, idx) => idx !== i) }));
     this.markDirty();
   }
 
@@ -307,15 +419,24 @@ export class ResumeBuilder implements OnInit {
   }
 
   // ---------- design (visual style) — every option is single-column, ATS-safe ----------
-  readonly designs: { id: ResumeDesign; label: string; note: string }[] = [
-    { id: 'classic', label: 'Classic', note: 'Serif, centered' },
-    { id: 'modern', label: 'Modern', note: 'Sans, gold accent' },
-    { id: 'minimal', label: 'Minimal', note: 'Airy, light' },
-    { id: 'executive', label: 'Executive', note: 'Serif, formal' },
-    { id: 'banner', label: 'Banner', note: 'Dark header band' },
-    { id: 'split', label: 'Split', note: 'Name / contact split' },
-    { id: 'bar', label: 'Bar', note: 'Filled headings' },
-    { id: 'categorized', label: 'Rail', note: 'Left accent rail' },
+  readonly designs: { id: ResumeDesign; label: string; note: string; suits: string }[] = [
+    { id: 'classic', label: 'Classic', note: 'Serif, centered', suits: 'Government, banking, legal, education' },
+    { id: 'modern', label: 'Modern', note: 'Sans, gold accent', suits: 'Hospitality, marketing, front office' },
+    { id: 'minimal', label: 'Minimal', note: 'Airy, light', suits: 'Design, media, start-ups' },
+    { id: 'executive', label: 'Executive', note: 'Serif, formal', suits: 'Supervisory and management roles' },
+    { id: 'banner', label: 'Banner', note: 'Dark header band', suits: 'Sales, events, customer-facing roles' },
+    { id: 'split', label: 'Split', note: 'Name / contact split', suits: 'Administration, coordination' },
+    { id: 'bar', label: 'Bar', note: 'Filled headings', suits: 'Retail, operations, logistics' },
+    { id: 'categorized', label: 'Rail', note: 'Left accent rail', suits: 'Any role wanting a little colour' },
+    // The six added to the ATS set. Names differ from the brief's so they
+    // don't collide with the eight above ("Classic" and "Executive" were
+    // already taken by a different look).
+    { id: 'traditional', label: 'Traditional', note: 'Georgia, thin rules', suits: 'The most conservative employers' },
+    { id: 'clean', label: 'Clean', note: 'No rules, whitespace only', suits: 'Corporate roles, modern HR teams' },
+    { id: 'compact', label: 'Compact', note: 'Tight — fits more on a page', suits: 'Long histories that must stay on one page' },
+    { id: 'senior', label: 'Senior', note: 'Big name block + headline', suits: 'Department heads, senior applicants' },
+    { id: 'graduate', label: 'Graduate', note: 'Education first', suits: 'Fresh graduates and OJT applicants' },
+    { id: 'technical', label: 'Technical', note: 'Skills and projects first', suits: 'IT, engineering, technical roles' },
   ];
 
   setDesign(d: ResumeDesign): void {
@@ -420,32 +541,79 @@ export class ResumeBuilder implements OnInit {
     return true;
   }
 
+  /** Joins the optional bits of a line, dropping the empty ones. Template
+   *  expressions can't reach the global `Boolean`, so the filtering has to
+   *  happen here rather than inline in the HTML. */
+  joinMeta(parts: (string | undefined | null)[], sep = ' · '): string {
+    return parts.map((x) => (x ?? '').trim()).filter((x) => x !== '').join(sep);
+  }
+  monthsLabel(months: number): string {
+    return months ? `${months} month${months > 1 ? 's' : ''}` : '';
+  }
+  languageLine(): string {
+    return this.visibleLanguages().map((l) => this.joinMeta([l.name, l.proficiency], ' — ')).join('  ·  ');
+  }
+
+  /** "Jun 2025 – Present" / "Jun 2024 – Mar 2025". One format everywhere, so
+   *  a parser reading dates out of the sheet sees the same shape each time. */
+  dateRange(e: { startDate?: string; endDate?: string; current?: boolean }): string {
+    const from = (e.startDate || '').trim();
+    const to = e.current ? 'Present' : (e.endDate || '').trim();
+    if (from && to) return `${from} – ${to}`;
+    return from || to || '';
+  }
+
   // ---------- exports ----------
   private plainText(): string {
     const r = this.resume();
     const p = r.personal;
     const L: string[] = [];
-    L.push(p.fullName || '', [p.email, p.phone, p.address].filter(Boolean).join(' | '), '');
-    if (p.summary) L.push('SUMMARY', p.summary, '');
+    L.push(p.fullName || '');
+    if (p.headline) L.push(p.headline);
+    // Links go in as their full visible URL: a parser that drops the anchor
+    // still keeps the address.
+    L.push([p.email, p.phone, p.address, p.linkedin, p.portfolio].filter(Boolean).join(' | '), '');
+    if (p.summary) L.push('PROFESSIONAL SUMMARY', p.summary, '');
     if (r.education.length) {
       L.push('EDUCATION');
-      r.education.forEach((e) => L.push('- ' + [e.degree, e.school, e.year].filter(Boolean).join(', ')));
+      r.education.forEach((e) => {
+        L.push('- ' + [e.degree, e.field, e.school, e.location, e.year].filter(Boolean).join(', '));
+        if (e.honors) L.push('  ' + e.honors);
+      });
       L.push('');
     }
     if (r.experience.length) {
-      L.push('EXPERIENCE');
+      L.push('WORK EXPERIENCE');
       r.experience.forEach((e) => {
-        L.push('- ' + [e.position, e.company, e.months ? e.months + ' months' : ''].filter(Boolean).join(', '));
+        L.push('- ' + [e.position, e.company, e.location, this.dateRange(e) || (e.months ? e.months + ' months' : '')].filter(Boolean).join(', '));
         if (e.description) L.push('  ' + e.description);
+        (e.bullets ?? []).forEach((b) => L.push('  - ' + b));
       });
       L.push('');
     }
     if (r.skills.length) L.push('SKILLS', r.skills.join(', '), '');
+    if (r.projects?.length) {
+      L.push('PROJECTS');
+      r.projects.forEach((x) => {
+        L.push('- ' + [x.name, x.role, this.dateRange(x)].filter(Boolean).join(', '));
+        if (x.description) L.push('  ' + x.description);
+        if (x.link) L.push('  ' + x.link);
+      });
+      L.push('');
+    }
     if (r.certifications.length) {
       L.push('CERTIFICATIONS');
-      r.certifications.forEach((c) => L.push('- ' + [c.name, c.year].filter(Boolean).join(', ')));
+      r.certifications.forEach((c) => L.push('- ' + [c.name, c.issuer, c.year, c.credentialId].filter(Boolean).join(', ')));
+      L.push('');
     }
-    return L.join('\n');
+    if (r.languages?.length) {
+      L.push('LANGUAGES', r.languages.map((l) => [l.name, l.proficiency].filter(Boolean).join(' — ')).join(', '), '');
+    }
+    if (r.references?.length) {
+      L.push('REFERENCES');
+      r.references.forEach((x) => L.push('- ' + [x.name, x.position, x.company, x.email, x.phone].filter(Boolean).join(', ')));
+    }
+    return L.join('\n').trimEnd();
   }
 
   private slug(): string {
@@ -467,28 +635,50 @@ export class ResumeBuilder implements OnInit {
   /** Builds the same section markup/order as the live-preview template,
    *  as a raw HTML string — used only for the Word export (option (a)
    *  from the task brief: build the target HTML directly rather than
-   *  reading back rendered DOM). */
+   *  reading back rendered DOM). Headings are the standard ATS ones, spelled
+   *  the same here, in the preview, and on the print sheet. */
   private buildBlocksHtml(): string {
     const r = this.resume();
+    const meta = (parts: (string | undefined)[]) => parts.filter(Boolean).map((x) => esc(x)).join(' · ');
+
     const eduHtml = this.visibleEducation()
-      .map((e) => `<div class="p-item"><b>${esc(e.degree || 'Degree')}</b><i>${esc(e.school || '')}${e.year ? ' · ' + esc(e.year) : ''}</i></div>`)
+      .map((e) => `<div class="p-item"><b>${esc([e.degree || 'Degree', e.field].filter(Boolean).join(' — '))}</b>`
+        + `<i>${meta([e.school, e.location, e.year])}</i>${e.honors ? `<p>${esc(e.honors)}</p>` : ''}</div>`)
       .join('');
     const expHtml = this.visibleExperience()
-      .map((e) => `<div class="p-item"><b>${esc(e.position || 'Position')}</b><i>${esc(e.company || '')}${e.months ? ' · ' + e.months + ' month' + (e.months > 1 ? 's' : '') : ''}</i>${e.description ? `<p>${esc(e.description)}</p>` : ''}</div>`)
+      .map((e) => `<div class="p-item"><b>${esc(e.position || 'Position')}</b>`
+        + `<i>${meta([e.company, e.location, this.dateRange(e) || (e.months ? e.months + ' month' + (e.months > 1 ? 's' : '') : '')])}</i>`
+        + `${e.description ? `<p>${esc(e.description)}</p>` : ''}`
+        + `${(e.bullets ?? []).length ? `<ul>${(e.bullets ?? []).map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` : ''}</div>`)
       .join('');
-    const skillHtml = r.skills.length ? `<div class="p-skills">${r.skills.map((s) => `<span>${esc(s)}</span>`).join('')}</div>` : '';
+    const skillHtml = r.skills.length ? `<p>${esc(r.skills.join(' · '))}</p>` : '';
+    const projHtml = this.visibleProjects()
+      .map((x) => `<div class="p-item"><b>${esc(x.name)}</b><i>${meta([x.role, this.dateRange(x)])}</i>`
+        + `${x.description ? `<p>${esc(x.description)}</p>` : ''}${x.link ? `<p>${esc(x.link)}</p>` : ''}</div>`)
+      .join('');
     const certHtml = this.visibleCertifications()
-      .map((c) => `<div class="p-item"><b>${esc(c.name)}</b>${c.year ? `<i>${esc(c.year)}</i>` : ''}</div>`)
+      .map((c) => `<div class="p-item"><b>${esc(c.name)}</b><i>${meta([c.issuer, c.year])}</i>`
+        + `${c.credentialId ? `<p>${esc(c.credentialId)}</p>` : ''}</div>`)
+      .join('');
+    const langHtml = this.visibleLanguages().length
+      ? `<p>${esc(this.visibleLanguages().map((l) => [l.name, l.proficiency].filter(Boolean).join(' — ')).join(' · '))}</p>` : '';
+    const refHtml = this.visibleReferences()
+      .map((x) => `<div class="p-item"><b>${esc(x.name)}</b><i>${meta([x.position, x.company])}</i>`
+        + `${x.email || x.phone ? `<p>${meta([x.email, x.phone])}</p>` : ''}</div>`)
       .join('');
 
-    const edu = this.sectionHtml('Education', eduHtml);
-    const exp = this.sectionHtml('Experience', expHtml);
-    const skill = this.sectionHtml('Skills', skillHtml);
-    const cert = this.sectionHtml('Certifications', certHtml);
-
-    if (r.template === 'functional') return skill + exp + edu + cert;
-    if (r.template === 'combination') return skill + edu + exp + cert;
-    return edu + exp + skill + cert;
+    const block: Record<SectionKind, string> = {
+      education: this.sectionHtml('Education', eduHtml),
+      experience: this.sectionHtml('Work Experience', expHtml),
+      skills: this.sectionHtml('Skills', skillHtml),
+      projects: this.sectionHtml('Projects', projHtml),
+      certifications: this.sectionHtml('Certifications', certHtml),
+    };
+    // Languages and References always close the document, whatever the order
+    // above — that is where a reader expects them.
+    return this.sectionOrder().map((k) => block[k]).join('')
+      + this.sectionHtml('Languages', langHtml)
+      + this.sectionHtml('References', refHtml);
   }
 
   exportTxt(): void {
@@ -500,18 +690,24 @@ export class ResumeBuilder implements OnInit {
     const r = this.resume();
     const p = r.personal;
     const name = esc(p.fullName) || 'Your name';
+    const headline = p.headline ? `<p class="hl">${esc(p.headline)}</p>` : '';
     const contact = esc(this.contactLine()) || 'email · phone · city';
-    const summary = p.summary ? `<div class="p-sec"><h2>Summary</h2><p style="font-size:11.5px">${esc(p.summary)}</p></div>` : '';
+    const links = [p.linkedin, p.portfolio].filter(Boolean).map((x) => esc(x)).join(' · ');
+    const summary = p.summary ? `<div class="p-sec"><h2>Professional Summary</h2><p style="font-size:11.5px">${esc(p.summary)}</p></div>` : '';
     const ownFileNote = r.ownFile
       ? `<div class="p-sec"><h2>Attached by the applicant</h2><p style="font-size:11px;color:#5A5F6B">${esc(r.ownFile.name)} — sent to the recruiter alongside this resume. Not part of the score.</p></div>`
       : '';
 
     const html =
       '<html xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8">' +
-      '<style>body{font-family:Georgia,serif;font-size:11pt;line-height:1.4}h1{font-size:18pt;margin:0}' +
-      'h2{font-size:10pt;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:2px;margin:16pt 0 6pt}' +
-      '.c{font-size:9pt;color:#555}</style></head><body>' +
-      `<h1>${name}</h1><p class="c">${contact}</p>${summary}${this.buildBlocksHtml()}${ownFileNote}</body></html>`;
+      // Word gets ATS-safe system fonts too — a downloaded face would not
+      // survive the .doc anyway, and Georgia/Arial are on every machine.
+      '<style>body{font-family:Georgia,"Times New Roman",serif;font-size:11pt;line-height:1.4}h1{font-size:18pt;margin:0}' +
+      'h2{font-family:Arial,Helvetica,sans-serif;font-size:10pt;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:2px;margin:16pt 0 6pt}' +
+      'ul{margin:3pt 0 0 16pt;padding:0}li{font-size:10.5pt}' +
+      '.c,.hl{font-size:9.5pt;color:#555}</style></head><body>' +
+      `<h1>${name}</h1>${headline}<p class="c">${contact}</p>${links ? `<p class="c">${links}</p>` : ''}` +
+      `${summary}${this.buildBlocksHtml()}${ownFileNote}</body></html>`;
 
     this.downloadBlob(new Blob(['﻿' + html], { type: 'application/msword' }), this.slug() + '.doc');
     this.showToast('Word file downloaded.');

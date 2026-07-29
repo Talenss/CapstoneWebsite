@@ -18,6 +18,23 @@ import { AppStatus, EduLevel, MatchResult, Posting, Resume, Tier } from './model
 export const WEIGHTS = { skills: 0.5, education: 0.25, experience: 0.25 };
 export const THRESHOLDS = { strong: 80, related: 50 };
 
+/** Every accepted value of `resumes.design`. Anything else falls back to
+ *  'classic' rather than being rejected, so a resume saved by a newer build
+ *  still opens on an older one. Three places must agree with this list: the
+ *  ResumeDesign union in models.ts, the whitelist in server routes/resumes.ts,
+ *  and the CHECK constraint on the resumes table. */
+export const DESIGNS: string[] = [
+  'classic', 'modern', 'minimal', 'executive', 'banner', 'split', 'bar', 'categorized',
+  'traditional', 'clean', 'compact', 'senior', 'graduate', 'technical',
+];
+
+/** Two designs are defined by the ORDER they impose, not by their looks, so
+ *  they override the template's order. Everything else leaves it alone. */
+export const DESIGN_ORDER: Record<string, ('education' | 'experience' | 'skills' | 'projects' | 'certifications')[]> = {
+  graduate: ['education', 'projects', 'certifications', 'experience', 'skills'],
+  technical: ['skills', 'projects', 'experience', 'education', 'certifications'],
+};
+
 /** Adopt the server's weights and thresholds. Ignores anything malformed, so
  *  a bad row in match_settings degrades to the published defaults rather than
  *  producing NaN scores across the whole interface. */

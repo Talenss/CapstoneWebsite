@@ -47,7 +47,12 @@ router.post('/save', async (req, res) => {
 
   const title = (String(R.title ?? '').trim() || 'Untitled resume').slice(0, 120);
   const template = ['chronological', 'functional', 'combination'].includes(R.template) ? R.template : 'chronological';
-  const design = ['classic', 'modern', 'minimal', 'executive', 'banner', 'split', 'bar', 'categorized'].includes(R.design) ? R.design : 'classic';
+  // Kept in step with client/src/app/core/engine.ts DESIGNS, the ResumeDesign
+  // union, and the CHECK constraint on resumes.design. An unknown value falls
+  // back rather than failing the save, so a resume written by a newer build
+  // still saves against an older server.
+  const design = ['classic', 'modern', 'minimal', 'executive', 'banner', 'split', 'bar', 'categorized',
+    'traditional', 'clean', 'compact', 'senior', 'graduate', 'technical'].includes(R.design) ? R.design : 'classic';
   const p = R.personal && typeof R.personal === 'object' ? R.personal : {};
 
   // Section arrays are clamped before they reach the transaction. Each skill
@@ -60,6 +65,9 @@ router.post('/save', async (req, res) => {
   const experience = cap<any>(R.experience, 30);
   const certifications = cap<any>(R.certifications, 30);
   const skills = cap<any>(R.skills, 100);
+  const projects = cap<any>(R.projects, 20);
+  const languages = cap<any>(R.languages, 20);
+  const references = cap<any>(R.references, 10);
 
   // Ownership check up front so we can send a clean 403 (an error thrown
   // inside the transaction surfaces only as a generic 500).
@@ -74,13 +82,17 @@ router.post('/save', async (req, res) => {
 
       if (id) {
         await tx.exec(
-          'UPDATE resumes SET title=?, template_type=?, design=?, full_name=?, email=?, phone=?, address=?, summary=? WHERE resume_id=?',
-          [title, template, design, p.fullName ?? '', p.email ?? '', p.phone ?? '', p.address ?? '', p.summary ?? '', id],
+          `UPDATE resumes SET title=?, template_type=?, design=?, full_name=?, email=?, phone=?,
+             address=?, summary=?, headline=?, linkedin=?, portfolio=? WHERE resume_id=?`,
+          [title, template, design, p.fullName ?? '', p.email ?? '', p.phone ?? '', p.address ?? '', p.summary ?? '',
+           String(p.headline ?? '').slice(0, 200), String(p.linkedin ?? '').slice(0, 300), String(p.portfolio ?? '').slice(0, 300), id],
         );
       } else {
         const ins = await tx.exec(
-          'INSERT INTO resumes (user_id, title, template_type, design, full_name, email, phone, address, summary) VALUES (?,?,?,?,?,?,?,?,?) RETURNING resume_id',
-          [u.user_id, title, template, design, p.fullName ?? '', p.email ?? '', p.phone ?? '', p.address ?? '', p.summary ?? ''],
+          `INSERT INTO resumes (user_id, title, template_type, design, full_name, email, phone, address, summary,
+             headline, linkedin, portfolio) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) RETURNING resume_id`,
+          [u.user_id, title, template, design, p.fullName ?? '', p.email ?? '', p.phone ?? '', p.address ?? '', p.summary ?? '',
+           String(p.headline ?? '').slice(0, 200), String(p.linkedin ?? '').slice(0, 300), String(p.portfolio ?? '').slice(0, 300)],
         );
         id = ins.insertId;
         if (u.active_resume_id === null) {
@@ -93,29 +105,79 @@ router.post('/save', async (req, res) => {
       await tx.exec('DELETE FROM work_experience WHERE resume_id = ?', [id]);
       await tx.exec('DELETE FROM certifications WHERE resume_id = ?', [id]);
       await tx.exec('DELETE FROM resume_skills WHERE resume_id = ?', [id]);
+      await tx.exec('DELETE FROM projects WHERE resume_id = ?', [id]);
+      await tx.exec('DELETE FROM resume_languages WHERE resume_id = ?', [id]);
+      await tx.exec('DELETE FROM resume_references WHERE resume_id = ?', [id]);
 
       let i = 0;
       for (const e of education) {
         const lvl = Object.keys(EDU_RANK).includes(e.level) ? e.level : 'bachelor';
         await tx.exec(
-          'INSERT INTO education (resume_id, school, degree, level, year_grad, sort_order) VALUES (?,?,?,?,?,?)',
-          [id, String(e.school ?? '').slice(0, 160), String(e.degree ?? '').slice(0, 160), lvl, String(e.year ?? '').slice(0, 20), i++],
+          `INSERT INTO education (resume_id, school, degree, level, year_grad, field, location, honors, sort_order)
+             VALUES (?,?,?,?,?,?,?,?,?)`,
+          [id, String(e.school ?? '').slice(0, 160), String(e.degree ?? '').slice(0, 160), lvl, String(e.year ?? '').slice(0, 20),
+           String(e.field ?? '').slice(0, 160), String(e.location ?? '').slice(0, 160), String(e.honors ?? '').slice(0, 200), i++],
         );
       }
       i = 0;
       for (const e of experience) {
         await tx.exec(
-          'INSERT INTO work_experience (resume_id, position, company, months, description, sort_order) VALUES (?,?,?,?,?,?)',
-          [id, String(e.position ?? '').slice(0, 160), String(e.company ?? '').slice(0, 160), Math.max(0, Math.min(720, Number(e.months) || 0)), String(e.description ?? '').slice(0, 2000), i++],
+          `INSERT INTO work_experience (resume_id, position, company, months, description,
+             location, start_date, end_date, is_current, bullets, sort_order)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+          [id, String(e.position ?? '').slice(0, 160), String(e.company ?? '').slice(0, 160),
+           Math.max(0, Math.min(720, Number(e.months) || 0)), String(e.description ?? '').slice(0, 2000),
+           String(e.location ?? '').slice(0, 160), String(e.startDate ?? '').slice(0, 40), String(e.endDate ?? '').slice(0, 40),
+           e.current ? 1 : 0,
+           // Stored newline-separated; blanks dropped so no empty bullet
+           // can ever reach the sheet. Capped like every other list.
+           (Array.isArray(e.bullets) ? e.bullets : []).slice(0, 12)
+             .map((b: unknown) => String(b ?? '').trim().slice(0, 300)).filter(Boolean).join('\n'),
+           i++],
         );
       }
       i = 0;
       for (const c of certifications) {
         await tx.exec(
-          'INSERT INTO certifications (resume_id, cert_name, year_taken, sort_order) VALUES (?,?,?,?)',
-          [id, String(c.name ?? '').slice(0, 160), String(c.year ?? '').slice(0, 20), i++],
+          `INSERT INTO certifications (resume_id, cert_name, year_taken, issuer, credential_id, sort_order)
+             VALUES (?,?,?,?,?,?)`,
+          [id, String(c.name ?? '').slice(0, 160), String(c.year ?? '').slice(0, 20),
+           String(c.issuer ?? '').slice(0, 200), String(c.credentialId ?? '').slice(0, 120), i++],
         );
       }
+      i = 0;
+      for (const x of projects) {
+        const name = String(x.name ?? '').trim().slice(0, 200);
+        if (!name) continue;   // a nameless project would print as an empty entry
+        await tx.exec(
+          `INSERT INTO projects (resume_id, proj_name, proj_role, start_date, end_date, description, link, sort_order)
+             VALUES (?,?,?,?,?,?,?,?)`,
+          [id, name, String(x.role ?? '').slice(0, 160), String(x.startDate ?? '').slice(0, 40),
+           String(x.endDate ?? '').slice(0, 40), String(x.description ?? '').slice(0, 2000),
+           String(x.link ?? '').slice(0, 300), i++],
+        );
+      }
+      i = 0;
+      for (const x of languages) {
+        const name = String(x.name ?? '').trim().slice(0, 120);
+        if (!name) continue;
+        await tx.exec(
+          'INSERT INTO resume_languages (resume_id, lang_name, proficiency, sort_order) VALUES (?,?,?,?)',
+          [id, name, String(x.proficiency ?? '').slice(0, 120), i++],
+        );
+      }
+      i = 0;
+      for (const x of references) {
+        const name = String(x.name ?? '').trim().slice(0, 160);
+        if (!name) continue;
+        await tx.exec(
+          `INSERT INTO resume_references (resume_id, ref_name, position, company, email, phone, sort_order)
+             VALUES (?,?,?,?,?,?,?)`,
+          [id, name, String(x.position ?? '').slice(0, 160), String(x.company ?? '').slice(0, 160),
+           String(x.email ?? '').slice(0, 190), String(x.phone ?? '').slice(0, 40), i++],
+        );
+      }
+
       for (const s of skills) {
         const trimmed = String(s).trim().slice(0, 80);
         if (!trimmed) continue;

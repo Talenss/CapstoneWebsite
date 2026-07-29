@@ -67,6 +67,22 @@
               </div>
             </div>
             <div class="field">
+              <label for="pHeadline">Headline <span class="opt">optional</span></label>
+              <input type="text" id="pHeadline" placeholder="BS Information Technology graduate" [value]="resume().personal.headline || ''" (input)="setPersonal('headline', inputValue($event))">
+              <p class="hint">One line under your name. What you are, not what you want.</p>
+            </div>
+            <div class="row2">
+              <div class="field">
+                <label for="pLinkedin">LinkedIn <span class="opt">optional</span></label>
+                <input type="text" id="pLinkedin" placeholder="linkedin.com/in/juandelacruz" [value]="resume().personal.linkedin || ''" (input)="setPersonal('linkedin', inputValue($event))">
+              </div>
+              <div class="field">
+                <label for="pPortfolio">Portfolio or GitHub <span class="opt">optional</span></label>
+                <input type="text" id="pPortfolio" placeholder="github.com/juandelacruz" [value]="resume().personal.portfolio || ''" (input)="setPersonal('portfolio', inputValue($event))">
+              </div>
+            </div>
+            <p class="hint" style="margin:-6px 0 18px">Type the address itself, not a word like "LinkedIn" — screening software often drops the link and keeps only the text.</p>
+            <div class="field">
               <label for="pSummary">Short summary</label>
               <textarea id="pSummary" rows="3" placeholder="BS Information Technology graduate with internship experience in web development. Looking for an entry-level developer role." [value]="resume().personal.summary" (input)="setPersonal('summary', inputValue($event))"></textarea>
               <p class="hint">Write it in plain sentences. Skip words like "hardworking" — say what you actually did instead.</p>
@@ -105,6 +121,20 @@
                       <input type="text" [id]="'edu-year-' + $index" placeholder="2026" [value]="e.year" (input)="updateEducation($index, 'year', inputValue($event))">
                     </div>
                   </div>
+                  <div class="row2">
+                    <div class="field">
+                      <label [for]="'edu-field-' + $index">Field of study <span class="opt">optional</span></label>
+                      <input type="text" [id]="'edu-field-' + $index" placeholder="Information Technology" [value]="e.field || ''" (input)="updateEducation($index, 'field', inputValue($event))">
+                    </div>
+                    <div class="field">
+                      <label [for]="'edu-loc-' + $index">City <span class="opt">optional</span></label>
+                      <input type="text" [id]="'edu-loc-' + $index" placeholder="Angeles City" [value]="e.location || ''" (input)="updateEducation($index, 'location', inputValue($event))">
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label [for]="'edu-honors-' + $index">Honors or awards <span class="opt">optional</span></label>
+                    <input type="text" [id]="'edu-honors-' + $index" placeholder="Cum Laude · Dean's Lister" [value]="e.honors || ''" (input)="updateEducation($index, 'honors', inputValue($event))">
+                  </div>
                 </div>
               } @empty {
                 <p style="color:var(--muted);font-size:13.5px;margin-bottom:14px">Nothing added yet.</p>
@@ -137,9 +167,38 @@
                       <input type="number" [id]="'exp-months-' + $index" placeholder="6" [value]="e.months.toString()" (input)="updateExperience($index, 'months', inputValue($event))">
                     </div>
                   </div>
+                  <p class="hint" style="margin:-8px 0 14px">Months worked is the only part of this entry the score uses. The dates below are for the recruiter reading the page.</p>
+                  <div class="row2">
+                    <div class="field">
+                      <label [for]="'exp-loc-' + $index">City <span class="opt">optional</span></label>
+                      <input type="text" [id]="'exp-loc-' + $index" placeholder="Clark Freeport Zone" [value]="e.location || ''" (input)="updateExperience($index, 'location', inputValue($event))">
+                    </div>
+                    <div class="field">
+                      <label [for]="'exp-start-' + $index">Started <span class="opt">optional</span></label>
+                      <input type="text" [id]="'exp-start-' + $index" placeholder="Jun 2025" [value]="e.startDate || ''" (input)="updateExperience($index, 'startDate', inputValue($event))">
+                    </div>
+                  </div>
+                  <div class="row2">
+                    <div class="field">
+                      <label [for]="'exp-end-' + $index">Ended <span class="opt">optional</span></label>
+                      <input type="text" [id]="'exp-end-' + $index" placeholder="Nov 2025" [disabled]="!!e.current" [value]="e.endDate || ''" (input)="updateExperience($index, 'endDate', inputValue($event))">
+                    </div>
+                    <div class="field">
+                      <label [for]="'exp-cur-' + $index">Still working here</label>
+                      <label class="check">
+                        <input type="checkbox" [id]="'exp-cur-' + $index" [checked]="!!e.current" (change)="toggleCurrent($index, !e.current)">
+                        <span>Yes — print "Present" as the end date</span>
+                      </label>
+                    </div>
+                  </div>
                   <div class="field">
                     <label [for]="'exp-desc-' + $index">What you did</label>
                     <textarea [id]="'exp-desc-' + $index" rows="2" placeholder="Built and maintained pages for the city job portal." [value]="e.description" (input)="updateExperience($index, 'description', inputValue($event))"></textarea>
+                  </div>
+                  <div class="field">
+                    <label [for]="'exp-bul-' + $index">Achievements <span class="opt">optional · one per line</span></label>
+                    <textarea [id]="'exp-bul-' + $index" rows="3" placeholder="Served 60+ covers per shift&#10;Cut billing errors by handling POS reconciliation daily" [value]="bulletText(e)" (input)="updateBullets($index, inputValue($event))"></textarea>
+                    <p class="hint">Each line becomes a bullet. Start with what you did and add a number where you have one.</p>
                   </div>
                 </div>
               } @empty {
@@ -157,12 +216,13 @@
             <p class="sub">Half of every score comes from this one list. Be specific — "MySQL" scores; "computer skills" doesn't match anything.</p>
             <div class="field" style="margin-bottom:8px">
               <label for="skillInput">Add a skill</label>
-              <input type="text" id="skillInput" list="skillOpts" placeholder="Type a skill, then press Enter" autocomplete="off" (keydown)="onSkillKeydown($event)" (change)="onSkillChange($event)">
+              <input type="text" id="skillInput" list="skillOpts" placeholder="Type any skill, then press Enter" autocomplete="off" (keydown)="onSkillKeydown($event)" (change)="onSkillChange($event)">
               <datalist id="skillOpts">
                 @for (s of poolAll(); track s) {
                   <option [value]="s"></option>
                 }
               </datalist>
+              <p class="hint">Type anything — the list below is only a shortcut. A skill no opening asks for scores nothing today, but it still goes on your resume, and openings change.</p>
             </div>
             <div class="tags">
               @for (s of resume().skills; track s; let i = $index) {
@@ -178,6 +238,17 @@
                   <button type="button" (click)="addSkill(s)">+ {{ s }} <span style="color:var(--faint)">&middot; {{ demanded()[s] }}</span></button>
                 } @empty {
                   <p style="color:var(--emerald);font-size:13px;font-weight:500">You already list every skill Royce is asking for.</p>
+                }
+              </div>
+            </div>
+            <div class="sugg">
+              <b>Other skills worth listing</b>
+              <p class="hint" style="margin:-4px 0 9px">No open position asks for these right now, so they add nothing to today's score — but they belong on a resume a person reads, and the openings change.</p>
+              <div class="pool">
+                @for (s of otherSuggestions(); track s) {
+                  <button type="button" (click)="addSkill(s)">+ {{ s }}</button>
+                } @empty {
+                  <p style="color:var(--muted);font-size:13px">Nothing left to suggest — type your own above.</p>
                 }
               </div>
             </div>
@@ -197,9 +268,19 @@
                     <label [for]="'cert-name-' + $index">Certificate</label>
                     <input type="text" [id]="'cert-name-' + $index" placeholder="TESDA Web Development NC III" [value]="c.name" (input)="updateCertification($index, 'name', inputValue($event))">
                   </div>
+                  <div class="row2">
+                    <div class="field">
+                      <label [for]="'cert-year-' + $index">Year</label>
+                      <input type="text" [id]="'cert-year-' + $index" placeholder="2025" [value]="c.year" (input)="updateCertification($index, 'year', inputValue($event))">
+                    </div>
+                    <div class="field">
+                      <label [for]="'cert-issuer-' + $index">Issued by <span class="opt">optional</span></label>
+                      <input type="text" [id]="'cert-issuer-' + $index" placeholder="TESDA" [value]="c.issuer || ''" (input)="updateCertification($index, 'issuer', inputValue($event))">
+                    </div>
+                  </div>
                   <div class="field">
-                    <label [for]="'cert-year-' + $index">Year</label>
-                    <input type="text" [id]="'cert-year-' + $index" placeholder="2025" [value]="c.year" (input)="updateCertification($index, 'year', inputValue($event))">
+                    <label [for]="'cert-id-' + $index">Certificate number <span class="opt">optional</span></label>
+                    <input type="text" [id]="'cert-id-' + $index" placeholder="NC-III-2025-014352" [value]="c.credentialId || ''" (input)="updateCertification($index, 'credentialId', inputValue($event))">
                   </div>
                 </div>
               } @empty {
@@ -210,9 +291,124 @@
           </section>
         }
 
-        <!-- 6 · Your own file + template -->
+        <!-- 6 · More sections — projects, languages, references -->
         @if (step() === 5) {
           <section class="step" id="s5">
+            <h2>More sections</h2>
+            <p class="sub">All optional, and none of them change your score. They change what a recruiter reads. A section you leave empty is not printed at all — no stray heading, no gap.</p>
+
+            <h3 class="grp">Projects</h3>
+            <p class="hint" style="margin-bottom:12px">Capstone, OJT output, freelance work, a system you built for an organisation. This is often the strongest section a fresh graduate has.</p>
+            <div>
+              @for (p of resume().projects || []; track $index) {
+                <div class="item">
+                  <button class="kill" type="button" (click)="removeProject($index)">Remove</button>
+                  <div class="field">
+                    <label [for]="'proj-name-' + $index">Project</label>
+                    <input type="text" [id]="'proj-name-' + $index" placeholder="Barangay records system" [value]="p.name" (input)="updateProject($index, 'name', inputValue($event))">
+                  </div>
+                  <div class="row2">
+                    <div class="field">
+                      <label [for]="'proj-role-' + $index">Your role <span class="opt">optional</span></label>
+                      <input type="text" [id]="'proj-role-' + $index" placeholder="Front-end developer" [value]="p.role || ''" (input)="updateProject($index, 'role', inputValue($event))">
+                    </div>
+                    <div class="field">
+                      <label [for]="'proj-link-' + $index">Link <span class="opt">optional</span></label>
+                      <input type="text" [id]="'proj-link-' + $index" placeholder="github.com/you/project" [value]="p.link || ''" (input)="updateProject($index, 'link', inputValue($event))">
+                    </div>
+                  </div>
+                  <div class="row2">
+                    <div class="field">
+                      <label [for]="'proj-start-' + $index">Started <span class="opt">optional</span></label>
+                      <input type="text" [id]="'proj-start-' + $index" placeholder="Aug 2025" [value]="p.startDate || ''" (input)="updateProject($index, 'startDate', inputValue($event))">
+                    </div>
+                    <div class="field">
+                      <label [for]="'proj-end-' + $index">Finished <span class="opt">optional</span></label>
+                      <input type="text" [id]="'proj-end-' + $index" placeholder="Feb 2026" [value]="p.endDate || ''" (input)="updateProject($index, 'endDate', inputValue($event))">
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label [for]="'proj-desc-' + $index">What it does <span class="opt">optional</span></label>
+                    <textarea [id]="'proj-desc-' + $index" rows="2" placeholder="Web app that replaced a paper logbook for 1,200 residents." [value]="p.description || ''" (input)="updateProject($index, 'description', inputValue($event))"></textarea>
+                  </div>
+                </div>
+              } @empty {
+                <p style="color:var(--muted);font-size:13.5px;margin-bottom:14px">Nothing added yet.</p>
+              }
+            </div>
+            <button class="add" type="button" (click)="addProject()">+ Add project</button>
+
+            <h3 class="grp">Languages</h3>
+            <p class="hint" style="margin-bottom:12px">Written as words, never as bars or stars — a graphic means nothing to screening software and nothing in a black-and-white printout.</p>
+            <div>
+              @for (l of resume().languages || []; track $index) {
+                <div class="item">
+                  <button class="kill" type="button" (click)="removeLanguage($index)">Remove</button>
+                  <div class="row2">
+                    <div class="field">
+                      <label [for]="'lang-name-' + $index">Language</label>
+                      <input type="text" [id]="'lang-name-' + $index" placeholder="Filipino" [value]="l.name" (input)="updateLanguage($index, 'name', inputValue($event))">
+                    </div>
+                    <div class="field">
+                      <label [for]="'lang-prof-' + $index">How well <span class="opt">optional</span></label>
+                      <input type="text" [id]="'lang-prof-' + $index" list="profOpts" placeholder="Native" [value]="l.proficiency || ''" (input)="updateLanguage($index, 'proficiency', inputValue($event))">
+                      <datalist id="profOpts">
+                        <option value="Native"></option>
+                        <option value="Fluent"></option>
+                        <option value="Conversational"></option>
+                        <option value="Basic"></option>
+                      </datalist>
+                    </div>
+                  </div>
+                </div>
+              } @empty {
+                <p style="color:var(--muted);font-size:13.5px;margin-bottom:14px">Nothing added yet.</p>
+              }
+            </div>
+            <button class="add" type="button" (click)="addLanguage()">+ Add language</button>
+
+            <h3 class="grp">References</h3>
+            <p class="hint" style="margin-bottom:12px">Ask the person first — you are putting their contact details on a document you send to strangers. If you would rather not, leave this empty; nothing is printed.</p>
+            <div>
+              @for (x of resume().references || []; track $index) {
+                <div class="item">
+                  <button class="kill" type="button" (click)="removeReference($index)">Remove</button>
+                  <div class="field">
+                    <label [for]="'ref-name-' + $index">Name</label>
+                    <input type="text" [id]="'ref-name-' + $index" placeholder="Engr. Maria Santos" [value]="x.name" (input)="updateReference($index, 'name', inputValue($event))">
+                  </div>
+                  <div class="row2">
+                    <div class="field">
+                      <label [for]="'ref-pos-' + $index">Position <span class="opt">optional</span></label>
+                      <input type="text" [id]="'ref-pos-' + $index" placeholder="IT Supervisor" [value]="x.position || ''" (input)="updateReference($index, 'position', inputValue($event))">
+                    </div>
+                    <div class="field">
+                      <label [for]="'ref-co-' + $index">Company <span class="opt">optional</span></label>
+                      <input type="text" [id]="'ref-co-' + $index" placeholder="LGU San Fernando" [value]="x.company || ''" (input)="updateReference($index, 'company', inputValue($event))">
+                    </div>
+                  </div>
+                  <div class="row2">
+                    <div class="field">
+                      <label [for]="'ref-email-' + $index">Email <span class="opt">optional</span></label>
+                      <input type="email" [id]="'ref-email-' + $index" [value]="x.email || ''" (input)="updateReference($index, 'email', inputValue($event))">
+                    </div>
+                    <div class="field">
+                      <label [for]="'ref-phone-' + $index">Phone <span class="opt">optional</span></label>
+                      <input type="tel" [id]="'ref-phone-' + $index" [value]="x.phone || ''" (input)="updateReference($index, 'phone', inputValue($event))">
+                    </div>
+                  </div>
+                </div>
+              } @empty {
+                <p style="color:var(--muted);font-size:13.5px;margin-bottom:14px">Nothing added yet.</p>
+              }
+            </div>
+            <button class="add" type="button" (click)="addReference()">+ Add reference</button>
+          </section>
+        }
+
+        <!-- 7 · Your own file + template -->
+        @if (step() === 6) {
+          <section class="step" id="s6">
             <h2>Your own resume file</h2>
             <p class="sub">If you already have a resume, attach it. The recruiter reads it with their own eyes, alongside the one you just built. <b>It is never parsed and never scored</b> — so a formatting quirk in your file can't count against you.</p>
 
@@ -240,6 +436,11 @@
 
             <h3 style="font-size:20px;margin:32px 0 4px">Template</h3>
             <p class="sub" style="margin-bottom:16px">All three are ATS-friendly. The choice is about how you want your background read, not about which one is "safe".</p>
+            @if (designReorders()) {
+              <div class="alert info show" style="margin-bottom:14px">
+                The <b>{{ resume().design === 'graduate' ? 'Graduate' : 'Technical' }}</b> design sets its own section order, so this choice has no effect while it is selected. Pick any other design to use it.
+              </div>
+            }
             <div class="tpl">
               <label>
                 <input type="radio" name="tpl" value="chronological" [checked]="resume().template === 'chronological'" (change)="setTemplate('chronological')">
@@ -259,14 +460,19 @@
             </div>
 
             <h3 style="font-size:20px;margin:32px 0 4px">Design</h3>
-            <p class="sub" style="margin-bottom:16px">Pick the look you like — every design is single-column and ATS-safe, so your score is identical. See it in full on <b>Preview / print</b>.</p>
+            <p class="sub" style="margin-bottom:16px">Fourteen looks, one document. Every one is single column with real headings, standard fonts and no graphics, so your score is identical whichever you pick. See it in full on <b>Preview / print</b>.</p>
             <div class="designs">
               @for (d of designs; track d.id) {
-                <button type="button" class="design-opt" [class.on]="resume().design === d.id" (click)="setDesign(d.id)">
+                <button type="button" class="design-opt" [class.on]="resume().design === d.id" [title]="d.suits" (click)="setDesign(d.id)">
                   <b>{{ d.label }}</b><small>{{ d.note }}</small>
                 </button>
               }
             </div>
+            @for (d of designs; track d.id) {
+              @if (resume().design === d.id) {
+                <p class="hint" style="margin-top:9px">Suits: {{ d.suits }}.</p>
+              }
+            }
 
             <h3 style="font-size:20px;margin:32px 0 10px">Before you save</h3>
             <ul class="checks">
@@ -303,12 +509,18 @@
             <div class="p-name">
               @if (resume().personal.fullName) { {{ resume().personal.fullName }} } @else { <span class="p-empty">Your name</span> }
             </div>
+            @if (resume().personal.headline) {
+              <div class="p-headline">{{ resume().personal.headline }}</div>
+            }
             <div class="p-contact">
               @if (contactLine()) { {{ contactLine() }} } @else { <span class="p-empty">email &middot; phone &middot; city</span> }
             </div>
+            @if (resume().personal.linkedin || resume().personal.portfolio) {
+              <div class="p-contact">{{ joinMeta([resume().personal.linkedin, resume().personal.portfolio], '  ·  ') }}</div>
+            }
           </div>
           @if (resume().personal.summary) {
-            <div class="p-sec"><h4>Summary</h4><p style="font-size:11.5px">{{ resume().personal.summary }}</p></div>
+            <div class="p-sec"><h4>Professional Summary</h4><p style="font-size:11.5px">{{ resume().personal.summary }}</p></div>
           }
 
           <ng-template #eduSection>
@@ -317,8 +529,9 @@
                 <h4>Education</h4>
                 @for (e of visibleEducation(); track $index) {
                   <div class="p-item">
-                    <b>{{ e.degree || 'Degree' }}</b>
-                    <i>{{ e.school }}{{ e.year ? ' · ' + e.year : '' }}</i>
+                    <b>{{ e.field ? (e.degree || 'Degree') + ' — ' + e.field : (e.degree || 'Degree') }}</b>
+                    <i>{{ joinMeta([e.school, e.location, e.year]) }}</i>
+                    @if (e.honors) { <p>{{ e.honors }}</p> }
                   </div>
                 }
               </div>
@@ -328,12 +541,17 @@
           <ng-template #expSection>
             @if (visibleExperience().length) {
               <div class="p-sec">
-                <h4>Experience</h4>
+                <h4>Work Experience</h4>
                 @for (e of visibleExperience(); track $index) {
                   <div class="p-item">
                     <b>{{ e.position || 'Position' }}</b>
-                    <i>{{ e.company }}{{ e.months ? ' · ' + e.months + ' month' + (e.months > 1 ? 's' : '') : '' }}</i>
+                    <i>{{ joinMeta([e.company, e.location, dateRange(e) || monthsLabel(e.months)]) }}</i>
                     @if (e.description) { <p>{{ e.description }}</p> }
+                    @if (e.bullets?.length) {
+                      <ul>
+                        @for (b of e.bullets; track $index) { <li>{{ b }}</li> }
+                      </ul>
+                    }
                   </div>
                 }
               </div>
@@ -351,6 +569,22 @@
             }
           </ng-template>
 
+          <ng-template #projSection>
+            @if (visibleProjects().length) {
+              <div class="p-sec">
+                <h4>Projects</h4>
+                @for (p of visibleProjects(); track $index) {
+                  <div class="p-item">
+                    <b>{{ p.name }}</b>
+                    <i>{{ joinMeta([p.role, dateRange(p)]) }}</i>
+                    @if (p.description) { <p>{{ p.description }}</p> }
+                    @if (p.link) { <p>{{ p.link }}</p> }
+                  </div>
+                }
+              </div>
+            }
+          </ng-template>
+
           <ng-template #certSection>
             @if (visibleCertifications().length) {
               <div class="p-sec">
@@ -358,33 +592,43 @@
                 @for (c of visibleCertifications(); track $index) {
                   <div class="p-item">
                     <b>{{ c.name }}</b>
-                    @if (c.year) { <i>{{ c.year }}</i> }
+                    <i>{{ joinMeta([c.issuer, c.year]) }}</i>
+                    @if (c.credentialId) { <p>{{ c.credentialId }}</p> }
                   </div>
                 }
               </div>
             }
           </ng-template>
 
-          <!-- template order — functional and combination lead with skills, chronological with history -->
-          @switch (resume().template) {
-            @case ('functional') {
-              <ng-container [ngTemplateOutlet]="skillSection" />
-              <ng-container [ngTemplateOutlet]="expSection" />
-              <ng-container [ngTemplateOutlet]="eduSection" />
-              <ng-container [ngTemplateOutlet]="certSection" />
+          <!-- Section order: normally the template's, but 'graduate' and
+               'technical' impose their own — see sectionOrder(). -->
+          @for (kind of sectionOrder(); track kind) {
+            @switch (kind) {
+              @case ('education') { <ng-container [ngTemplateOutlet]="eduSection" /> }
+              @case ('experience') { <ng-container [ngTemplateOutlet]="expSection" /> }
+              @case ('skills') { <ng-container [ngTemplateOutlet]="skillSection" /> }
+              @case ('projects') { <ng-container [ngTemplateOutlet]="projSection" /> }
+              @case ('certifications') { <ng-container [ngTemplateOutlet]="certSection" /> }
             }
-            @case ('combination') {
-              <ng-container [ngTemplateOutlet]="skillSection" />
-              <ng-container [ngTemplateOutlet]="eduSection" />
-              <ng-container [ngTemplateOutlet]="expSection" />
-              <ng-container [ngTemplateOutlet]="certSection" />
-            }
-            @default {
-              <ng-container [ngTemplateOutlet]="eduSection" />
-              <ng-container [ngTemplateOutlet]="expSection" />
-              <ng-container [ngTemplateOutlet]="skillSection" />
-              <ng-container [ngTemplateOutlet]="certSection" />
-            }
+          }
+
+          @if (visibleLanguages().length) {
+            <div class="p-sec">
+              <h4>Languages</h4>
+              <p style="font-size:11.5px">{{ languageLine() }}</p>
+            </div>
+          }
+          @if (visibleReferences().length) {
+            <div class="p-sec">
+              <h4>References</h4>
+              @for (x of visibleReferences(); track $index) {
+                <div class="p-item">
+                  <b>{{ x.name }}</b>
+                  <i>{{ joinMeta([x.position, x.company]) }}</i>
+                  @if (x.email || x.phone) { <p>{{ joinMeta([x.email, x.phone]) }}</p> }
+                </div>
+              }
+            </div>
           }
 
           @if (resume().ownFile; as file) {
