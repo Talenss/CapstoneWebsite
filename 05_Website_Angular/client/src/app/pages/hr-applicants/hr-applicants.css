@@ -95,3 +95,19 @@
   .badge{ border:none !important; background:none !important; padding:0 !important;
           color:#000 !important; font-weight:600 }
 }
+
+/* "Who has handled this" — the recorded trail for one applicant, shown to
+   the employer's own staff. Names appear here and never in the applicant's
+   own view: internal accountability is what the stored actor is for. */
+.handled{padding:14px 22px;border-top:1px solid var(--rule-2);background:var(--ivory)}
+.handled-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.handled-head b{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.handled-head .wait{font-size:12px;color:var(--gold-deep);font-weight:600}
+.handled-empty{font-size:12.5px;color:var(--muted);margin:0}
+.trail{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.trail li{font-size:12.5px;line-height:1.5}
+.trail b{color:var(--text);font-weight:600}
+.trail .actor{color:var(--muted)}
+.trail .at{color:var(--faint);margin-left:8px}
+@media(max-width:560px){ .trail .at{display:block;margin-left:0} }
+@media print{ .handled{display:none} }

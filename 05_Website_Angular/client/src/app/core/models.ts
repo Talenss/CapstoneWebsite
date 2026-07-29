@@ -186,6 +186,12 @@ export interface StatusEvent {
   to: AppStatus;
   at: number;
   by: 'applicant' | 'employer';
+  /** The individual who made the change, present ONLY when the caller is
+   *  staff at the company that owns the posting. Absent for the applicant,
+   *  by design: internal accountability is why changed_by is stored, but
+   *  naming an HR staff member to an applicant is a different disclosure.
+   *  Treat `undefined` as "not disclosed", never as "unknown actor". */
+  byName?: string;
 }
 
 export interface MatchResult {

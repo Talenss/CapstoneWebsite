@@ -36,7 +36,7 @@ interface Db {
   /** Mirrors the server's application_status_history table. Written on
    *  every status change so demo mode can show the same applicant-facing
    *  timeline as api mode rather than a feature that only half exists. */
-  statusHistory: { applicationId: string; from: AppStatus | null; to: AppStatus; at: number; by: 'applicant' | 'employer' }[];
+  statusHistory: { applicationId: string; from: AppStatus | null; to: AppStatus; at: number; by: 'applicant' | 'employer'; byUserId?: string | null }[];
 }
 
 /** Past-deadline postings stop accepting applications — same lazy
@@ -151,16 +151,16 @@ function seed(): Db {
        the one event that applying creates. */
     statusHistory: [
       { applicationId: 'a1', from: null, to: 'submitted', at: Date.now() - D * 3, by: 'applicant' },
-      { applicationId: 'a1', from: 'submitted', to: 'review', at: Date.now() - D * 1, by: 'employer' },
+      { applicationId: 'a1', from: 'submitted', to: 'review', at: Date.now() - D * 1, by: 'employer', byUserId: 'u2' },
 
       { applicationId: 'a2', from: null, to: 'submitted', at: Date.now() - D * 2, by: 'applicant' },
 
       { applicationId: 'a3', from: null, to: 'submitted', at: Date.now() - D * 4, by: 'applicant' },
-      { applicationId: 'a3', from: 'submitted', to: 'review', at: Date.now() - D * 3, by: 'employer' },
-      { applicationId: 'a3', from: 'review', to: 'shortlisted', at: Date.now() - D * 1, by: 'employer' },
+      { applicationId: 'a3', from: 'submitted', to: 'review', at: Date.now() - D * 3, by: 'employer', byUserId: 'u2' },
+      { applicationId: 'a3', from: 'review', to: 'shortlisted', at: Date.now() - D * 1, by: 'employer', byUserId: 'u7' },
 
       { applicationId: 'a4', from: null, to: 'submitted', at: Date.now() - D * 3, by: 'applicant' },
-      { applicationId: 'a4', from: 'submitted', to: 'review', at: Date.now() - D * 2, by: 'employer' },
+      { applicationId: 'a4', from: 'submitted', to: 'review', at: Date.now() - D * 2, by: 'employer', byUserId: 'u2' },
 
       { applicationId: 'a5', from: null, to: 'submitted', at: Date.now() - D * 1, by: 'applicant' },
     ],
@@ -620,7 +620,7 @@ export class DemoAdapter implements ApiAdapter {
         scoreSnapshot: r && p ? scoreLocal(r, p).score : null,
       };
       db.applications.push(app);
-      db.statusHistory.push({ applicationId: app.id, from: null, to: 'submitted', at: app.appliedAt, by: 'applicant' });
+      db.statusHistory.push({ applicationId: app.id, from: null, to: 'submitted', at: app.appliedAt, by: 'applicant', byUserId: me.id });
       persist(db);
       return apiOk({ application: app });
     },
@@ -665,7 +665,7 @@ export class DemoAdapter implements ApiAdapter {
       const wasStatus = a.status;
       a.status = status as any; a.updatedAt = Date.now(); (a as any).decidedBy = me.id; // a human made this call
       if (wasStatus !== a.status) {
-        db.statusHistory.push({ applicationId: a.id, from: wasStatus, to: a.status, at: a.updatedAt!, by: 'employer' });
+        db.statusHistory.push({ applicationId: a.id, from: wasStatus, to: a.status, at: a.updatedAt!, by: 'employer', byUserId: me.id });
       }
       persist(db);
       return apiOk({ application: a });
@@ -684,7 +684,7 @@ export class DemoAdapter implements ApiAdapter {
       }
       const priorStatus = a.status;
       a.status = 'withdrawn'; a.updatedAt = Date.now();
-      db.statusHistory.push({ applicationId: a.id, from: priorStatus, to: 'withdrawn', at: a.updatedAt!, by: 'applicant' });
+      db.statusHistory.push({ applicationId: a.id, from: priorStatus, to: 'withdrawn', at: a.updatedAt!, by: 'applicant', byUserId: me.id });
       persist(db);
       return apiOk({ application: a });
     },
@@ -715,10 +715,23 @@ export class DemoAdapter implements ApiAdapter {
       const mine = !!a && a.seekerId === me.id;
       const atMyCompany = !!p && (me.role === 'recruiter' || me.role === 'admin') && p.companyId === me.companyId;
       if (!a || !(mine || atMyCompany)) return apiFail('Application not found.');
+      /* Who made each change is disclosed by audience, exactly as the server
+         does it: the employer's own staff get names (that is what changed_by
+         is for), the applicant never does. An applicant reading their own
+         history gets no names even if they also work here — the narrower
+         disclosure wins. */
+      const maySeeNames = atMyCompany && !mine;
       const events: StatusEvent[] = db.statusHistory
         .filter((h) => h.applicationId === applicationId)
         .sort((x, y) => x.at - y.at)
-        .map((h) => ({ from: h.from, to: h.to, at: h.at, by: h.by }));
+        .map((h) => {
+          const e: StatusEvent = { from: h.from, to: h.to, at: h.at, by: h.by };
+          if (maySeeNames && h.by === 'employer' && h.byUserId) {
+            const actor = db.users.find((u) => u.id === h.byUserId);
+            if (actor) e.byName = actor.name;
+          }
+          return e;
+        });
       return apiOk({ events });
     },
   };

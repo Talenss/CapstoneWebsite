@@ -34,6 +34,13 @@ database. `../04_Website` is the old PHP version, kept only as a reference;
   (structured + uploaded file) side by side; message an applicant by email.
 - **Department-based routing:** a new application's email goes to the HR person
   who owns that posting's department; unowned departments notify all recruiters.
+- **"Who has handled this"** — opening an applicant shows the recorded trail of
+  every status change with the **name of the colleague** who made it and how
+  long the applicant has been waiting since. Several HR people share one pool
+  once departments are routed, so the current status alone does not say whether
+  someone acted an hour ago or three weeks ago. The applicant's own view of the
+  same record never names an individual — internal accountability and applicant
+  transparency are different disclosures, and the server decides which is which.
 
 **For the research team (admin)**
 - Recruiter-access approval, department-routing assignment, and anonymous
@@ -109,11 +116,12 @@ npm run build:demo  # browser-only build (demo mode, no server needed)
 npm run dev         # API on :4300, restarts on change
 npm run build && npm start   # production; also serves the built Angular app
 npm test            # engine + file-type tests (30, no database needed)
-npm run test:api    # API integration tests (33) — needs a local PostgreSQL;
+npm run test:api    # API integration tests (35) — needs a local PostgreSQL;
                     # creates and drops its own throwaway database
 npm run test:email  # email delivery (10) — real SMTP dialogue, local sink
 npm run test:analyze # AI extraction (10) — local stand-in for Gemini
-npm run test:all    # all 83 server tests
+npm run test:parity # demo-mode vs API-mode parity (10) — needs PostgreSQL
+npm run test:all    # all 95 server tests
 npm run create-admin -- you@example.com "a strong password"
 ```
 
@@ -157,3 +165,21 @@ secrets are needed, so CI goes green out of the box.
 
 `client/src/environments/environment.ts` → `mode: 'demo' | 'api'`. Demo runs in
 the browser; `api` talks to the Node server. Nothing else changes between them.
+
+But they are **not two builds of the same code**: demo mode is a separate
+hand-written implementation (`client/src/app/core/demo-adapter.ts`). Demo mode is
+what gets demonstrated; api mode is what a real applicant would use. A rule
+enforced in one and not the other would make the demonstration a
+misrepresentation of the system, so `npm run test:parity` drives the same
+operations through both and asserts they agree — on the guards, on the
+validation, and on the actual scores.
+
+## A note on `demo123`
+
+The seeded accounts use a seven-character password while the app's rule asks for
+eight with a letter and a number. That is deliberate, not an oversight: the rule
+is enforced wherever a password is **set** (register, reset, change) and never at
+login, so a policy change can never lock an existing user out of their own data.
+The seed rows insert a bcrypt hash directly and so bypass the rule by
+construction. The practical consequence: you cannot change one of these
+passwords *back* to `demo123` through the UI.

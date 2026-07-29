@@ -536,6 +536,42 @@ test('a status change by the recruiter appears in the applicant’s history', as
   assert.equal(last.by, 'employer', 'a recruiter decision is attributed to the employer');
 });
 
+test('a recruiter sees WHICH colleague made each change', async () => {
+  // The asymmetry is the point: internal accountability is why changed_by is
+  // stored, and several HR people share one pool once departments are routed.
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const ranked = (await hr('applications/ranked', { postingId: '1' })).body;
+  const row = ranked.rows.find((r: any) => r.application.status !== 'withdrawn');
+  assert.ok(row, 'expected a non-withdrawn applicant on posting 1');
+
+  // make a change so there is definitely a named employer event
+  await hr('applications/set-status', { id: row.application.id, status: 'review' });
+
+  const { body } = await hr('applications/history', { id: row.application.id });
+  assert.equal(body.ok, true);
+  const employerEvents = body.events.filter((e: any) => e.by === 'employer');
+  assert.ok(employerEvents.length, 'expected at least one employer-side event');
+  assert.ok(
+    employerEvents.some((e: any) => typeof e.byName === 'string' && e.byName.length),
+    'a recruiter must see the name of the colleague who made the change',
+  );
+});
+
+test('the applicant’s own action is never attributed to a named person', async () => {
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const ranked = (await hr('applications/ranked', { postingId: '1' })).body;
+  for (const row of ranked.rows) {
+    const { body } = await hr('applications/history', { id: row.application.id });
+    for (const e of body.events) {
+      if (e.by === 'applicant') {
+        assert.ok(!('byName' in e), 'applicant-side events must carry no byName');
+      }
+    }
+  }
+});
+
 test('history never names the individual who made the decision', async () => {
   // The applicant is told what was decided and when. Naming a particular HR
   // staff member to an applicant is a different disclosure this feature does

@@ -338,6 +338,15 @@ INSERT INTO companies (company_id, company_name, industry, location, about, webs
 --    accounts or change their passwords. The admin one matters most: it
 --    approves recruiter access.
 --
+-- NOTE  demo123 is seven characters, and the app's password rule asks for
+--    eight with a letter and a number. That is not a contradiction: the rule
+--    is enforced wherever a password is SET (register, reset, change) and
+--    deliberately never at login, so accounts created under an older rule are
+--    not locked out of their own data by a policy change. These rows insert a
+--    pre-computed bcrypt hash directly and so bypass the rule by construction.
+--    The practical consequence worth knowing: you cannot change one of these
+--    passwords BACK to demo123 through the UI — the change would be rejected.
+--
 -- For a real deployment, create your own admin instead:
 --   cd server && npm run create-admin -- you@example.com "a strong password"
 --
