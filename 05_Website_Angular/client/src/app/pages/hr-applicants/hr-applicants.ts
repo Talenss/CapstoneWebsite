@@ -5,7 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
-import { AppStatus, Personal, Posting, RankedRow, Tier } from '../../core/models';
+import { AppStatus, Personal, Posting, RankedRow, StatusEvent, Tier } from '../../core/models';
 import { EDU_LABELS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 
@@ -184,13 +184,75 @@ export class HrApplicants {
   setFFile(e: Event): void { this.fFile.set((e.target as HTMLSelectElement).value); }
   setModalStatus(e: Event): void { this.modalStatus.set((e.target as HTMLSelectElement).value as AppStatus); }
 
+  /* ---------- who already handled this applicant ----------
+     Royce routes departments to different HR owners, so several recruiters
+     work the same pool. Without this the only thing on screen is the CURRENT
+     status: a recruiter opening an applicant cannot tell whether a colleague
+     moved them an hour ago or three weeks ago, or who to ask about it. Two
+     people then quietly redo each other's decisions.
+
+     The rows have always been written. Here — unlike the applicant's own
+     view — they carry the name of the person who made each change, because
+     internal accountability is precisely what changed_by is stored for. The
+     server decides that; the client only renders what it is given. */
+  history = signal<StatusEvent[]>([]);
+  historyLoading = signal(false);
+  historyError = signal('');
+
   openModal(r: RankedRow): void {
     this.current.set(r);
     this.modalStatus.set(r.application.status);
+    this.loadHistory(r.application.id);
   }
+
+  private async loadHistory(applicationId: string): Promise<void> {
+    this.history.set([]);
+    this.historyError.set('');
+    this.historyLoading.set(true);
+    const res = await this.api.applications.history(applicationId);
+    this.historyLoading.set(false);
+    // The recruiter may have closed this one and opened another while the
+    // request was in flight; don't paint one applicant's trail onto another.
+    if (this.current()?.application.id !== applicationId) return;
+    if (!res.ok) { this.historyError.set(res.error); return; }
+    this.history.set(res.events);
+  }
+
+  /** "Applied", or the move that was made. Phrased from the recruiter's side:
+   *  this is a colleague's action, not the reader's own. */
+  historyLabel(e: StatusEvent): string {
+    if (e.from === null) return 'Applied';
+    if (e.to === 'withdrawn') return 'Withdrawn by the applicant';
+    return STATUS_LABELS[e.from] + ' → ' + STATUS_LABELS[e.to];
+  }
+
+  /** The colleague who made the change. Absent for the applicant's own
+   *  actions — the recruiter already knows who that is. */
+  historyActor(e: StatusEvent): string {
+    return e.by === 'employer' && e.byName ? e.byName : '';
+  }
+
+  historyMoment(ts: number): string {
+    return new Date(ts).toLocaleString(undefined, {
+      year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+    });
+  }
+
+  /** How long this applicant has been waiting since the last thing anyone
+   *  did — the number a recruiter actually acts on. */
+  waitingSince = computed(() => {
+    const ev = this.history();
+    if (!ev.length) return '';
+    const days = Math.floor((Date.now() - ev[ev.length - 1].at) / 86400000);
+    if (days < 1) return 'updated today';
+    if (days === 1) return 'waiting 1 day since the last update';
+    return 'waiting ' + days + ' days since the last update';
+  });
 
   closeModal(): void {
     this.current.set(null);
+    this.history.set([]);
+    this.historyError.set('');
   }
 
   onBackdropClick(e: MouseEvent): void {

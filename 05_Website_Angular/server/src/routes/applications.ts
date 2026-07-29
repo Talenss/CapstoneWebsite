@@ -286,13 +286,24 @@ router.post('/withdraw', async (req, res) => {
    ranking should be transparent cannot keep the applicant's own history from
    them; this closes that gap using data already being captured.
 
-   Visible to the applicant (their own application only) and to recruiters at
-   the company that owns the posting. Deliberately NOT included: the name of
-   the individual who made each change. The applicant learns what was decided
-   and when, which is what affects them; naming a particular HR staff member
-   to an applicant is a different disclosure with a different risk, and this
-   feature does not need it to be honest. `by` is therefore a role, not a
-   person. */
+   Visible to the applicant (their own application only) and to recruiters and
+   admins at the company that owns the posting.
+
+   WHO DID IT is disclosed by audience, and the asymmetry is deliberate:
+
+     · To the APPLICANT — never a name. They learn what was decided and when,
+       which is what affects them. Naming a particular HR staff member to an
+       applicant is a different disclosure with a different risk, and the
+       feature does not need it in order to be honest.
+
+     · To the EMPLOYER'S OWN STAFF — the name, because internal accountability
+       is the entire reason changed_by is stored. Royce routes departments to
+       different HR owners, so several recruiters share one applicant pool; a
+       recruiter picking up a colleague's work needs to know who already moved
+       this person and when, or two people quietly redo each other's decisions.
+
+   Same rows, same ordering; only `byName` differs, and it is attached solely
+   for a caller who works at the company that owns the posting. */
 router.post('/history', async (req, res) => {
   const u = await requireUser(req, res);
   if (!u) return;
@@ -313,24 +324,37 @@ router.post('/history', async (req, res) => {
     && a.company_id === u.company_id;
   if (!a || !(mine || atMyCompany)) return fail(res, 'Application not found.');
 
+  /* An applicant reading their OWN history gets no names, even in the odd
+     case where they also work at the company — the narrower disclosure wins. */
+  const maySeeNames = atMyCompany && !mine;
+
   const rows = await query<{
-    old_status: string | null; new_status: string; changed_at: unknown; changed_by: number | null;
+    old_status: string | null; new_status: string; changed_at: unknown;
+    changed_by: number | null; actor_name: string | null;
   }>(
-    `SELECT old_status, new_status, changed_at, changed_by
-       FROM application_status_history
-      WHERE application_id = ?
-      ORDER BY changed_at ASC, history_id ASC`, [aid],
+    `SELECT h.old_status, h.new_status, h.changed_at, h.changed_by,
+            u.full_name AS actor_name
+       FROM application_status_history h
+       LEFT JOIN users u ON u.user_id = h.changed_by
+      WHERE h.application_id = ?
+      ORDER BY h.changed_at ASC, h.history_id ASC`, [aid],
   );
 
   ok(res, {
-    events: rows.map((r) => ({
-      from: r.old_status,
-      to: r.new_status,
-      at: new Date(r.changed_at as string | number | Date).getTime(),
-      // 'you' when the applicant did it themselves (only withdrawal, today),
-      // otherwise the employer. Never an individual's name — see above.
-      by: r.changed_by === a.seeker_id ? 'applicant' : 'employer',
-    })),
+    events: rows.map((r) => {
+      const by = r.changed_by === a.seeker_id ? 'applicant' : 'employer';
+      const e: Record<string, unknown> = {
+        from: r.old_status,
+        to: r.new_status,
+        at: new Date(r.changed_at as string | number | Date).getTime(),
+        by,
+      };
+      // Only ever set for the employer's own staff, and never for the
+      // applicant's own action (that person is the applicant themselves —
+      // the recruiter already knows who they are from the row they clicked).
+      if (maySeeNames && by === 'employer' && r.actor_name) e['byName'] = r.actor_name;
+      return e;
+    }),
   });
 });
 

@@ -110,3 +110,17 @@ jobs:
           DB_USER: postgres
           DB_PASS: postgres
         run: npm run test:analyze
+
+      # Demo mode is a SEPARATE hand-written implementation, and it is the one
+      # that gets demonstrated. These drive the same operations through the
+      # demo adapter and the real server and assert they agree — on the rules
+      # and on the actual scores — so the demonstration cannot drift into
+      # misrepresenting what the deployed system does.
+      - name: Demo-mode / API-mode parity tests
+        working-directory: 05_Website_Angular/server
+        env:
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_USER: postgres
+          DB_PASS: postgres
+        run: npm run test:parity
