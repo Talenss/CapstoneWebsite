@@ -1,5 +1,5 @@
 import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import { provideHttpClient, withFetch } from '@angular/common/http';
 
 import { routes } from './app.routes';
@@ -10,7 +10,22 @@ import { applyMatchSettings } from './core/engine';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes, withComponentInputBinding()),
+    /* anchorScrolling makes a URL fragment actually scroll to its element,
+       which is what the learning hub's guide links rely on. Those links go
+       through the router (routerLink + fragment) rather than a bare
+       href="#id", because index.html sets <base href="/"> and a browser
+       resolves a bare fragment against the base — sending the reader to the
+       home page instead of the guide.
+
+       scrollPositionRestoration is deliberately left at its default of
+       'disabled': turning it on would change how EVERY navigation in the app
+       restores scroll, which is a much larger behavioural change than the
+       one bug being fixed here. */
+    provideRouter(
+      routes,
+      withComponentInputBinding(),
+      withInMemoryScrolling({ anchorScrolling: 'enabled' }),
+    ),
     provideHttpClient(withFetch()),
     // Load the signed-in user once at startup so session.user() is populated
     // on every page — including public routes with no guard (home, privacy,

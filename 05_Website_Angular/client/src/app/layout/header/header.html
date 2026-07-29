@@ -1,4 +1,10 @@
-<a class="skip-link" href="#main">Skip to main content</a>
+<!-- Handled in code, not left as a bare href. index.html sets <base href="/">,
+     and a browser resolves a bare "#main" against the BASE, not the current
+     page — so on /privacy this link navigated to /#main, i.e. the home page,
+     and dropped focus onto <body>. The one feature built for keyboard users
+     threw them off the page they were reading. Measured on three routes
+     before the fix; all three navigated away. -->
+<a class="skip-link" href="#main" (click)="skipToMain($event)">Skip to main content</a>
 
 <header class="site-header">
   <div class="container">
