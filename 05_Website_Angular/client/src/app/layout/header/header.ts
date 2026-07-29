@@ -33,6 +33,32 @@ export class Header {
 
   menuOpen = false;
 
+  /** The skip link, done properly.
+   *
+   *  It cannot be a plain href="#main": index.html sets <base href="/">, and
+   *  a bare fragment resolves against the BASE rather than the current page,
+   *  so on /privacy the browser went to /#main — the home page. Verified on
+   *  /learning-hub, /privacy and /browse; every one navigated away.
+   *
+   *  Scrolling alone would not be enough either. The point of a skip link is
+   *  to move the KEYBOARD CARET past the navigation, so the next Tab lands
+   *  inside the content. Angular's anchorScrolling only scrolls — focus would
+   *  stay in the header and the next Tab would walk back through the nav,
+   *  which is exactly what the link exists to avoid. So this moves focus and
+   *  lets that scroll the element into view.
+   *
+   *  tabindex="-1" makes <main> focusable programmatically without adding it
+   *  to the tab order. preventScroll + scrollIntoView keeps the movement
+   *  smooth rather than jumping. */
+  skipToMain(e: Event): void {
+    const main = document.getElementById('main');
+    if (!main) return;          // no target: let the browser do whatever it would
+    e.preventDefault();
+    main.setAttribute('tabindex', '-1');
+    main.focus({ preventScroll: true });
+    main.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   /** Light/dark theme. The no-flash init script in index.html sets the
    *  data-theme attribute before Angular boots; this just mirrors and
    *  toggles it. */

@@ -8,16 +8,24 @@
   </div>
 
   <div class="hub">
+    <!-- routerLink + fragment, NOT a bare href="#basics". index.html sets
+         <base href="/">, so a browser resolves a bare fragment against the
+         BASE rather than the current page: every one of these used to send
+         the reader to /#basics — the home page — instead of scrolling to the
+         guide. Going through the router also makes each guide a real address
+         (/learning-hub#ats) that can be linked to and reloaded, which a bare
+         fragment never was. Scrolling is handled by anchorScrolling, enabled
+         in app.config.ts. -->
     <nav class="toc" aria-label="Guides">
       <b>Guides</b>
-      <a href="#basics">Resume basics</a>
-      <a href="#ats">What an ATS is</a>
-      <a href="#skills">Writing the skills section</a>
-      <a href="#experience">When you have no experience</a>
-      <a href="#templates">Choosing a template</a>
-      <a href="#scores">Reading your score</a>
-      <a href="#applying">After you apply</a>
-      <a href="#mistakes">Common mistakes</a>
+      <a routerLink="/learning-hub" fragment="basics">Resume basics</a>
+      <a routerLink="/learning-hub" fragment="ats">What an ATS is</a>
+      <a routerLink="/learning-hub" fragment="skills">Writing the skills section</a>
+      <a routerLink="/learning-hub" fragment="experience">When you have no experience</a>
+      <a routerLink="/learning-hub" fragment="templates">Choosing a template</a>
+      <a routerLink="/learning-hub" fragment="scores">Reading your score</a>
+      <a routerLink="/learning-hub" fragment="applying">After you apply</a>
+      <a routerLink="/learning-hub" fragment="mistakes">Common mistakes</a>
     </nav>
 
     <div>
