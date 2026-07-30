@@ -7,7 +7,7 @@ import { PostingRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
 import { requireUser, requireRole } from '../lib/auth';
 import { fetchResume, fetchPosting, serializeResume, serializePosting, recruiterMayReadResume } from '../lib/serializers';
-import { rmScore, cacheScore, getSettings } from '../lib/engine';
+import { rmScore, rmFileScore, cacheScore, getSettings } from '../lib/engine';
 
 const router = asyncRouter();
 
@@ -40,7 +40,19 @@ router.post('/score', async (req, res) => {
     return fail(res, 'You can only score your own resumes.', 403);
   }
 
-  ok(res, await rmScore(await serializeResume(r), await serializePosting(p, false)));
+  const resume = await serializeResume(r);
+  const posting = await serializePosting(p, false);
+  /* Two numbers, same engine. `score` is the resume the applicant typed;
+     `fileScore` is their own uploaded document, read by software. Reported
+     side by side rather than merged, because they can differ and the gap is
+     itself the finding: it is what a parser lost. Null — not zero — when the
+     document could not be read at all. */
+  const fileScore = await rmFileScore(resume.ownFile?.extract, posting);
+  ok(res, {
+    ...(await rmScore(resume, posting)),
+    ...(fileScore ? { fileScore } : {}),
+    ...(resume.ownFile?.extractStatus ? { fileStatus: resume.ownFile.extractStatus } : {}),
+  });
 });
 
 router.post('/recommendations', async (req, res) => {
@@ -77,11 +89,13 @@ router.post('/recommendations', async (req, res) => {
     const s = await rmScore(resume, posting);
     await cacheScore(rid, p.posting_id, s);
 
+    const fs = await rmFileScore(resume.ownFile?.extract, posting);
     const item = {
       ...s,
       posting,
       company: posting.company ?? null,
       applied: applied.includes(String(p.posting_id)),
+      ...(fs ? { fileScore: fs } : {}),
     };
 
     if (s.tier === 'strong') strong.push(item);

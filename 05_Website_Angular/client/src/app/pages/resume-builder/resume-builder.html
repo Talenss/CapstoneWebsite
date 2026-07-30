@@ -410,7 +410,7 @@
         @if (step() === 6) {
           <section class="step" id="s6">
             <h2>Your own resume file</h2>
-            <p class="sub">If you already have a resume, attach it. The recruiter reads it with their own eyes, alongside the one you just built. <b>It is never parsed and never scored</b> — so a formatting quirk in your file can't count against you.</p>
+            <p class="sub">If you already have a resume, attach it. The recruiter reads it with their own eyes, alongside the one you just built &mdash; and software reads it too, so you can see the score your own document gets. <b>Your ranking still comes from the resume above</b>, the one you can correct, so a formatting quirk in your file can't count against you.</p>
 
             <div class="drop" [class.has]="!!resume().ownFile">
               @if (resume().ownFile; as file) {
@@ -419,7 +419,7 @@
                     <span style="font-size:22px">&#128206;</span>
                     <div style="flex:1;min-width:0">
                       <b>{{ file.name }}</b>
-                      <span>{{ formatSize(file.size) }} &middot; uploaded {{ formatUploadDate(file.uploadedAt) }} &middot; never scored</span>
+                      <span>{{ formatSize(file.size) }} &middot; uploaded {{ formatUploadDate(file.uploadedAt) }} &middot; {{ fileStatusLabel() }}</span>
                     </div>
                     <a class="btn ghost sm" [href]="fileUrl() || '#'" target="_blank" rel="noopener">View</a>
                     <button class="btn warn sm" type="button" (click)="removeOwnFile()">Remove</button>
@@ -642,7 +642,7 @@
           <div class="own-file">
             <div class="of-head">
               <b>Your own file</b>
-              <span class="badge gold">Never scored</span>
+              <span class="badge slate">{{ fileStatusLabel() }}</span>
             </div>
             @switch (ownFileKind()) {
               @case ('pdf') {
@@ -655,7 +655,7 @@
                 <p class="of-none">A Word document can&rsquo;t be shown in the browser. The recruiter downloads and opens it &mdash; use <b>View</b> on the last step to check it yourself.</p>
               }
             }
-            <p class="of-foot">{{ file.name }} &middot; {{ formatSize(file.size) }} &middot; read by the recruiter, never by the engine</p>
+            <p class="of-foot">{{ file.name }} &middot; {{ formatSize(file.size) }} &middot; read by the recruiter{{ readByMachine() ? ', and by software so it can be scored' : '' }}</p>
           </div>
         }
         <div class="exports">

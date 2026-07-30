@@ -169,6 +169,20 @@ export class ResumeBuilder implements OnInit {
     return 'other';
   });
 
+  /** What happened when software tried to read the attached file. Written so
+   *  "we could not read it" never reads like "it scored badly" — those mean
+   *  opposite things, and only one of them is about the applicant. */
+  fileStatusLabel = computed(() => {
+    switch (this.resume().ownFile?.extractStatus) {
+      case 'ok':          return 'read and scored';
+      case 'unavailable': return 'not read — automatic reading is off here';
+      case 'unreadable':  return "not read — this format can't be opened by software";
+      case 'failed':      return 'could not be read automatically';
+      default:            return 'read by the recruiter';
+    }
+  });
+  readByMachine = computed(() => this.resume().ownFile?.extractStatus === 'ok');
+
   /** An <iframe src> is a trusted-resource-URL context, so Angular blocks a
    *  plain string. The URL is our own /api/file endpoint or a data: URL this
    *  same browser just produced from the user's own file — never third-party

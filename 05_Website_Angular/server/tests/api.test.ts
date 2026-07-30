@@ -285,9 +285,20 @@ test('a recruiter only sees applicants for their own company’s postings', asyn
   assert.equal(ranked.body.ok, true);
 });
 
-// ---------- the uploaded file is never scored ----------
+/* ---------- the ranking score, and the file score beside it ----------
 
-test('scores come only from structured data — the uploaded file is not read', async () => {
+   The applicant's own file is now read and scored too. Two rules hold this
+   together and both are load-bearing:
+
+     1. `score` — the number a recruiter ranks by — still comes only from the
+        structured resume. A parser misreading a scan must never move a person
+        down a list.
+     2. A document that could NOT be read produces no fileScore at all. Not
+        zero. Zero is a finding about an applicant; absent is a finding about
+        a document, and showing one as the other would be a lie about a person.
+*/
+
+test('the ranking score comes only from the structured resume', async () => {
   const api = client();
   await api('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
   const resumeId = (await api('resumes/list')).body.resumes[0].id;
@@ -295,9 +306,50 @@ test('scores come only from structured data — the uploaded file is not read', 
   const { body } = await api('match/score', { resumeId, postingId });
   assert.equal(body.ok, true);
   assert.equal(typeof body.score, 'number');
-  // the response describes the structured comparison, never the file
   assert.ok(Array.isArray(body.matchedSkills) && Array.isArray(body.missingSkills));
-  assert.ok(!('ownFile' in body), 'the scoring response must not involve the uploaded file');
+  assert.ok(!('ownFile' in body), 'the ranking score must not be derived from the uploaded file');
+});
+
+test('an unreadable file yields no score at all, never a zero', async () => {
+  const api = client();
+  await api('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const resumeId = (await api('resumes/list')).body.resumes[0].id;
+  const postingId = (await api('postings/list')).body.postings[0].id;
+  const { body } = await api('match/score', { resumeId, postingId });
+
+  // No GEMINI_API_KEY is set in the test environment, so nothing can have
+  // been read. That must show up as an ABSENT fileScore.
+  assert.ok(!('fileScore' in body) || body.fileScore === null,
+    'a file that was never read must not produce a score');
+  if ('fileScore' in body && body.fileScore) {
+    assert.notEqual(body.fileScore.score, 0, 'an unread file must never surface as 0%');
+  }
+});
+
+test('a file that was read is scored by the same engine as the resume', async () => {
+  // Drive the engine directly: the API path needs a live Gemini key, but the
+  // arithmetic on an extraction must be provably identical to the arithmetic
+  // on a typed resume — same weights, same rounding, same tiers.
+  const { scoreWith, DEFAULT_SETTINGS } = await import('../src/lib/engine');
+  const posting: any = { id: '1', skills: ['HTML/CSS', 'JavaScript', 'MySQL'], educationLevel: 'bachelor', minExperienceMonths: 6 };
+  const typed: any = {
+    id: '1', skills: ['HTML/CSS', 'JavaScript', 'MySQL'],
+    education: [{ level: 'bachelor' }], experience: [{ months: 6 }],
+  };
+  // the same person, as a parser read them out of their own document
+  const fromFile: any = {
+    id: '1', skills: ['HTML/CSS', 'JavaScript', 'MySQL'],
+    education: [{ level: 'bachelor' }], experience: [{ months: 6 }],
+  };
+  const a = scoreWith(DEFAULT_SETTINGS, typed, posting);
+  const b = scoreWith(DEFAULT_SETTINGS, fromFile, posting);
+  assert.equal(a.score, b.score, 'identical content must score identically whichever way it arrived');
+  assert.equal(a.tier, b.tier);
+
+  // and a parser that lost a skill scores LOWER — the gap the study reports
+  const lossy: any = { ...fromFile, skills: ['HTML/CSS', 'JavaScript'] };
+  const c = scoreWith(DEFAULT_SETTINGS, lossy, posting);
+  assert.ok(c.score < a.score, 'a parser that drops a skill must produce a lower number, not the same one');
 });
 
 /* ============================================================

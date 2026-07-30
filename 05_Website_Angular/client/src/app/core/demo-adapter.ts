@@ -130,7 +130,11 @@ function seed(): Db {
         languages: [{ name: 'Filipino', proficiency: 'Native' }, { name: 'English', proficiency: 'Fluent' }, { name: 'Korean', proficiency: 'Basic' }],
         // DUAL-RESUME MODEL: the applicant's OWN file. HR views and downloads it.
         // It is NEVER parsed and NEVER scored — see the paper's delimitations.
+        // extractStatus is set even on the seed: a file with no status at all
+        // is indistinguishable from one that scored nothing, which is the one
+        // confusion this feature must never create.
         ownFile: { name: 'Marco_Garcia_Resume.pdf', mime: 'application/pdf', size: 712, uploadedAt: Date.now() - D * 5,
+          extractStatus: 'unavailable',
           dataUrl: 'data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBvYmo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlwZS9QYWdlL1BhcmVudCAyIDAgUi9NZWRpYUJveFswIDAgNjEyIDc5Ml0vQ29udGVudHMgNCAwIFIvUmVzb3VyY2VzPDwvRm9udDw8L0YxIDUgMCBSPj4+Pj4+ZW5kb2JqCjQgMCBvYmo8PC9MZW5ndGggMjE1Pj5zdHJlYW0KQlQgL0YxIDE0IFRmIDYwIDc2MCBUZCAoTWFyY28gR2FyY2lhIC0gUmVzdW1lKSBUaiAwIC0yNCBUZCAoQlMgSG9zcGl0YWxpdHkgTWFuYWdlbWVudCwgSEFVIDIwMjUpIFRqIDAgLTIwIFRkIChGJkIgSW50ZXJuIC0gQ2xhcmsgaG90ZWwsIDYgbW9udGhzKSBUaiAwIC0yMCBUZCAoU2tpbGxzOiBDdXN0b21lciBTZXJ2aWNlLCBQT1MsIE1TIE9mZmljZSwgRW5nbGlzaCkgVGogRVQKZW5kc3RyZWFtIGVuZG9iago1IDAgb2JqPDwvVHlwZS9Gb250L1N1YnR5cGUvVHlwZTEvQmFzZUZvbnQvSGVsdmV0aWNhPj5lbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTIgMDAwMDAgbiAKMDAwMDAwMDEwMSAwMDAwMCBuIAowMDAwMDAwMjExIDAwMDAwIG4gCjAwMDAwMDA0NzMgMDAwMDAgbiAKdHJhaWxlcjw8L1NpemUgNi9Sb290IDEgMCBSPj4Kc3RhcnR4cmVmCjUzNAolJUVPRg==' },
         updatedAt: Date.now() - D * 5 },
       { id: 'r4', userId: 'u5', title: 'HR & Marketing', template: 'combination', design: 'executive',
@@ -656,7 +660,16 @@ export class DemoAdapter implements ApiAdapter {
         const fr = new FileReader();
         fr.onload = () => {
           try {
-            r.ownFile = { name: file.name, mime: file.type, size: file.size, uploadedAt: Date.now(), dataUrl: fr.result as string };
+            /* Demo mode cannot read the document. There is no server here and
+               no API key, and the simulated extraction that fills the builder
+               on the "Upload & analyze" page is invented content — scoring
+               THAT and showing the number against the applicant's real file
+               would be a fabrication, not a demonstration. So demo mode says
+               plainly that reading is unavailable, and no file score appears
+               on either the applicant's screen or the recruiter's. Api mode
+               with a GEMINI_API_KEY set is the only place a file is scored. */
+            r.ownFile = { name: file.name, mime: file.type, size: file.size, uploadedAt: Date.now(),
+              dataUrl: fr.result as string, extractStatus: 'unavailable' };
             r.updatedAt = Date.now();
             persist(db);
             resolve({ ok: true, ownFile: r.ownFile });

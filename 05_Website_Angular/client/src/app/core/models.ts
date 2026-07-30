@@ -185,12 +185,27 @@ export interface Reference {
   phone?: string;
 }
 
+/** Why the applicant's own document has no reading attached to it.
+ *   · ok          — it was read; `extract` holds the result
+ *   · unavailable — automatic reading isn't set up (no API key, or demo mode)
+ *   · unreadable  — the format can't be read at all (old .doc, odd type)
+ *   · failed      — it was attempted and didn't work: network, quota, or a
+ *                   scan whose text isn't legible to software
+ *
+ *  Anything other than 'ok' means NO SCORE — which is not the same as a score
+ *  of zero, and must never be shown as one. */
+export type ExtractStatus = 'ok' | 'unavailable' | 'unreadable' | 'failed';
+
 export interface OwnFile {
   name: string;
   mime: string;
   size: number;
   uploadedAt: number;
   dataUrl?: string; // demo mode only — the file itself, base64
+  /** The document read into the same structured shape the builder edits, so
+   *  the engine can score it. Absent unless `extractStatus` is 'ok'. */
+  extract?: AnalyzedResume;
+  extractStatus?: ExtractStatus;
 }
 
 export interface Resume {
@@ -290,12 +305,19 @@ export interface RecommendationItem extends MatchResult {
   posting: Posting;
   company: Company | null;
   applied: boolean;
+  /** The same posting scored against the applicant's own uploaded document.
+   *  Absent when there is no readable document — never zero in that case. */
+  fileScore?: MatchResult;
 }
 
 export interface RankedRow extends MatchResult {
   application: Application;
   resume: Resume;
   seeker: { id: string; name: string; email: string; role: 'seeker' };
+  /** The applicant's own document, scored. Shown beside the ranking number
+   *  but never used FOR the ranking: a misread scan must not move a person
+   *  down the list. */
+  fileScore?: MatchResult;
 }
 
 export interface HrStats {

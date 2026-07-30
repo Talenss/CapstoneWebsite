@@ -48,6 +48,12 @@ export interface ResumeRow {
   own_file_size: number | null;
   own_file_path: string | null;
   own_file_uploaded_at: string | null;
+  /** The applicant's own document, read into the shape the builder edits, so
+   *  the engine can score it. Null until a file is uploaded, or when the
+   *  reading failed — own_file_extract_status says which. */
+  own_file_extract: any | null;
+  own_file_extract_status: 'ok' | 'unavailable' | 'unreadable' | 'failed' | null;
+  own_file_extract_at: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -133,12 +133,25 @@ export async function serializeResume(r: ResumeRow): Promise<any> {
 
   // The uploaded file: metadata only. The bytes are served by /api/file,
   // which checks who is asking. There is no public URL to this document.
+  /* The uploaded file: metadata, plus what was read out of it.
+     `extract` is the structured resume the engine scores; `extractStatus`
+     says why it is absent when it is. Those two must stay distinguishable —
+     "we could not read this document" and "this document scored zero" mean
+     opposite things to the person reading the ranking. */
   const ownFile = r.own_file_name
     ? {
         name: r.own_file_name,
         mime: r.own_file_mime,
         size: Number(r.own_file_size),
         uploadedAt: ts(r.own_file_uploaded_at),
+        ...((r as any).own_file_extract_status
+          ? { extractStatus: (r as any).own_file_extract_status }
+          : {}),
+        ...((r as any).own_file_extract
+          ? { extract: typeof (r as any).own_file_extract === 'string'
+              ? JSON.parse((r as any).own_file_extract)
+              : (r as any).own_file_extract }
+          : {}),
       }
     : null;
 

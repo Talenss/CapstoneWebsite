@@ -45,6 +45,14 @@ export async function runMigrations(): Promise<void> {
     'classic','modern','minimal','executive','banner','split','bar','categorized',
     'traditional','clean','compact','senior','graduate','technical'))`);
 
+  // resumes.own_file_extract — the applicant's own document, read into the
+  // same structured shape the builder edits so the engine can score it. The
+  // status column is what keeps "we could not read this" distinguishable
+  // from "this scored zero"; they mean opposite things to a recruiter.
+  await exec('ALTER TABLE resumes ADD COLUMN IF NOT EXISTS own_file_extract JSONB');
+  await exec('ALTER TABLE resumes ADD COLUMN IF NOT EXISTS own_file_extract_status TEXT');
+  await exec('ALTER TABLE resumes ADD COLUMN IF NOT EXISTS own_file_extract_at TIMESTAMPTZ');
+
   // job_postings.application_deadline — optional "apply by" date; past it,
   // the posting stops accepting applications (lazy auto-close, no cron)
   await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS application_deadline DATE');
