@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
-import { Resume, Template } from '../../core/models';
+import { Resume, ResumeDesign, Template } from '../../core/models';
 
 /** Port of 04_Website/app/my-resumes.html — the seeker's resume library.
  *  Grid of resume cards with make-active / edit / PDF / duplicate / delete
@@ -51,6 +51,27 @@ export class MyResumes implements OnInit {
 
   templateLabel(t: Template): string {
     return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+
+  /** The design's on-screen name. 'categorized' is shown as "Rail" in the
+   *  builder's picker, so it has to read the same here rather than exposing
+   *  the stored value. */
+  designLabel(d: ResumeDesign | undefined): string {
+    if (!d) return 'Classic';
+    if (d === 'categorized') return 'Rail';
+    return d.charAt(0).toUpperCase() + d.slice(1);
+  }
+
+  /** Which optional sections this resume carries, for the card's summary.
+   *  Named rather than counted — "Projects · Languages" tells the applicant
+   *  which of their two drafts is the fuller one; "+2 sections" does not. */
+  extraSections(r: Resume): string {
+    return [
+      r.projects?.length ? 'Projects' : '',
+      r.languages?.length ? 'Languages' : '',
+      r.references?.length ? 'References' : '',
+      r.certifications?.length ? 'Certifications' : '',
+    ].filter(Boolean).join(' · ');
   }
 
   day(ts: number | undefined): string {

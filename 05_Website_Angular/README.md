@@ -17,9 +17,17 @@ database. `../04_Website` is the old PHP version, kept only as a reference;
 **For job seekers**
 - Guided résumé wizard with live preview, plus "upload & analyze" (AI reads a
   file into the builder; scoring stays with the rule-based engine).
-- **8 ATS-safe résumé designs** to choose from (Classic, Modern, Minimal,
-  Executive, Banner, Split, Bar, Categorized) — single-column, parser-safe,
-  applied to the on-screen preview and the printed / PDF export.
+- **14 ATS-safe résumé designs** to choose from (Classic, Modern, Minimal,
+  Executive, Banner, Split, Bar, Rail, Traditional, Clean, Compact, Senior,
+  Graduate, Technical) — single-column, parser-safe, applied to the on-screen
+  preview and the printed / PDF export. Every one uses the standard section
+  headings, system fonts, real headings and real bullets; Graduate and
+  Technical also set their own section order.
+- **Optional résumé sections** — Projects, Languages and References, plus a
+  headline, LinkedIn / portfolio links, achievement bullets, dates and
+  locations. All optional; a section left empty prints nothing at all. None of
+  it changes the score, which still reads skills, education level and months
+  of experience only.
 - Honest match scores against every real opening (**skills 50 / education 25 /
   experience 25**, weights published), in three tiers — strong, possible,
   related. No one is auto-rejected.

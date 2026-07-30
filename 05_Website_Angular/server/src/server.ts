@@ -9,6 +9,7 @@
    ============================================================ */
 import express from 'express';
 import session from 'express-session';
+import pgSession from 'connect-pg-simple';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
@@ -28,6 +29,7 @@ import adminRoutes from './routes/admin';
 import savedRoutes from './routes/saved';
 import metricsRoutes from './routes/metrics';
 import { runMigrations } from './lib/migrate';
+import { db } from './db';
 
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
@@ -61,8 +63,25 @@ app.use(helmet({
 app.use(cors({ origin: ALLOW_ORIGIN, credentials: true }));
 app.use(express.json({ limit: '2mb' }));
 
+/* Sessions live in Postgres, not in the process.
+ *
+ * express-session's default MemoryStore keeps every session in a variable, so
+ * a restart — a deploy, a crash, the free-tier host idling the dyno — signed
+ * everybody out, and nothing ever pruned expired entries. Storing them in the
+ * database the app already has means a restart is invisible to whoever is
+ * mid-application, and expired rows are swept on a timer.
+ *
+ * The table is created here rather than by the library's own bundled SQL so
+ * it exists before the first request, on a fresh database and an upgraded one
+ * alike. */
 app.use(session({
   name: 'rmph.sid',
+  store: new (pgSession(session))({
+    pool: db(),
+    tableName: 'user_sessions',
+    createTableIfMissing: true,
+    pruneSessionInterval: 60 * 15,   // seconds
+  }),
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,

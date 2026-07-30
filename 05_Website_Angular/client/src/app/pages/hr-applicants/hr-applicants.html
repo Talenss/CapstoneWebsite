@@ -153,25 +153,41 @@
             <header><b>Structured resume</b><span class="badge green">Scored</span></header>
             <div class="inner">
               <div class="p-name">{{ r.resume.personal.fullName }}</div>
+              @if (r.resume.personal.headline) {
+                <div class="p-headline">{{ r.resume.personal.headline }}</div>
+              }
               <div class="p-contact">{{ contactLine(r.resume.personal) }}</div>
+              @if (linkLine(r.resume.personal)) {
+                <div class="p-contact">{{ linkLine(r.resume.personal) }}</div>
+              }
               @if (r.resume.personal.summary) {
-                <div class="p-sec"><h4>Summary</h4><p style="font-size:11.5px">{{ r.resume.personal.summary }}</p></div>
+                <div class="p-sec"><h4>Professional Summary</h4><p style="font-size:11.5px">{{ r.resume.personal.summary }}</p></div>
               }
               @if (r.resume.education.length) {
                 <div class="p-sec">
                   <h4>Education</h4>
                   @for (e of r.resume.education; track $index) {
-                    <div class="p-item"><b>{{ e.degree }}</b><i>{{ e.school }}{{ e.year ? ' · ' + e.year : '' }}</i></div>
+                    <div class="p-item">
+                      <b>{{ e.field ? e.degree + ' — ' + e.field : e.degree }}</b>
+                      <i>{{ join([e.school, e.location, e.year]) }}</i>
+                      @if (e.honors) { <p>{{ e.honors }}</p> }
+                    </div>
                   }
                 </div>
               }
               @if (r.resume.experience.length) {
                 <div class="p-sec">
-                  <h4>Experience</h4>
+                  <h4>Work Experience</h4>
                   @for (e of r.resume.experience; track $index) {
                     <div class="p-item">
-                      <b>{{ e.position }}</b><i>{{ e.company }}{{ e.months ? ' · ' + e.months + ' months' : '' }}</i>
+                      <b>{{ e.position }}</b>
+                      <i>{{ join([e.company, e.location, dateRange(e) || monthsLabel(e.months)]) }}</i>
                       @if (e.description) { <p>{{ e.description }}</p> }
+                      @if (e.bullets?.length) {
+                        <ul>
+                          @for (b of e.bullets; track $index) { <li>{{ b }}</li> }
+                        </ul>
+                      }
                     </div>
                   }
                 </div>
@@ -186,11 +202,45 @@
                   </div>
                 </div>
               }
+              <!-- The optional sections. They score nothing, but the applicant
+                   put them on the document and the recruiter is reading the
+                   document — leaving them out here would hide real work. -->
+              @if (r.resume.projects?.length) {
+                <div class="p-sec">
+                  <h4>Projects</h4>
+                  @for (p of r.resume.projects; track $index) {
+                    <div class="p-item">
+                      <b>{{ p.name }}</b>
+                      <i>{{ join([p.role, dateRange(p)]) }}</i>
+                      @if (p.description) { <p>{{ p.description }}</p> }
+                      @if (p.link) { <p>{{ p.link }}</p> }
+                    </div>
+                  }
+                </div>
+              }
               @if (r.resume.certifications.length) {
                 <div class="p-sec">
                   <h4>Certifications</h4>
                   @for (c of r.resume.certifications; track $index) {
-                    <div class="p-item"><b>{{ c.name }}</b>@if (c.year) {<i>{{ c.year }}</i>}</div>
+                    <div class="p-item"><b>{{ c.name }}</b><i>{{ join([c.issuer, c.year, c.credentialId]) }}</i></div>
+                  }
+                </div>
+              }
+              @if (r.resume.languages?.length) {
+                <div class="p-sec">
+                  <h4>Languages</h4>
+                  <p style="font-size:11.5px">{{ languageLine(r.resume) }}</p>
+                </div>
+              }
+              @if (r.resume.references?.length) {
+                <div class="p-sec">
+                  <h4>References</h4>
+                  @for (x of r.resume.references; track $index) {
+                    <div class="p-item">
+                      <b>{{ x.name }}</b>
+                      <i>{{ join([x.position, x.company]) }}</i>
+                      @if (x.email || x.phone) { <p>{{ join([x.email, x.phone]) }}</p> }
+                    </div>
                   }
                 </div>
               }

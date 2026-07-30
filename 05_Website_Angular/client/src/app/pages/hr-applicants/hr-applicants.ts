@@ -5,7 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
-import { AppStatus, Personal, Posting, RankedRow, StatusEvent, Tier } from '../../core/models';
+import { AppStatus, Personal, Posting, RankedRow, Resume, StatusEvent, Tier } from '../../core/models';
 import { EDU_LABELS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 
@@ -159,6 +159,27 @@ export class HrApplicants {
 
   contactLine(p: Personal): string {
     return [p.email, p.phone, p.address].filter(Boolean).join('  ·  ');
+  }
+  /** The recruiter's pane shows the same document the applicant sees, so
+   *  these mirror the builder's preview and the print sheet exactly. A
+   *  section the applicant filled in must not be invisible here. */
+  linkLine(p: Personal): string {
+    return this.join([p.linkedin, p.portfolio], '  ·  ');
+  }
+  join(parts: (string | undefined | null)[], sep = ' · '): string {
+    return parts.map((x) => (x ?? '').trim()).filter((x) => x !== '').join(sep);
+  }
+  dateRange(e: { startDate?: string; endDate?: string; current?: boolean }): string {
+    const from = (e.startDate || '').trim();
+    const to = e.current ? 'Present' : (e.endDate || '').trim();
+    if (from && to) return `${from} – ${to}`;
+    return from || to || '';
+  }
+  monthsLabel(months: number): string {
+    return months ? `${months} month${months > 1 ? 's' : ''}` : '';
+  }
+  languageLine(r: Resume): string {
+    return (r.languages ?? []).map((l) => this.join([l.name, l.proficiency], ' — ')).join('  ·  ');
   }
 
   iframeUrl(resumeId: string | null): SafeResourceUrl | null {

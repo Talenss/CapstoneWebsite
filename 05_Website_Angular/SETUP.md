@@ -274,6 +274,13 @@ Before exposing the site publicly, set these in `server/.env`:
 | `COOKIE_SECURE` | `true` | behind HTTPS: session cookie is HTTPS-only |
 | `APP_URL` | your public URL | links inside notification emails |
 
+Sessions are stored in Postgres, in a `user_sessions` table the server creates
+on first boot — nothing to configure, and no extra service. A restart or a
+redeploy therefore does not sign anyone out, and expired rows are swept every
+fifteen minutes. Re-importing `db/resumematch_ph.sql` drops that table along
+with everything else, because the reset renumbers `user_id` from 1 and an old
+cookie must not resolve to whoever now holds that number.
+
 …and put a real HTTPS reverse proxy (nginx, Caddy, or your cloud host's)
 in front of the Node process. No code edits needed — it's all `.env`.
 

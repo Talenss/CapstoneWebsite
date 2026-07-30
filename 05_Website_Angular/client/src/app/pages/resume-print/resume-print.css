@@ -1,28 +1,48 @@
 /* Port of the inline <style> block from 04_Website/app/resume-print.html.
    An ATS-friendly print sheet: one column, real headings, no tables,
-   no text boxes, no graphics. Print to PDF from any browser.        */
+   no text boxes, no graphics. Print to PDF from any browser.
+
+   Font stacks are deliberately restricted to faces that exist on the
+   machines this is printed from — Arial/Helvetica, Georgia, Times New
+   Roman. A downloaded web font is substituted at print time anyway, so
+   designing against one shows a document nobody actually receives.   */
 .toolbar{background:var(--ink);padding:14px 0}
 .toolbar .container{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
 .toolbar p{color:#9BA2B1;font-size:13px}
 .toolbar b{color:var(--gold)}
+/* A4 / Letter switch — changes only the @page size below */
+.paper-size{display:flex;border:1px solid #3A4050;border-radius:var(--r);overflow:hidden}
+.paper-size button{background:none;border:none;color:#9BA2B1;font-family:var(--body);font-size:12px;font-weight:600;
+  padding:6px 12px;cursor:pointer}
+.paper-size button.on{background:var(--gold);color:#1a1a1a}
+
 .sheet{max-width:760px;margin:32px auto 60px;background:#fff;padding:56px 60px;
   border:1px solid var(--rule);box-shadow:var(--shadow);
-  font-family:Georgia,'Times New Roman',serif;font-size:12pt;line-height:1.5;color:#1a1d24}
+  font-family:Georgia,'Times New Roman',serif;font-size:12pt;line-height:1.5;color:#1a1d24;
+  /* Body copy is left-aligned and never hyphenated: justified text opens
+     rivers of whitespace that some parsers read as column breaks. */
+  text-align:left;hyphens:none;-webkit-hyphens:none}
 @media(max-width:620px){.sheet{padding:32px 26px;margin:20px 14px 40px}}
-.sheet h1{font-family:Georgia,serif;font-size:22pt;font-weight:700;letter-spacing:.3px;line-height:1.1;color:#1a1d24;margin:0}
+.sheet h1{font-family:Georgia,'Times New Roman',serif;font-size:22pt;font-weight:700;letter-spacing:.3px;line-height:1.1;color:#1a1d24;margin:0}
+.sheet .headline{font-size:11pt;color:#33373f;margin-top:4px}
 .sheet .contact{font-size:10pt;color:#4d525c;margin-top:6px}
 .sheet section{margin-top:22px}
-.sheet h2{font-family:'Inter',Arial,sans-serif;font-size:9.5pt;font-weight:600;letter-spacing:2px;text-transform:uppercase;
-  color:#1a1d24;border-bottom:1px solid #1a1d24;padding-bottom:3px;margin:0 0 10px}
-.sheet .item{margin-bottom:11px}
-.sheet .item b{display:block;font-size:11.5pt}
-.sheet .item i{font-style:italic;color:#4d525c;font-size:10pt}
+.sheet h2{font-family:Arial,Helvetica,sans-serif;font-size:9.5pt;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:#1a1d24;border-bottom:1px solid #1a1d24;padding-bottom:3px;margin:0 0 10px;break-after:avoid;page-break-after:avoid}
+.sheet .item{margin-bottom:11px;break-inside:avoid;page-break-inside:avoid}
+.sheet .item h3{font-family:inherit;font-size:11.5pt;font-weight:700;margin:0;line-height:1.3}
+.sheet .item .meta{font-style:italic;color:#4d525c;font-size:10pt;margin:0}
 .sheet .item p{margin-top:2px;font-size:10.5pt}
+/* Plain disc bullets — no glyphs, no emoji, nothing a parser has to guess at */
+.sheet .item ul{margin:4px 0 0 18px;padding:0;list-style:disc}
+.sheet .item li{font-size:10.5pt;margin-bottom:2px}
 .sheet .skills{font-size:11pt}
 
 /* ============================================================
-   ATS-safe design skins. Section ORDER stays with the template;
-   these only skin the sheet (font, header, heading treatment).
+   ATS-safe design skins. Section ORDER stays with the template
+   (except 'graduate' and 'technical', which are defined by the
+   order they impose — see DESIGN_ORDER); these only skin the
+   sheet: font, header, heading treatment, spacing rhythm.
    Every one is single-column with real headings and real text.
    ============================================================ */
 .sheet .rhead{margin:0}
@@ -31,39 +51,97 @@
 .sheet.rz-classic .rhead{text-align:center}
 .sheet.rz-classic h2{text-align:center;font-family:Georgia,serif;letter-spacing:1.5px;border-bottom-width:1.5px}
 /* 2 · Modern — sans, gold left-bar headings */
-.sheet.rz-modern,.sheet.rz-modern h1{font-family:'Manrope',Arial,sans-serif}
+.sheet.rz-modern,.sheet.rz-modern h1{font-family:Arial,Helvetica,sans-serif}
 .sheet.rz-modern .rhead{border-bottom:3px solid #AD7F2C;padding-bottom:9px}
 .sheet.rz-modern h2{border-bottom:none;padding-left:12px;position:relative;letter-spacing:1.4px}
 .sheet.rz-modern h2::before{content:"";position:absolute;left:0;top:1px;bottom:1px;width:4px;background:#AD7F2C}
 /* 3 · Minimal — light, airy, hairline headings */
-.sheet.rz-minimal,.sheet.rz-minimal h1{font-family:'Helvetica Neue',Arial,sans-serif}
-.sheet.rz-minimal h1{font-weight:300}
-.sheet.rz-minimal h2{border-bottom:1px solid #e6e6e6;color:#8a8a8a;letter-spacing:2.5px}
+.sheet.rz-minimal,.sheet.rz-minimal h1{font-family:Helvetica,Arial,sans-serif}
+.sheet.rz-minimal h1{font-weight:400}
+.sheet.rz-minimal h2{border-bottom:1px solid #d8d8d8;color:#6b6b6b;letter-spacing:2.5px}
 /* 4 · Executive — serif, double header rule */
 .sheet.rz-executive{font-family:Georgia,'Times New Roman',serif}
 .sheet.rz-executive .rhead{border-bottom:3px double #1a1a1a;padding-bottom:8px}
 .sheet.rz-executive h2{font-family:Georgia,serif;letter-spacing:.6px;border-bottom:1px solid #bbb}
 /* 5 · Banner — dark header block */
-.sheet.rz-banner,.sheet.rz-banner h1{font-family:'Manrope',Arial,sans-serif}
+.sheet.rz-banner,.sheet.rz-banner h1{font-family:Arial,Helvetica,sans-serif}
 .sheet.rz-banner .rhead{background:#191510;padding:18px 22px;border-radius:6px}
-.sheet.rz-banner .rhead h1{color:#fff}
+.sheet.rz-banner .rhead h1,.sheet.rz-banner .rhead .headline{color:#fff}
 .sheet.rz-banner .rhead .contact{color:#cdd0d7}
 .sheet.rz-banner h2{color:#7A5B1E;border-bottom-color:#e4dcc6;letter-spacing:1.4px}
 /* 6 · Split — name left, contact right; centered headings */
-.sheet.rz-split .rhead{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;border-bottom:2px solid #1a1a1a;padding-bottom:8px}
+.sheet.rz-split .rhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:18px;border-bottom:2px solid #1a1a1a;padding-bottom:8px}
 .sheet.rz-split .rhead .contact{text-align:right;margin-top:0}
 .sheet.rz-split h2{text-align:center;border-bottom:none;letter-spacing:2px}
 /* 7 · Bar — filled heading bands */
-.sheet.rz-bar,.sheet.rz-bar h1{font-family:'Manrope',Arial,sans-serif}
+.sheet.rz-bar,.sheet.rz-bar h1{font-family:Arial,Helvetica,sans-serif}
 .sheet.rz-bar h2{background:#F3E9CE;border-bottom:none;padding:4px 10px;color:#1a1a1a;letter-spacing:1.2px}
 /* 8 · Categorized — left accent rail */
-.sheet.rz-categorized,.sheet.rz-categorized h1{font-family:'Helvetica Neue',Arial,sans-serif}
+.sheet.rz-categorized,.sheet.rz-categorized h1{font-family:Helvetica,Arial,sans-serif}
 .sheet.rz-categorized{border-left:4px solid #AD7F2C}
 .sheet.rz-categorized h2{color:#7A5B1E;border-bottom:none;letter-spacing:2px}
+
+/* ---- the six added designs ----
+   Distinct at a glance, but only through typeface, heading treatment,
+   spacing rhythm and the name block. No graphics, no colour behind body
+   text, nothing that stops making sense in greyscale.                 */
+/* 9 · Traditional — the most conservative sheet: Georgia, centred name,
+       hairline rules. Suits government, banking, legal, education. */
+.sheet.rz-traditional{font-family:Georgia,'Times New Roman',serif}
+.sheet.rz-traditional .rhead{text-align:center;padding-bottom:10px;border-bottom:1px solid #1a1a1a}
+.sheet.rz-traditional h2{font-family:Georgia,serif;letter-spacing:1.2px;border-bottom:1px solid #999;font-weight:700}
+/* 10 · Clean — Arial, left name, no rules anywhere; whitespace carries it. */
+.sheet.rz-clean,.sheet.rz-clean h1{font-family:Arial,Helvetica,sans-serif}
+.sheet.rz-clean section{margin-top:28px}
+.sheet.rz-clean h2{border-bottom:none;padding-bottom:0;letter-spacing:3px;color:#33373f}
+/* 11 · Compact — same skeleton, tuned to keep a long history on one page. */
+.sheet.rz-compact,.sheet.rz-compact h1{font-family:Arial,Helvetica,sans-serif}
+.sheet.rz-compact{font-size:10.5pt;line-height:1.32}
+.sheet.rz-compact h1{font-size:18pt}
+.sheet.rz-compact section{margin-top:13px}
+.sheet.rz-compact h2{font-size:9pt;letter-spacing:1.2px;margin-bottom:6px;padding-bottom:2px}
+.sheet.rz-compact .item{margin-bottom:7px}
+.sheet.rz-compact .item h3{font-size:10.5pt}
+.sheet.rz-compact .item .meta,.sheet.rz-compact .item p,.sheet.rz-compact .item li{font-size:9.5pt}
+.sheet.rz-compact .item li{margin-bottom:0}
+/* 12 · Senior — large name block with the headline beneath, heavy rules,
+        generous margins. Reads senior without shouting. */
+.sheet.rz-senior{font-family:Georgia,'Times New Roman',serif;padding:64px 68px}
+.sheet.rz-senior h1{font-size:26pt}
+.sheet.rz-senior .headline{font-size:12pt;margin-top:6px}
+.sheet.rz-senior .rhead{padding-bottom:14px;border-bottom:2px solid #1a1a1a}
+.sheet.rz-senior section{margin-top:26px}
+.sheet.rz-senior h2{font-family:Arial,Helvetica,sans-serif;border-bottom:2px solid #1a1a1a;letter-spacing:1.6px}
+/* 13 · Graduate — Education leads, then Projects and Certifications, with
+        Work Experience and Skills after (DESIGN_ORDER). For applicants whose
+        strongest section is their schooling. */
+.sheet.rz-graduate,.sheet.rz-graduate h1{font-family:Arial,Helvetica,sans-serif}
+.sheet.rz-graduate .rhead{border-bottom:2px solid #AD7F2C;padding-bottom:10px}
+.sheet.rz-graduate h2{border-bottom:1px solid #d8d8d8;color:#3d4149;letter-spacing:1.8px}
+/* 14 · Technical — Skills and Projects lead. Still one column, still no
+        graphics: the difference is what a reader meets first. */
+.sheet.rz-technical,.sheet.rz-technical h1{font-family:Helvetica,Arial,sans-serif}
+.sheet.rz-technical .rhead{border-bottom:1px solid #1a1a1a;padding-bottom:9px}
+.sheet.rz-technical h2{border-bottom:none;border-left:3px solid #1a1a1a;padding:0 0 0 10px;letter-spacing:1.6px}
 
 @media print{
   .toolbar{display:none!important}
   body{background:#fff}
   .sheet{margin:0;padding:0;border:none;box-shadow:none;max-width:none}
-  @page{margin:18mm}
+  /* Keep an entry and its heading together across a page break. */
+  .sheet h1,.sheet h2,.sheet h3{break-after:avoid;page-break-after:avoid}
+  .sheet .item{break-inside:avoid;page-break-inside:avoid}
+  /* The banner design's dark block is the one place a background carries
+     meaning. Browsers drop backgrounds on print unless asked, which would
+     leave white text on white paper — so on paper it becomes plain text on
+     a rule instead. Legible either way, printed in colour or not. */
+  .sheet.rz-banner .rhead{background:none;padding:0;border-bottom:2px solid #1a1a1a;padding-bottom:8px}
+  .sheet.rz-banner .rhead h1,.sheet.rz-banner .rhead .headline{color:#1a1d24}
+  .sheet.rz-banner .rhead .contact{color:#4d525c}
+  .sheet.rz-bar h2{background:none;border-bottom:1px solid #1a1d24;padding:0 0 3px}
+  /* Default page. `size` cannot be driven by a class — @page has no access
+     to the document tree — so the Letter variant is written into a <style>
+     element by the component instead (see applyPageSize). This stays as the
+     fallback that applies before anything is toggled. */
+  @page{size:A4;margin:18mm}
 }

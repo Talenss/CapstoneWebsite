@@ -1,14 +1,18 @@
 <div class="toolbar no-print">
   <div class="container">
     <p><b>Print, then choose "Save as PDF"</b> as the destination. This layout is single-column and heading-based, so any ATS can read it.</p>
-    <div style="display:flex;gap:9px">
+    <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
+      <div class="paper-size" role="group" aria-label="Paper size">
+        <button type="button" [class.on]="paper() === 'a4'" (click)="setPaper('a4')">A4</button>
+        <button type="button" [class.on]="paper() === 'letter'" (click)="setPaper('letter')">Letter</button>
+      </div>
       <button class="btn ghost sm" type="button" (click)="back()">Back</button>
       <button class="btn primary sm" type="button" (click)="print()">Print / Save as PDF</button>
     </div>
   </div>
 </div>
 
-<div [class]="'sheet rz-' + (resume()?.design || 'classic')" id="sheet">
+<div [class]="'sheet rz-' + (resume()?.design || 'classic') + ' pg-' + paper()" id="sheet">
   @if (loading()) {
     <p style="color:#888">Loading…</p>
   } @else if (error()) {
@@ -16,10 +20,18 @@
   } @else if (resume(); as r) {
     <header class="rhead">
       <h1>{{ r.personal.fullName }}</h1>
+      @if (r.personal.headline) {
+        <p class="headline">{{ r.personal.headline }}</p>
+      }
       <p class="contact">{{ contactLine() }}</p>
+      <!-- Links print as their full visible address: parsers routinely drop
+           href, and an anchor reading only "LinkedIn" is then lost. -->
+      @if (linkLine()) {
+        <p class="contact">{{ linkLine() }}</p>
+      }
     </header>
     @if (r.personal.summary) {
-      <section><h2>Summary</h2><p style="font-size:10.5pt">{{ r.personal.summary }}</p></section>
+      <section><h2>Professional Summary</h2><p style="font-size:10.5pt">{{ r.personal.summary }}</p></section>
     }
     @for (kind of sectionOrder(); track kind) {
       @switch (kind) {
@@ -29,8 +41,9 @@
               <h2>Education</h2>
               @for (e of r.education; track $index) {
                 <div class="item">
-                  <b>{{ e.degree }}</b>
-                  <i>{{ e.school }}{{ e.year ? ' · ' + e.year : '' }}</i>
+                  <h3>{{ e.field ? e.degree + ' — ' + e.field : e.degree }}</h3>
+                  <p class="meta">{{ join([e.school, e.location, e.year]) }}</p>
+                  @if (e.honors) { <p>{{ e.honors }}</p> }
                 </div>
               }
             </section>
@@ -39,12 +52,17 @@
         @case ('experience') {
           @if (r.experience.length) {
             <section>
-              <h2>Experience</h2>
+              <h2>Work Experience</h2>
               @for (e of r.experience; track $index) {
                 <div class="item">
-                  <b>{{ e.position }}</b>
-                  <i>{{ e.company }}{{ e.months ? ' · ' + monthsLabel(e.months) : '' }}</i>
+                  <h3>{{ e.position }}</h3>
+                  <p class="meta">{{ join([e.company, e.location, dateRange(e) || monthsLabel(e.months)]) }}</p>
                   @if (e.description) { <p>{{ e.description }}</p> }
+                  @if (e.bullets?.length) {
+                    <ul>
+                      @for (b of e.bullets; track $index) { <li>{{ b }}</li> }
+                    </ul>
+                  }
                 </div>
               }
             </section>
@@ -55,20 +73,50 @@
             <section><h2>Skills</h2><p class="skills">{{ r.skills.join(' · ') }}</p></section>
           }
         }
+        @case ('projects') {
+          @if (r.projects?.length) {
+            <section>
+              <h2>Projects</h2>
+              @for (p of r.projects; track $index) {
+                <div class="item">
+                  <h3>{{ p.name }}</h3>
+                  <p class="meta">{{ join([p.role, dateRange(p)]) }}</p>
+                  @if (p.description) { <p>{{ p.description }}</p> }
+                  @if (p.link) { <p class="meta">{{ p.link }}</p> }
+                </div>
+              }
+            </section>
+          }
+        }
         @case ('certifications') {
           @if (r.certifications.length) {
             <section>
               <h2>Certifications</h2>
               @for (c of r.certifications; track $index) {
                 <div class="item">
-                  <b>{{ c.name }}</b>
-                  @if (c.year) { <i>{{ c.year }}</i> }
+                  <h3>{{ c.name }}</h3>
+                  <p class="meta">{{ join([c.issuer, c.year, c.credentialId]) }}</p>
                 </div>
               }
             </section>
           }
         }
       }
+    }
+    @if (r.languages?.length) {
+      <section><h2>Languages</h2><p class="skills">{{ languageLine() }}</p></section>
+    }
+    @if (r.references?.length) {
+      <section>
+        <h2>References</h2>
+        @for (x of r.references; track $index) {
+          <div class="item">
+            <h3>{{ x.name }}</h3>
+            <p class="meta">{{ join([x.position, x.company]) }}</p>
+            @if (x.email || x.phone) { <p class="meta">{{ join([x.email, x.phone]) }}</p> }
+          </div>
+        }
+      </section>
     }
   }
 </div>

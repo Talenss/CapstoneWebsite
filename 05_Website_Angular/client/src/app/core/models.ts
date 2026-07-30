@@ -50,10 +50,18 @@ export interface RoutingCompany {
 }
 export type EduLevel = 'none' | 'highschool' | 'vocational' | 'associate' | 'bachelor' | 'master';
 export type Template = 'chronological' | 'functional' | 'combination';
-/** Visual style of the rendered/printed resume. Section ORDER stays with
- *  Template; this only skins the sheet. Every design is single-column and
- *  ATS-safe. */
-export type ResumeDesign = 'classic' | 'modern' | 'minimal' | 'executive' | 'banner' | 'split' | 'bar' | 'categorized';
+/** Visual style of the rendered/printed resume. Every design is single-column
+ *  and ATS-safe: real headings, real text, no tables, no graphics.
+ *
+ *  Section ORDER normally stays with Template — a design only skins the sheet.
+ *  The two exceptions are 'graduate' and 'technical', which exist *because* of
+ *  the order they impose (education first for a fresh graduate; skills and
+ *  projects first for a technical applicant). Picking one of those overrides
+ *  the Template order, and the builder says so on screen rather than leaving
+ *  the Template radio looking as though it still applies. */
+export type ResumeDesign =
+  | 'classic' | 'modern' | 'minimal' | 'executive' | 'banner' | 'split' | 'bar' | 'categorized'
+  | 'traditional' | 'clean' | 'compact' | 'senior' | 'graduate' | 'technical';
 export type EmploymentType = 'full-time' | 'part-time' | 'contract' | 'internship';
 export type AppStatus = 'submitted' | 'review' | 'shortlisted' | 'rejected' | 'hired' | 'withdrawn';
 export type Tier = 'strong' | 'possible' | 'related';
@@ -83,31 +91,98 @@ export interface Company {
   website: string | null;
 }
 
+/* ---------------------------------------------------------------------
+   THE RESUME RECORD
+
+   Everything added below is OPTIONAL and additive. Three fields are load-
+   bearing and deliberately untouched, because the matching engine scores
+   on exactly these and nothing else:
+
+     · skills          a FLAT string[] — normalised and set-matched
+     · education.level feeds EDU_RANK for the education component
+     · experience.months summed for the experience component
+
+   Richer alternatives were considered (grouped skills, start/end dates in
+   place of months, dropping level in favour of free-text degree) and
+   rejected: they would have required rewriting the engine, its demo-mode
+   twin, the parity suite, and the 50/25/25 formula published in the study.
+   A resume can now carry far more, and the score still comes from the same
+   three inputs it always did.
+   --------------------------------------------------------------------- */
+
 export interface Personal {
   fullName: string;
   email: string;
   phone: string;
   address: string;
   summary: string;
+  /** One line under the name — "BS Information Technology graduate". */
+  headline?: string;
+  /** Printed as the full visible URL, never a bare anchor label: parsers
+   *  routinely drop href, so a link that only reads "LinkedIn" is lost. */
+  linkedin?: string;
+  portfolio?: string;
 }
 
 export interface Education {
   school: string;
   degree: string;
+  /** SCORED. Keep. */
   level: EduLevel;
   year: string;
+  /** Field of study, where the degree name alone doesn't carry it. */
+  field?: string;
+  location?: string;
+  honors?: string;
 }
 
 export interface Experience {
   position: string;
   company: string;
+  /** SCORED. Keep — the engine sums these. Dates below are for display. */
   months: number;
   description: string;
+  location?: string;
+  /** Free text ("Jun 2025"), shown on the sheet. Never parsed for scoring. */
+  startDate?: string;
+  endDate?: string;
+  current?: boolean;
+  /** Achievement bullets. `description` stays as the prose fallback so
+   *  every existing resume keeps rendering exactly as before. */
+  bullets?: string[];
 }
 
 export interface Certification {
   name: string;
   year: string;
+  issuer?: string;
+  credentialId?: string;
+}
+
+/** Optional sections. Absent or empty means the heading is not rendered at
+ *  all — no empty heading, no leftover gap. */
+export interface Project {
+  name: string;
+  role?: string;
+  startDate?: string;
+  endDate?: string;
+  description?: string;
+  link?: string;
+}
+
+export interface Language {
+  name: string;
+  /** Text only. Never a bar, star rating or percentage — a graphic carries
+   *  no meaning through a parser and none through greyscale print. */
+  proficiency?: string;
+}
+
+export interface Reference {
+  name: string;
+  position?: string;
+  company?: string;
+  email?: string;
+  phone?: string;
 }
 
 export interface OwnFile {
@@ -127,6 +202,12 @@ export interface Resume {
   personal: Personal;
   education: Education[];
   experience: Experience[];
+  /** Optional sections. Absent or empty renders nothing at all — no
+   *  heading, no gap. Optional so every resume saved before they existed
+   *  stays valid without a migration on the client side. */
+  projects?: Project[];
+  languages?: Language[];
+  references?: Reference[];
   skills: string[];
   certifications: Certification[];
   ownFile: OwnFile | null;
@@ -237,6 +318,9 @@ export interface AnalyzedResume {
   experience: Experience[];
   skills: string[];
   certifications: Certification[];
+  projects?: Project[];
+  languages?: Language[];
+  references?: Reference[];
 }
 
 /** Every API method returns this shape — success carries the payload,

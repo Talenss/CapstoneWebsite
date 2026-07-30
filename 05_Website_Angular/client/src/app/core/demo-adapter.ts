@@ -5,7 +5,7 @@
    ============================================================ */
 import { ApiAdapter } from './adapter';
 import { AnalyzedResume, ApiResult, AppStatus, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, StatusEvent, User } from './models';
-import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME } from './engine';
+import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS } from './engine';
 
 const KEY = 'rmph_v3_db';
 const SESSION = 'rmph_v3_session';
@@ -39,6 +39,28 @@ interface Db {
   statusHistory: { applicationId: string; from: AppStatus | null; to: AppStatus; at: number; by: 'applicant' | 'employer'; byUserId?: string | null }[];
 }
 
+/* ------------------------------------------------------------------
+   RESUME NORMALISATION
+
+   Api mode round-trips a saved resume through PostgreSQL, and that trip
+   changes it: strings are clamped to their column widths, blank optional
+   fields come back absent rather than empty, and a whole section that
+   holds nothing is omitted instead of returned as []. Demo mode keeps the
+   object it was handed, so without this it would return `field: ''` and
+   `projects: []` where api mode returns neither — a shape difference the
+   printed sheet reacts to (an empty array is truthy, and would render a
+   heading with nothing under it).
+
+   These helpers reproduce that trip. Every cap matches routes/resumes.ts.
+   ------------------------------------------------------------------ */
+const clamp = (v: unknown, n: number) => String(v ?? '').slice(0, n);
+/** Assigns only when there is something to assign, mirroring the
+ *  serializer's `...(x ? { k: x } : {})`. */
+function put(target: any, key: string, value: string): void {
+  const v = value.trim();
+  if (v) target[key] = v;
+}
+
 /** Past-deadline postings stop accepting applications — same lazy
  *  auto-close rule as server mode (deadline day itself still counts). */
 function isExpired(p: Posting): boolean {
@@ -64,28 +86,48 @@ function seed(): Db {
       { id: 'u7', role: 'recruiter', name: 'Grace Lopez', email: 'grace@demo.ph', password: 'demo123', companyId: 'c1', position: 'HR Officer — Front Office', verified: true, createdAt: Date.now() - D * 55 },
     ] as DemoUser[],
     resumes: [
+      // Juan carries every optional section, so the demo shows a complete
+      // sheet. Kept identical to resume 1 in db/resumematch_ph.sql.
       { id: 'r1', userId: 'u1', title: 'IT — fresh graduate', template: 'chronological', design: 'classic',
         personal: { fullName: 'Juan Dela Cruz', email: 'seeker@demo.ph', phone: '0917 000 0000', address: 'San Fernando, Pampanga',
-          summary: 'BS Information Technology graduate with internship experience building and maintaining public-facing web pages. Looking for an entry-level web developer role.' },
-        education: [{ school: 'Holy Angel University', degree: 'BS Information Technology', level: 'bachelor', year: '2026' }],
-        experience: [{ position: 'Web Development Intern', company: 'LGU San Fernando', months: 4, description: 'Built and maintained pages for the city job portal; fixed layout issues reported by staff.' }],
+          summary: 'BS Information Technology graduate with internship experience building and maintaining public-facing web pages. Looking for an entry-level web developer role.',
+          headline: 'BS Information Technology graduate', linkedin: 'linkedin.com/in/juandelacruz', portfolio: 'github.com/juandelacruz' },
+        education: [{ school: 'Holy Angel University', degree: 'BS Information Technology', level: 'bachelor', year: '2026',
+          field: 'Information Technology', location: 'Angeles City', honors: "Dean's Lister, 3 semesters" }],
+        experience: [{ position: 'Web Development Intern', company: 'LGU San Fernando', months: 4, description: 'Built and maintained pages for the city job portal; fixed layout issues reported by staff.',
+          location: 'San Fernando, Pampanga', startDate: 'Jun 2025', endDate: 'Sep 2025',
+          bullets: ['Rebuilt the job posting pages so they open correctly on a phone', 'Cleared a backlog of 40+ layout issues reported by staff'] }],
         skills: ['HTML/CSS', 'JavaScript', 'MySQL', 'Teamwork', 'Communication'],
-        certifications: [{ name: 'TESDA Web Development NC III', year: '2025' }],
+        certifications: [{ name: 'TESDA Web Development NC III', year: '2025', issuer: 'TESDA', credentialId: 'NC-III-2025-014352' }],
+        projects: [{ name: 'Barangay records system', role: 'Front-end developer', startDate: 'Aug 2025', endDate: 'Feb 2026',
+          description: 'Web app that replaced a paper logbook for about 1,200 residents; built with a team of four.', link: 'github.com/juandelacruz/brgy-records' }],
+        languages: [{ name: 'Filipino', proficiency: 'Native' }, { name: 'English', proficiency: 'Fluent' }, { name: 'Kapampangan', proficiency: 'Native' }],
+        references: [{ name: 'Engr. Roberto Lim', position: 'IT Supervisor', company: 'LGU San Fernando', email: 'rlim@example.ph', phone: '0917 555 0101' }],
         ownFile: null, updatedAt: Date.now() - D * 2 },
       { id: 'r2', userId: 'u3', title: 'Computer Science — fresh graduate', template: 'chronological', design: 'modern',
         personal: { fullName: 'Ana Reyes', email: 'ana@demo.ph', phone: '0917 111 1111', address: 'Mabalacat, Pampanga',
-          summary: 'BS Computer Science graduate with coursework projects in front-end development. Seeking a junior developer role.' },
-        education: [{ school: 'Angeles University Foundation', degree: 'BS Computer Science', level: 'bachelor', year: '2026' }],
-        experience: [{ position: 'Capstone Developer', company: 'Angeles University Foundation', months: 3, description: 'Built a school event portal with a team of four.' }],
+          summary: 'BS Computer Science graduate with coursework projects in front-end development. Seeking a junior developer role.',
+          headline: 'BS Computer Science graduate' },
+        education: [{ school: 'Angeles University Foundation', degree: 'BS Computer Science', level: 'bachelor', year: '2026',
+          field: 'Computer Science', location: 'Angeles City' }],
+        experience: [{ position: 'Capstone Developer', company: 'Angeles University Foundation', months: 3, description: 'Built a school event portal with a team of four.',
+          location: 'Angeles City', startDate: 'Aug 2025', endDate: 'Oct 2025' }],
         skills: ['HTML/CSS', 'JavaScript', 'Communication', 'Teamwork'], certifications: [],
+        projects: [{ name: 'School event portal', role: 'Team lead', startDate: 'Aug 2025', endDate: 'Oct 2025',
+          description: 'Registration and attendance for campus events, used by three student organizations.' }],
         ownFile: null, updatedAt: Date.now() - D * 4 },
       { id: 'r3', userId: 'u4', title: 'Hospitality Management', template: 'chronological', design: 'minimal',
         personal: { fullName: 'Marco Garcia', email: 'marco@demo.ph', phone: '0917 222 2222', address: 'Angeles City, Pampanga',
-          summary: 'Hospitality Management graduate with food & beverage internship experience at a Clark hotel.' },
-        education: [{ school: 'Holy Angel University', degree: 'BS Hospitality Management', level: 'bachelor', year: '2025' }],
-        experience: [{ position: 'F&B Intern', company: 'Clark hotel', months: 6, description: 'Served 60+ covers per shift; handled POS billing and table turnover.' }],
+          summary: 'Hospitality Management graduate with food & beverage internship experience at a Clark hotel.',
+          headline: 'Hospitality Management graduate' },
+        education: [{ school: 'Holy Angel University', degree: 'BS Hospitality Management', level: 'bachelor', year: '2025',
+          field: 'Hospitality Management', location: 'Angeles City' }],
+        experience: [{ position: 'F&B Intern', company: 'Clark hotel', months: 6, description: 'Served 60+ covers per shift; handled POS billing and table turnover.',
+          location: 'Clark Freeport Zone', startDate: 'Jan 2025', endDate: 'Jun 2025',
+          bullets: ['Served 60+ covers per shift across breakfast and dinner service', 'Handled POS billing with no cash variance over the placement'] }],
         skills: ['Customer Service', 'Communication', 'MS Office', 'English Proficiency', 'POS', 'Teamwork', 'Food Safety'],
-        certifications: [{ name: 'Food Safety Training', year: '2025' }],
+        certifications: [{ name: 'Food Safety Training', year: '2025', issuer: 'Royce Hotel & Casino' }],
+        languages: [{ name: 'Filipino', proficiency: 'Native' }, { name: 'English', proficiency: 'Fluent' }, { name: 'Korean', proficiency: 'Basic' }],
         // DUAL-RESUME MODEL: the applicant's OWN file. HR views and downloads it.
         // It is NEVER parsed and NEVER scored — see the paper's delimitations.
         ownFile: { name: 'Marco_Garcia_Resume.pdf', mime: 'application/pdf', size: 712, uploadedAt: Date.now() - D * 5,
@@ -93,9 +135,12 @@ function seed(): Db {
         updatedAt: Date.now() - D * 5 },
       { id: 'r4', userId: 'u5', title: 'HR & Marketing', template: 'combination', design: 'executive',
         personal: { fullName: 'Liza Cruz', email: 'liza@demo.ph', phone: '0917 333 3333', address: 'San Fernando, Pampanga',
-          summary: 'Psychology graduate with HR internship exposure and social media management for a student organization.' },
-        education: [{ school: 'University of the Assumption', degree: 'BA Psychology', level: 'bachelor', year: '2025' }],
-        experience: [{ position: 'HR Intern', company: 'Manufacturing firm', months: 8, description: 'Assisted in screening, interview scheduling, and 201 filing.' }],
+          summary: 'Psychology graduate with HR internship exposure and social media management for a student organization.',
+          headline: 'BA Psychology graduate' },
+        education: [{ school: 'University of the Assumption', degree: 'BA Psychology', level: 'bachelor', year: '2025',
+          field: 'Psychology', location: 'San Fernando' }],
+        experience: [{ position: 'HR Intern', company: 'Manufacturing firm', months: 8, description: 'Assisted in screening, interview scheduling, and 201 filing.',
+          location: 'San Fernando, Pampanga', startDate: 'Sep 2024', endDate: 'Apr 2025' }],
         skills: ['Communication', 'Recruitment', 'MS Office', 'Organization', 'Social Media'], certifications: [],
         ownFile: null, updatedAt: Date.now() - D * 7 },
     ] as unknown as Resume[],
@@ -419,23 +464,117 @@ export class DemoAdapter implements ApiAdapter {
       // could build a resume here but gets a 403 from the server, and an
       // invalid design persisted in demo while the server coerced it.
       if (!me || me.role !== 'seeker') return apiFail('You are not signed in.');
+      const list = (v: unknown, n: number): any[] => (Array.isArray(v) ? v : []).slice(0, n);
+      const p: any = resume.personal || {};
+
+      const personal: any = {
+        fullName: p.fullName ?? '', email: p.email ?? '', phone: p.phone ?? '',
+        address: p.address ?? '', summary: p.summary ?? '',
+      };
+      put(personal, 'headline', clamp(p.headline, 200));
+      put(personal, 'linkedin', clamp(p.linkedin, 300));
+      put(personal, 'portfolio', clamp(p.portfolio, 300));
+
+      const education = list(resume.education, 20).map((e) => {
+        const row: any = {
+          school: clamp(e.school, 160), degree: clamp(e.degree, 160),
+          level: Object.keys(EDU_RANK).includes(e.level) ? e.level : 'bachelor',
+          year: clamp(e.year, 20),
+        };
+        put(row, 'field', clamp(e.field, 160));
+        put(row, 'location', clamp(e.location, 160));
+        put(row, 'honors', clamp(e.honors, 200));
+        return row;
+      });
+
+      const experience = list(resume.experience, 30).map((e) => {
+        const row: any = {
+          position: clamp(e.position, 160), company: clamp(e.company, 160),
+          months: Math.max(0, Math.min(720, Number(e.months) || 0)),
+          description: clamp(e.description, 2000),
+        };
+        put(row, 'location', clamp(e.location, 160));
+        put(row, 'startDate', clamp(e.startDate, 40));
+        put(row, 'endDate', clamp(e.endDate, 40));
+        if (e.current) row.current = true;
+        const bullets = list(e.bullets, 12).map((b) => clamp(b, 300).trim()).filter(Boolean);
+        if (bullets.length) row.bullets = bullets;
+        return row;
+      });
+
+      const certifications = list(resume.certifications, 30).map((c) => {
+        const row: any = { name: clamp(c.name, 160), year: clamp(c.year, 20) };
+        put(row, 'issuer', clamp(c.issuer, 200));
+        put(row, 'credentialId', clamp(c.credentialId, 120));
+        return row;
+      });
+
+      // The three optional sections. A nameless entry is dropped rather than
+      // stored, and a section that ends up empty is omitted entirely — both
+      // exactly what the round-trip through Postgres does in api mode.
+      const projects = list(resume.projects, 20).map((x) => {
+        const name = clamp(x.name, 200).trim();
+        if (!name) return null;
+        const row: any = { name };
+        put(row, 'role', clamp(x.role, 160));
+        put(row, 'startDate', clamp(x.startDate, 40));
+        put(row, 'endDate', clamp(x.endDate, 40));
+        put(row, 'description', clamp(x.description, 2000));
+        put(row, 'link', clamp(x.link, 300));
+        return row;
+      }).filter(Boolean);
+
+      const languages = list(resume.languages, 20).map((x) => {
+        const name = clamp(x.name, 120).trim();
+        if (!name) return null;
+        const row: any = { name };
+        put(row, 'proficiency', clamp(x.proficiency, 120));
+        return row;
+      }).filter(Boolean);
+
+      const references = list(resume.references, 10).map((x) => {
+        const name = clamp(x.name, 160).trim();
+        if (!name) return null;
+        const row: any = { name };
+        put(row, 'position', clamp(x.position, 160));
+        put(row, 'company', clamp(x.company, 160));
+        put(row, 'email', clamp(x.email, 190));
+        put(row, 'phone', clamp(x.phone, 40));
+        return row;
+      }).filter(Boolean);
+
       resume = {
         ...resume,
         title: (String(resume.title ?? '').trim() || 'Untitled resume').slice(0, 120),
         template: ['chronological', 'functional', 'combination'].includes(resume.template as string)
           ? resume.template : 'chronological',
-        design: ['classic', 'modern', 'minimal', 'executive', 'banner', 'split', 'bar', 'categorized']
-          .includes(resume.design as string) ? resume.design : 'classic',
-        education: (Array.isArray(resume.education) ? resume.education : []).slice(0, 20),
-        experience: (Array.isArray(resume.experience) ? resume.experience : []).slice(0, 30),
-        certifications: (Array.isArray(resume.certifications) ? resume.certifications : []).slice(0, 30),
-        skills: (Array.isArray(resume.skills) ? resume.skills : []).slice(0, 100),
+        design: DESIGNS.includes(resume.design as string) ? resume.design : 'classic',
+        personal,
+        education,
+        experience,
+        certifications,
+        skills: list(resume.skills, 100).map((s) => String(s).trim().slice(0, 80)).filter(Boolean),
       } as Resume;
+      // Assigned separately so an empty section leaves no key behind on an
+      // edit that removed its last entry.
+      delete (resume as any).projects; delete (resume as any).languages; delete (resume as any).references;
+      if (projects.length) resume.projects = projects;
+      if (languages.length) resume.languages = languages;
+      if (references.length) resume.references = references;
       const i = db.resumes.findIndex((r) => r.id === resume.id);
       try {
         if (i >= 0) {
           if (db.resumes[i].userId !== me.id) return apiFail('You can only edit your own resumes.');
-          db.resumes[i] = { ...db.resumes[i], ...resume, userId: me.id, updatedAt: Date.now() };
+          const merged: any = { ...db.resumes[i], ...resume, userId: me.id, updatedAt: Date.now() };
+          // The spread carries the STORED record forward, which is what keeps
+          // the uploaded ownFile (saved by a different call) attached. It would
+          // also carry a section the user just emptied, so those three keys are
+          // taken only from the incoming record — api mode deletes their rows
+          // and then returns nothing for them.
+          for (const k of ['projects', 'languages', 'references'] as const) {
+            if ((resume as any)[k]) merged[k] = (resume as any)[k]; else delete merged[k];
+          }
+          db.resumes[i] = merged;
         } else {
           resume = { ...resume, id: resume.id || uid(), userId: me.id, updatedAt: Date.now() };
           if (resume.ownFile === undefined) resume.ownFile = null;
