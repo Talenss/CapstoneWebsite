@@ -144,6 +144,15 @@ CREATE TABLE resumes (
   own_file_size INT,
   own_file_path VARCHAR(255),                          -- server/uploads/, never web-reachable
   own_file_uploaded_at TIMESTAMPTZ,
+  -- The applicant's own document, read into structured fields so it can be
+  -- scored alongside the resume they built. `own_file_extract` is the same
+  -- shape the builder edits; `own_file_extract_status` records WHY it is
+  -- empty when it is ('unavailable' = no API key, 'unreadable' = format,
+  -- 'failed' = tried and could not), because "no score" and "zero score"
+  -- must never look the same to a recruiter.
+  own_file_extract        JSONB,
+  own_file_extract_status TEXT,
+  own_file_extract_at     TIMESTAMPTZ,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );

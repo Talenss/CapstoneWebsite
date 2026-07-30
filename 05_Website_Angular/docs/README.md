@@ -28,8 +28,15 @@ where the manuscript and the implementation had diverged:
 5. **Published weights** — skills 50 / education 25 / experience 25, tiers at
    80 and 50, stored as database configuration.
 6. **Three content formats × fourteen parser-safe designs.**
-7. **Two resumes per applicant** — the structured one is scored; the uploaded
-   file is forwarded but never parsed.
+7. **Two resumes per applicant, two scores** — the structured one the
+   applicant typed, and their own uploaded file, which the AI reads into the
+   same fields so the same formula can score it too. Both numbers are shown,
+   to the applicant and to the recruiter. **Ranking uses only the structured
+   one**, so a parser misreading a scan cannot move anybody down a list; the
+   file's score is reported beside it, and the gap between the two is a
+   finding in its own right — it is what an ordinary screening system would
+   have lost. A file that could not be read produces no score at all, never a
+   zero.
 8. **Six application statuses**, including applicant withdrawal, with an audit
    trail naming the recruiter behind every change.
 9. **Automated testing** — 29 engine tests and 16 API integration tests under

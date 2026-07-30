@@ -338,6 +338,10 @@ table.tbl tbody tr:hover{background:var(--ivory)}
 .breakdown .row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:11px 15px;
   font-size:13px;border-bottom:1px solid var(--rule-2)}
 .breakdown .row:last-child{border-bottom:none;background:var(--ivory)}
+/* The applicant's own file, scored. Set apart from the three weighted rows
+   above it, because it is not one of them: it does not feed the score, it is
+   a second reading of a second document shown for comparison. */
+.breakdown .row.filerow{background:var(--ivory);border-top:1px dashed var(--rule)}
 .breakdown .row b{text-align:right;font-weight:600}
 .breakdown .w{color:var(--muted);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;display:block}
 /* On phones the label/value pair reads better stacked than squeezed. */

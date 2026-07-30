@@ -12,7 +12,7 @@ import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 /** Port of 04_Website/app/hr-applicants.html — the ranked-applicant list
  *  for a single posting (?id=), with a search/filter bar and a dual-resume
  *  detail modal: the structured (scored) resume next to the applicant's
- *  own uploaded file (never scored). */
+ *  own uploaded file, which is read by software and scored separately. */
 @Component({
   selector: 'app-hr-applicants',
   standalone: true,
@@ -178,6 +178,28 @@ export class HrApplicants {
   monthsLabel(months: number): string {
     return months ? `${months} month${months > 1 ? 's' : ''}` : '';
   }
+  /** How the file's score compares with the resume the applicant typed. The
+   *  sign is the whole point: a document that scores LOWER than what its
+   *  owner typed is a document an ordinary screening system would have
+   *  under-read — which is the case this project exists to make. */
+  fileGap(r: RankedRow): string {
+    if (!r.fileScore) return '';
+    const d = r.fileScore.score - r.score;
+    if (d === 0) return 'same as their typed resume';
+    return d > 0 ? `+${d} vs typed` : `${d} vs typed`;
+  }
+
+  /** Why there is no file score. Never phrased so it could be mistaken for
+   *  a bad score — "could not be read" and "scored zero" are opposites. */
+  fileStatusLabel(r: RankedRow): string {
+    switch (r.resume.ownFile?.extractStatus) {
+      case 'unavailable': return 'automatic reading is off on this server';
+      case 'unreadable':  return "this format can't be read by software";
+      case 'failed':      return 'could not be read automatically';
+      default:            return 'not read';
+    }
+  }
+
   languageLine(r: Resume): string {
     return (r.languages ?? []).map((l) => this.join([l.name, l.proficiency], ' — ')).join('  ·  ');
   }

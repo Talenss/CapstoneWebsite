@@ -11,6 +11,7 @@ import { ok, fail, idOf } from '../lib/http';
 import { requireUser, requireRole } from '../lib/auth';
 import { fetchResume, serializeResume, recruiterMayReadResume } from '../lib/serializers';
 import { EDU_RANK, skillId } from '../lib/engine';
+import { extractResume } from '../lib/extract';
 import { UPLOAD_DIR, MAX_UPLOAD, ALLOWED_MIME } from '../config';
 import { sniffFileType, typeMatches } from '../lib/file-type';
 
@@ -280,7 +281,8 @@ router.post('/set-active', async (req, res) => {
 });
 
 /* ---- the dual-resume model: the applicant's OWN file.
-        Stored outside the web root. Never parsed. Never scored. ---- */
+        Stored outside the web root, and read into structured fields on
+        upload so the engine can score it too. ---- */
 /* requireSeekerBeforeUpload runs BEFORE multer, so an anonymous caller is
    turned away without ever writing a 2 MB temp file to disk. Multer used to
    run first, which let an unauthenticated script churn the upload directory
@@ -332,12 +334,29 @@ router.post('/upload', requireSeekerBeforeUpload, upload.single('file'), async (
   }
 
   await exec(
-    'UPDATE resumes SET own_file_name=?, own_file_mime=?, own_file_size=?, own_file_path=?, own_file_uploaded_at=NOW() WHERE resume_id=?',
+    `UPDATE resumes SET own_file_name=?, own_file_mime=?, own_file_size=?, own_file_path=?,
+       own_file_uploaded_at=NOW(), own_file_extract=NULL, own_file_extract_status=NULL, own_file_extract_at=NULL
+     WHERE resume_id=?`,
     [Buffer.from(f.originalname, 'latin1').toString('utf8').slice(0, 200), mime, f.size, stored, id],
   );
 
+  /* Read the document into structured fields so the engine can score it.
+     The old extraction is cleared above first: a stale reading of the
+     PREVIOUS file, scored against this one, is worse than none.
+
+     This runs inline rather than in the background because the applicant is
+     waiting on this response and the number is the point of the upload. It
+     cannot fail the upload, though — extractResume never throws, and every
+     failure is recorded as a status, so the file is still stored and still
+     sent to the recruiter even when nothing could be read out of it. */
+  const extract = await extractResume(fs.readFileSync(path.join(UPLOAD_DIR, stored)), mime, f.originalname || 'resume');
+  await exec(
+    'UPDATE resumes SET own_file_extract=?, own_file_extract_status=?, own_file_extract_at=NOW() WHERE resume_id=?',
+    [extract.resume ? JSON.stringify(extract.resume) : null, extract.status, id],
+  );
+
   const updated = await serializeResume((await fetchResume(id))!);
-  ok(res, { ownFile: updated.ownFile });
+  ok(res, { ownFile: updated.ownFile, extractStatus: extract.status, extractMessage: extract.message ?? null });
 });
 
 router.post('/remove-file', async (req, res) => {

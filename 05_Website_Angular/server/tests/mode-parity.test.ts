@@ -427,6 +427,44 @@ test('the optional sections round-trip identically in both modes', async () => {
   assert.equal(dS.score, aS.score, 'a resume with the new sections scores differently between modes');
 });
 
+/* The applicant's own file is read and scored in api mode. Demo mode has no
+   server and no API key, so it CANNOT read a document — and must not pretend
+   to. What has to agree between the modes is the contract, not the number:
+   a score appears only where a document was actually read, and the reason is
+   always stated. An invented demo score would be the worst outcome here,
+   because demo mode is what gets demonstrated. */
+test('neither mode ever invents a score for a file it could not read', async () => {
+  await demo.auth.login('marco@demo.ph', 'demo123');
+  await api('auth/login', { email: 'marco@demo.ph', password: 'demo123' });
+
+  const dR: any = await demo.resumes.mine();
+  const aR: any = await api('resumes/list');
+  const dPost: any = (await demo.postings.open()).postings[0];
+  const aPost: any = (await api('postings/list')).postings.find((p: any) => p.title === dPost.title);
+
+  for (const [label, resume, score] of [
+    ['demo', dR.resumes.find((r: any) => r.ownFile), await demo.match.score(dR.resumes.find((r: any) => r.ownFile)?.id, dPost.id)],
+    ['api', aR.resumes.find((r: any) => r.ownFile), await api('match/score', { resumeId: aR.resumes.find((r: any) => r.ownFile)?.id, postingId: aPost.id })],
+  ] as [string, any, any][]) {
+    if (!resume) continue;                     // that mode's seed has no attached file
+    assert.ok(resume.ownFile, `${label}: expected an attached file`);
+
+    const readable = resume.ownFile.extractStatus === 'ok';
+    if (!readable) {
+      assert.ok(!score.fileScore,
+        `${label} mode produced a score for a file it never read (status=${resume.ownFile.extractStatus})`);
+      assert.ok(resume.ownFile.extractStatus,
+        `${label} mode gave no reason for the missing reading — "unread" must never look like "scored zero"`);
+    } else {
+      assert.equal(typeof score.fileScore?.score, 'number', `${label}: a read file must carry a score`);
+    }
+
+    // Whatever happened to the file, the RANKING score is unaffected: it is
+    // computed from the structured resume alone, in both modes.
+    assert.equal(typeof score.score, 'number', `${label}: the ranking score must always be present`);
+  }
+});
+
 test('the password policy is the same in both modes', async () => {
   await demo.auth.login('liza@demo.ph', 'demo123');
   await api('auth/login', { email: 'liza@demo.ph', password: 'demo123' });

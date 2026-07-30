@@ -1,7 +1,8 @@
 /* ============================================================
    MATCHING ENGINE — port of api/_lib.php rm_score(), which itself
    mirrors assets/api.js score(). Rule-based only — no ML, no AI.
-   The applicant's uploaded file is never opened here.
+   The applicant's uploaded file is scored by the SAME arithmetic, from
+   fields a reader extracted out of it — see rmFileScore below.
    ============================================================ */
 import { query, exec } from '../db';
 
@@ -179,6 +180,28 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
 
 export async function rmScore(resume: SerializedResume, posting: SerializedPosting): Promise<MatchResult> {
   return scoreWith(await getSettings(), resume, posting);
+}
+
+/** The score of the applicant's OWN uploaded document, when it could be read.
+ *
+ *  Same engine, same weights, same arithmetic as the resume built here — the
+ *  only difference is where the skills, education level and months came from:
+ *  a machine reading a document, rather than the applicant typing them in.
+ *  That difference is exactly why this is reported SEPARATELY rather than
+ *  replacing the score, and why the interface labels it as read by software.
+ *
+ *  Returns null when there is nothing to score, which is not the same as
+ *  scoring zero and must never be displayed as though it were. */
+export async function rmFileScore(
+  extract: { skills?: string[]; education?: any[]; experience?: any[] } | null | undefined,
+  posting: SerializedPosting,
+): Promise<MatchResult | null> {
+  if (!extract) return null;
+  return scoreWith(await getSettings(), {
+    skills: Array.isArray(extract.skills) ? extract.skills : [],
+    education: Array.isArray(extract.education) ? extract.education : [],
+    experience: Array.isArray(extract.experience) ? extract.experience : [],
+  } as SerializedResume, posting);
 }
 
 /** Cache a computed score so the study can report on it later. */

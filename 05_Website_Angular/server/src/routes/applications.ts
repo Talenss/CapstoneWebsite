@@ -5,7 +5,7 @@ import { ApplicationRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
 import { requireRole, requireUser } from '../lib/auth';
 import { fetchResume, fetchPosting, postingExpired, serializeResume, serializePosting, serializeApplication } from '../lib/serializers';
-import { rmScore, cacheScore } from '../lib/engine';
+import { rmScore, rmFileScore, cacheScore } from '../lib/engine';
 import { notifyStatusChange, notifyNewApplication, sendInterviewInvite } from '../lib/notify';
 import { UserRow } from '../types';
 
@@ -180,11 +180,17 @@ router.post('/ranked', async (req, res) => {
     const s = await rmScore(resume, posting);
     await cacheScore(a.resume_id, pid, s);
 
+    /* The recruiter sees both numbers. Ranking stays on `score` — the resume
+       the applicant typed and can correct — so a parser misreading a scan
+       cannot move anybody down the list. `fileScore` sits beside it as
+       information about the document, not as a verdict on the person. */
+    const fs = await rmFileScore(resume.ownFile?.extract, posting);
     out.push({
       ...s,
       application: serializeApplication(a),
       resume,
       seeker: { id: String(a.s_id), name: a.s_name, email: a.s_email, role: 'seeker' },
+      ...(fs ? { fileScore: fs } : {}),
     });
   }
 
