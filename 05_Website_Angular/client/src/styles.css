@@ -69,6 +69,12 @@
 :root[data-theme="dark"] .pill-tab.on{background:var(--ink-3);border-color:var(--ink-line)}
 
 *{box-sizing:border-box;margin:0;padding:0}
+/* The `hidden` attribute only means display:none at specificity 0-1-0, so any
+   ordinary rule that sets a display — `.toc a{display:block}` did — silently
+   overrides it and the element stays on screen. That is how the learning hub's
+   contents list kept offering links to articles the search had already hidden.
+   Make hidden mean hidden, everywhere. */
+[hidden]{display:none!important}
 html{scroll-behavior:smooth}
 body{font-family:var(--body);color:var(--text);background:var(--ivory);line-height:1.6;font-size:15px;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
 img{max-width:100%;display:block}

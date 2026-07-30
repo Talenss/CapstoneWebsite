@@ -238,6 +238,14 @@ export class ResumeBuilder implements OnInit {
     }
   }
 
+  /** Read by the route's canDeactivate guard. `beforeunload` above only
+   *  covers closing or reloading the tab; clicking a link in the header is a
+   *  route change, which fires no such event and used to bin unsaved work
+   *  without a word. */
+  hasUnsavedChanges(): boolean {
+    return this.dirty();
+  }
+
   /** Reads the current value out of an (input)/(change) DOM event —
    *  shared by every plain text/select/textarea binding in the template. */
   inputValue(e: Event): string {

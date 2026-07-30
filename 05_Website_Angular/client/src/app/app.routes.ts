@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth.guard';
+import { unsavedChangesGuard } from './core/unsaved-changes.guard';
 
 export const routes: Routes = [
   { path: '', loadComponent: () => import('./pages/home/home').then((m) => m.Home), title: 'ResumeMatch PH — Every applicant gets a seat.' },
@@ -13,7 +14,8 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/seeker-dashboard/seeker-dashboard').then((m) => m.SeekerDashboard),
   },
   {
-    path: 'resume-builder', canActivate: [authGuard('seeker')], title: 'Resume builder — ResumeMatch PH',
+    path: 'resume-builder', canActivate: [authGuard('seeker')], canDeactivate: [unsavedChangesGuard],
+    title: 'Resume builder — ResumeMatch PH',
     loadComponent: () => import('./pages/resume-builder/resume-builder').then((m) => m.ResumeBuilder),
   },
   {

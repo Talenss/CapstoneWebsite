@@ -47,12 +47,26 @@ export class LearningHub implements OnInit, AfterViewInit, OnDestroy {
         entries.forEach((en) => {
           if (!en.isIntersecting) return;
           const id = (en.target as HTMLElement).id;
-          this.tocLinks.forEach((l) => l.classList.toggle('on', l.getAttribute('href') === '#' + id));
+          this.tocLinks.forEach((l) => l.classList.toggle('on', this.fragmentOf(l) === id));
         });
       },
       { rootMargin: '-92px 0px -70% 0px' },
     );
     this.articles.forEach((a) => this.spy!.observe(a));
+  }
+
+  /** The section a TOC link points at.
+   *
+   *  These links used to be bare `href="#basics"`, and this compared the whole
+   *  href against '#' + id. They are now routerLink + fragment (a bare
+   *  fragment resolves against <base href>, which sent every one of them to
+   *  the home page), so the rendered href reads '/learning-hub#basics' and
+   *  that comparison could never match again — the highlight silently stopped
+   *  working. Read the fragment itself and the two forms both work. */
+  private fragmentOf(a: HTMLAnchorElement): string {
+    const href = a.getAttribute('href') ?? '';
+    const hash = href.indexOf('#');
+    return hash === -1 ? '' : href.slice(hash + 1);
   }
 
   ngOnDestroy(): void {
@@ -62,10 +76,18 @@ export class LearningHub implements OnInit, AfterViewInit, OnDestroy {
   onSearch(event: Event): void {
     const q = (event.target as HTMLInputElement).value.trim().toLowerCase();
     let hits = 0;
+    const shown = new Set<string>();
     this.articles.forEach((a) => {
       const show = !q || (a.textContent ?? '').toLowerCase().includes(q);
       a.hidden = !show;
-      if (show) hits++;
+      if (show) { hits++; shown.add(a.id); }
+    });
+    // The contents list has to follow the search. It used to stay complete
+    // while the articles behind it were hidden, so it offered links to
+    // sections that were not on the page and clicking one did nothing.
+    this.tocLinks.forEach((l) => {
+      const item = l.closest('li') ?? l;
+      (item as HTMLElement).hidden = !shown.has(this.fragmentOf(l));
     });
     this.noMatches.set(hits === 0);
   }
