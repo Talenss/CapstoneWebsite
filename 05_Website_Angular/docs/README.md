@@ -39,11 +39,24 @@ where the manuscript and the implementation had diverged:
    zero.
 8. **Six application statuses**, including applicant withdrawal, with an audit
    trail naming the recruiter behind every change.
-9. **Automated testing** — 29 engine tests and 16 API integration tests under
-   CI, alongside the ISO 25010 evaluation.
+9. **Automated testing** — five suites totalling 99 tests under CI (engine,
+   API, email, extraction, and a demo/API parity suite), plus scripted browser
+   walkthroughs that drive the real interface, alongside the ISO 25010
+   evaluation.
 10. **Security and data rights** — email verification, hashed passwords,
     role-based access, applicant data export, account deletion.
 11. **Department-based routing** of new applications.
+
+## Revision of 30 July 2026
+
+`ResumeMatch-PH-Updated-Manuscript-Sections.docx` was regenerated on 30 July.
+Sixteen paragraphs changed, and one of them is a reversal rather than a
+refinement: the paper's promise that the uploaded file is *never parsed and
+can never lower a score* is gone, because the file is now read and scored.
+The replacement text says what is true instead — both documents are scored,
+both numbers are shown, and only the structured resume decides an applicant's
+position in a recruiter's list. The other changes are the three new optional
+sections, fourteen designs in place of eight, and the test counts.
 
 ## Regenerating
 
