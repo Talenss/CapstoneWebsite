@@ -1,6 +1,6 @@
 import { Location } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { DESIGN_ORDER } from '../../core/engine';
 import { Resume } from '../../core/models';
@@ -25,6 +25,7 @@ export class ResumePrint implements OnInit, OnDestroy {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   private location = inject(Location);
+  private router = inject(Router);
 
   loading = signal(true);
   error = signal<string | null>(null);
@@ -120,8 +121,13 @@ export class ResumePrint implements OnInit, OnDestroy {
     document.getElementById('rmph-page-size')?.remove();
   }
 
+  /** The sheet is usually opened in a NEW TAB (both "PDF" on My resumes and
+   *  "Export PDF" in the builder do), and a fresh tab has nothing to go back
+   *  to — the button simply did nothing, leaving the reader on a page with no
+   *  header and no way out. Fall back to the resume library. */
   back(): void {
-    this.location.back();
+    if (history.length > 1) { this.location.back(); return; }
+    this.router.navigateByUrl('/my-resumes');
   }
 
   print(): void {

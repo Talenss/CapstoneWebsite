@@ -250,11 +250,37 @@ function persist(db: Db): void {
     throw new Error('Browser storage is full. Remove an uploaded resume file and try again.');
   }
 }
+/* The demo session, readable from a second tab.
+ *
+ * It lived in sessionStorage alone, which is per-tab. Opening the print sheet
+ * from "My resumes" — an <a target="_blank" rel="noopener"> — therefore landed
+ * on the login page, while the builder's Export PDF button (window.open, which
+ * does hand the new tab a copy of sessionStorage) worked. Same destination,
+ * two different outcomes, and the broken one is the path taken in a demo.
+ *
+ * sessionStorage stays the primary so the behaviour is unchanged in the tab
+ * that signed in; localStorage is a fallback that a new tab can read, and it
+ * is written and cleared in lockstep. Logging out clears both, so a shared
+ * machine does not leave a session behind.
+ *
+ * This is demo mode: the "session" is a user id in the same browser storage
+ * that already holds the whole demo database. Api mode is unaffected — there
+ * the session is a signed, httpOnly cookie issued by the server. */
 const sessionId = (): string | null => {
-  try { return sessionStorage.getItem(SESSION); } catch { return null; }
+  try {
+    const own = sessionStorage.getItem(SESSION);
+    if (own) return own;
+    const shared = localStorage.getItem(SESSION);
+    // Adopt it, so this tab keeps working if the other one logs out.
+    if (shared) sessionStorage.setItem(SESSION, shared);
+    return shared;
+  } catch { return null; }
 };
 const setSession = (id: string | null): void => {
-  try { id ? sessionStorage.setItem(SESSION, id) : sessionStorage.removeItem(SESSION); } catch { /* ignore */ }
+  try {
+    if (id) { sessionStorage.setItem(SESSION, id); localStorage.setItem(SESSION, id); }
+    else { sessionStorage.removeItem(SESSION); localStorage.removeItem(SESSION); }
+  } catch { /* ignore */ }
 };
 const apiOk = <T extends object>(data: T): Promise<ApiResult<T>> => Promise.resolve({ ok: true, ...data } as ApiResult<T>);
 const apiFail = (error: string): Promise<any> => Promise.resolve({ ok: false, error });
@@ -1165,7 +1191,12 @@ export class DemoAdapter implements ApiAdapter {
   };
 
   resetDemo() {
-    try { localStorage.removeItem(KEY); sessionStorage.removeItem(SESSION); } catch { /* ignore */ }
+    // setSession(null) rather than a bare removeItem: the session now has a
+    // localStorage copy so a second tab can read it, and a reset that cleared
+    // only one of the two would leave the browser signed in as a user the
+    // wiped database no longer contains.
+    try { localStorage.removeItem(KEY); } catch { /* ignore */ }
+    setSession(null);
     return apiOk({});
   }
 }

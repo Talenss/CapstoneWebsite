@@ -1,6 +1,7 @@
 import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
@@ -64,6 +65,7 @@ export class ResumeBuilder implements OnInit {
   private tour = inject(TourService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private sanitizer = inject(DomSanitizer);
 
   /** The original file from the Upload & Analyze flow, attached to the
    *  resume as the recruiter-visible "own file" after the first save. */
@@ -152,6 +154,30 @@ export class ResumeBuilder implements OnInit {
     return r.id ? this.api.resumes.fileUrl(r.id) : r.ownFile.dataUrl || null;
   });
 
+  /* ---- the attached file, shown in the preview ----
+     The preview used to name the attached file and stop there, so the one
+     thing the applicant could not check was the document the recruiter would
+     actually open. It is rendered here the same way the recruiter's screen
+     renders it — PDF in a frame, image inline, Word as a note, because no
+     browser previews .docx — and deliberately OUTSIDE the sheet: it is a
+     second document sent alongside, not part of the one being printed. */
+  ownFileKind = computed<'pdf' | 'image' | 'other' | null>(() => {
+    const f = this.resume().ownFile;
+    if (!f) return null;
+    if (f.mime === 'application/pdf') return 'pdf';
+    if (f.mime.startsWith('image/')) return 'image';
+    return 'other';
+  });
+
+  /** An <iframe src> is a trusted-resource-URL context, so Angular blocks a
+   *  plain string. The URL is our own /api/file endpoint or a data: URL this
+   *  same browser just produced from the user's own file — never third-party
+   *  input — so trusting it is safe here and nowhere wider. */
+  ownFileFrameUrl = computed<SafeResourceUrl | null>(() => {
+    const url = this.fileUrl();
+    return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : null;
+  });
+
   async ngOnInit(): Promise<void> {
     const user = this.session.user()!;
     const id = this.route.snapshot.queryParamMap.get('id');
@@ -236,6 +262,14 @@ export class ResumeBuilder implements OnInit {
       e.preventDefault();
       e.returnValue = '';
     }
+  }
+
+  /** Read by the route's canDeactivate guard. `beforeunload` above only
+   *  covers closing or reloading the tab; clicking a link in the header is a
+   *  route change, which fires no such event and used to bin unsaved work
+   *  without a word. */
+  hasUnsavedChanges(): boolean {
+    return this.dirty();
   }
 
   /** Reads the current value out of an (input)/(change) DOM event —

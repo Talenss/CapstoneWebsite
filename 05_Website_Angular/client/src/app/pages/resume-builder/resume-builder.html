@@ -631,13 +631,33 @@
             </div>
           }
 
-          @if (resume().ownFile; as file) {
-            <div class="p-sec">
-              <h4>Attached by the applicant</h4>
-              <p style="font-size:11px;color:#5A5F6B">{{ file.name }} &mdash; sent to the recruiter alongside this resume. Not part of the score.</p>
-            </div>
-          }
         </div>
+
+        <!-- The applicant's own file, shown as its own document rather than a
+             line inside the sheet: it is sent alongside the resume, not
+             printed as part of it. This is deliberately the same pair the
+             recruiter sees on their screen, so nothing about what gets sent
+             is a surprise. -->
+        @if (resume().ownFile; as file) {
+          <div class="own-file">
+            <div class="of-head">
+              <b>Your own file</b>
+              <span class="badge gold">Never scored</span>
+            </div>
+            @switch (ownFileKind()) {
+              @case ('pdf') {
+                <iframe [src]="ownFileFrameUrl()" [title]="file.name"></iframe>
+              }
+              @case ('image') {
+                <img [src]="fileUrl()" [alt]="'Your uploaded resume, ' + file.name">
+              }
+              @default {
+                <p class="of-none">A Word document can&rsquo;t be shown in the browser. The recruiter downloads and opens it &mdash; use <b>View</b> on the last step to check it yourself.</p>
+              }
+            }
+            <p class="of-foot">{{ file.name }} &middot; {{ formatSize(file.size) }} &middot; read by the recruiter, never by the engine</p>
+          </div>
+        }
         <div class="exports">
           <button class="btn ghost sm" type="button" (click)="exportPdf()">Export PDF</button>
           <button class="btn ghost sm" type="button" (click)="exportWord()">Export Word</button>
