@@ -36,7 +36,7 @@
                   <span class="badge gold">Active</span>
                 }
               </div>
-              <div class="meta">{{ templateLabel(r.template) }} · updated {{ day(r.updatedAt) }}</div>
+              <div class="meta">{{ templateLabel(r.template) }} · {{ designLabel(r.design) }} design · updated {{ day(r.updatedAt) }}</div>
             </div>
             <div class="body">
               <div class="facts">
@@ -44,6 +44,12 @@
                 <span><b>{{ (r.education || []).length }}</b> education</span>
                 <span><b>{{ monthsFor(r) }}</b> mo experience</span>
               </div>
+              <!-- Only the three scored counts sit in .facts above. These are
+                   the sections that go on the page but not into the score, so
+                   they are listed by name and kept visually separate. -->
+              @if (extraSections(r); as extra) {
+                <p class="extras">Also on this resume: {{ extra }}</p>
+              }
               @if (r.ownFile) {
                 <p><span class="clip">📎</span> <b>{{ r.ownFile.name }}</b> attached — recruiters read it, the engine never scores it.</p>
               } @else {

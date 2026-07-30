@@ -34,6 +34,12 @@ DROP TABLE IF EXISTS
   projects, resume_languages, resume_references,
   certifications, work_experience, education, resumes, email_codes,
   recruiter_requests, users, companies, skills, match_settings CASCADE;
+-- Logged-in sessions. Dropped with everything else because re-running this
+-- file renumbers user_id from 1: a session cookie issued before the reset
+-- would otherwise still resolve, and resolve to whoever now holds that id.
+-- The server recreates the table on boot (see the session store in
+-- src/server.ts), so there is nothing to define here.
+DROP TABLE IF EXISTS user_sessions CASCADE;
 DROP FUNCTION IF EXISTS set_updated_at() CASCADE;
 
 -- ------------------------------------------------------------
