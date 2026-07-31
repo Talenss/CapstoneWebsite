@@ -85,6 +85,31 @@ export class MyResumes implements OnInit {
     this.showToast(`"${r.title}" is now your active resume.`);
   }
 
+  /** The card puts the title in its heading and every other action beside
+   *  it, but there was no way to change it here: renaming meant opening the
+   *  builder, finding the Details step, editing the field, saving, and
+   *  coming back. The name is how an applicant tells "IT — fresh graduate"
+   *  from "Front office", so it belongs where the resumes are listed. */
+  async renameResume(r: Resume): Promise<void> {
+    if (!r.id) return;
+    const answer = prompt('What should this resume be called?', r.title);
+    if (answer === null) return;                       // Cancel
+    const title = answer.trim().replace(/\s+/g, ' ').slice(0, 120);
+    if (!title) { this.showToast('A resume needs a name.'); return; }
+    if (title === r.title) return;
+
+    /* Re-read the whole record before writing it back. The card needs only a
+       summary, and if the list payload ever leaves a section out, saving the
+       card's copy would quietly delete it. A rename must never cost data. */
+    const cur = await this.api.resumes.get(r.id);
+    if (!cur.ok) { this.showToast(cur.error); return; }
+
+    const saved = await this.api.resumes.save({ ...cur.resume, title });
+    if (!saved.ok) { this.showToast(saved.error); return; }
+    await this.render();
+    this.showToast(`Renamed to "${title}".`);
+  }
+
   async duplicateResume(r: Resume): Promise<void> {
     if (!r.id) return;
     const d = await this.api.resumes.duplicate(r.id);
