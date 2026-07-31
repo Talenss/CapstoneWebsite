@@ -7,7 +7,10 @@
       <h1>Study metrics</h1>
       <p>Evaluation data for the paper — aggregates only, never a name. Scores are captured <b>at the moment of applying</b>, so they reflect what the applicant and recruiter actually saw.</p>
     </div>
-    <button class="btn primary" type="button" [disabled]="!m()" (click)="downloadJson()">Download as JSON</button>
+    <div style="display:flex;gap:9px;flex-wrap:wrap">
+      <button class="btn primary" type="button" [disabled]="!m()" (click)="downloadCsv()">Download as CSV</button>
+      <button class="btn ghost" type="button" [disabled]="!m()" (click)="downloadJson()">Download as JSON</button>
+    </div>
   </div>
 
   @if (errorMsg()) {

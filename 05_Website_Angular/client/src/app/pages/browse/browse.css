@@ -4,6 +4,8 @@
   font-family:var(--body);font-size:13.5px;background:var(--paper)}
 .filters input{flex:1;min-width:230px}
 .filters .count{margin-left:auto;font-size:12.5px;color:var(--muted);white-space:nowrap}
+/* A search box does nothing on paper, and the count describes a screen. */
+@media print{.filters{display:none}}
 .job{display:flex;flex-direction:column;gap:13px}
 .job .top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
 .job h3{font-size:19px;line-height:1.25}
