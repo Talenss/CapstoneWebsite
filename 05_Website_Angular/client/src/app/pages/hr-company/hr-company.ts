@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
@@ -10,7 +11,10 @@ import { SessionService } from '../../core/session.service';
 @Component({
   selector: 'app-hr-company',
   standalone: true,
-  imports: [RouterLink, Header, Footer],
+  // See the note in hr-posting: without FormsModule, (ngSubmit) is a
+  // custom event nothing dispatches, and Save profile performs a native
+  // form submit that reloads the page and discards every edit.
+  imports: [FormsModule, RouterLink, Header, Footer],
   templateUrl: './hr-company.html',
   styleUrl: './hr-company.css',
 })

@@ -1,11 +1,13 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { EduLevel, EmploymentType, Posting, Resume } from '../../core/models';
 import { EDU_LABELS, THRESHOLDS, WEIGHTS, scoreLocal, tierColor } from '../../core/engine';
+import { reportInvalidFields } from '../../shared/invalid-fields';
 
 /** Port of 04_Website/app/hr-posting.html — create/edit an opening. The
  *  required-skills / education / experience fields ARE the scoring rule,
@@ -15,7 +17,12 @@ import { EDU_LABELS, THRESHOLDS, WEIGHTS, scoreLocal, tierColor } from '../../co
 @Component({
   selector: 'app-hr-posting',
   standalone: true,
-  imports: [RouterLink, Header, Footer],
+  // FormsModule is what makes (ngSubmit) an event that exists. Without it
+  // Angular binds a listener for a custom DOM event named "ngSubmit" that
+  // nothing ever dispatches — the template compiles, the button looks
+  // right, and the browser performs a NATIVE submit instead: a GET to
+  // /hr-posting? that reloads the page and throws the form away.
+  imports: [FormsModule, RouterLink, Header, Footer],
   templateUrl: './hr-posting.html',
   styleUrl: './hr-posting.css',
 })
@@ -157,9 +164,17 @@ export class HrPosting {
     this.descInvalid.set(!descOk);
     this.skillsInvalid.set(!skillsOk);
 
-    if (!(titleOk && deptOk && descOk && skillsOk)) {
+    // The summary is announced (role="alert"), and the keyboard is put on
+    // the first field that failed — scrolling the window to the top only
+    // ever helped someone who could see where it landed.
+    const allOk = reportInvalidFields([
+      { id: 'title', invalid: !titleOk },
+      { id: 'dept', invalid: !deptOk },
+      { id: 'desc', invalid: !descOk },
+      { id: 'skillInput', invalid: !skillsOk },
+    ]);
+    if (!allOk) {
       this.msg.set('Fill in the highlighted fields before publishing.');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
