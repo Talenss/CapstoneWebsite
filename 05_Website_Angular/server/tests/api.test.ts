@@ -129,6 +129,48 @@ test('a valid login starts a session that /me recognises', async () => {
   assert.equal(me.body.user.email, 'seeker@demo.ph');
 });
 
+test('a user can change the name on their account, within limits', async () => {
+  const api = client();
+  await api('auth/login', { email: 'liza@demo.ph', password: 'demo123' });
+
+  const blank = await api('auth/change-name', { name: ' ' });
+  assert.equal(blank.body.ok, false, 'an empty name is refused');
+  const tooLong = await api('auth/change-name', { name: 'x'.repeat(121) });
+  assert.equal(tooLong.body.ok, false, 'a 121-character name is refused');
+
+  // still the old name after the two refusals — a rejected write changes nothing
+  const before = await api('auth/me');
+  assert.equal(before.body.user.name, 'Liza Cruz');
+
+  const good = await api('auth/change-name', { name: '  Liza   Cruz-Reyes  ' });
+  assert.equal(good.body.ok, true);
+  // trimmed, and the run of spaces collapsed to one
+  assert.equal(good.body.user.name, 'Liza Cruz-Reyes');
+  const after = await api('auth/me');
+  assert.equal(after.body.user.name, 'Liza Cruz-Reyes', 'the new name survives the round trip');
+});
+
+test('changing the account name leaves the name printed on a resume alone', async () => {
+  const api = client();
+  await api('auth/login', { email: 'marco@demo.ph', password: 'demo123' });
+  const mine = await api('resumes/list');
+  const resumeId = mine.body.resumes[0].id;
+  const printedBefore = mine.body.resumes[0].personal.fullName;
+
+  const changed = await api('auth/change-name', { name: 'Marco A. Garcia' });
+  assert.equal(changed.body.ok, true);
+
+  const again = await api('resumes/get', { id: resumeId });
+  assert.equal(again.body.resume.personal.fullName, printedBefore,
+    'the resume keeps the name the applicant typed into the builder');
+});
+
+test('an anonymous caller cannot change anybody’s name', async () => {
+  const api = client(); // never logs in
+  const { body } = await api('auth/change-name', { name: 'Somebody Else' });
+  assert.equal(body.ok, false);
+});
+
 // ---------- guards: signed in, and the right role ----------
 
 test('protected routes refuse an anonymous caller', async () => {

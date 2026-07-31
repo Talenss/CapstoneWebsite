@@ -316,6 +316,46 @@ export class ResumeBuilder implements OnInit {
     this.markDirty();
   }
 
+  /* ---------- putting entries in order ----------
+
+     A resume is read top down, and the guidance this site gives is "most
+     recent first". Until now the builder could only add an entry at the end
+     and remove one: if you remembered an earlier job after typing a later
+     one, the only way to fix the order was to delete an entry and type it
+     again. The order is part of the content, so it needs to be editable like
+     the rest of it. */
+  private reorder<T>(arr: T[] | undefined, i: number, delta: number): T[] {
+    const list = [...(arr ?? [])];
+    const j = i + delta;
+    if (i < 0 || i >= list.length || j < 0 || j >= list.length) return list;
+    [list[i], list[j]] = [list[j], list[i]];
+    return list;
+  }
+  moveEducation(i: number, d: number): void {
+    this.resume.update((r) => ({ ...r, education: this.reorder(r.education, i, d) }));
+    this.markDirty();
+  }
+  moveExperience(i: number, d: number): void {
+    this.resume.update((r) => ({ ...r, experience: this.reorder(r.experience, i, d) }));
+    this.markDirty();
+  }
+  moveCertification(i: number, d: number): void {
+    this.resume.update((r) => ({ ...r, certifications: this.reorder(r.certifications, i, d) }));
+    this.markDirty();
+  }
+  moveProject(i: number, d: number): void {
+    this.resume.update((r) => ({ ...r, projects: this.reorder(r.projects, i, d) }));
+    this.markDirty();
+  }
+  moveLanguage(i: number, d: number): void {
+    this.resume.update((r) => ({ ...r, languages: this.reorder(r.languages, i, d) }));
+    this.markDirty();
+  }
+  moveReference(i: number, d: number): void {
+    this.resume.update((r) => ({ ...r, references: this.reorder(r.references, i, d) }));
+    this.markDirty();
+  }
+
   // ---------- education ----------
   addEducation(): void {
     this.resume.update((r) => ({ ...r, education: [...r.education, { school: '', degree: '', level: 'bachelor', year: '' } as Education] }));

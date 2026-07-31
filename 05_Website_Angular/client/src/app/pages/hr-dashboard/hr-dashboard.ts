@@ -32,6 +32,50 @@ export class HrDashboard implements OnInit {
   coLabel = signal('');
   toastMsg = signal<string | null>(null);
 
+  /* ---- finding an opening ----
+     The applicant's side has had search, a department filter and a sort
+     since it was built; the recruiter's own list had none of it and was
+     stuck in insertion order, so a hotel running two dozen vacancies had
+     to read the whole page to find one. The same three controls, plus the
+     one filter only this side needs: open vs closed. */
+  query = signal('');
+  state = signal<'' | 'open' | 'closed' | 'expired' | 'waiting'>('');
+  sort = signal<'new' | 'applicants' | 'az'>('new');
+
+  visiblePostings = computed<Posting[]>(() => {
+    const q = this.query().trim().toLowerCase();
+    const state = this.state();
+
+    let out = this.postings().filter((p) => {
+      // "Deadline passed" is a state of its own on this page — an opening
+      // still marked open that no longer accepts anyone. Rolling it into
+      // "open" would hide exactly the rows that need attention.
+      if (state === 'open' && !(p.status === 'open' && !p.expired)) return false;
+      if (state === 'closed' && p.status !== 'closed') return false;
+      if (state === 'expired' && !(p.status === 'open' && p.expired)) return false;
+      if (state === 'waiting' && !p.newCount) return false;
+      if (!q) return true;
+      return (p.title + ' ' + p.department + ' ' + p.skills.join(' ')).toLowerCase().includes(q);
+    });
+
+    const by = this.sort();
+    out = [...out].sort((a, b) =>
+      by === 'az' ? a.title.localeCompare(b.title)
+        : by === 'applicants' ? (b.applicantCount ?? 0) - (a.applicantCount ?? 0)
+          : b.createdAt - a.createdAt);
+    return out;
+  });
+
+  onQueryInput(e: Event): void { this.query.set((e.target as HTMLInputElement).value); }
+  onStateChange(e: Event): void { this.state.set((e.target as HTMLSelectElement).value as any); }
+  onSortChange(e: Event): void { this.sort.set((e.target as HTMLSelectElement).value as any); }
+
+  clearFilters(): void {
+    this.query.set('');
+    this.state.set('');
+    this.sort.set('new');
+  }
+
   hello = computed(() => {
     const u = this.session.user();
     return u ? 'Good day, ' + u.name.split(' ')[0] + '.' : 'Good day.';

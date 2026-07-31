@@ -38,6 +38,26 @@
         <p style="color:var(--muted);font-size:13.5px">Close an opening to stop new applications without losing the ones you already have.</p>
       </div>
     </div>
+    @if (!loading() && postings().length) {
+      <div class="filters">
+        <input type="search" placeholder="Search your openings by title, department, or skill"
+               aria-label="Search your openings" [value]="query()" (input)="onQueryInput($event)">
+        <select aria-label="Filter openings by state" [value]="state()" (change)="onStateChange($event)">
+          <option value="">All openings</option>
+          <option value="open">Open and accepting</option>
+          <option value="expired">Deadline passed</option>
+          <option value="closed">Closed</option>
+          <option value="waiting">Has new applicants</option>
+        </select>
+        <select aria-label="Sort openings" [value]="sort()" (change)="onSortChange($event)">
+          <option value="new">Newest first</option>
+          <option value="applicants">Most applicants first</option>
+          <option value="az">A to Z</option>
+        </select>
+        <span class="count">{{ visiblePostings().length }} of {{ postings().length }} shown</span>
+      </div>
+    }
+
     <div class="card flush" id="posts">
       @if (loading()) {
         <div class="loading"><span class="spinner"></span> Loading your openings…</div>
@@ -47,8 +67,14 @@
           <p>Post one and applicants will start arriving here, already scored against the skills and qualifications you asked for.</p>
           <a class="btn primary" routerLink="/hr-posting">Post your first opening</a>
         </div>
+      } @else if (!visiblePostings().length) {
+        <div class="empty">
+          <h2>Nothing matches that</h2>
+          <p>You have {{ postings().length }} opening{{ postings().length === 1 ? '' : 's' }}, but none of them match what you're filtering by.</p>
+          <button class="btn ghost" type="button" (click)="clearFilters()">Clear the filters</button>
+        </div>
       } @else {
-        @for (p of postings(); track p.id) {
+        @for (p of visiblePostings(); track p.id) {
           <div class="p-row" [class.closed]="p.status === 'closed'">
             <div class="main">
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
