@@ -360,12 +360,61 @@ router.post('/export', async (req, res) => {
   const appRows = await query<ApplicationRow>('SELECT * FROM applications WHERE seeker_id = ?', [u.user_id]);
   const applications = appRows.map(serializeApplication);
 
+  /* The privacy notice offers "the whole lot", and these two were missing
+     from it. Both are the user's own personal data:
+
+     · the status history is the record of decisions taken ABOUT them, which
+       the same notice describes as permanent — "nothing is ever removed from
+       that record". A copy of everything that cannot be removed but also
+       cannot be obtained is not a copy of everything.
+     · saved openings are what they bookmarked.
+
+     Names are redacted here exactly as they are in /applications/history:
+     an applicant reading their own history is told an action came from the
+     employer, never which member of staff. An export must not disclose what
+     the screen deliberately withholds. */
+  const appIds = appRows.map((a) => a.application_id);
+  const histRows = appIds.length
+    ? await query<{
+        application_id: number; old_status: string | null;
+        new_status: string; changed_at: unknown; changed_by: number | null;
+      }>(
+        `SELECT application_id, old_status, new_status, changed_at, changed_by
+           FROM application_status_history
+          WHERE application_id IN (${appIds.map(() => '?').join(',')})
+          ORDER BY changed_at ASC, history_id ASC`,
+        appIds,
+      )
+    : [];
+
+  const applicationHistory = histRows.map((r) => ({
+    applicationId: String(r.application_id),
+    from: r.old_status,
+    to: r.new_status,
+    at: new Date(r.changed_at as string | number | Date).getTime(),
+    by: r.changed_by === u.user_id ? 'you' : 'employer',
+  }));
+
+  const savedRows = await query<{ posting_id: number; title: string; department: string; saved_at: unknown }>(
+    `SELECT p.posting_id, p.title, p.department, s.created_at AS saved_at
+       FROM saved_jobs s JOIN job_postings p ON p.posting_id = s.posting_id
+      WHERE s.user_id = ? ORDER BY s.created_at DESC`, [u.user_id],
+  );
+  const savedOpenings = savedRows.map((r) => ({
+    postingId: String(r.posting_id),
+    title: r.title,
+    department: r.department,
+    savedAt: new Date(r.saved_at as string | number | Date).getTime(),
+  }));
+
   ok(res, {
     data: {
       exportedAt: new Date().toISOString(),
       account: serializeUser(u),
       resumes,
       applications,
+      applicationHistory,
+      savedOpenings,
       note: 'Uploaded resume files download separately from My resumes.',
     },
   });

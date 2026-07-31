@@ -453,6 +453,7 @@ export class DemoAdapter implements ApiAdapter {
     exportMyData: () => {
       const db = load(); const u = meRow(db);
       if (!u) return apiFail('You are not signed in.');
+      const myAppIds = new Set(db.applications.filter((a) => a.seekerId === u.id).map((a) => a.id));
       return apiOk({
         data: {
           exportedAt: new Date().toISOString(),
@@ -461,6 +462,25 @@ export class DemoAdapter implements ApiAdapter {
             ...r, ownFile: r.ownFile ? { name: r.ownFile.name, mime: r.ownFile.mime, size: r.ownFile.size, note: 'Download the file itself from My resumes.' } : null,
           })),
           applications: db.applications.filter((a) => a.seekerId === u.id),
+          /* Same two additions as the server's /auth/export, and for the same
+             reason: the privacy notice offers "the whole lot", and the record
+             of decisions taken about you — which the notice calls permanent —
+             was not in it. `byUserId` is dropped exactly as the history
+             endpoint drops it: an applicant is told an action came from the
+             employer, never which member of staff. */
+          applicationHistory: db.statusHistory
+            .filter((h) => myAppIds.has(h.applicationId))
+            .map((h) => ({
+              applicationId: h.applicationId, from: h.from, to: h.to, at: h.at,
+              by: h.by === 'applicant' ? 'you' : 'employer',
+            })),
+          savedOpenings: db.savedJobs
+            .filter((s) => s.userId === u.id)
+            .map((s) => {
+              const p = db.postings.find((x) => x.id === s.postingId);
+              return { postingId: s.postingId, title: p?.title ?? '(opening removed)',
+                       department: p?.department ?? '', savedAt: s.createdAt };
+            }),
         },
       });
     },

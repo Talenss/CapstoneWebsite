@@ -683,6 +683,45 @@ test('history never names the individual who made the decision', async () => {
   assert.ok(!JSON.stringify(body).toLowerCase().includes('santos'), 'must not leak a recruiter name');
 });
 
+test('the data export carries the whole lot, including the status history', async () => {
+  // The privacy notice offers "the whole lot" and separately calls the status
+  // history permanent. A copy of everything that omits the one record the
+  // subject cannot have removed is not a copy of everything.
+  const api = client();
+  await api('auth/login', { email: 'ana@demo.ph', password: 'demo123' });
+  const { body } = await api('auth/export');
+  assert.equal(body.ok, true);
+  const d = body.data;
+
+  for (const key of ['account', 'resumes', 'applications', 'applicationHistory', 'savedOpenings']) {
+    assert.ok(key in d, 'export is missing ' + key);
+  }
+  assert.ok(d.applications.length, 'this fixture should have applications to export');
+  assert.ok(d.applicationHistory.length, 'and a history for them');
+
+  // Every history row belongs to an application that is also in the export —
+  // no orphans, and nothing from somebody else's application.
+  const mine = new Set(d.applications.map((a: any) => String(a.id)));
+  for (const h of d.applicationHistory) {
+    assert.ok(mine.has(h.applicationId), 'history row for an application not in the export');
+    assert.ok(['you', 'employer'].includes(h.by), '`by` must be a role, got ' + h.by);
+  }
+});
+
+test('the export redacts staff names exactly as the history screen does', async () => {
+  // An export must not disclose what the interface deliberately withholds.
+  const api = client();
+  await api('auth/login', { email: 'ana@demo.ph', password: 'demo123' });
+  const { body } = await api('auth/export');
+  const flat = JSON.stringify(body.data).toLowerCase();
+  assert.ok(!flat.includes('santos'), 'must not leak a recruiter name');
+  assert.ok(!flat.includes('password'), 'must not carry any password field');
+  for (const h of body.data.applicationHistory) {
+    assert.deepEqual(Object.keys(h).sort(), ['applicationId', 'at', 'by', 'from', 'to'],
+      'no extra identifying fields on a history row');
+  }
+});
+
 test('a seeker cannot read another seeker’s application history', async () => {
   const victim = client();
   await victim('auth/login', { email: 'liza@demo.ph', password: 'demo123' });
