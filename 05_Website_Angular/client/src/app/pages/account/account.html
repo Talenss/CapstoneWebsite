@@ -14,8 +14,29 @@
   <div class="sections">
     <section class="card">
       <h2 style="font-size:22px;margin-bottom:14px">Details</h2>
-      <div class="kv"><span>Name</span><b>{{ session.user()?.name }}</b></div>
+      <div class="kv"><span>Name</span><b>{{ session.user()?.name }} <button type="button" class="linklike" style="margin-left:8px" (click)="openChangeName()">Change</button></b></div>
       <div class="kv"><span>Email</span><b>{{ session.user()?.email }} <button type="button" class="linklike" style="margin-left:8px" (click)="openChangeEmail()">Change</button></b></div>
+
+      @if (nameOpen()) {
+        <div class="change-email">
+          @if (cnError()) {
+            <div class="alert error show" role="alert">{{ cnError() }}</div>
+          }
+          <p class="hint" style="margin-bottom:12px">This is the name a recruiter sees beside your application. The name printed on a resume is set in the builder, and changing it here leaves your saved resumes exactly as they are.</p>
+          <form novalidate (ngSubmit)="onChangeName($event)">
+            <div class="field">
+              <label for="cnName">Full name</label>
+              <input type="text" id="cnName" autocomplete="name" maxlength="120" required [(ngModel)]="cnName" name="cnName">
+            </div>
+            <div style="display:flex;gap:9px;flex-wrap:wrap">
+              <button class="btn primary" type="submit" [disabled]="cnBusy()">
+                @if (cnBusy()) { <span class="spinner"></span> Saving… } @else { Save name }
+              </button>
+              <button class="btn ghost" type="button" (click)="cancelChangeName()">Cancel</button>
+            </div>
+          </form>
+        </div>
+      }
 
       @if (emailStep() !== 'closed') {
         <div class="change-email">

@@ -23,6 +23,10 @@ export interface ApiAdapter {
     logout(): Promise<ApiResult<object>>;
     me(): Promise<ApiResult<{ user: User | null }>>;
     changePassword(current: string, next: string): Promise<ApiResult<object>>;
+    /** The name on the account — what a recruiter reads beside an application.
+     *  Not a credential, so no code and no password, the same as the
+     *  notification toggle. Saved resumes keep their own printed name. */
+    changeName(name: string): Promise<ApiResult<{ user: User }>>;
     /** Change email, proven the same way as registration: a code goes to
      *  the NEW address; the switch happens only when it checks out. */
     changeEmailStart(newEmail: string, password: string): Promise<ApiResult<{ sent?: boolean; devCode?: string; simulated?: boolean; note?: string }>>;

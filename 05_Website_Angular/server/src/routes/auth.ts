@@ -221,6 +221,26 @@ router.post('/set-notifications', async (req, res) => {
   ok(res, { user: serializeUser(updated) });
 });
 
+/** The name on the account. It is not a credential — nothing is proved by
+ *  holding it — so there is no code and no password here, the same as the
+ *  notification toggle. It IS what a recruiter reads next to an application
+ *  and what the header greets the user by, which is exactly why a typo made
+ *  at sign-up, or a surname that has since changed, has to be fixable.
+ *
+ *  The name printed on a resume is a separate field the builder owns; this
+ *  route deliberately leaves saved resumes alone. */
+router.post('/change-name', async (req, res) => {
+  const u = await requireUser(req, res);
+  if (!u) return;
+  const name = String(req.body?.name ?? '').trim().replace(/\s+/g, ' ');
+  if (name.length < 2) return fail(res, 'Enter your full name.');
+  if (name.length > 120) return fail(res, 'That name is too long — 120 characters at most.');
+
+  await exec('UPDATE users SET full_name = ? WHERE user_id = ?', [name, u.user_id]);
+  const updated = await queryOne<UserRow>('SELECT * FROM users WHERE user_id = ?', [u.user_id]);
+  ok(res, { user: serializeUser(updated) });
+});
+
 /* ---- Change email: same proof-of-inbox flow as registration. ----
    Step 1 checks the password and emails a code to the NEW address;
    step 2 confirms the code and switches the account over, with a

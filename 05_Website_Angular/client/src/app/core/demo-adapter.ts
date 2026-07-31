@@ -420,6 +420,17 @@ export class DemoAdapter implements ApiAdapter {
       persist(db);
       return apiOk({ user: pubUser(u)! });
     },
+    /* Same rules as the server: trimmed, collapsed whitespace, 2–120
+       characters, and saved resumes are left alone. */
+    changeName: (name: string) => {
+      const db = load(); const u = meRow(db);
+      if (!u) return apiFail('You are not signed in.');
+      const clean = String(name).trim().replace(/\s+/g, ' ');
+      if (clean.length < 2) return apiFail('Enter your full name.');
+      if (clean.length > 120) return apiFail('That name is too long — 120 characters at most.');
+      u.name = clean; persist(db);
+      return apiOk({ user: pubUser(u)! });
+    },
     changePassword: (current: string, next: string) => {
       const db = load(); const u = meRow(db);
       if (!u) return apiFail('You are not signed in.');

@@ -38,6 +38,49 @@ export class Account {
   toastMsg = signal<string | null>(null);
   readonly passwordHint = PASSWORD_HINT;
 
+  /* ---- change the name on the account ----
+     A typo made at sign-up used to be permanent, and this name is what a
+     recruiter reads beside an application. No password and no code: it
+     proves nothing, and demanding one would be theatre. */
+  nameOpen = signal(false);
+  cnName = '';
+  cnError = signal('');
+  cnBusy = signal(false);
+
+  openChangeName(): void {
+    this.cnName = this.session.user()?.name ?? '';
+    this.cnError.set('');
+    this.nameOpen.set(true);
+  }
+
+  cancelChangeName(): void {
+    this.nameOpen.set(false);
+  }
+
+  async onChangeName(e: Event): Promise<void> {
+    e.preventDefault();
+    this.cnError.set('');
+    const clean = this.cnName.trim().replace(/\s+/g, ' ');
+    if (clean.length < 2) {
+      this.cnError.set('Enter your full name.');
+      return;
+    }
+    if (clean === this.session.user()?.name) {
+      this.nameOpen.set(false);
+      return;
+    }
+    this.cnBusy.set(true);
+    const res = await this.api.auth.changeName(clean);
+    this.cnBusy.set(false);
+    if (!res.ok) {
+      this.cnError.set(res.error);
+      return;
+    }
+    this.session.user.set(res.user);
+    this.nameOpen.set(false);
+    this.showToast('Name updated.');
+  }
+
   // ---- change email (code-verified, like registration) ----
   emailStep = signal<'closed' | 'form' | 'code'>('closed');
   ceNewEmail = '';
