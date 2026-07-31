@@ -320,15 +320,25 @@ table.tbl tbody tr:hover{background:var(--ivory)}
 .modal-back{position:fixed;inset:0;background:rgba(18,21,28,.62);display:none;
   align-items:flex-start;justify-content:center;padding:5vh 16px;z-index:110;overflow:auto}
 .modal-back.show{display:flex}
+/* A dialog never grows past the window. The applicant detail on the recruiter
+   screen ran to 1162px inside a 900px viewport: the backdrop scrolled, so
+   nothing was unreachable, but the applicant's name at the top and the status
+   control at the bottom both left the screen while you read, and you scrolled
+   the whole dialog to get either back. Capping it and scrolling only the body
+   keeps the head and the foot — who this is, and what you can do about them —
+   fixed in place. */
 .modal{background:var(--paper);border-radius:var(--r-lg);max-width:600px;width:100%;box-shadow:var(--shadow-lg);
-  border-top:2px solid var(--gold);position:relative;animation:pop .2s cubic-bezier(.2,.7,.3,1)}
+  border-top:2px solid var(--gold);position:relative;animation:pop .2s cubic-bezier(.2,.7,.3,1);
+  max-height:90vh;display:flex;flex-direction:column}
 .modal.wide{max-width:960px}
 @keyframes pop{from{opacity:0;transform:translateY(10px)}}
-.modal-head{padding:24px 26px 0}
+.modal-head{padding:24px 26px 0;flex:none}
 .modal-head h3{font-size:25px}
 .modal-head .sub{font-size:13px;color:var(--muted);margin-top:3px}
-.modal-body{padding:18px 26px}
-.modal-foot{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;padding:16px 26px;border-top:1px solid var(--rule-2);background:var(--ivory);
+/* min-height:0 is what actually lets a flex child shrink and scroll; without
+   it the body keeps its content height and the cap above does nothing. */
+.modal-body{padding:18px 26px;overflow:auto;min-height:0;flex:1 1 auto}
+.modal-foot{flex:none;display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;padding:16px 26px;border-top:1px solid var(--rule-2);background:var(--ivory);
   border-radius:0 0 var(--r-lg) var(--r-lg);flex-wrap:wrap}
 .close-x{position:absolute;top:12px;right:14px;background:none;border:none;font-size:24px;color:var(--muted);cursor:pointer;line-height:1;padding:4px 8px}
 .close-x:hover{color:var(--text)}

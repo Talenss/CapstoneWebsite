@@ -2,6 +2,7 @@ import { Location } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../core/api.service';
+import { SessionService } from '../../core/session.service';
 import { DESIGN_ORDER } from '../../core/engine';
 import { Resume } from '../../core/models';
 
@@ -26,6 +27,7 @@ export class ResumePrint implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private location = inject(Location);
   private router = inject(Router);
+  private session = inject(SessionService);
 
   loading = signal(true);
   error = signal<string | null>(null);
@@ -55,6 +57,11 @@ export class ResumePrint implements OnInit, OnDestroy {
   });
 
   async ngOnInit(): Promise<void> {
+    // The role decides where Back leads when this sheet was opened in a tab
+    // of its own, so the session has to be resolved even though the page
+    // itself renders the same for everyone.
+    void this.session.ensure();
+
     let saved: string | null = null;
     try { saved = localStorage.getItem(PAPER_KEY); } catch { /* private mode — A4 stands */ }
     this.setPaper(saved === 'letter' ? 'letter' : 'a4');
@@ -121,13 +128,21 @@ export class ResumePrint implements OnInit, OnDestroy {
     document.getElementById('rmph-page-size')?.remove();
   }
 
-  /** The sheet is usually opened in a NEW TAB (both "PDF" on My resumes and
-   *  "Export PDF" in the builder do), and a fresh tab has nothing to go back
-   *  to — the button simply did nothing, leaving the reader on a page with no
-   *  header and no way out. Fall back to the resume library. */
+  /** The sheet is usually opened in a NEW TAB — "PDF" on My resumes, "Export
+   *  PDF" in the builder, and now "Open full resume" on the recruiter's
+   *  screen — and a fresh tab has nothing to go back to, so the button did
+   *  nothing at all on a page with no header and no other way out.
+   *
+   *  The fallback has to know WHO is reading. Sending everyone to /my-resumes
+   *  worked for the applicant and stranded the recruiter, because that route
+   *  is seeker-only: a recruiter arriving there is bounced straight out
+   *  again. Each role now goes somewhere it is allowed to be. */
   back(): void {
     if (history.length > 1) { this.location.back(); return; }
-    this.router.navigateByUrl('/my-resumes');
+    const role = this.session.user()?.role;
+    this.router.navigateByUrl(
+      role === 'recruiter' ? '/hr-dashboard' : role === 'admin' ? '/admin' : '/my-resumes',
+    );
   }
 
   print(): void {

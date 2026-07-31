@@ -204,10 +204,18 @@ export class HrApplicants {
     return (r.languages ?? []).map((l) => this.join([l.name, l.proficiency], ' — ')).join('  ·  ');
   }
 
+  /** The applicant's file, framed for reading.
+   *
+   *  The viewer's own toolbar is turned off. It shows the source URL as the
+   *  document title, and in demo mode that source is a data: URL — so the
+   *  recruiter got a wall of base64 across the top of the pane where the file
+   *  name should be. The name is already printed under the frame, so nothing
+   *  is lost by hiding the bar, and FitH starts the page at a readable width. */
   iframeUrl(resumeId: string | null): SafeResourceUrl | null {
     if (!resumeId) return null;
     const url = this.api.resumes.fileUrl(resumeId);
-    return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : null;
+    if (!url) return null;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url + '#toolbar=0&navpanes=0&statusbar=0&view=FitH');
   }
 
   imgUrl(resumeId: string | null): string | null {

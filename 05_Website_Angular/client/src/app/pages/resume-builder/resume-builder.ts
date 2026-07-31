@@ -189,7 +189,11 @@ export class ResumeBuilder implements OnInit {
    *  input — so trusting it is safe here and nowhere wider. */
   ownFileFrameUrl = computed<SafeResourceUrl | null>(() => {
     const url = this.fileUrl();
-    return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : null;
+    if (!url) return null;
+    // Same as the recruiter's frame: the viewer's toolbar prints the source
+    // URL as a title, which for a demo-mode data: URL is a screenful of
+    // base64. The file name is shown beneath the frame instead.
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url + '#toolbar=0&navpanes=0&statusbar=0&view=FitH');
   });
 
   async ngOnInit(): Promise<void> {

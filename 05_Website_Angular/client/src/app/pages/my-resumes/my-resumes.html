@@ -66,7 +66,8 @@
                 <button class="btn ghost sm" type="button" (click)="makeActive(r)">Make active</button>
               }
               <a class="btn ghost sm" routerLink="/resume-builder" [queryParams]="{ id: r.id }">Edit</a>
-              <a class="btn ghost sm" routerLink="/resume-print" [queryParams]="{ id: r.id }" target="_blank" rel="noopener">PDF</a>
+              <a class="btn ghost sm" routerLink="/resume-print" [queryParams]="{ id: r.id }" target="_blank" rel="noopener"
+                 title="See the finished resume, and print or save it as PDF">View / PDF</a>
               <button class="btn ghost sm" type="button" (click)="duplicateResume(r)">Duplicate</button>
               <button class="btn warn sm" type="button" style="margin-left:auto" (click)="deleteResume(r)">Delete</button>
             </div>
