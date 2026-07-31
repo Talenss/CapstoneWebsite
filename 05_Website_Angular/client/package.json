@@ -4,12 +4,12 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build && npm run check:csp && npm run check:forms",
+    "build": "ng build && npm run check:csp && npm run check:templates",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "build:demo": "ng build --configuration demo && npm run check:csp && npm run check:forms",
+    "build:demo": "ng build --configuration demo && npm run check:csp && npm run check:templates",
     "check:csp": "node scripts/check-csp-safe.mjs",
-    "check:forms": "node scripts/check-forms-wired.mjs"
+    "check:templates": "node scripts/check-template-imports.mjs"
   },
   "private": true,
   "packageManager": "npm@10.9.7",
