@@ -167,7 +167,18 @@
         </div>
         <div class="dual">
           <section class="pane scored">
-            <header><b>Structured resume</b><span class="badge green">Scored</span></header>
+            <header>
+              <b>Structured resume</b>
+              <span style="display:flex;gap:8px;align-items:center">
+                <!-- The pane below is a window onto a document that is often
+                     taller than it. A recruiter reading properly wants the
+                     whole sheet, laid out as it prints — which this page can
+                     already render, and until now had no link to. -->
+                <a class="btn ghost sm" [routerLink]="['/resume-print']" [queryParams]="{ id: r.resume.id }"
+                   target="_blank" rel="noopener" title="Open the full resume, laid out as it prints">Open full resume</a>
+                <span class="badge green">Scored</span>
+              </span>
+            </header>
             <div class="inner">
               <div class="p-name">{{ r.resume.personal.fullName }}</div>
               @if (r.resume.personal.headline) {

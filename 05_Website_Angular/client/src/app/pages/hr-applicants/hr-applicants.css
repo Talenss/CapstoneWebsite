@@ -27,11 +27,22 @@
 .pane > header b{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--text)}
 .pane.scored{border-top:2px solid var(--emerald)}
 .pane.human{border-top:2px solid var(--gold)}
-.pane .inner{padding:20px;font-family:Georgia,serif;font-size:12.5px;line-height:1.55;max-height:460px;overflow:auto;flex:1;background:#fff}
+/* The reading window. 460px was a letterbox — a short seeded resume already
+   runs to 637px, and resumes grew again when Projects, Languages and
+   References were added — so a recruiter read every applicant through a small
+   box with its own scrollbar, inside a dialog that also scrolled.
+   The dialog now caps to the viewport and scrolls its body once (see .modal in
+   styles.css), so this pane no longer needs a scrollbar of its own: it shows
+   the resume in full and the single outer scroll moves through it. */
+.pane .inner{padding:20px;font-family:Georgia,serif;font-size:12.5px;line-height:1.55;
+  flex:1;background:#fff}
 .pane .none{padding:44px 20px;text-align:center;color:var(--muted);font-size:13px;background:var(--ivory);flex:1;
   display:flex;flex-direction:column;justify-content:center;gap:12px}
-.pane iframe{width:100%;height:460px;border:none;background:#fff}
-.pane img{max-height:460px;margin:0 auto;object-fit:contain}
+/* The applicant's own document keeps a fixed frame: a PDF viewer scrolls
+   itself, and letting it grow to the length of the structured resume beside
+   it would just leave a tall empty box for a one-page file. */
+.pane iframe{width:100%;height:min(620px, 70vh);border:none;background:#fff}
+.pane img{max-height:min(620px, 70vh);margin:0 auto;object-fit:contain}
 .p-name{font-size:19px;font-weight:700}
 .p-headline{font-size:11.5px;color:#3E434D;margin-top:3px}
 .p-contact{font-size:11px;color:#5A5F6B;margin-top:4px}
