@@ -98,7 +98,15 @@
             <div>
               @for (e of resume().education; track $index) {
                 <div class="item">
-                  <button class="kill" type="button" (click)="removeEducation($index)">Remove</button>
+                  <div class="tools">
+                    <button class="mv" type="button" [disabled]="$index === 0"
+                            [attr.aria-label]="'Move this education entry up'" title="Move up"
+                            (click)="moveEducation($index, -1)">&uarr;</button>
+                    <button class="mv" type="button" [disabled]="$index === resume().education.length - 1"
+                            [attr.aria-label]="'Move this education entry down'" title="Move down"
+                            (click)="moveEducation($index, 1)">&darr;</button>
+                    <button class="kill" type="button" (click)="removeEducation($index)">Remove</button>
+                  </div>
                   <div class="field">
                     <label [for]="'edu-school-' + $index">School</label>
                     <input type="text" [id]="'edu-school-' + $index" [value]="e.school" (input)="updateEducation($index, 'school', inputValue($event))">
@@ -152,7 +160,15 @@
             <div>
               @for (e of resume().experience; track $index) {
                 <div class="item">
-                  <button class="kill" type="button" (click)="removeExperience($index)">Remove</button>
+                  <div class="tools">
+                    <button class="mv" type="button" [disabled]="$index === 0"
+                            [attr.aria-label]="'Move this experience entry up'" title="Move up"
+                            (click)="moveExperience($index, -1)">&uarr;</button>
+                    <button class="mv" type="button" [disabled]="$index === resume().experience.length - 1"
+                            [attr.aria-label]="'Move this experience entry down'" title="Move down"
+                            (click)="moveExperience($index, 1)">&darr;</button>
+                    <button class="kill" type="button" (click)="removeExperience($index)">Remove</button>
+                  </div>
                   <div class="field">
                     <label [for]="'exp-position-' + $index">Position</label>
                     <input type="text" [id]="'exp-position-' + $index" placeholder="Web Development Intern" [value]="e.position" (input)="updateExperience($index, 'position', inputValue($event))">
@@ -263,7 +279,15 @@
             <div>
               @for (c of resume().certifications; track $index) {
                 <div class="item">
-                  <button class="kill" type="button" (click)="removeCertification($index)">Remove</button>
+                  <div class="tools">
+                    <button class="mv" type="button" [disabled]="$index === 0"
+                            [attr.aria-label]="'Move this certification up'" title="Move up"
+                            (click)="moveCertification($index, -1)">&uarr;</button>
+                    <button class="mv" type="button" [disabled]="$index === resume().certifications.length - 1"
+                            [attr.aria-label]="'Move this certification down'" title="Move down"
+                            (click)="moveCertification($index, 1)">&darr;</button>
+                    <button class="kill" type="button" (click)="removeCertification($index)">Remove</button>
+                  </div>
                   <div class="field">
                     <label [for]="'cert-name-' + $index">Certificate</label>
                     <input type="text" [id]="'cert-name-' + $index" placeholder="TESDA Web Development NC III" [value]="c.name" (input)="updateCertification($index, 'name', inputValue($event))">
@@ -302,7 +326,15 @@
             <div>
               @for (p of resume().projects || []; track $index) {
                 <div class="item">
-                  <button class="kill" type="button" (click)="removeProject($index)">Remove</button>
+                  <div class="tools">
+                    <button class="mv" type="button" [disabled]="$index === 0"
+                            [attr.aria-label]="'Move this project up'" title="Move up"
+                            (click)="moveProject($index, -1)">&uarr;</button>
+                    <button class="mv" type="button" [disabled]="$index === (resume().projects || []).length - 1"
+                            [attr.aria-label]="'Move this project down'" title="Move down"
+                            (click)="moveProject($index, 1)">&darr;</button>
+                    <button class="kill" type="button" (click)="removeProject($index)">Remove</button>
+                  </div>
                   <div class="field">
                     <label [for]="'proj-name-' + $index">Project</label>
                     <input type="text" [id]="'proj-name-' + $index" placeholder="Barangay records system" [value]="p.name" (input)="updateProject($index, 'name', inputValue($event))">
@@ -343,7 +375,15 @@
             <div>
               @for (l of resume().languages || []; track $index) {
                 <div class="item">
-                  <button class="kill" type="button" (click)="removeLanguage($index)">Remove</button>
+                  <div class="tools">
+                    <button class="mv" type="button" [disabled]="$index === 0"
+                            [attr.aria-label]="'Move this language up'" title="Move up"
+                            (click)="moveLanguage($index, -1)">&uarr;</button>
+                    <button class="mv" type="button" [disabled]="$index === (resume().languages || []).length - 1"
+                            [attr.aria-label]="'Move this language down'" title="Move down"
+                            (click)="moveLanguage($index, 1)">&darr;</button>
+                    <button class="kill" type="button" (click)="removeLanguage($index)">Remove</button>
+                  </div>
                   <div class="row2">
                     <div class="field">
                       <label [for]="'lang-name-' + $index">Language</label>
@@ -372,7 +412,15 @@
             <div>
               @for (x of resume().references || []; track $index) {
                 <div class="item">
-                  <button class="kill" type="button" (click)="removeReference($index)">Remove</button>
+                  <div class="tools">
+                    <button class="mv" type="button" [disabled]="$index === 0"
+                            [attr.aria-label]="'Move this reference up'" title="Move up"
+                            (click)="moveReference($index, -1)">&uarr;</button>
+                    <button class="mv" type="button" [disabled]="$index === (resume().references || []).length - 1"
+                            [attr.aria-label]="'Move this reference down'" title="Move down"
+                            (click)="moveReference($index, 1)">&darr;</button>
+                    <button class="kill" type="button" (click)="removeReference($index)">Remove</button>
+                  </div>
                   <div class="field">
                     <label [for]="'ref-name-' + $index">Name</label>
                     <input type="text" [id]="'ref-name-' + $index" placeholder="Engr. Maria Santos" [value]="x.name" (input)="updateReference($index, 'name', inputValue($event))">

@@ -28,10 +28,20 @@
 .step > .sub { font-size: 13.5px; color: var(--muted); margin-bottom: 22px; max-width: 60ch; }
 
 .item { border: 1px solid var(--rule); border-radius: var(--r); padding: 18px; margin-bottom: 14px; position: relative; background: var(--paper); }
-.item .kill {
-  position: absolute; top: 12px; right: 12px; background: none; border: 1px solid var(--rule); color: var(--muted);
-  border-radius: 2px; padding: 3px 9px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: var(--body);
+/* Per-entry controls. Order is part of a resume — the learning hub tells
+   applicants to list the most recent first, and the chronological template
+   is defined by it — so every repeatable entry can be moved instead of
+   deleted and retyped. The row sits in normal flow rather than floating
+   over the corner the way the lone Remove button used to: three controls
+   are wide enough to land on top of a field on a narrow screen. */
+.item .tools { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin: -4px 0 12px; }
+.item .mv, .item .kill {
+  background: none; border: 1px solid var(--rule); color: var(--muted); border-radius: 2px;
+  padding: 3px 9px; font-size: 11px; font-weight: 600; line-height: 1.35; cursor: pointer; font-family: var(--body);
 }
+.item .mv { min-width: 27px; padding: 3px 6px; }
+.item .mv:hover:not(:disabled) { border-color: var(--gold); color: var(--gold-deep); background: var(--gold-wash); }
+.item .mv:disabled { opacity: .35; cursor: not-allowed; }
 .item .kill:hover { border-color: var(--wine); color: var(--wine); background: var(--wine-wash); }
 .add {
   width: 100%; border: 1px dashed var(--rule); background: transparent; border-radius: var(--r); padding: 13px;
