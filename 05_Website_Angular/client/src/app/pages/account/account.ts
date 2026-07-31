@@ -7,6 +7,7 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { environment } from '../../../environments/environment';
 import { passwordOk, PASSWORD_HINT } from '../../core/engine';
+import { reportInvalidFields } from '../../shared/invalid-fields';
 
 /** Port of 04_Website/app/account.html — shared by both seeker and
  *  recruiter accounts (the route is guarded with no specific role).
@@ -184,7 +185,11 @@ export class Account {
     this.curInvalid.set(!curOk);
     this.newInvalid.set(!newOk);
     this.repInvalid.set(!repOk);
-    if (!curOk || !newOk || !repOk) return;
+    if (!reportInvalidFields([
+      { id: 'cur', invalid: !curOk },
+      { id: 'new', invalid: !newOk },
+      { id: 'rep', invalid: !repOk },
+    ])) return;
 
     this.pwSaving.set(true);
     const res = await this.api.auth.changePassword(curInput.value, newInput.value);
@@ -219,11 +224,8 @@ export class Account {
   async onDeleteSubmit(e: Event, delPwInput: HTMLInputElement): Promise<void> {
     e.preventDefault();
     this.msg.set(null);
-    if (!delPwInput.value) {
-      this.delInvalid.set(true);
-      return;
-    }
-    this.delInvalid.set(false);
+    this.delInvalid.set(!delPwInput.value);
+    if (!reportInvalidFields([{ id: 'delPw', invalid: !delPwInput.value }])) return;
 
     if (!confirm('Delete your account and everything in it? This cannot be undone.')) return;
 

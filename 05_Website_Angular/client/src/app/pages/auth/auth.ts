@@ -7,6 +7,7 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { Company } from '../../core/models';
 import { passwordOk, PASSWORD_HINT } from '../../core/engine';
+import { reportInvalidFields } from '../../shared/invalid-fields';
 
 type Tab = 'login' | 'reg';
 type Role = 'seeker' | 'recruiter';
@@ -171,7 +172,10 @@ export class Auth implements OnInit, OnDestroy {
     this.loginEmailInvalid.set(!emailOk);
     const passOk = this.loginPassword.length > 0;
     this.loginPasswordInvalid.set(!passOk);
-    if (!emailOk || !passOk) return;
+    if (!reportInvalidFields([
+      { id: 'le', invalid: !emailOk },
+      { id: 'lp', invalid: !passOk },
+    ])) return;
 
     this.loginBusy.set(true);
     const res = await this.api.auth.login(this.loginEmail.trim(), this.loginPassword);
@@ -208,7 +212,7 @@ export class Auth implements OnInit, OnDestroy {
     this.fpError.set('');
     const emailOk = this.emailValid(this.fpEmail);
     this.fpEmailInvalid.set(!emailOk);
-    if (!emailOk) return;
+    if (!reportInvalidFields([{ id: 'fpe', invalid: !emailOk }])) return;
 
     this.fpBusy.set(true);
     const res = await this.api.auth.sendCode(this.fpEmail.trim(), 'reset');
@@ -245,7 +249,10 @@ export class Auth implements OnInit, OnDestroy {
     this.fpCodeInvalid.set(!codeOk);
     const passOk = passwordOk(this.fpPassword);
     this.fpPasswordInvalid.set(!passOk);
-    if (!codeOk || !passOk) return;
+    if (!reportInvalidFields([
+      { id: 'fpc', invalid: !codeOk },
+      { id: 'fpp', invalid: !passOk },
+    ])) return;
 
     this.fpBusy.set(true);
     const res = await this.api.auth.resetPassword({ email: this.fpEmail.trim(), code: this.fpCode.trim(), password: this.fpPassword });
@@ -293,7 +300,17 @@ export class Auth implements OnInit, OnDestroy {
       this.regPositionInvalid.set(false);
     }
 
-    if (!(nameOk && emailOk && passOk && companyOk && posOk)) return;
+    // Listed in the order they appear, and only the ones this role actually
+    // renders — the password field and the company/position pair are on
+    // opposite sides of an @if, and focusing a field that is not on screen
+    // would be worse than not moving at all.
+    if (!reportInvalidFields([
+      { id: 'rn', invalid: !nameOk },
+      { id: 're', invalid: !emailOk },
+      ...(hr
+        ? [{ id: 'rc', invalid: !companyOk }, { id: 'rpos', invalid: !posOk }]
+        : [{ id: 'rp', invalid: !passOk }]),
+    ])) return;
 
     this.regBusy.set(true);
     if (!hr) {
@@ -339,7 +356,7 @@ export class Auth implements OnInit, OnDestroy {
     this.regMessage.set(null);
     const codeOk = /^\d{6}$/.test(this.regCode.trim());
     this.regCodeInvalid.set(!codeOk);
-    if (!codeOk) return;
+    if (!reportInvalidFields([{ id: 'rcode', invalid: !codeOk }])) return;
 
     this.regBusy.set(true);
     const res = await this.api.auth.registerSeeker({
