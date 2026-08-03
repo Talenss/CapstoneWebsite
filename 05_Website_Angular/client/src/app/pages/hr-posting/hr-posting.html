@@ -60,22 +60,26 @@
           @for (s of knownSkills(); track s) { <option [value]="s"></option> }
         </datalist>
         <span class="err">Add at least one required skill.</span>
+        <p class="hint" style="margin-bottom:6px">Skills already in use across your openings — click to require one here, click again to drop it:</p>
+        <div class="pool">
+          @if (!poolSkills().length) {
+            <span style="font-size:12.5px;color:var(--muted)">Nothing else in use yet.</span>
+          } @else {
+            @for (s of poolSkills(); track s) {
+              <button type="button" [class.on]="skillRequired(s)" [attr.aria-pressed]="skillRequired(s)"
+                      [attr.title]="skillRequired(s) ? 'Stop requiring ' + s : 'Require ' + s"
+                      (click)="toggleSkill(s)"><span class="mark" aria-hidden="true">{{ skillRequired(s) ? '&check;' : '+' }}</span>{{ s }}</button>
+            }
+          }
+        </div>
+        <!-- After the pool, not before it: this list grows as skills are added,
+             and above the chips it pushed them down mid-click. -->
         <div class="tags">
           @if (!skillsVal().length) {
             <p style="color:var(--muted);font-size:13px">No skills yet — this is half the score, so add at least one.</p>
           } @else {
             @for (s of skillsVal(); track s; let i = $index) {
               <span class="tag">{{ s }}<button type="button" (click)="removeSkill(i)" [attr.aria-label]="'Remove ' + s">&times;</button></span>
-            }
-          }
-        </div>
-        <p class="hint" style="margin-bottom:6px">Skills already in use across your other openings:</p>
-        <div class="pool">
-          @if (!poolSkills().length) {
-            <span style="font-size:12.5px;color:var(--muted)">Nothing else in use yet.</span>
-          } @else {
-            @for (s of poolSkills(); track s) {
-              <button type="button" (click)="addSkill(s)">+ {{ s }}</button>
             }
           }
         </div>

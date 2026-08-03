@@ -65,10 +65,14 @@ export class HrPosting {
 
   deptOptions = computed(() => Array.from(new Set(this.posts().map((p) => p.department).filter(Boolean))).sort());
   knownSkills = computed(() => Array.from(new Set(this.posts().flatMap((p) => p.skills))).sort());
-  poolSkills = computed(() => {
-    const have = this.skillsVal().map((s) => s.toLowerCase());
-    return this.knownSkills().filter((s) => !have.includes(s.toLowerCase()));
-  });
+  /** Every skill this company already uses, shown whether or not it is on
+   *  this opening. Dropping the chosen ones out of the pool reflowed the
+   *  rows under the cursor mid-click; here that would put a skill the
+   *  recruiter never meant to require onto the posting every applicant is
+   *  then ranked against. */
+  private requiredSkills = computed(() => new Set(this.skillsVal().map((s) => s.toLowerCase())));
+  skillRequired = (s: string): boolean => this.requiredSkills().has(s.toLowerCase());
+  poolSkills = computed(() => this.knownSkills());
 
   simRows = computed(() => {
     const skills = this.skillsVal();
@@ -146,6 +150,14 @@ export class HrPosting {
 
   removeSkill(i: number): void {
     this.skillsVal.update((arr) => arr.filter((_, idx) => idx !== i));
+  }
+
+  /** The pool chips are toggles, so a chip clicked by mistake is undone by
+   *  clicking the same chip again. */
+  toggleSkill(s: string): void {
+    const i = this.skillsVal().findIndex((x) => x.toLowerCase() === s.toLowerCase());
+    if (i >= 0) this.removeSkill(i);
+    else this.addSkill(s);
   }
 
   async submit(): Promise<void> {

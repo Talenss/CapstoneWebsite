@@ -113,17 +113,29 @@ export class ResumeBuilder implements OnInit {
   visibleProjects = computed(() => (this.resume().projects ?? []).filter((p) => !!p.name));
   visibleLanguages = computed(() => (this.resume().languages ?? []).filter((l) => !!l.name));
   visibleReferences = computed(() => (this.resume().references ?? []).filter((r) => !!r.name));
-  poolSuggestions = computed(() => {
-    const have = new Set(this.resume().skills.map((s) => s.toLowerCase()));
-    return this.poolAll().filter((s) => !have.has(s.toLowerCase()));
-  });
-  /** The second pool: not in demand today, not already on the list. */
+  /** What is already on the resume, lower-cased. The two suggestion pools
+   *  consult this to draw a chip's state — never to decide whether the chip
+   *  is there at all. Removing chosen chips reflowed the rows under the
+   *  user's cursor, so a second click in a quick sequence landed on whatever
+   *  had slid into that spot; on the list that carries 50% of the score,
+   *  that silently changed the score without the user noticing. */
+  private listedSkills = computed(() => new Set(this.resume().skills.map((s) => s.toLowerCase())));
+  skillListed = (s: string): boolean => this.listedSkills().has(s.toLowerCase());
+
+  /** The second pool: skills no open posting asks for. Fixed once the
+   *  postings have loaded, and deliberately not filtered by what the user
+   *  has chosen — so nothing here moves while they are choosing either. */
   otherSuggestions = computed(() => {
-    const have = new Set([
-      ...this.resume().skills.map((s) => s.toLowerCase()),
-      ...this.poolAll().map((s) => s.toLowerCase()),
-    ]);
-    return OTHER_SKILLS.filter((s) => !have.has(s.toLowerCase()));
+    const demanded = new Set(this.poolAll().map((s) => s.toLowerCase()));
+    return OTHER_SKILLS.filter((s) => !demanded.has(s.toLowerCase()));
+  });
+
+  /** Every skill in demand is now on the resume. Said as a note beside the
+   *  chips rather than in place of them, because the chips still have a job:
+   *  they are how you take one back off. */
+  allDemandedListed = computed(() => {
+    const pool = this.poolAll();
+    return pool.length > 0 && pool.every((s) => this.listedSkills().has(s.toLowerCase()));
   });
 
   /** Section order for the live preview. Normally the Template decides; the
@@ -501,6 +513,14 @@ export class ResumeBuilder implements OnInit {
   removeSkill(i: number): void {
     this.resume.update((r) => ({ ...r, skills: r.skills.filter((_, idx) => idx !== i) }));
     this.markDirty();
+  }
+  /** A suggestion chip is a toggle, so the chip that added a skill by mistake
+   *  is the one that takes it off again — in place, without hunting for it
+   *  in the list above. */
+  toggleSkill(s: string): void {
+    const i = this.resume().skills.findIndex((x) => x.toLowerCase() === s.toLowerCase());
+    if (i >= 0) this.removeSkill(i);
+    else this.addSkill(s);
   }
   onSkillKeydown(e: KeyboardEvent): void {
     if (e.key === 'Enter' || e.key === ',') {
