@@ -1,0 +1,50 @@
+/* Route-loading indicator.
+
+   A thin bar pinned to the top rather than a centred spinner: it says the
+   click registered without occupying the space the incoming page is about
+   to fill, so nothing jumps when the chunk lands. It is not a measurement —
+   the browser cannot know how much of a lazy chunk has arrived — so it
+   animates indefinitely instead of pretending to a percentage. */
+.route-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 3px;
+  z-index: 2000;
+  background: var(--rule-2);
+  overflow: hidden;
+}
+
+.route-progress::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  animation: route-progress-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes route-progress-slide {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(350%); }
+}
+
+/* Announced, but not drawn: the bar carries no text, and "the page is
+   loading" is exactly what someone who cannot see it needs to hear. */
+.route-progress-label {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The global prefers-reduced-motion rule disables the animation. Without a
+   fallback the bar would then be a static grey line that never changes, so
+   fill it instead — it still reads as busy, it just does not move. */
+@media (prefers-reduced-motion: reduce) {
+  .route-progress::after { width: 100%; background: var(--gold); }
+}
+
+@media print { .route-progress { display: none; } }

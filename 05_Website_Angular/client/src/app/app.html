@@ -1,1 +1,6 @@
+@if (navigating()) {
+  <div class="route-progress" role="status" aria-live="polite">
+    <span class="route-progress-label">Loading the page…</span>
+  </div>
+}
 <router-outlet></router-outlet>
