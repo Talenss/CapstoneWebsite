@@ -112,7 +112,10 @@ router.post('/save', async (req, res) => {
 
       let i = 0;
       for (const e of education) {
-        const lvl = Object.keys(EDU_RANK).includes(e.level) ? e.level : 'bachelor';
+        // An unrecognised level means we do not know it, so it claims nothing
+        // (rank 0). Defaulting to 'bachelor' invented a degree for anyone
+        // whose payload was blank, partial, or hand-made.
+        const lvl = Object.keys(EDU_RANK).includes(e.level) ? e.level : 'none';
         await tx.exec(
           `INSERT INTO education (resume_id, school, degree, level, year_grad, field, location, honors, sort_order)
              VALUES (?,?,?,?,?,?,?,?,?)`,
