@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { OtpInput } from '../../shared/otp-input/otp-input';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { RouterLink } from '@angular/router';
@@ -15,7 +16,7 @@ import { reportInvalidFields } from '../../shared/invalid-fields';
 @Component({
   selector: 'app-account',
   standalone: true,
-  imports: [FormsModule, RouterLink, Header, Footer],
+  imports: [FormsModule, OtpInput, RouterLink, Header, Footer],
   templateUrl: './account.html',
   styleUrl: './account.css',
 })

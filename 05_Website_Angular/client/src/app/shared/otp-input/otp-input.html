@@ -1,0 +1,17 @@
+<div class="otp" role="group" [attr.aria-label]="groupLabel()">
+  @for (i of slots(); track i) {
+    <input #box
+           type="text"
+           inputmode="numeric"
+           [attr.id]="i === 0 && inputId() ? inputId() : null"
+           [attr.autocomplete]="i === 0 ? 'one-time-code' : 'off'"
+           [attr.aria-label]="'Digit ' + (i + 1) + ' of ' + length()"
+           [value]="digits()[i] || ''"
+           [disabled]="isDisabled()"
+           (input)="onInput(i, $event)"
+           (keydown)="onKeydown(i, $event)"
+           (paste)="onPaste(i, $event)"
+           (focus)="onFocus(i)"
+           (blur)="markTouched()">
+  }
+</div>

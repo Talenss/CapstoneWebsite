@@ -67,9 +67,10 @@
               <div class="dev-code" role="status"><b>Demo / development</b> — no real email is sent. Your code is <code>{{ code }}</code>.</div>
             }
             <form novalidate (ngSubmit)="onChangeEmailConfirm($event)">
-              <div class="field" style="max-width:220px">
+              <div class="field">
                 <label for="ceCode">6-digit code</label>
-                <input type="text" id="ceCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" required [(ngModel)]="ceCode" name="ceCode">
+                <app-otp-input inputId="ceCode" groupLabel="6-digit code from the email"
+                               [(ngModel)]="ceCode" name="ceCode" />
               </div>
               <div style="display:flex;gap:9px;flex-wrap:wrap">
                 <button class="btn primary" type="submit" [disabled]="ceBusy()">
