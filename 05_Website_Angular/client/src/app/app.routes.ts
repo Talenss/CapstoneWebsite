@@ -6,6 +6,16 @@ export const routes: Routes = [
   { path: '', loadComponent: () => import('./pages/home/home').then((m) => m.Home), title: 'ResumeMatch PH — Every applicant gets a seat.' },
   { path: 'auth', loadComponent: () => import('./pages/auth/auth').then((m) => m.Auth), title: 'Log in or create an account — ResumeMatch PH' },
   { path: 'browse', loadComponent: () => import('./pages/browse/browse').then((m) => m.Browse), title: 'Openings — ResumeMatch PH' },
+  /* The nav calls this page "Openings" but the route is /browse, so /openings
+     is the path a person guesses — from a bookmark, a shared message, or a QR
+     code on a printed flyer. It used to reach the wildcard below and show the
+     404 page, which is an expensive dead end for the one audience least likely
+     to try a second URL.
+     pathMatch: 'full' on purpose. Only /openings is implied by the label;
+     nothing deeper ever existed under it, so redirecting /openings/anything
+     would be inventing a URL space rather than honouring one. Those still land
+     on the 404 page, which links straight to the openings list. */
+  { path: 'openings', redirectTo: 'browse', pathMatch: 'full' },
   { path: 'learning-hub', loadComponent: () => import('./pages/learning-hub/learning-hub').then((m) => m.LearningHub), title: 'Learning hub — ResumeMatch PH' },
   { path: 'privacy', loadComponent: () => import('./pages/privacy/privacy').then((m) => m.Privacy), title: 'Privacy notice — ResumeMatch PH' },
 
