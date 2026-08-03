@@ -8,6 +8,7 @@ import { SessionService } from '../../core/session.service';
 import { Company } from '../../core/models';
 import { passwordOk, PASSWORD_HINT } from '../../core/engine';
 import { reportInvalidFields } from '../../shared/invalid-fields';
+import { environment } from '../../../environments/environment';
 
 type Tab = 'login' | 'reg';
 type Role = 'seeker' | 'recruiter';
@@ -42,6 +43,18 @@ export class Auth implements OnInit, OnDestroy {
   role = signal<Role>('seeker');
   companies = signal<Company[]>([]);
   readonly passwordHint = PASSWORD_HINT;
+
+  /** Working logins are printed on this page for graders and reviewers.
+   *  They belong ONLY in the browser-only demo build, where the accounts
+   *  are seeded fakes living in the visitor's own localStorage and there
+   *  is no server behind them. In api mode the same page sits in front of
+   *  a real database, and a list of credentials on an unauthenticated
+   *  screen is a standing risk from the moment that build goes up.
+   *
+   *  The research team's admin login is gone from both modes regardless:
+   *  it reaches every applicant record and the study's own metrics, so it
+   *  does not belong on a public screen even in a demo. */
+  readonly showDemoAccounts = environment.mode === 'demo';
 
   // ---- login form state ----
   loginEmail = '';
