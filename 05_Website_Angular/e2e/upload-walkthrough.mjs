@@ -58,7 +58,7 @@ await step('a valid PDF attaches and is named back to the applicant', async () =
   if (!/my-cv\.pdf/i.test(t)) throw new Error('the attached filename is not shown back: ' + t.slice(0, 160));
 });
 
-await step('the attached file is stored but is NOT part of the score', async () => {
+await step('the attached file is stored, and the ranking still comes from the built resume', async () => {
   // The seed data already contains a resume with an attachment, so match the
   // file THIS test uploaded rather than the first one with any ownFile.
   const state = await page.evaluate(() => {
@@ -69,10 +69,23 @@ await step('the attached file is stored but is NOT part of the score', async () 
   });
   if (!state) throw new Error('the uploaded file was not persisted');
   if (!state.hasData) throw new Error('the file contents were not stored');
-  // the UI must say so plainly — this is the paper's dual-resume claim
+  /* The UI must say plainly what the file does and does not decide — this is
+     the paper's dual-resume claim.
+
+     This used to demand the words "not scored", which was right when the
+     uploaded file was scored by nobody. It is now deliberately scored on its
+     own and shown to the applicant, precisely so they can see what a parser
+     makes of their document; what it does NOT do is drive the ranking. So
+     the old assertion had come to demand a sentence that would be false.
+     Assert the claim the app actually makes, and still must make: the
+     ranking comes from the structured resume, not the attachment. */
   const t = await page.locator('body').innerText();
-  if (!/not part of the score|never.*scor|not scored/i.test(t))
-    throw new Error('the UI does not state that the file is not scored');
+  /* Must mention RANKING specifically. An earlier version of this pattern
+     also accepted "exports use the structured resume above", which is a
+     different claim about a different thing — and a planted defect that
+     stripped the ranking sentence still passed because that one survived. */
+  if (!/ranking (still )?comes from the resume|not used for ranking/i.test(t))
+    throw new Error('the UI does not state that the RANKING comes from the built resume, not the attached file');
 });
 
 const clearAttachment = async () => {
