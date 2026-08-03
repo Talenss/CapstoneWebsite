@@ -12,6 +12,14 @@
 .pool button{border:1px dashed var(--rule);background:var(--paper);border-radius:2px;font-size:12px;color:var(--muted);
   padding:5px 11px;cursor:pointer;font-family:var(--body)}
 .pool button:hover{border-color:var(--gold);color:var(--gold-deep);border-style:solid}
+/* A required skill stays in the pool, marked, rather than disappearing from
+   it — otherwise the remaining chips reflow into the gap and the next click
+   in a quick sequence lands on the wrong one, putting a requirement on the
+   posting that every applicant is then ranked against. The marker is a
+   fixed-width box and the border width and weight do not change between
+   states, so choosing one chip moves no other chip. */
+.pool .mark{display:inline-block;width:1em;margin-right:5px;text-align:center;font-weight:700}
+.pool button.on{border-style:solid;border-color:var(--gold-line);background:var(--gold-wash);color:var(--gold-deep)}
 .aside{position:sticky;top:88px}
 .weights{border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;margin-top:12px}
 .weights .r{display:flex;justify-content:space-between;padding:11px 14px;font-size:13px;border-bottom:1px solid var(--rule-2)}

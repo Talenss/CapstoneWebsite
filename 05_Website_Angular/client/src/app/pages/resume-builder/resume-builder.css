@@ -69,13 +69,39 @@
   font-size: 10px; cursor: pointer; line-height: 1; display: grid; place-items: center; padding: 0;
 }
 .sugg { margin-top: 14px; }
-.sugg > b { display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 9px; }
+.sugg > b,
+.chosen > b { display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 9px; }
+/* The chosen list is the one element on this step whose height changes as you
+   click, so it sits after both pools. Above them it pushed the chips down by a
+   row every time it wrapped, which is the same mis-click the picker itself
+   used to cause. */
+.chosen { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--rule-2); }
+.chosen .tags { margin: 0; }
 .sugg .pool { display: flex; flex-wrap: wrap; gap: 6px; }
 .sugg button {
   border: 1px dashed var(--rule); background: var(--paper); border-radius: 2px; font-size: 12px; color: var(--muted);
   padding: 5px 11px; cursor: pointer; font-family: var(--body);
 }
 .sugg button:hover { border-color: var(--gold); color: var(--gold-deep); border-style: solid; }
+
+/* A chosen suggestion stays in place, marked, instead of being removed from
+   the pool. Removing it reflowed every chip after it into the gap, so a
+   second click in a quick sequence landed on whatever had slid underneath —
+   on the list that carries 50% of the score, that changed the score without
+   the user seeing it happen.
+
+   Everything that differs between the two states is size-neutral on purpose:
+   the marker is a fixed-width box (so + and ✓ occupy identical space), the
+   border stays 1px, and the weight does not change. Choosing a chip must not
+   move any other chip by a pixel, or the fix reintroduces the bug in
+   miniature. */
+.sugg .mark { display: inline-block; width: 1em; margin-right: 5px; text-align: center; font-weight: 700; }
+.sugg .n { color: var(--faint); }
+.sugg button.on {
+  border-style: solid; border-color: var(--gold-line);
+  background: var(--gold-wash); color: var(--gold-deep);
+}
+.sugg button.on .n { color: var(--gold-deep); opacity: .65; }
 
 .drop { border: 1px dashed var(--gold); border-radius: var(--r); background: var(--gold-wash); padding: 20px; text-align: center; }
 .drop.has { background: var(--paper); border-style: solid; border-color: var(--rule); text-align: left; }
