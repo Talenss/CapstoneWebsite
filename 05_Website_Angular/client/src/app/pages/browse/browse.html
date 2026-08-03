@@ -153,8 +153,13 @@
           }
         </div>
       </div>
+      <!-- One way out, not two. The close-x above is the standard placement and
+           is pinned to the dialog rather than to the scrolling body, so it is
+           on screen whatever you have scrolled to; Escape and a click on the
+           backdrop close it as well. A second labelled button here did the
+           same job as all three, and the recruiter's applicant dialog already
+           went without one. -->
       <div class="modal-foot">
-        <button class="btn ghost" type="button" (click)="closeDetail()">Close</button>
         @if (!session.user()) {
           <a class="btn primary" routerLink="/auth" fragment="register">Create an account to apply</a>
         } @else if (!isSeeker()) {
