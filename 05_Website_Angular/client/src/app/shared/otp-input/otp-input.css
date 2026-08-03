@@ -1,0 +1,34 @@
+/* Six boxes on one row.
+
+   Deliberately minimal: these are .field input elements sitting inside the
+   page's existing .field wrapper, so the border, the background, the radius
+   and the gold focus ring all come from the global rules and match every
+   other control on the form. Only the things that must differ are set here.
+
+   In particular NOTHING here sets border-color or background. The global
+   `.field.invalid input` rule is what turns a rejected field red, and a
+   more specific rule in this file would quietly beat it — the form would go
+   on rejecting the code with no visible sign of it. */
+.otp { display: flex; gap: 8px; }
+
+/* flex, not width. The global `.field input` sets width:100%, and a plain
+   width here would be a specificity race decided by stylesheet order. A
+   flex-basis is the flex item's main size outright, so it settles the
+   question regardless of which rule the browser prefers. */
+.otp input {
+  flex: 0 0 46px;
+  height: 52px;
+  padding: 0;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Below ~420px six fixed boxes plus their gaps overflow the column, so let
+   them share whatever width there is instead. min-width:0 is what allows a
+   flex item to shrink past its content at all. */
+@media (max-width: 420px) {
+  .otp { gap: 6px; }
+  .otp input { flex: 1 1 0; min-width: 0; height: 48px; font-size: 19px; }
+}

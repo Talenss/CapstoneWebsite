@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit, WritableSignal, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { OtpInput } from '../../shared/otp-input/otp-input';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
 import { ApiService } from '../../core/api.service';
@@ -29,7 +30,7 @@ const RESEND_SECONDS = 60;
 @Component({
   selector: 'app-auth',
   standalone: true,
-  imports: [FormsModule, RouterLink, Header],
+  imports: [FormsModule, OtpInput, RouterLink, Header],
   templateUrl: './auth.html',
   styleUrl: './auth.css',
 })
