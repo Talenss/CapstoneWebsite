@@ -41,9 +41,13 @@
         @if (step() === 0) {
           <section class="step" id="s0">
             <h2>Who you are</h2>
-            <p class="sub">This is the header of your resume. Keep the summary to two or three plain sentences — what you studied, what you've done, what you're looking for.</p>
+            <!-- Every other step says in this line what it needs — "If you have
+                 none, skip this", "Optional — but they're free evidence", "All
+                 optional". This step said nothing, which is why the tagged and
+                 untagged fields below could not be told apart at a glance. -->
+            <p class="sub">This is the header of your resume. Your name, a short summary and one way to reach you are what the resume needs before it can be scored — anything marked <b>optional</b> can be left blank. Keep the summary to two or three plain sentences: what you studied, what you've done, what you're looking for.</p>
             <div class="field">
-              <label for="rtitle">Name this resume <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(only you see this)</span></label>
+              <label for="rtitle">Name this resume <span class="opt">optional &middot; only you see this</span></label>
               <input type="text" id="rtitle" placeholder="e.g. IT — fresh graduate" [value]="resume().title" (input)="setTitle(inputValue($event))">
             </div>
             <div class="row2">
@@ -52,20 +56,26 @@
                 <input type="text" id="pName" autocomplete="name" [value]="resume().personal.fullName" (input)="setPersonal('fullName', inputValue($event))">
               </div>
               <div class="field">
-                <label for="pEmail">Email</label>
+                <!-- Not "optional": the resume needs an email OR a phone, so
+                     either one alone can be left blank but both cannot. Tagging
+                     these the same way as City would tell someone with no email
+                     that they may skip both, and their resume would then never
+                     reach "ready" with nothing on screen explaining why. -->
+                <label for="pEmail">Email <span class="opt">email or phone</span></label>
                 <input type="email" id="pEmail" autocomplete="email" [value]="resume().personal.email" (input)="setPersonal('email', inputValue($event))">
               </div>
             </div>
             <div class="row2">
               <div class="field">
-                <label for="pPhone">Phone</label>
+                <label for="pPhone">Phone <span class="opt">email or phone</span></label>
                 <input type="tel" id="pPhone" placeholder="0917 000 0000" [value]="resume().personal.phone" (input)="setPersonal('phone', inputValue($event))">
               </div>
               <div class="field">
-                <label for="pAddr">City / province</label>
+                <label for="pAddr">City / province <span class="opt">optional</span></label>
                 <input type="text" id="pAddr" placeholder="Angeles City, Pampanga" [value]="resume().personal.address" (input)="setPersonal('address', inputValue($event))">
               </div>
             </div>
+            <p class="hint" style="margin:-6px 0 18px">A recruiter needs at least one of the two — it is how they reply to you. City helps only if an opening is near you.</p>
             <div class="field">
               <label for="pHeadline">Headline <span class="opt">optional</span></label>
               <input type="text" id="pHeadline" placeholder="BS Information Technology graduate" [value]="resume().personal.headline || ''" (input)="setPersonal('headline', inputValue($event))">
