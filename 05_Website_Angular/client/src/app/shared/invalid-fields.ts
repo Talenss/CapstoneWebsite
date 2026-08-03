@@ -49,9 +49,15 @@ export interface FieldState {
  * Reconciles each control's ARIA with the verdict just reached, then puts
  * the keyboard on the first field that failed.
  *
+ * Pass `{ focus: false }` to reconcile only. That is what a form calls while
+ * the user is still typing: the mark on a field they have just corrected
+ * must come off — including its aria-invalid, or a screen reader goes on
+ * reporting an error the sighted user can see has gone — but pulling focus
+ * mid-keystroke would be a worse bug than the stale mark.
+ *
  * @returns true when every field passed — nothing was focused.
  */
-export function reportInvalidFields(fields: FieldState[]): boolean {
+export function reportInvalidFields(fields: FieldState[], opts: { focus?: boolean } = {}): boolean {
   let first: HTMLElement | null = null;
 
   for (const { id, invalid } of fields) {
@@ -82,6 +88,7 @@ export function reportInvalidFields(fields: FieldState[]): boolean {
   }
 
   if (!first) return true;
+  if (opts.focus === false) return false;
 
   // Focus first without scrolling, then centre it deliberately. Letting
   // focus() do the scrolling parks the field hard against the viewport's

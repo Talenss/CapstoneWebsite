@@ -163,6 +163,49 @@ export class Auth implements OnInit, OnDestroy {
     return EMAIL_RE.test(String(v).trim());
   }
 
+  /** Re-tests every field this page can mark, as the user types.
+   *
+   *  It only ever CLEARS a mark: each entry below is `alreadyFlagged && still
+   *  wrong`, so a field that has not failed a submit yet can never light up
+   *  while someone is halfway through typing an address. Before this, the
+   *  flags were set on submit and cleared nowhere, so the form went on saying
+   *  an email was invalid after it had been corrected — and then accepted the
+   *  submission anyway. The screen contradicting the behaviour, at the first
+   *  moment a new user is deciding whether the thing works.
+   *
+   *  aria-invalid is reconciled in the same pass. Dropping the red border and
+   *  leaving the attribute behind would fix this only for people who can see
+   *  the border. `focus: false` because moving the keyboard on a keystroke
+   *  would be its own bug. */
+  recheck(): void {
+    const hr = this.role() === 'recruiter';
+    const states = [
+      { id: 'le', invalid: this.loginEmailInvalid() && !this.emailValid(this.loginEmail) },
+      { id: 'lp', invalid: this.loginPasswordInvalid() && this.loginPassword.length === 0 },
+      { id: 'rn', invalid: this.regNameInvalid() && this.regName.trim().length < 2 },
+      { id: 're', invalid: this.regEmailInvalid() && !this.emailValid(this.regEmail) },
+      { id: 'rp', invalid: this.regPasswordInvalid() && !hr && !passwordOk(this.regPassword) },
+      { id: 'rc', invalid: this.regCompanyInvalid() && hr && !this.regCompanyId },
+      { id: 'rpos', invalid: this.regPositionInvalid() && hr && this.regPosition.trim().length < 2 },
+      { id: 'rcode', invalid: this.regCodeInvalid() && !/^\d{6}$/.test(this.regCode.trim()) },
+      { id: 'fpe', invalid: this.fpEmailInvalid() && !this.emailValid(this.fpEmail) },
+      { id: 'fpc', invalid: this.fpCodeInvalid() && !/^\d{6}$/.test(this.fpCode.trim()) },
+      { id: 'fpp', invalid: this.fpPasswordInvalid() && !passwordOk(this.fpPassword) },
+    ];
+    this.loginEmailInvalid.set(states[0].invalid);
+    this.loginPasswordInvalid.set(states[1].invalid);
+    this.regNameInvalid.set(states[2].invalid);
+    this.regEmailInvalid.set(states[3].invalid);
+    this.regPasswordInvalid.set(states[4].invalid);
+    this.regCompanyInvalid.set(states[5].invalid);
+    this.regPositionInvalid.set(states[6].invalid);
+    this.regCodeInvalid.set(states[7].invalid);
+    this.fpEmailInvalid.set(states[8].invalid);
+    this.fpCodeInvalid.set(states[9].invalid);
+    this.fpPasswordInvalid.set(states[10].invalid);
+    reportInvalidFields(states, { focus: false });
+  }
+
   /** 60-second countdown before "Resend code" becomes clickable again. */
   private startCooldown(sig: WritableSignal<number>): void {
     sig.set(RESEND_SECONDS);
