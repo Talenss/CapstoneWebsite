@@ -45,14 +45,17 @@
               }
             </button>
           </form>
-          <div class="keys">
-            <b>Demo accounts</b>
-            <div class="k"><span>Job seeker</span> <code>seeker&#64;demo.ph</code></div>
-            <div class="k"><span>Royce HR</span> <code>hr&#64;demo.ph</code></div>
-            <div class="k"><span>More applicants</span> <code>ana&#64; / marco&#64; / liza&#64;demo.ph</code></div>
-            <div class="k"><span>Research team (admin)</span> <code>admin&#64;demo.ph</code></div>
-            <div class="k" style="border-top:1px solid var(--rule-2);margin-top:8px;padding-top:9px"><span>Password (all)</span> <code>demo123</code></div>
-          </div>
+          @if (showDemoAccounts) {
+            <div class="keys">
+              <b>Demo accounts</b>
+              <div class="k"><span>Job seeker</span> <code>seeker&#64;demo.ph</code></div>
+              <div class="k"><span>Royce HR</span> <code>hr&#64;demo.ph</code></div>
+              <div class="k"><span>More applicants</span> <code>ana&#64; / marco&#64; / liza&#64;demo.ph</code></div>
+              <div class="k" style="border-top:1px solid var(--rule-2);margin-top:8px;padding-top:9px"><span>Password (all)</span> <code>demo123</code></div>
+              <p class="hint" style="margin-top:10px">This browser-only demo keeps everything in this browser. These accounts
+                exist on no server, and this panel is not built into the version that runs against a real database.</p>
+            </div>
+          }
         } @else {
           <h1 style="font-size:27px;margin-bottom:4px">Reset your password</h1>
           @if (fpStep() === 'email') {
@@ -136,8 +139,10 @@
           @if (regMessage(); as m) {
             @if (m.type === 'ok') {
               Request received. The research team will confirm it with <b>{{ m.companyName }}</b>&rsquo;s HR department, then activate your account and email you.
-              <br><br>
-              Meanwhile, you can explore the recruiter side with <code>hr&#64;demo.ph</code> / <code>demo123</code>.
+              @if (showDemoAccounts) {
+                <br><br>
+                Meanwhile, you can explore the recruiter side with <code>hr&#64;demo.ph</code> / <code>demo123</code>.
+              }
             } @else {
               {{ m.text }}
             }

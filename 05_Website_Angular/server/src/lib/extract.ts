@@ -50,7 +50,9 @@ function sanitize(raw: any, fileName: string): AnalyzedResume {
   const education = (Array.isArray(raw?.education) ? raw.education : []).slice(0, 10).map((e: any) => ({
     school: str(e?.school),
     degree: str(e?.degree),
-    level: levels.includes(e?.level) ? e.level : 'bachelor',
+    // The model is untrusted: anything it returns that is not a known level
+    // means unknown, and unknown must claim nothing rather than a degree.
+    level: levels.includes(e?.level) ? e.level : 'none',
     year: str(e?.year, 10),
   }));
   const experience = (Array.isArray(raw?.experience) ? raw.experience : []).slice(0, 15).map((e: any) => {

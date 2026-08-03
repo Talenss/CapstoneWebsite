@@ -539,7 +539,8 @@ export class DemoAdapter implements ApiAdapter {
       const education = list(resume.education, 20).map((e) => {
         const row: any = {
           school: clamp(e.school, 160), degree: clamp(e.degree, 160),
-          level: Object.keys(EDU_RANK).includes(e.level) ? e.level : 'bachelor',
+          // Same rule as the server: unknown claims nothing, never a degree.
+          level: Object.keys(EDU_RANK).includes(e.level) ? e.level : 'none',
           year: clamp(e.year, 20),
         };
         put(row, 'field', clamp(e.field, 160));

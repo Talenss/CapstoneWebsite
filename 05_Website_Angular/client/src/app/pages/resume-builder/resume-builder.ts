@@ -73,6 +73,9 @@ export class ResumeBuilder implements OnInit {
 
   readonly STEPS = STEPS;
   readonly eduLevelOptions: { value: EduLevel; label: string }[] = [
+    // The starting state of a new entry, and a real answer in its own right.
+    // Listed so the applicant can SEE that nothing is being claimed for them.
+    { value: 'none', label: 'Not stated yet' },
     { value: 'highschool', label: EDU_LABELS.highschool },
     { value: 'vocational', label: EDU_LABELS.vocational },
     { value: 'associate', label: EDU_LABELS.associate },
@@ -141,7 +144,13 @@ export class ResumeBuilder implements OnInit {
     return [
       { label: 'Your name and a way to contact you', done: !!(r.personal.fullName && (r.personal.email || r.personal.phone)), optional: false },
       { label: 'A short summary', done: (r.personal.summary || '').trim().length >= 20, optional: false },
-      { label: 'At least one education entry', done: r.education.length > 0, optional: false },
+      /* Tests CONTENT, not the existence of an entry object. An entry with
+         every field blank used to satisfy this, so a resume could be called
+         ready on the strength of a row nobody had typed into. The school
+         name is the evidence the entry is real; the level beside it is what
+         actually reaches the score. */
+      { label: 'An education entry with the school filled in',
+        done: r.education.some((e) => (e.school || '').trim() !== ''), optional: false },
       { label: 'At least three skills', done: r.skills.length >= 3, optional: false },
       { label: 'Experience (optional — many openings ask for none)', done: r.experience.length > 0, optional: true },
       { label: 'Projects, languages or references (optional)', done: !!(r.projects?.length || r.languages?.length || r.references?.length), optional: true },
@@ -357,8 +366,13 @@ export class ResumeBuilder implements OnInit {
   }
 
   // ---------- education ----------
+  /* A new entry claims NOTHING until the applicant says otherwise. It used
+     to arrive pre-set to 'bachelor' — rank 4 of 5 — so clicking "+ Add
+     education" and typing nothing awarded a bachelor's degree to a quarter
+     of the score, with a green tick on the readiness checklist confirming
+     it. 'none' is rank 0: an entry nobody has filled in cannot lift a score. */
   addEducation(): void {
-    this.resume.update((r) => ({ ...r, education: [...r.education, { school: '', degree: '', level: 'bachelor', year: '' } as Education] }));
+    this.resume.update((r) => ({ ...r, education: [...r.education, { school: '', degree: '', level: 'none', year: '' } as Education] }));
     this.markDirty();
   }
   updateEducation(i: number, field: string, v: string): void {
