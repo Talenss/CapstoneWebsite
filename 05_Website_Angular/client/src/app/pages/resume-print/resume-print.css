@@ -9,12 +9,12 @@
 .toolbar{background:var(--ink);padding:14px 0}
 .toolbar .container{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
 .toolbar p{color:#9BA2B1;font-size:13px}
-.toolbar b{color:var(--gold)}
+.toolbar b{color:var(--accent)}
 /* A4 / Letter switch — changes only the @page size below */
 .paper-size{display:flex;border:1px solid #3A4050;border-radius:var(--r);overflow:hidden}
 .paper-size button{background:none;border:none;color:#9BA2B1;font-family:var(--body);font-size:12px;font-weight:600;
   padding:6px 12px;cursor:pointer}
-.paper-size button.on{background:var(--gold);color:#1a1a1a}
+.paper-size button.on{background:var(--accent);color:#1a1a1a}
 
 .sheet{max-width:760px;margin:32px auto 60px;background:#fff;padding:56px 60px;
   border:1px solid var(--rule);box-shadow:var(--shadow);
@@ -50,11 +50,11 @@
 .sheet.rz-classic{font-family:Georgia,'Times New Roman',serif}
 .sheet.rz-classic .rhead{text-align:center}
 .sheet.rz-classic h2{text-align:center;font-family:Georgia,serif;letter-spacing:1.5px;border-bottom-width:1.5px}
-/* 2 · Modern — sans, gold left-bar headings */
+/* 2 · Modern — sans, navy left-bar headings */
 .sheet.rz-modern,.sheet.rz-modern h1{font-family:Arial,Helvetica,sans-serif}
-.sheet.rz-modern .rhead{border-bottom:3px solid #AD7F2C;padding-bottom:9px}
+.sheet.rz-modern .rhead{border-bottom:3px solid #16305C;padding-bottom:9px}
 .sheet.rz-modern h2{border-bottom:none;padding-left:12px;position:relative;letter-spacing:1.4px}
-.sheet.rz-modern h2::before{content:"";position:absolute;left:0;top:1px;bottom:1px;width:4px;background:#AD7F2C}
+.sheet.rz-modern h2::before{content:"";position:absolute;left:0;top:1px;bottom:1px;width:4px;background:#16305C}
 /* 3 · Minimal — light, airy, hairline headings */
 .sheet.rz-minimal,.sheet.rz-minimal h1{font-family:Helvetica,Arial,sans-serif}
 .sheet.rz-minimal h1{font-weight:400}
@@ -65,10 +65,10 @@
 .sheet.rz-executive h2{font-family:Georgia,serif;letter-spacing:.6px;border-bottom:1px solid #bbb}
 /* 5 · Banner — dark header block */
 .sheet.rz-banner,.sheet.rz-banner h1{font-family:Arial,Helvetica,sans-serif}
-.sheet.rz-banner .rhead{background:#191510;padding:18px 22px;border-radius:6px}
+.sheet.rz-banner .rhead{background:#16305C;padding:18px 22px;border-radius:6px}
 .sheet.rz-banner .rhead h1,.sheet.rz-banner .rhead .headline{color:#fff}
 .sheet.rz-banner .rhead .contact{color:#cdd0d7}
-.sheet.rz-banner h2{color:#7A5B1E;border-bottom-color:#e4dcc6;letter-spacing:1.4px}
+.sheet.rz-banner h2{color:#16305C;border-bottom-color:#d9dfe7;letter-spacing:1.4px}
 /* 6 · Split — name left, contact right; centered headings */
 .sheet.rz-split .rhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:18px;border-bottom:2px solid #1a1a1a;padding-bottom:8px}
 .sheet.rz-split .rhead .contact{text-align:right;margin-top:0}
@@ -78,8 +78,8 @@
 .sheet.rz-bar h2{background:#F3E9CE;border-bottom:none;padding:4px 10px;color:#1a1a1a;letter-spacing:1.2px}
 /* 8 · Categorized — left accent rail */
 .sheet.rz-categorized,.sheet.rz-categorized h1{font-family:Helvetica,Arial,sans-serif}
-.sheet.rz-categorized{border-left:4px solid #AD7F2C}
-.sheet.rz-categorized h2{color:#7A5B1E;border-bottom:none;letter-spacing:2px}
+.sheet.rz-categorized{border-left:4px solid #16305C}
+.sheet.rz-categorized h2{color:#16305C;border-bottom:none;letter-spacing:2px}
 
 /* ---- the six added designs ----
    Distinct at a glance, but only through typeface, heading treatment,
@@ -116,7 +116,7 @@
         Work Experience and Skills after (DESIGN_ORDER). For applicants whose
         strongest section is their schooling. */
 .sheet.rz-graduate,.sheet.rz-graduate h1{font-family:Arial,Helvetica,sans-serif}
-.sheet.rz-graduate .rhead{border-bottom:2px solid #AD7F2C;padding-bottom:10px}
+.sheet.rz-graduate .rhead{border-bottom:2px solid #16305C;padding-bottom:10px}
 .sheet.rz-graduate h2{border-bottom:1px solid #d8d8d8;color:#3d4149;letter-spacing:1.8px}
 /* 14 · Technical — Skills and Projects lead. Still one column, still no
         graphics: the difference is what a reader meets first. */

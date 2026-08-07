@@ -1,7 +1,7 @@
 # ResumeMatch PH — Angular + Node edition
 
 A free résumé builder + transparent, rule-based job-matching platform for
-Filipino job seekers, piloted with **Royce Hotel & Casino** (Clark Freeport
+Filipino job seekers, piloted with **Clark Outsourcing** (Clark Freeport
 Zone). This folder (`05_Website_Angular`) is the current app — an **Angular 21**
 front end + **Node/Express (TypeScript)** back end on a **Supabase / PostgreSQL**
 database. `../04_Website` is the old PHP version, kept only as a reference;
@@ -55,7 +55,7 @@ database. `../04_Website` is the old PHP version, kept only as a reference;
   **study metrics** with JSON export.
 
 **Site-wide**
-- Royce-branded **HR-SaaS UI** (Fraunces + Manrope + JetBrains Mono, lion crest).
+- **HR-SaaS UI** (Fraunces + Manrope + JetBrains Mono).
 - **Light / dark mode** — a toggle in the header, applied on every page, saved
   to the browser, and respecting your OS preference on first visit.
 - Fully responsive (works down to 390 px), onboarding tour, email verification,
@@ -78,7 +78,7 @@ Open <http://localhost:4200>. Sign in with any of these (password `demo123`):
 | Role | Email |
 |---|---|
 | Job seeker | `seeker@demo.ph` |
-| Recruiter (Royce HR) | `hr@demo.ph` |
+| Recruiter (Clark Outsourcing HR) | `hr@demo.ph` |
 | Admin (research team) | `admin@demo.ph` |
 
 To wipe demo data: open the browser console → `localStorage.clear()` → refresh.

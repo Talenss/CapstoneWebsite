@@ -200,7 +200,7 @@ test('a recruiter can be approved and then actually set a password by email', as
   // lowercased — so the recruiter waited forever for an email that never sent.
   sink.clear();
   const anon = client();
-  const typed = 'HR.Santos@Royce.PH';          // deliberately mixed case
+  const typed = 'HR.Santos@ClarkOutsourcing.PH';          // deliberately mixed case
   const lower = typed.toLowerCase();
 
   const companies = (await anon('companies/list')).body.companies;
@@ -260,7 +260,7 @@ test('a new application emails the recruiter', async () => {
 
   const mail = await sink.waitFor((m) => /applicant|application/i.test(m.subject));
   assert.ok(mail.to.length > 0, 'the notice must be addressed to someone');
-  assert.match(mail.body, /Royce|applicant|application/i);
+  assert.match(mail.body, /Clark|applicant|application/i);
 });
 
 test('a status change emails the applicant', async () => {
@@ -306,10 +306,10 @@ test('a new posting alerts seekers whose resume matches', async () => {
 
   const created = await hr('postings/save', {
     posting: {
-      title: 'Front Office Associate (alert test)',
-      department: 'Front Office',
+      title: 'Customer Support Agent (alert test)',
+      department: 'Customer Support',
       description: 'Greet guests, manage check-in and check-out, and handle enquiries at the desk.',
-      skills: ['Customer Service', 'Communication', 'Front Office'],
+      skills: ['Customer Service', 'Communication', 'CRM Software'],
       educationLevel: 'highschool',
       minExperienceMonths: 0,
       employmentType: 'full-time',

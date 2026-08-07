@@ -98,8 +98,9 @@ test('skill aliases: equivalent wording scores the same (no vocabulary false neg
   assert.equal(skillNorm('JS'), skillNorm('JavaScript'));
   assert.equal(skillNorm('MS Office'), skillNorm('Microsoft Office'));
   assert.equal(skillNorm('Customer Support'), skillNorm('Customer Service'));
-  assert.equal(skillNorm('F&B'), skillNorm('Food and Beverage'));
-  assert.equal(skillNorm('Front Desk'), skillNorm('Front Office'));
+  assert.equal(skillNorm('CRM'), skillNorm('CRM Software'));
+  assert.equal(skillNorm('Data Encoding'), skillNorm('Data Entry'));
+  assert.equal(skillNorm('Detail Oriented'), skillNorm('Attention to Detail'));
 
   // …and it changes the actual score, on both engines (score() asserts parity).
   const abbreviated = score(resume(['JS', 'MS Office']), posting(['JavaScript', 'Microsoft Office']));
@@ -111,7 +112,8 @@ test('skill aliases are conservative — different skills stay different', () =>
   // Folding synonyms must never credit a skill the applicant didn't claim.
   assert.notEqual(skillNorm('JavaScript'), skillNorm('Java'));
   assert.notEqual(skillNorm('Excel'), skillNorm('Word'));
-  assert.notEqual(skillNorm('Housekeeping'), skillNorm('Front Office'));
+  assert.notEqual(skillNorm('Salesforce'), skillNorm('CRM Software'));  // a product is not the category
+  assert.notEqual(skillNorm('Bookkeeping'), skillNorm('Accounting'));
   const s = score(resume(['Java']), posting(['JavaScript']));
   assert.equal(s.score, 50); // education + experience only; skills earn nothing
   assert.deepEqual(s.missingSkills, ['JavaScript']);

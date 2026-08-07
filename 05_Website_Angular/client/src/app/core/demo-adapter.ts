@@ -1,7 +1,7 @@
 /* ============================================================
    DEMO ADAPTER — browser storage, zero setup. Port of the `demo`
-   object in 04_Website/app/assets/api.js. Seeded with Royce's real
-   departments so all three match tiers actually demonstrate.
+   object in 04_Website/app/assets/api.js. Seeded with Clark Outsourcing's
+   real departments so all three match tiers actually demonstrate.
    ============================================================ */
 import { ApiAdapter } from './adapter';
 import { AnalyzedResume, ApiResult, AppStatus, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, StatusEvent, User } from './models';
@@ -71,10 +71,10 @@ const withExpired = (p: Posting): Posting => ({ ...p, expired: isExpired(p) });
 function seed(): Db {
   return {
     companies: [{
-      id: 'c1', name: 'Royce Hotel & Casino', industry: 'Hospitality & Gaming',
-      location: 'Manuel A. Roxas Highway, Clark Freeport Zone, Mabalacat, Pampanga',
-      about: 'An integrated hotel and entertainment destination in Clark Freeport Zone — 500 rooms across two buildings, ten dining venues, event ballrooms, a spa, and a gaming floor. Pilot partner of this study, hiring across front office, food & beverage, housekeeping, IT, human resources, and marketing.',
-      website: 'https://www.roycehotelandcasino.com',
+      id: 'c1', name: 'Clark Outsourcing', industry: 'Business Process Outsourcing',
+      location: 'Building 35 Philexcel Business Park, Clark Freeport Zone, Mabalacat, 2023 Pampanga',
+      about: 'An American-owned and operated full-service business process outsourcing company in the Clark Freeport Zone, providing remote staffing, seat leasing, and a build-operate-transfer model to small and mid-sized companies worldwide. Pilot partner of this study, hiring across customer support, administration, finance and accounting, information technology, digital marketing, healthcare support, and recruitment.',
+      website: 'https://clarkoutsourcing.com',
     }],
     users: [
       { id: 'u1', role: 'seeker', name: 'Juan Dela Cruz', email: 'seeker@demo.ph', password: 'demo123', activeResumeId: 'r1', createdAt: Date.now() - D * 30 },
@@ -83,7 +83,7 @@ function seed(): Db {
       { id: 'u4', role: 'seeker', name: 'Marco Garcia', email: 'marco@demo.ph', password: 'demo123', activeResumeId: 'r3', createdAt: Date.now() - D * 15 },
       { id: 'u5', role: 'seeker', name: 'Liza Cruz', email: 'liza@demo.ph', password: 'demo123', activeResumeId: 'r4', createdAt: Date.now() - D * 10 },
       { id: 'u6', role: 'admin', name: 'Research Team', email: 'admin@demo.ph', password: 'demo123', createdAt: Date.now() - D * 90 },
-      { id: 'u7', role: 'recruiter', name: 'Grace Lopez', email: 'grace@demo.ph', password: 'demo123', companyId: 'c1', position: 'HR Officer — Front Office', verified: true, createdAt: Date.now() - D * 55 },
+      { id: 'u7', role: 'recruiter', name: 'Grace Lopez', email: 'grace@demo.ph', password: 'demo123', companyId: 'c1', position: 'HR Officer — Customer Support', verified: true, createdAt: Date.now() - D * 55 },
     ] as DemoUser[],
     resumes: [
       // Juan carries every optional section, so the demo shows a complete
@@ -97,7 +97,7 @@ function seed(): Db {
         experience: [{ position: 'Web Development Intern', company: 'LGU San Fernando', months: 4, description: 'Built and maintained pages for the city job portal; fixed layout issues reported by staff.',
           location: 'San Fernando, Pampanga', startDate: 'Jun 2025', endDate: 'Sep 2025',
           bullets: ['Rebuilt the job posting pages so they open correctly on a phone', 'Cleared a backlog of 40+ layout issues reported by staff'] }],
-        skills: ['HTML/CSS', 'JavaScript', 'MySQL', 'Teamwork', 'Communication'],
+        skills: ['HTML/CSS', 'JavaScript', 'Git', 'Teamwork', 'Communication'],
         certifications: [{ name: 'TESDA Web Development NC III', year: '2025', issuer: 'TESDA', credentialId: 'NC-III-2025-014352' }],
         projects: [{ name: 'Barangay records system', role: 'Front-end developer', startDate: 'Aug 2025', endDate: 'Feb 2026',
           description: 'Web app that replaced a paper logbook for about 1,200 residents; built with a team of four.', link: 'github.com/juandelacruz/brgy-records' }],
@@ -116,17 +116,17 @@ function seed(): Db {
         projects: [{ name: 'School event portal', role: 'Team lead', startDate: 'Aug 2025', endDate: 'Oct 2025',
           description: 'Registration and attendance for campus events, used by three student organizations.' }],
         ownFile: null, updatedAt: Date.now() - D * 4 },
-      { id: 'r3', userId: 'u4', title: 'Hospitality Management', template: 'chronological', design: 'minimal',
+      { id: 'r3', userId: 'u4', title: 'Business Administration', template: 'chronological', design: 'minimal',
         personal: { fullName: 'Marco Garcia', email: 'marco@demo.ph', phone: '0917 222 2222', address: 'Angeles City, Pampanga',
-          summary: 'Hospitality Management graduate with food & beverage internship experience at a Clark hotel.',
-          headline: 'Hospitality Management graduate' },
-        education: [{ school: 'Holy Angel University', degree: 'BS Hospitality Management', level: 'bachelor', year: '2025',
-          field: 'Hospitality Management', location: 'Angeles City' }],
-        experience: [{ position: 'F&B Intern', company: 'Clark hotel', months: 6, description: 'Served 60+ covers per shift; handled POS billing and table turnover.',
+          summary: 'Business Administration graduate with customer support internship experience at a Clark BPO.',
+          headline: 'Business Administration graduate' },
+        education: [{ school: 'Holy Angel University', degree: 'BS Business Administration', level: 'bachelor', year: '2025',
+          field: 'Business Administration', location: 'Angeles City' }],
+        experience: [{ position: 'Customer Support Intern', company: 'Clark BPO', months: 6, description: 'Handled inbound enquiries by phone and email for an offshore client account.',
           location: 'Clark Freeport Zone', startDate: 'Jan 2025', endDate: 'Jun 2025',
-          bullets: ['Served 60+ covers per shift across breakfast and dinner service', 'Handled POS billing with no cash variance over the placement'] }],
-        skills: ['Customer Service', 'Communication', 'MS Office', 'English Proficiency', 'POS', 'Teamwork', 'Food Safety'],
-        certifications: [{ name: 'Food Safety Training', year: '2025', issuer: 'Royce Hotel & Casino' }],
+          bullets: ['Handled 40+ inbound enquiries per shift across phone, email and live chat', 'Logged every interaction in the client CRM with no unresolved tickets at handover'] }],
+        skills: ['Customer Service', 'Communication', 'MS Office', 'English Proficiency', 'CRM Software', 'Teamwork'],
+        certifications: [{ name: 'Customer Service Excellence', year: '2025', issuer: 'Clark Outsourcing' }],
         languages: [{ name: 'Filipino', proficiency: 'Native' }, { name: 'English', proficiency: 'Fluent' }, { name: 'Korean', proficiency: 'Basic' }],
         // DUAL-RESUME MODEL: the applicant's OWN file. HR views and downloads it.
         // It is NEVER parsed and NEVER scored — see the paper's delimitations.
@@ -149,29 +149,29 @@ function seed(): Db {
         ownFile: null, updatedAt: Date.now() - D * 7 },
     ] as unknown as Resume[],
     postings: [
-      { id: 'p1', companyId: 'c1', title: 'Junior Web Developer', department: 'IT', employmentType: 'full-time',
-        description: 'Maintain the hotel website, online booking pages, and internal web tools under the IT supervisor. Fresh graduates are welcome to apply.',
-        skills: ['HTML/CSS', 'JavaScript', 'MySQL', 'Teamwork'], educationLevel: 'bachelor', minExperienceMonths: 0, status: 'open', createdAt: Date.now() - D * 9 },
-      { id: 'p2', companyId: 'c1', title: 'IT Support Associate', department: 'IT', employmentType: 'full-time',
-        description: 'First-line technical support for the front office, gaming floor, and back-office systems.',
+      { id: 'p1', companyId: 'c1', title: 'Junior Web Developer', department: 'Information Technology', employmentType: 'full-time',
+        description: 'Build and maintain client-facing web pages and internal tools alongside the development team. Fresh graduates are welcome to apply.',
+        skills: ['HTML/CSS', 'JavaScript', 'Git', 'Teamwork'], educationLevel: 'bachelor', minExperienceMonths: 0, status: 'open', createdAt: Date.now() - D * 9 },
+      { id: 'p2', companyId: 'c1', title: 'Technical Support Agent', department: 'Customer Support', employmentType: 'full-time',
+        description: 'First-line technical support for client accounts across email, chat, and voice. Night shift.',
         skills: ['Troubleshooting', 'Windows', 'Networking', 'Communication'], educationLevel: 'bachelor', minExperienceMonths: 0, status: 'open', createdAt: Date.now() - D * 7 },
-      { id: 'p3', companyId: 'c1', title: 'Front Office Associate', department: 'Front Office', employmentType: 'full-time',
-        description: 'Handle guest check-in and check-out, reservations, and inquiries at the front desk of the Premium Building.',
-        skills: ['Customer Service', 'Communication', 'MS Office', 'English Proficiency'], educationLevel: 'bachelor', minExperienceMonths: 0, status: 'open', createdAt: Date.now() - D * 6 },
-      { id: 'p4', companyId: 'c1', title: 'F&B Service Attendant', department: 'Food & Beverage', employmentType: 'full-time',
-        description: 'Serve guests across the hotel restaurants and banquet events; uphold food safety standards.',
-        skills: ['Customer Service', 'Teamwork', 'Food Safety', 'POS'], educationLevel: 'highschool', minExperienceMonths: 0, status: 'open', createdAt: Date.now() - D * 5 },
-      { id: 'p5', companyId: 'c1', title: 'HR Assistant', department: 'Human Resources', employmentType: 'full-time',
-        description: 'Assist in recruitment scheduling, 201 files, and onboarding of new hires.',
-        skills: ['Communication', 'MS Office', 'Recruitment', 'Organization'], educationLevel: 'bachelor', minExperienceMonths: 0, status: 'open', createdAt: Date.now() - D * 4 },
-      { id: 'p6', companyId: 'c1', title: 'Marketing Associate', department: 'Marketing', employmentType: 'full-time',
-        description: 'Support promotions, events, and social media for the hotel and casino.',
+      { id: 'p3', companyId: 'c1', title: 'Customer Support Agent', department: 'Customer Support', employmentType: 'full-time',
+        description: 'Handle customer enquiries for offshore client accounts by phone, email, and live chat.',
+        skills: ['Customer Service', 'Communication', 'English Proficiency', 'CRM Software'], educationLevel: 'highschool', minExperienceMonths: 0, status: 'open', createdAt: Date.now() - D * 6 },
+      { id: 'p4', companyId: 'c1', title: 'Data Entry and Admin Assistant', department: 'Administration', employmentType: 'full-time',
+        description: 'Encode and maintain client records, prepare reports, and support the administration team.',
+        skills: ['Data Entry', 'MS Office', 'Organization', 'Attention to Detail'], educationLevel: 'highschool', minExperienceMonths: 0, status: 'open', createdAt: Date.now() - D * 5 },
+      { id: 'p5', companyId: 'c1', title: 'Accounting and Bookkeeping Support', department: 'Finance and Accounting', employmentType: 'full-time',
+        description: 'Assist with accounts payable and receivable, bank reconciliation, and month-end reporting for client accounts.',
+        skills: ['Bookkeeping', 'QuickBooks', 'MS Office', 'Attention to Detail'], educationLevel: 'bachelor', minExperienceMonths: 0, status: 'open', createdAt: Date.now() - D * 4 },
+      { id: 'p6', companyId: 'c1', title: 'Social Media Manager', department: 'Digital Marketing', employmentType: 'full-time',
+        description: 'Plan and publish content across client social channels; report on engagement.',
         skills: ['Social Media', 'Copywriting', 'Canva', 'Communication'], educationLevel: 'bachelor', minExperienceMonths: 6,
         deadline: new Date(Date.now() + D * 14).toISOString().slice(0, 10), // demos the "Apply by" chip
         status: 'open', createdAt: Date.now() - D * 3 },
-      { id: 'p7', companyId: 'c1', title: 'Housekeeping Team Leader', department: 'Housekeeping', employmentType: 'full-time',
-        description: 'Lead a room-attendant team across the Deluxe Building; manage schedules and quality inspections.',
-        skills: ['Housekeeping Operations', 'Leadership', 'Scheduling', 'Teamwork'], educationLevel: 'highschool', minExperienceMonths: 12, status: 'open', createdAt: Date.now() - D * 2 },
+      { id: 'p7', companyId: 'c1', title: 'Patient Coordinator', department: 'Healthcare Support', employmentType: 'full-time',
+        description: 'Coordinate scheduling and records for a US healthcare client; liaise with patients by phone and email.',
+        skills: ['Medical Terminology', 'Customer Service', 'Scheduling', 'English Proficiency'], educationLevel: 'bachelor', minExperienceMonths: 12, status: 'open', createdAt: Date.now() - D * 2 },
     ] as unknown as Posting[],
     applications: [
       { id: 'a1', seekerId: 'u3', resumeId: 'r2', postingId: 'p1', status: 'review', appliedAt: Date.now() - D * 3, scoreSnapshot: 82 },
@@ -182,16 +182,16 @@ function seed(): Db {
     ] as unknown as Application[],
     recruiterRequests: [
       // A sample pending request, so the admin panel has something to demonstrate.
-      { id: 'q1', name: 'Carlos Mendoza', email: 'carlos.mendoza@roycehotel.ph', position: 'Talent Acquisition Specialist',
+      { id: 'q1', name: 'Carlos Mendoza', email: 'carlos.mendoza@clarkoutsourcing.ph', position: 'Talent Acquisition Specialist',
         companyId: 'c1', note: 'Verify with HR head Ms. Santos, local 214.', status: 'pending', requestedAt: Date.now() - D * 1 },
     ],
     emailCodes: [],
     savedJobs: [],
-    // Example routing: Santos owns IT, Lopez owns Front Office. Every other
+    // Example routing: Santos owns IT, Lopez owns Customer Support. Every other
     // department is unassigned and falls back to notifying all recruiters.
     deptAssignments: [
-      { companyId: 'c1', department: 'IT', userId: 'u2' },
-      { companyId: 'c1', department: 'Front Office', userId: 'u7' },
+      { companyId: 'c1', department: 'Information Technology', userId: 'u2' },
+      { companyId: 'c1', department: 'Customer Support', userId: 'u7' },
     ],
     /* Seeded so the applicant timeline has something real to show on a
        fresh demo. Each seeded application's history ends at the status the

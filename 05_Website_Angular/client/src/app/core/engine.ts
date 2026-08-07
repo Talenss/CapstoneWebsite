@@ -126,14 +126,21 @@ export const SKILL_ALIASES: Record<string, string> = {
   photoshop: 'adobephotoshop',
   troubleshoot: 'troubleshooting', technicalsupport: 'troubleshooting', techsupport: 'troubleshooting',
   networking: 'computernetworking', network: 'computernetworking',
-  // hospitality / service (the pilot partner's world)
-  customersupport: 'customerservice', clientservice: 'customerservice', guestservice: 'customerservice',
-  guestrelations: 'customerservice',
-  frontdesk: 'frontoffice', receptionist: 'frontoffice',
-  fnb: 'foodandbeverage', fb: 'foodandbeverage', foodbeverage: 'foodandbeverage',
-  foodsafety: 'foodsafety', servsafe: 'foodsafety',
-  pointofsale: 'pos', possystem: 'pos',
-  housekeeper: 'housekeeping', roomattendant: 'housekeeping',
+  // outsourcing / back-office (the pilot partner's world)
+  //
+  // Every entry below is a genuine synonym or abbreviation of the term it maps
+  // to. Deliberately absent: product names folded into categories. "Salesforce"
+  // is not a synonym for "CRM Software", it is one particular CRM — equating
+  // them would credit an applicant with a skill they did not claim, which the
+  // Definition of Terms promises this vocabulary never does.
+  customersupport: 'customerservice', clientservice: 'customerservice',
+  clientsupport: 'customerservice', customercare: 'customerservice', csr: 'customerservice',
+  crm: 'crmsoftware', crmsystem: 'crmsoftware', crmtools: 'crmsoftware',
+  encoding: 'dataentry', dataencoding: 'dataentry',
+  qb: 'quickbooks', quickbooksonline: 'quickbooks',
+  bookkeeper: 'bookkeeping', bookkeepingsupport: 'bookkeeping',
+  medicalterms: 'medicalterminology',
+  detailoriented: 'attentiontodetail', attentiontodetails: 'attentiontodetail',
   // general
   communicationskills: 'communication', oralcommunication: 'communication',
   teamplayer: 'teamwork', collaboration: 'teamwork',
@@ -189,12 +196,12 @@ export function tierOf(n: number): Tier {
 }
 export function tierColor(n: number): string {
   const t = tierOf(n);
-  return t === 'strong' ? 'var(--emerald)' : t === 'possible' ? 'var(--gold)' : 'var(--slate)';
+  return t === 'strong' ? 'var(--emerald)' : t === 'possible' ? 'var(--amber)' : 'var(--slate)';
 }
 export function tierLabel(n: number): string {
   const t = tierOf(n);
   return t === 'strong' ? 'Strong match' : t === 'possible' ? 'Possible match' : 'Related role';
 }
 export function statusBadge(s: AppStatus): string {
-  return { submitted: 'slate', review: 'gold', shortlisted: 'green', hired: 'solid', rejected: 'wine', withdrawn: 'slate' }[s] || 'slate';
+  return { submitted: 'slate', review: 'amber', shortlisted: 'green', hired: 'solid', rejected: 'wine', withdrawn: 'slate' }[s] || 'slate';
 }

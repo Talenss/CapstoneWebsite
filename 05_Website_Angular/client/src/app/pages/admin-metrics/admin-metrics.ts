@@ -46,7 +46,7 @@ export class AdminMetrics implements OnInit {
     const total = Math.max(1, Number(t.strong || 0) + Number(t.possible || 0) + Number(t.related || 0));
     return [
       { label: 'Strong match', cls: 'green', count: Number(t.strong || 0), pct: (Number(t.strong || 0) / total) * 100 },
-      { label: 'Possible match', cls: 'gold', count: Number(t.possible || 0), pct: (Number(t.possible || 0) / total) * 100 },
+      { label: 'Possible match', cls: 'amber', count: Number(t.possible || 0), pct: (Number(t.possible || 0) / total) * 100 },
       { label: 'Related (below threshold — applied anyway)', cls: 'slate', count: Number(t.related || 0), pct: (Number(t.related || 0) / total) * 100 },
     ];
   });

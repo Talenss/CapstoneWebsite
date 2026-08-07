@@ -6,7 +6,7 @@
 .tally div{padding:20px 22px;border-right:1px solid var(--rule-2)}
 .tally div:last-child{border-right:none}
 .tally b{display:block;font-family:var(--display);font-size:38px;line-height:1;color:var(--text)}
-.tally b.alert{color:var(--gold-deep)}
+.tally b.alert{color:var(--accent-deep)}
 .tally span{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:8px}
 
 /* pipeline: the whole funnel, visible. nobody drops off silently. */

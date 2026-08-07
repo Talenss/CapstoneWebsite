@@ -139,11 +139,11 @@
               </div>
               <div class="row">
                 <span><b>Education</b><span class="w">{{ weights.education * 100 }}% weight</span></span>
-                <b [style.color]="r.eduMeets ? 'var(--emerald)' : 'var(--gold-deep)'">{{ r.eduMeets ? 'Meets' : 'Below' }} {{ posting() ? eduLabels[posting()!.educationLevel] : '' }}</b>
+                <b [style.color]="r.eduMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ r.eduMeets ? 'Meets' : 'Below' }} {{ posting() ? eduLabels[posting()!.educationLevel] : '' }}</b>
               </div>
               <div class="row">
                 <span><b>Experience</b><span class="w">{{ weights.experience * 100 }}% weight</span></span>
-                <b [style.color]="r.expMeets ? 'var(--emerald)' : 'var(--gold-deep)'">{{ r.seekerMonths }} mo · asked {{ posting()?.minExperienceMonths || 0 }} mo</b>
+                <b [style.color]="r.expMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ r.seekerMonths }} mo · asked {{ posting()?.minExperienceMonths || 0 }} mo</b>
               </div>
               <!-- The same posting scored against what software read out of
                    the applicant's own file. Reported, never ranked on: a

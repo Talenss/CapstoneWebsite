@@ -35,7 +35,7 @@ Open <http://localhost:4200>. Log in with any of (password `demo123` for all):
 | Role | Email |
 |---|---|
 | Job seeker | `seeker@demo.ph` |
-| Royce HR (recruiter) | `hr@demo.ph` |
+| Clark Outsourcing HR (recruiter) | `hr@demo.ph` |
 | More applicants | `ana@demo.ph`, `marco@demo.ph`, `liza@demo.ph` |
 | Research team (admin) | `admin@demo.ph` — reviews recruiter requests at `/admin` |
 

@@ -19,7 +19,7 @@
     } @else if (!resumes().length) {
       <div class="card empty crest">
         <h2>No resumes yet</h2>
-        <p>Set one up and the system will score it against every open position at Royce — and show you which roles you nearly fit, not just the ones you already do.</p>
+        <p>Set one up and the system will score it against every open position at Clark Outsourcing — and show you which roles you nearly fit, not just the ones you already do.</p>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
           <a class="btn primary" routerLink="/upload-resume">Upload my existing resume</a>
           <a class="btn ghost" routerLink="/resume-builder">Build it from scratch</a>
@@ -33,7 +33,7 @@
               <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
                 <h3>{{ r.title }}</h3>
                 @if (r.id === activeId()) {
-                  <span class="badge gold">Active</span>
+                  <span class="badge amber">Active</span>
                 }
               </div>
               <div class="meta">{{ templateLabel(r.template) }} · {{ designLabel(r.design) }} design · updated {{ day(r.updatedAt) }}</div>

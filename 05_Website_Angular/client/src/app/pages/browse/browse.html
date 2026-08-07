@@ -2,7 +2,7 @@
 
 <main id="main" class="container" style="padding-bottom:80px">
   <div class="page-head">
-    <span class="eyebrow">Royce Hotel &amp; Casino · Clark Freeport Zone</span>
+    <span class="eyebrow">Clark Outsourcing · Clark Freeport Zone</span>
     <h1>Open positions</h1>
     <p>{{ sub() }}</p>
   </div>
@@ -129,7 +129,7 @@
           <span class="badge slate">{{ row.posting.minExperienceMonths ? row.posting.minExperienceMonths + ' months experience' : 'No experience required' }}</span>
           <span class="badge slate">{{ row.posting.employmentType || 'full-time' }}</span>
           @if (deadlineLabel(row.posting); as dl) {
-            <span class="badge gold">{{ dl }}</span>
+            <span class="badge amber">{{ dl }}</span>
           }
         </div>
         <div class="breakdown">
@@ -140,11 +140,11 @@
             </div>
             <div class="row">
               <span><b>Education</b><span class="w">{{ WEIGHTS.education * 100 }}% of the score</span></span>
-              <b [style.color]="row.s.eduMeets ? 'var(--emerald)' : 'var(--gold-deep)'">{{ row.s.eduMeets ? 'Meets' : 'Below' }} {{ EDU_LABELS[row.posting.educationLevel] }}</b>
+              <b [style.color]="row.s.eduMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ row.s.eduMeets ? 'Meets' : 'Below' }} {{ EDU_LABELS[row.posting.educationLevel] }}</b>
             </div>
             <div class="row">
               <span><b>Experience</b><span class="w">{{ WEIGHTS.experience * 100 }}% of the score</span></span>
-              <b [style.color]="row.s.expMeets ? 'var(--emerald)' : 'var(--gold-deep)'">{{ row.s.seekerMonths }} mo · asks for {{ row.posting.minExperienceMonths || 0 }} mo</b>
+              <b [style.color]="row.s.expMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ row.s.seekerMonths }} mo · asks for {{ row.posting.minExperienceMonths || 0 }} mo</b>
             </div>
             <div class="row"><span><b>If your score is low</b></span><b style="font-weight:500;color:var(--muted)">You still appear on the recruiter’s list.</b></div>
           } @else {

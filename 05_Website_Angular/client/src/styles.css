@@ -1,39 +1,48 @@
 /* ============================================================
-   ResumeMatch PH — Design System v3 "Front Desk"
+   ResumeMatch PH — Design System v4 "Front Desk"
    ------------------------------------------------------------
-   Inspired by Royce Hotel & Casino's brand language (white-on-
-   dark chrome, champagne gold, "modern elegance") — not copied.
-   Concept: hospitality is the business of WELCOME, which is also
-   this system's ethic — no applicant is ever auto-rejected.
-   Dark chrome = the lobby. Ivory working surface = the desk.
+   Aligned to Clark Outsourcing's brand language — navy chrome,
+   a red action accent, cool light working surfaces — not copied.
+   Concept unchanged: this system's ethic is that no applicant is
+   ever auto-rejected. Navy chrome = the office. Cool grey working
+   surface = the desk.
 
-   Palette : Midnight · Champagne Gold · Ivory · Emerald · Wine
-   Type    : Cormorant Garamond (display, used sparingly) + Inter
+   Palette : Navy · Signal Red · Cool Grey · Emerald · Amber · Wine
+   Type    : Fraunces (display, used sparingly) + Manrope
    Radius  : small (3px) — refined, not rounded-SaaS
 
-   Ported verbatim from 04_Website/app/assets/styles.css — the
-   shared global design system. Page-specific extra rules live in
-   each page component's own .css file.
+   COLOUR ROLES — the one rule that matters here:
+   --accent (red) is the BRAND and ACTION colour: primary buttons,
+   links, focus rings, eyebrows. It is deliberately NOT used for any
+   match tier or status, because a red "possible match" reads as an
+   error. The tier/status hues are separate and semantic:
+       emerald  strong match · shortlisted · hired
+       amber    possible match · under review
+       slate    related role · submitted · withdrawn
+       wine     rejected · destructive
+   Wine is kept markedly darker than --accent so a destructive
+   control never reads as a primary one.
    ============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..600;1,9..144,400..600&family=Manrope:wght@400..800&family=JetBrains+Mono:wght@500;600;700&display=swap');
 
 :root{
-  /* chrome — a warm near-black (the lion's ink), not a cool navy */
-  --ink:#191510; --ink-2:#221C13; --ink-3:#332C1F; --ink-line:#3A3220;
-  /* accent — Royce gold, warm and burnished */
-  --gold:#AD7F2C; --gold-deep:#7A5B1E; --gold-bright:#C9A227; --gold-wash:#F6EEDA; --gold-line:#E4D9B8;
-  /* surfaces — warm stone & cream; cards stay pure --paper white */
-  --ivory:#FBF9F3; --paper:#FFFFFF; --stone-2:#F1EAD3; --rule:#E4D9B8; --rule-2:#EFE7CF;
+  /* chrome — Clark Outsourcing navy */
+  --ink:#16305C; --ink-2:#1E3C6E; --ink-3:#27497F; --ink-line:#33578F;
+  /* accent — Clark Outsourcing red. Brand + action only, never a status. */
+  --accent:#C1272D; --accent-deep:#961F24; --accent-bright:#DC3A41; --accent-wash:#FBECED; --accent-line:#F0CFD1;
+  /* surfaces — cool greys; cards stay pure --paper white */
+  --ivory:#F5F6F8; --paper:#FFFFFF; --stone-2:#E9EDF2; --rule:#D9DFE7; --rule-2:#EAEEF3;
   /* text */
-  --text:#20222A; --muted:#6E6B64; --faint:#9B9890;
-  /* semantics — one per match tier */
-  --emerald:#3C6E43; --emerald-wash:#E9F0E7;   /* strong match / shortlisted / hired */
-  --slate:#6B7280;   --slate-wash:#EEF0F1;     /* related role / submitted */
-  --wine:#7E2E3C;    --wine-wash:#F7EBED;      /* rejected / destructive */
+  --text:#1B2430; --muted:#5C6675; --faint:#8B94A2;
+  /* semantics — one per match tier / status, all distinct from --accent */
+  --emerald:#2F7A4A; --emerald-wash:#E7F2EB;   /* strong match / shortlisted / hired */
+  --amber:#8F5A00;   --amber-wash:#FDF3E2; --amber-line:#EFD9AE;  /* possible match / under review */
+  --slate:#5B6472;   --slate-wash:#EDEFF3;     /* related role / submitted */
+  --wine:#6E1F2A;    --wine-wash:#F6E9EB;      /* rejected / destructive */
   /* system */
   --r:8px; --r-lg:16px; --r-pill:999px;
-  --shadow:0 1px 2px rgba(20,18,10,.05), 0 18px 40px -20px rgba(20,18,10,.22);
-  --shadow-lg:0 30px 70px -22px rgba(20,18,10,.36);
+  --shadow:0 1px 2px rgba(16,30,60,.06), 0 18px 40px -20px rgba(16,30,60,.24);
+  --shadow-lg:0 30px 70px -22px rgba(16,30,60,.38);
   --display:'Fraunces',Georgia,'Times New Roman',serif;
   --body:'Manrope','Segoe UI',system-ui,-apple-system,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
@@ -46,23 +55,24 @@
    contrast on a dark ground. Resume sheets keep their own hard-coded
    white paper (a printed page is white) and are unaffected. */
 :root[data-theme="dark"]{
-  --ivory:#14120E; --paper:#201C16; --stone-2:#2A251C;
-  --rule:#38311F; --rule-2:#2A251C;
-  --text:#ECEAE1; --muted:#A7A296; --faint:#7C776B;
-  --gold:#C9A227; --gold-deep:#DDBB60; --gold-wash:#2B2416; --gold-line:#4A3E22;
-  --emerald:#5FA56F; --emerald-wash:#1A271E;
-  --slate:#9AA0AC; --slate-wash:#242832;
+  --ivory:#0E1626; --paper:#152036; --stone-2:#1C2942;
+  --rule:#2A3A56; --rule-2:#1C2942;
+  --text:#E6EAF1; --muted:#9BA6B8; --faint:#71809A;
+  --accent:#E5545A; --accent-deep:#F58388; --accent-wash:#33161A; --accent-line:#5B2429;
+  --emerald:#5FA56F; --emerald-wash:#16281D;
+  --amber:#D79A3C;   --amber-wash:#2E2413; --amber-line:#4E3D1C;
+  --slate:#9AA4B6; --slate-wash:#212C42;
   --wine:#CE7E89; --wine-wash:#2E1B1F;
-  --shadow:0 1px 2px rgba(0,0,0,.4), 0 18px 40px -20px rgba(0,0,0,.6);
-  --shadow-lg:0 30px 70px -22px rgba(0,0,0,.7);
+  --shadow:0 1px 2px rgba(0,0,0,.45), 0 18px 40px -20px rgba(0,0,0,.65);
+  --shadow-lg:0 30px 70px -22px rgba(0,0,0,.75);
   color-scheme:dark;
 }
 /* hard-coded light chips / accents that tokens don't reach */
-:root[data-theme="dark"] .badge.gold{background:var(--gold-wash);border-color:var(--gold-line)}
+:root[data-theme="dark"] .badge.amber{background:var(--amber-wash);color:var(--amber);border-color:var(--amber-line)}
 :root[data-theme="dark"] .badge.green{border-color:#2C4636}
 :root[data-theme="dark"] .badge.slate{border-color:#343B47}
 :root[data-theme="dark"] .badge.wine{border-color:#4A2C31}
-:root[data-theme="dark"] .alert.info{color:var(--gold-deep)}
+:root[data-theme="dark"] .alert.info{color:var(--accent-deep)}
 /* the ink CTA blends into a dark page — lift it so it stays a clear button */
 :root[data-theme="dark"] .btn.dark{background:var(--ink-3);border-color:var(--ink-line)}
 :root[data-theme="dark"] .btn.dark:hover{background:#413729}
@@ -80,7 +90,7 @@ body{font-family:var(--body);color:var(--text);background:var(--ivory);line-heig
 img{max-width:100%;display:block}
 a{color:var(--text);text-underline-offset:3px}
 h1,h2,h3{font-family:var(--display);color:var(--text);font-weight:600;line-height:1.15;letter-spacing:-.01em}
-:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:2px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}}
 
 /* ---------- layout ---------- */
@@ -104,11 +114,11 @@ main{flex:1}
 
 /* the eyebrow is now a mono label — the "technical" voice the HR-SaaS refs use */
 .eyebrow{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.13em;
-  text-transform:uppercase;color:var(--gold);margin-bottom:14px}
-.section.dark .eyebrow{color:var(--gold-bright)}
+  text-transform:uppercase;color:var(--accent);margin-bottom:14px}
+.section.dark .eyebrow{color:var(--accent-bright)}
 .lede{font-size:17px;color:var(--muted);max-width:58ch}
 
-/* ---------- header ("the front desk") — white SaaS nav with the lion crest ---------- */
+/* ---------- header ("the front desk") — white SaaS nav with the wordmark ---------- */
 .site-header{background:var(--paper);border-bottom:1px solid var(--rule);position:sticky;top:0;z-index:60}
 .site-header .bar{display:none}
 .site-header .container{display:flex;align-items:center;gap:14px;height:68px}
@@ -116,7 +126,7 @@ main{flex:1}
 .brand .mark{width:30px;height:30px;flex:none;display:grid;place-items:center}
 .brand .mark svg{width:28px;height:28px;display:block}
 .brand .word{font-family:var(--display);font-size:20px;font-weight:560;color:var(--text);line-height:1}
-.brand .word em{font-style:normal;color:var(--gold)}
+.brand .word em{font-style:normal;color:var(--accent)}
 .brand .word small{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin-top:3px;font-weight:600}
 /* The nav row has to survive the widest case: six links, the visitor's name,
    and — on the seeker dashboard only, because that page passes showTour —
@@ -145,7 +155,7 @@ main{flex:1}
 .nav-links::-webkit-scrollbar{display:none}
 .nav-links a{color:var(--muted);text-decoration:none;font-size:13.5px;font-weight:600;padding:24px 0;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap;flex:none}
 .nav-links a:hover{color:var(--text)}
-.nav-links a.active{color:var(--text);border-bottom-color:var(--gold)}
+.nav-links a.active{color:var(--text);border-bottom-color:var(--accent)}
 /* The CTA yields before the nav does. It used to be flex:none, so when a long
    name needed more room the only thing that could give was the links row —
    and a clipped NAV label looks broken, while a truncated name does not. The
@@ -163,7 +173,7 @@ main{flex:1}
 .whoami{font-size:12.5px;color:var(--muted);max-width:96px;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .menu-btn{display:none;margin-left:auto;background:none;border:1px solid var(--rule);color:var(--text);border-radius:var(--r);padding:7px 11px;cursor:pointer;font-size:15px}
 .theme-btn{width:38px;height:38px;flex:none;padding:0;border-radius:var(--r-pill);border:1.5px solid var(--rule);background:transparent;color:var(--text);cursor:pointer;font-size:15px;line-height:1;display:inline-grid;place-items:center;transition:.15s}
-.theme-btn:hover{border-color:var(--gold);color:var(--gold-deep)}
+.theme-btn:hover{border-color:var(--accent);color:var(--accent-deep)}
 @media(max-width:900px){
   .site-header .container{gap:12px}
   /* overflow-x is reset here: in the dropdown the links are a COLUMN, so a
@@ -192,8 +202,8 @@ main{flex:1}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--body);font-weight:700;
   font-size:13.5px;border-radius:var(--r-pill);padding:12px 24px;border:1.5px solid transparent;
   cursor:pointer;text-decoration:none;transition:.16s;white-space:nowrap}
-.btn.primary{background:var(--gold);color:#fff;border-color:var(--gold)}
-.btn.primary:hover{background:var(--gold-deep);border-color:var(--gold-deep)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.primary:hover{background:var(--accent-deep);border-color:var(--accent-deep)}
 .btn.dark{background:var(--ink);color:#fff;border-color:var(--ink)}
 .btn.dark:hover{background:var(--ink-2)}
 .btn.good{background:var(--emerald);color:#fff;border-color:var(--emerald)}
@@ -201,7 +211,7 @@ main{flex:1}
 .btn.warn{background:transparent;color:var(--wine);border-color:#E9D3D7}
 .btn.warn:hover{background:var(--wine-wash);border-color:var(--wine)}
 .btn.ghost{background:transparent;color:var(--text);border-color:var(--rule)}
-.btn.ghost:hover{border-color:var(--gold);color:var(--gold-deep)}
+.btn.ghost:hover{border-color:var(--accent);color:var(--accent-deep)}
 /* Ghost buttons sitting on a dark surface must invert, or they render
    dark-on-dark and vanish. (The header and hero are light now.) */
 .section.dark .btn.ghost,
@@ -211,7 +221,7 @@ main{flex:1}
 .section.dark .btn.ghost:hover,
 .aside .btn.ghost:hover,
 .footer .btn.ghost:hover,
-.btn.ghost-dark:hover{color:#fff;border-color:var(--gold-bright);background:rgba(201,162,39,.12)}
+.btn.ghost-dark:hover{color:#fff;border-color:var(--accent-bright);background:rgba(201,162,39,.12)}
 .btn.sm{padding:9px 17px;font-size:12.5px}
 .btn.block{width:100%}
 .btn[disabled]{opacity:.5;cursor:not-allowed}
@@ -219,20 +229,20 @@ main{flex:1}
 /* ---------- cards ---------- */
 .card{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r-lg);padding:24px;box-shadow:var(--shadow)}
 .card.flush{padding:0;overflow:hidden}
-.card.crest{border-top:2px solid var(--gold)}
+.card.crest{border-top:2px solid var(--accent)}
 
 /* ---------- badges & chips ---------- */
 .badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--body);font-size:10.5px;font-weight:600;
   letter-spacing:.08em;text-transform:uppercase;border-radius:2px;padding:4px 9px;border:1px solid transparent;white-space:nowrap}
-.badge.gold{background:linear-gradient(180deg,#FAF3E0,#F0E3C0);color:var(--gold-deep);border-color:var(--gold-line)}
+.badge.amber{background:var(--amber-wash);color:var(--amber);border-color:var(--amber-line)}
 .badge.green{background:var(--emerald-wash);color:var(--emerald);border-color:#CBE0D5}
 .badge.slate{background:var(--slate-wash);color:var(--slate);border-color:#DCE0E6}
 .badge.wine{background:var(--wine-wash);color:var(--wine);border-color:#E9D3D7}
 .badge.solid{background:var(--emerald);color:#fff;border-color:var(--emerald)}
 .chip{display:inline-block;font-size:11.5px;font-weight:500;border-radius:2px;padding:3px 9px;margin:0 4px 4px 0;
-  background:var(--gold-wash);color:var(--gold-deep);border:1px solid var(--gold-line)}
+  background:var(--accent-wash);color:var(--accent-deep);border:1px solid var(--accent-line)}
 .chip.miss{background:transparent;color:var(--faint);border:1px dashed var(--rule);text-decoration:line-through}
-.clip{color:var(--gold-deep);font-weight:700}
+.clip{color:var(--accent-deep);font-weight:700}
 
 /* ---------- SIGNATURE 1: the score ring ----------
    The ring never empties to nothing. Below the related threshold it
@@ -252,12 +262,12 @@ main{flex:1}
 .arrivals .score-ring b{background:var(--ink-2);color:#fff}
 
 /* ---------- SIGNATURE 2: the arrivals board ----------
-   The ranked-applicant panel, styled like a hotel front-desk board.
+   The ranked-applicant panel, styled like an arrivals board.
    Its point: every applicant is on it. Nobody is filtered off.      */
 .arrivals{background:var(--ink);border:1px solid var(--ink-line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow-lg)}
 .arrivals .board-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 20px;
   border-bottom:1px solid var(--ink-line);background:linear-gradient(180deg,var(--ink-2),var(--ink))}
-.arrivals .board-head span{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
+.arrivals .board-head span{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
 .arrivals .board-head span.dim{color:#767D8C}
 .arrivals .line{display:flex;align-items:center;gap:16px;padding:16px 20px;border-bottom:1px solid var(--ink-2)}
 .arrivals .line:last-child{border-bottom:none}
@@ -266,7 +276,7 @@ main{flex:1}
 .arrivals .who span{display:block;font-size:12px;color:#868D9C;margin-top:2px}
 .arrivals .foot{padding:13px 20px;background:var(--ink-2);border-top:1px solid var(--ink-line);
   font-size:11.5px;color:#8F96A5}
-.arrivals .foot b{color:var(--gold);font-weight:600}
+.arrivals .foot b{color:var(--accent);font-weight:600}
 .reveal{opacity:0;transform:translateY(6px);animation:reveal .5s cubic-bezier(.2,.7,.3,1) forwards}
 @keyframes reveal{to{opacity:1;transform:none}}
 
@@ -275,7 +285,7 @@ main{flex:1}
 .field label{display:block;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text);margin-bottom:7px}
 .field input,.field select,.field textarea{width:100%;font-family:var(--body);font-size:14.5px;padding:11px 13px;
   border:1px solid var(--rule);border-radius:var(--r);background:var(--paper);color:var(--text);transition:.15s}
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);outline:none;box-shadow:0 0 0 3px rgba(198,166,100,.16)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(198,166,100,.16)}
 .field textarea{resize:vertical;min-height:78px}
 .field .hint{font-size:12px;color:var(--muted);margin-top:6px}
 .field .err{display:none;font-size:12.5px;color:var(--wine);margin-top:6px;font-weight:500}
@@ -287,7 +297,7 @@ main{flex:1}
 .alert.show{display:block}
 .alert.error{background:var(--wine-wash);color:var(--wine);border-color:var(--wine)}
 .alert.ok{background:var(--emerald-wash);color:var(--emerald);border-color:var(--emerald)}
-.alert.info{background:var(--gold-wash);color:#6B5828;border-color:var(--gold)}
+.alert.info{background:var(--accent-wash);color:#6B5828;border-color:var(--accent)}
 
 /* ---------- tables ---------- */
 table.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
@@ -299,7 +309,7 @@ table.tbl tbody tr:hover{background:var(--ivory)}
 .wrap-x{overflow-x:auto}
 
 /* ---------- notes, empty states, toast ---------- */
-.note{border-left:2px solid var(--gold);background:var(--gold-wash);border-radius:0 var(--r) var(--r) 0;
+.note{border-left:2px solid var(--accent);background:var(--accent-wash);border-radius:0 var(--r) var(--r) 0;
   padding:13px 16px;font-size:13px;color:#5F5124}
 .note.plain{background:var(--ivory);border-color:var(--rule);color:var(--muted)}
 .empty{text-align:center;padding:60px 26px}
@@ -307,11 +317,11 @@ table.tbl tbody tr:hover{background:var(--ivory)}
 .empty p{color:var(--muted);max-width:52ch;margin:0 auto 22px}
 .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--ink);color:#fff;
   padding:13px 24px;border-radius:var(--r);font-size:13.5px;font-weight:500;opacity:0;pointer-events:none;transition:.25s;z-index:130;
-  border-left:2px solid var(--gold);box-shadow:var(--shadow-lg);max-width:calc(100vw - 32px)}
+  border-left:2px solid var(--accent);box-shadow:var(--shadow-lg);max-width:calc(100vw - 32px)}
 .toast.show{opacity:1;transform:translateX(-50%)}
-.skip-link{position:absolute;left:-9999px;top:0;background:var(--gold);color:var(--text);padding:11px 18px;z-index:200;font-weight:600}
+.skip-link{position:absolute;left:-9999px;top:0;background:var(--accent);color:var(--text);padding:11px 18px;z-index:200;font-weight:600}
 .skip-link:focus{left:0}
-.spinner{width:16px;height:16px;border:2px solid var(--rule);border-top-color:var(--gold);border-radius:50%;
+.spinner{width:16px;height:16px;border:2px solid var(--rule);border-top-color:var(--accent);border-radius:50%;
   animation:spin .7s linear infinite;display:inline-block;vertical-align:-2px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading{padding:52px;text-align:center;color:var(--muted);font-size:14px}
@@ -328,7 +338,7 @@ table.tbl tbody tr:hover{background:var(--ivory)}
    keeps the head and the foot — who this is, and what you can do about them —
    fixed in place. */
 .modal{background:var(--paper);border-radius:var(--r-lg);max-width:600px;width:100%;box-shadow:var(--shadow-lg);
-  border-top:2px solid var(--gold);position:relative;animation:pop .2s cubic-bezier(.2,.7,.3,1);
+  border-top:2px solid var(--accent);position:relative;animation:pop .2s cubic-bezier(.2,.7,.3,1);
   max-height:90vh;display:flex;flex-direction:column}
 .modal.wide{max-width:960px}
 @keyframes pop{from{opacity:0;transform:translateY(10px)}}
@@ -363,10 +373,10 @@ table.tbl tbody tr:hover{background:var(--ivory)}
 /* ---------- footer ---------- */
 .footer{background:var(--ink);color:#8A91A0;padding:56px 0 28px;font-size:13px}
 .footer a{color:#C8CCD6;text-decoration:none}
-.footer a:hover{color:var(--gold)}
+.footer a:hover{color:var(--accent)}
 .footer .brand .word{color:#fff}
 .footer .brand .word small{color:var(--faint)}
-.footer h4{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:15px;font-weight:600}
+.footer h4{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-bright);margin-bottom:15px;font-weight:600}
 .footer .cols{display:grid;grid-template-columns:2fr 1fr 1fr 1.5fr;gap:34px}
 @media(max-width:820px){.footer .cols{grid-template-columns:1fr 1fr;gap:28px}}
 @media(max-width:520px){.footer .cols{grid-template-columns:1fr}}
@@ -378,9 +388,9 @@ table.tbl tbody tr:hover{background:var(--ivory)}
 /* The spotlight and the card share one identical transition so they always
    move at the same speed and arrive together (see TourService.reposition). */
 .tour-spot{position:fixed;z-index:140;border-radius:var(--r);pointer-events:none;
-  box-shadow:0 0 0 2px var(--gold), 0 0 0 9999px rgba(18,21,28,.66);
+  box-shadow:0 0 0 2px var(--accent), 0 0 0 9999px rgba(18,21,28,.66);
   transition:top .16s ease-out,left .16s ease-out,width .16s ease-out,height .16s ease-out}
-.tour-card{position:fixed;z-index:141;background:var(--paper);border-radius:var(--r-lg);border-top:2px solid var(--gold);
+.tour-card{position:fixed;z-index:141;background:var(--paper);border-radius:var(--r-lg);border-top:2px solid var(--accent);
   max-width:340px;width:calc(100vw - 32px);box-shadow:var(--shadow-lg);padding:20px 22px;
   transition:top .16s ease-out,left .16s ease-out,width .16s ease-out,height .16s ease-out}
 .tour-card h4{font-family:var(--display);font-size:20px;color:var(--text);margin-bottom:6px;font-weight:600}
