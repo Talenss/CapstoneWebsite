@@ -12,13 +12,13 @@
 .job .co{font-size:12.5px;color:var(--muted);margin-top:4px}
 .job .desc{font-size:13px;color:var(--muted);line-height:1.6}
 .job .req{display:flex;gap:16px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
-.job .req b.ok{color:var(--emerald)} .job .req b.no{color:var(--gold-deep)}
+.job .req b.ok{color:var(--emerald)} .job .req b.no{color:var(--accent-deep)}
 .job .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto;padding-top:4px}
 .job .foot span{font-size:12.5px;color:var(--muted)}
-.req .deadline{color:var(--gold-deep);font-weight:600}
+.req .deadline{color:var(--accent-deep);font-weight:600}
 .bookmark{border:1px solid var(--rule);background:var(--paper);border-radius:8px;width:32px;height:30px;font-size:16px;line-height:1;cursor:pointer;color:var(--muted);transition:.15s}
-.bookmark:hover{border-color:var(--gold);color:var(--gold-deep)}
-.bookmark.on{color:var(--gold-deep);border-color:var(--gold);background:var(--gold-wash)}
+.bookmark:hover{border-color:var(--accent);color:var(--accent-deep)}
+.bookmark.on{color:var(--accent-deep);border-color:var(--accent);background:var(--accent-wash)}
 
 /* Attribution for the scores in the list — see browse.html. Deliberately
    quiet: it is a statement of fact, not a call to action. */
@@ -26,4 +26,4 @@
   margin:0 0 14px; font-size:13px; color:var(--muted);
 }
 .scored-from b{ color:var(--text); font-weight:600 }
-.scored-from a{ color:var(--gold-deep); margin-left:6px }
+.scored-from a{ color:var(--accent-deep); margin-left:6px }

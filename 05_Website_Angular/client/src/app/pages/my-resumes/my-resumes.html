@@ -33,7 +33,7 @@
               <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
                 <h3>{{ r.title }}</h3>
                 @if (r.id === activeId()) {
-                  <span class="badge gold">Active</span>
+                  <span class="badge amber">Active</span>
                 }
               </div>
               <div class="meta">{{ templateLabel(r.template) }} · {{ designLabel(r.design) }} design · updated {{ day(r.updatedAt) }}</div>

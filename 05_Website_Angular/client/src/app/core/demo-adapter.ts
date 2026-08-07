@@ -182,7 +182,7 @@ function seed(): Db {
     ] as unknown as Application[],
     recruiterRequests: [
       // A sample pending request, so the admin panel has something to demonstrate.
-      { id: 'q1', name: 'Carlos Mendoza', email: 'carlos.mendoza@roycehotel.ph', position: 'Talent Acquisition Specialist',
+      { id: 'q1', name: 'Carlos Mendoza', email: 'carlos.mendoza@clarkoutsourcing.ph', position: 'Talent Acquisition Specialist',
         companyId: 'c1', note: 'Verify with HR head Ms. Santos, local 214.', status: 'pending', requestedAt: Date.now() - D * 1 },
     ],
     emailCodes: [],

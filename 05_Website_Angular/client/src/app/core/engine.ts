@@ -196,12 +196,12 @@ export function tierOf(n: number): Tier {
 }
 export function tierColor(n: number): string {
   const t = tierOf(n);
-  return t === 'strong' ? 'var(--emerald)' : t === 'possible' ? 'var(--gold)' : 'var(--slate)';
+  return t === 'strong' ? 'var(--emerald)' : t === 'possible' ? 'var(--amber)' : 'var(--slate)';
 }
 export function tierLabel(n: number): string {
   const t = tierOf(n);
   return t === 'strong' ? 'Strong match' : t === 'possible' ? 'Possible match' : 'Related role';
 }
 export function statusBadge(s: AppStatus): string {
-  return { submitted: 'slate', review: 'gold', shortlisted: 'green', hired: 'solid', rejected: 'wine', withdrawn: 'slate' }[s] || 'slate';
+  return { submitted: 'slate', review: 'amber', shortlisted: 'green', hired: 'solid', rejected: 'wine', withdrawn: 'slate' }[s] || 'slate';
 }

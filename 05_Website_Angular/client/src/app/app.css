@@ -19,7 +19,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: 40%;
-  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
   animation: route-progress-slide 1.1s ease-in-out infinite;
 }
 
@@ -44,7 +44,7 @@
    fallback the bar would then be a static grey line that never changes, so
    fill it instead — it still reads as busy, it just does not move. */
 @media (prefers-reduced-motion: reduce) {
-  .route-progress::after { width: 100%; background: var(--gold); }
+  .route-progress::after { width: 100%; background: var(--accent); }
 }
 
 @media print { .route-progress { display: none; } }

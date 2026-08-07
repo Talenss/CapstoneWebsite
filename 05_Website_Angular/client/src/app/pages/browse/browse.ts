@@ -92,7 +92,7 @@ export class Browse implements OnInit {
   depts = computed(() => Array.from(new Set(this.postings().map((p) => p.department))).sort());
 
   sub = computed(() => {
-    if (!this.loaded()) return "Every posting here is a real vacancy, posted by the hotel's own HR staff.";
+    if (!this.loaded()) return "Every posting here is a real vacancy, posted by Clark Outsourcing's own HR staff.";
     const n = this.postings().length;
     return `${n} open position${n === 1 ? '' : 's'} at Clark Outsourcing — every one posted by their own HR staff.`;
   });
@@ -151,7 +151,7 @@ export class Browse implements OnInit {
 
   tierBadgeClass(score: number): string {
     const t = tierOf(score);
-    return t === 'strong' ? 'green' : t === 'possible' ? 'gold' : 'slate';
+    return t === 'strong' ? 'green' : t === 'possible' ? 'amber' : 'slate';
   }
 
   openDetail(row: BrowseRow): void {

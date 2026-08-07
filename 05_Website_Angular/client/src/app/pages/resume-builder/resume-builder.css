@@ -1,7 +1,7 @@
 /* ============================================================
    Port of the <style> block embedded in
    04_Website/app/resume-builder.html (the wizard + live-preview
-   pane). Global tokens (--rule, --gold, --paper, etc.) come from
+   pane). Global tokens (--rule, --accent, --paper, etc.) come from
    src/styles.css — only the page-specific rules live here.
    ============================================================ */
 
@@ -20,8 +20,8 @@
   white-space: nowrap; display: flex; gap: 7px; align-items: center;
 }
 .rail button .n { font-family: var(--display); font-size: 15px; color: var(--faint); }
-.rail button[aria-current="true"] { color:var(--text); border-bottom-color: var(--gold); }
-.rail button[aria-current="true"] .n { color: var(--gold-deep); }
+.rail button[aria-current="true"] { color:var(--text); border-bottom-color: var(--accent); }
+.rail button[aria-current="true"] .n { color: var(--accent-deep); }
 .rail button.done .n { color: var(--emerald); }
 
 .step > h2 { font-size: 26px; margin-bottom: 4px; }
@@ -40,14 +40,14 @@
   padding: 3px 9px; font-size: 11px; font-weight: 600; line-height: 1.35; cursor: pointer; font-family: var(--body);
 }
 .item .mv { min-width: 27px; padding: 3px 6px; }
-.item .mv:hover:not(:disabled) { border-color: var(--gold); color: var(--gold-deep); background: var(--gold-wash); }
+.item .mv:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-deep); background: var(--accent-wash); }
 .item .mv:disabled { opacity: .35; cursor: not-allowed; }
 .item .kill:hover { border-color: var(--wine); color: var(--wine); background: var(--wine-wash); }
 .add {
   width: 100%; border: 1px dashed var(--rule); background: transparent; border-radius: var(--r); padding: 13px;
   font-family: var(--body); font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer;
 }
-.add:hover { border-color: var(--gold); color: var(--gold-deep); background: var(--gold-wash); }
+.add:hover { border-color: var(--accent); color: var(--accent-deep); background: var(--accent-wash); }
 
 /* "optional" marker inside a label, which is uppercase + letterspaced */
 .opt { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--muted); }
@@ -61,11 +61,11 @@
 
 .tags { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0; }
 .tag {
-  display: inline-flex; align-items: center; gap: 8px; background: var(--gold-wash); border: 1px solid var(--gold-line);
-  color: var(--gold-deep); font-size: 13px; font-weight: 600; border-radius: 2px; padding: 6px 7px 6px 12px;
+  display: inline-flex; align-items: center; gap: 8px; background: var(--accent-wash); border: 1px solid var(--accent-line);
+  color: var(--accent-deep); font-size: 13px; font-weight: 600; border-radius: 2px; padding: 6px 7px 6px 12px;
 }
 .tag button {
-  border: none; background: var(--gold-deep); color: #fff; width: 17px; height: 17px; border-radius: 50%;
+  border: none; background: var(--accent-deep); color: #fff; width: 17px; height: 17px; border-radius: 50%;
   font-size: 10px; cursor: pointer; line-height: 1; display: grid; place-items: center; padding: 0;
 }
 .sugg { margin-top: 14px; }
@@ -82,7 +82,7 @@
   border: 1px dashed var(--rule); background: var(--paper); border-radius: 2px; font-size: 12px; color: var(--muted);
   padding: 5px 11px; cursor: pointer; font-family: var(--body);
 }
-.sugg button:hover { border-color: var(--gold); color: var(--gold-deep); border-style: solid; }
+.sugg button:hover { border-color: var(--accent); color: var(--accent-deep); border-style: solid; }
 
 /* A chosen suggestion stays in place, marked, instead of being removed from
    the pool. Removing it reflowed every chip after it into the gap, so a
@@ -98,12 +98,12 @@
 .sugg .mark { display: inline-block; width: 1em; margin-right: 5px; text-align: center; font-weight: 700; }
 .sugg .n { color: var(--faint); }
 .sugg button.on {
-  border-style: solid; border-color: var(--gold-line);
-  background: var(--gold-wash); color: var(--gold-deep);
+  border-style: solid; border-color: var(--accent-line);
+  background: var(--accent-wash); color: var(--accent-deep);
 }
-.sugg button.on .n { color: var(--gold-deep); opacity: .65; }
+.sugg button.on .n { color: var(--accent-deep); opacity: .65; }
 
-.drop { border: 1px dashed var(--gold); border-radius: var(--r); background: var(--gold-wash); padding: 20px; text-align: center; }
+.drop { border: 1px dashed var(--accent); border-radius: var(--r); background: var(--accent-wash); padding: 20px; text-align: center; }
 .drop.has { background: var(--paper); border-style: solid; border-color: var(--rule); text-align: left; }
 .drop .file { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .drop .file b { font-size: 14px; }
@@ -112,7 +112,7 @@
 .tpl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 @media (max-width: 560px) { .tpl { grid-template-columns: 1fr; } }
 .tpl label { border: 1px solid var(--rule); border-radius: var(--r); padding: 14px; cursor: pointer; background: var(--paper); transition: .15s; position: relative; }
-.tpl label:has(input:checked) { border-color: var(--gold); background: var(--gold-wash); }
+.tpl label:has(input:checked) { border-color: var(--accent); background: var(--accent-wash); }
 .tpl input { position: absolute; opacity: 0; }
 .tpl b { display: block; font-size: 13.5px; color:var(--text); }
 .tpl small { display: block; font-size: 11.5px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
@@ -174,8 +174,8 @@
 @media (max-width: 520px) { .designs { grid-template-columns: repeat(2, 1fr); } }
 .design-opt { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 10px 12px;
   border: 1px solid var(--rule); border-radius: var(--r); background: var(--paper); cursor: pointer; transition: .14s; }
-.design-opt:hover { border-color: var(--gold); }
-.design-opt.on { border-color: var(--gold); background: var(--gold-wash); box-shadow: 0 0 0 1px var(--gold); }
+.design-opt:hover { border-color: var(--accent); }
+.design-opt.on { border-color: var(--accent); background: var(--accent-wash); box-shadow: 0 0 0 1px var(--accent); }
 .design-opt b { font-size: 12.5px; color:var(--text); }
 .design-opt small { font-size: 10.5px; color: var(--muted); }
 
@@ -189,9 +189,9 @@
 .paper.rz-classic .rhead { text-align: center; }
 .paper.rz-classic .p-sec h4 { text-align: center; font-family: Georgia, serif; letter-spacing: 1px; border-bottom-width: 1.5px; }
 .paper.rz-modern, .paper.rz-modern .p-name { font-family: Arial, Helvetica, sans-serif; }
-.paper.rz-modern .rhead { border-bottom: 3px solid var(--gold); padding-bottom: 7px; }
+.paper.rz-modern .rhead { border-bottom: 3px solid var(--accent); padding-bottom: 7px; }
 .paper.rz-modern .p-sec h4 { border-bottom: none; padding-left: 11px; position: relative; }
-.paper.rz-modern .p-sec h4::before { content: ""; position: absolute; left: 0; top: 1px; bottom: 1px; width: 3px; background: var(--gold); }
+.paper.rz-modern .p-sec h4::before { content: ""; position: absolute; left: 0; top: 1px; bottom: 1px; width: 3px; background: var(--accent); }
 .paper.rz-minimal, .paper.rz-minimal .p-name { font-family: Helvetica, Arial, sans-serif; }
 .paper.rz-minimal .p-name { font-weight: 400; }
 .paper.rz-minimal .p-sec h4 { border-bottom: 1px solid #e6e6e6; color: #6b6b6b; }
@@ -199,18 +199,18 @@
 .paper.rz-executive .rhead { border-bottom: 3px double #1a1a1a; padding-bottom: 7px; }
 .paper.rz-executive .p-sec h4 { font-family: Georgia, serif; border-bottom: 1px solid #bbb; }
 .paper.rz-banner, .paper.rz-banner .p-name { font-family: Arial, Helvetica, sans-serif; }
-.paper.rz-banner .rhead { background: #191510; padding: 14px 16px; border-radius: 6px; }
+.paper.rz-banner .rhead { background: #16305C; padding: 14px 16px; border-radius: 6px; }
 .paper.rz-banner .rhead .p-name, .paper.rz-banner .rhead .p-headline { color: #fff; }
 .paper.rz-banner .rhead .p-contact { color: #cdd0d7; }
-.paper.rz-banner .p-sec h4 { color: var(--gold-deep); border-bottom-color: #e4dcc6; }
+.paper.rz-banner .p-sec h4 { color: var(--accent-deep); border-bottom-color: #d9dfe7; }
 .paper.rz-split .rhead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 14px; border-bottom: 2px solid #1a1a1a; padding-bottom: 7px; }
 .paper.rz-split .rhead .p-contact { text-align: right; margin-top: 0; }
 .paper.rz-split .p-sec h4 { text-align: center; border-bottom: none; }
 .paper.rz-bar, .paper.rz-bar .p-name { font-family: Arial, Helvetica, sans-serif; }
 .paper.rz-bar .p-sec h4 { background: #F3E9CE; border-bottom: none; padding: 3px 9px; color: #1a1a1a; }
 .paper.rz-categorized, .paper.rz-categorized .p-name { font-family: Helvetica, Arial, sans-serif; }
-.paper.rz-categorized { border-left: 4px solid var(--gold); }
-.paper.rz-categorized .p-sec h4 { color: var(--gold-deep); border-bottom: none; }
+.paper.rz-categorized { border-left: 4px solid var(--accent); }
+.paper.rz-categorized .p-sec h4 { color: var(--accent-deep); border-bottom: none; }
 
 /* ---- the six added designs ---- */
 /* Traditional — the most conservative sheet here: Georgia throughout,
@@ -239,7 +239,7 @@
 .paper.rz-senior .p-sec h4 { font-family: Arial, Helvetica, sans-serif; font-weight: 700; border-bottom: 2px solid #1a1a1a; letter-spacing: .14em; }
 /* Graduate — education leads (see DESIGN_ORDER); warm, plain, readable. */
 .paper.rz-graduate, .paper.rz-graduate .p-name { font-family: Arial, Helvetica, sans-serif; }
-.paper.rz-graduate .rhead { border-bottom: 2px solid var(--gold); padding-bottom: 8px; }
+.paper.rz-graduate .rhead { border-bottom: 2px solid var(--accent); padding-bottom: 8px; }
 .paper.rz-graduate .p-sec h4 { border-bottom: 1px solid #d8d8d8; color: #4a4a4a; letter-spacing: .16em; }
 /* Technical — skills and projects lead; monospaced-feeling but still Arial. */
 .paper.rz-technical, .paper.rz-technical .p-name { font-family: Helvetica, Arial, sans-serif; }

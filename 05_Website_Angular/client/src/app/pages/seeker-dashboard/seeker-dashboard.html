@@ -93,7 +93,7 @@
     <section class="tier" id="savedSection">
       <div class="tier-head">
         <h2>Saved openings</h2>
-        <span class="badge gold">{{ savedPostings().length }}</span>
+        <span class="badge amber">{{ savedPostings().length }}</span>
       </div>
       <p>Bookmarked from the openings page — they stay here until you remove them, even if you haven't applied yet.</p>
       <div class="saved-list">
@@ -101,7 +101,7 @@
           <div class="saved-row card">
             <div>
               <b>{{ p.title }}</b>
-              <span class="sub">{{ p.department }}@if (deadlineLabel(p); as dl) { · <span style="color:var(--gold-deep)">{{ dl }}</span> }@if (p.expired) { · <span style="color:var(--wine)">Deadline passed</span> }</span>
+              <span class="sub">{{ p.department }}@if (deadlineLabel(p); as dl) { · <span style="color:var(--accent-deep)">{{ dl }}</span> }@if (p.expired) { · <span style="color:var(--wine)">Deadline passed</span> }</span>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
               <a class="btn ghost sm" routerLink="/browse">Open</a>
@@ -118,7 +118,7 @@
       <h2>My applications</h2>
       <span class="badge slate">Statuses are set by the recruiter</span>
     </div>
-    <p>Every change here was made by a person at the hotel. The system never moves an application on its own.</p>
+    <p>Every change here was made by a person at Clark Outsourcing. The system never moves an application on its own.</p>
     @if (applications().length) {
       <div class="tally" id="tally">
         <div><b>{{ applications().length }}</b><span>Applied</span></div>
@@ -245,11 +245,11 @@
           </div>
           <div class="row">
             <span><b>Education</b><span class="w">{{ WEIGHTS.education * 100 }}% of the score</span></span>
-            <b [style.color]="item.eduMeets ? 'var(--emerald)' : 'var(--gold-deep)'">{{ item.eduMeets ? 'Meets ' + EDU_LABELS[item.posting.educationLevel] : 'Below ' + EDU_LABELS[item.posting.educationLevel] }}</b>
+            <b [style.color]="item.eduMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ item.eduMeets ? 'Meets ' + EDU_LABELS[item.posting.educationLevel] : 'Below ' + EDU_LABELS[item.posting.educationLevel] }}</b>
           </div>
           <div class="row">
             <span><b>Experience</b><span class="w">{{ WEIGHTS.experience * 100 }}% of the score</span></span>
-            <b [style.color]="item.expMeets ? 'var(--emerald)' : 'var(--gold-deep)'">{{ item.seekerMonths }} mo · asks for {{ item.posting.minExperienceMonths || 0 }} mo</b>
+            <b [style.color]="item.expMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ item.seekerMonths }} mo · asks for {{ item.posting.minExperienceMonths || 0 }} mo</b>
           </div>
           <div class="row"><span><b>What happens to a low score</b></span><b style="font-weight:500;color:var(--muted)">Nothing automatic. A recruiter still sees you.</b></div>
         </div>

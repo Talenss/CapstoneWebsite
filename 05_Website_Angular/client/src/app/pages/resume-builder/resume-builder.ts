@@ -548,7 +548,7 @@ export class ResumeBuilder implements OnInit {
   // ---------- design (visual style) — every option is single-column, ATS-safe ----------
   readonly designs: { id: ResumeDesign; label: string; note: string; suits: string }[] = [
     { id: 'classic', label: 'Classic', note: 'Serif, centered', suits: 'Government, banking, legal, education' },
-    { id: 'modern', label: 'Modern', note: 'Sans, gold accent', suits: 'Hospitality, marketing, front office' },
+    { id: 'modern', label: 'Modern', note: 'Sans, navy accent', suits: 'Marketing, admin, client-facing roles' },
     { id: 'minimal', label: 'Minimal', note: 'Airy, light', suits: 'Design, media, start-ups' },
     { id: 'executive', label: 'Executive', note: 'Serif, formal', suits: 'Supervisory and management roles' },
     { id: 'banner', label: 'Banner', note: 'Dark header band', suits: 'Sales, events, customer-facing roles' },

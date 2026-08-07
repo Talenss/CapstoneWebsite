@@ -1,7 +1,7 @@
 /* Port of the inline <style> block from 04_Website/app/seeker-dashboard.html. */
 .picker{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .picker select{padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:14px;background:var(--paper);min-width:190px}
-.picker .attached{font-size:12px;color:var(--gold-deep);font-weight:600;white-space:nowrap}
+.picker .attached{font-size:12px;color:var(--accent-deep);font-weight:600;white-space:nowrap}
 .tier{margin-top:40px}
 .tier-head{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap}
 .tier-head h2{font-size:25px}
@@ -11,7 +11,7 @@
 .job h3{font-size:19px;line-height:1.25}
 .job .co{font-size:12.5px;color:var(--muted);margin-top:4px}
 .job .req{display:flex;gap:16px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
-.job .req b.ok{color:var(--emerald)} .job .req b.no{color:var(--gold-deep)}
+.job .req b.ok{color:var(--emerald)} .job .req b.no{color:var(--accent-deep)}
 .job .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto;padding-top:4px}
 .job .foot span{font-size:12.5px;color:var(--muted)}
 .tally{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--rule);border-radius:var(--r-lg);background:var(--paper);overflow:hidden;margin-top:26px}
@@ -27,11 +27,11 @@
 /* "How to raise this score" — actionable coaching in the apply modal.
    Deliberately framed as guidance, never a barrier: applying stays one
    click away, and the advice only appears when there's real headroom. */
-.coach{margin-top:16px;border-left:2px solid var(--gold);background:var(--gold-wash);
+.coach{margin-top:16px;border-left:2px solid var(--accent);background:var(--accent-wash);
   border-radius:0 var(--r) var(--r) 0;padding:14px 16px}
-.coach > b{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold-deep);margin-bottom:6px}
+.coach > b{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-deep);margin-bottom:6px}
 .coach p{font-size:13.5px;line-height:1.65;color:var(--text);margin-bottom:12px}
-.coach p b{color:var(--gold-deep)}
+.coach p b{color:var(--accent-deep)}
 
 /* Applicant's own audit trail — the recorded status changes for one
    application, expanded from its row. The rows were always written; this
@@ -45,7 +45,7 @@
 .timeline li:not(:last-child)::before{content:"";position:absolute;left:4px;top:14px;bottom:0;
   width:1px;background:var(--rule)}
 .timeline .dot{flex:0 0 9px;width:9px;height:9px;border-radius:50%;margin-top:5px;
-  background:var(--gold);position:relative;z-index:1}
+  background:var(--accent);position:relative;z-index:1}
 .timeline .dot.first{background:var(--slate)}
 .timeline b{font-size:13.5px;color:var(--text);font-weight:600}
 .timeline .who{font-size:12.5px;color:var(--muted);margin-left:7px}

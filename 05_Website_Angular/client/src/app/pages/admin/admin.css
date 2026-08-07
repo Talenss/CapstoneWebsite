@@ -1,8 +1,8 @@
 .block { margin-bottom: 44px; }
 .block h2 { font-size: 22px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
 .count {
-  font-family: var(--body); font-size: 12px; font-weight: 700; color: var(--gold-deep);
-  background: var(--gold-wash); border: 1px solid var(--gold); border-radius: 99px;
+  font-family: var(--body); font-size: 12px; font-weight: 700; color: var(--accent-deep);
+  background: var(--accent-wash); border: 1px solid var(--accent); border-radius: 99px;
   min-width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; padding: 0 8px;
 }
 
@@ -13,7 +13,7 @@
 .req .facts span { color: var(--muted); }
 .req .facts b { font-weight: 600; text-align: right; word-break: break-word; }
 .req .note {
-  font-size: 13px; color: var(--muted); background: var(--paper); border-left: 2px solid var(--gold);
+  font-size: 13px; color: var(--muted); background: var(--paper); border-left: 2px solid var(--accent);
   padding: 10px 14px; border-radius: 0 var(--r) var(--r) 0; margin: 12px 0 0; line-height: 1.6;
 }
 .req .acts { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 16px; }

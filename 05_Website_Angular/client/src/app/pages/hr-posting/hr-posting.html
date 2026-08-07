@@ -18,14 +18,14 @@
     <form (ngSubmit)="submit()" class="card" novalidate>
       <div class="field" [class.invalid]="titleInvalid()">
         <label for="title">Job title</label>
-        <input type="text" id="title" [value]="titleVal()" (input)="setTitle($event)" placeholder="Front Office Associate">
+        <input type="text" id="title" [value]="titleVal()" (input)="setTitle($event)" placeholder="Customer Support Agent">
         <span class="err">Give the opening a title.</span>
       </div>
 
       <div class="row2">
         <div class="field" [class.invalid]="deptInvalid()">
           <label for="dept">Department</label>
-          <input type="text" id="dept" list="deptList" [value]="deptVal()" (input)="setDept($event)" placeholder="Front Office">
+          <input type="text" id="dept" list="deptList" [value]="deptVal()" (input)="setDept($event)" placeholder="Customer Support">
           <datalist id="deptList">
             @for (d of deptOptions(); track d) { <option [value]="d"></option> }
           </datalist>
@@ -44,7 +44,7 @@
 
       <div class="field" [class.invalid]="descInvalid()">
         <label for="desc">What the job involves</label>
-        <textarea id="desc" rows="4" [value]="descVal()" (input)="setDesc($event)" placeholder="Handle guest check-in and check-out, reservations, and inquiries at the front desk."></textarea>
+        <textarea id="desc" rows="4" [value]="descVal()" (input)="setDesc($event)" placeholder="Handle customer enquiries for offshore client accounts by phone, email, and live chat."></textarea>
         <span class="err">Describe the role in a sentence or two.</span>
         <p class="hint">Plain language. This is what the applicant reads before deciding to apply.</p>
       </div>

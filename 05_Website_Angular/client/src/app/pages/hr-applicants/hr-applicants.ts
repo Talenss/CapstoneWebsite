@@ -154,7 +154,7 @@ export class HrApplicants {
   }
 
   tierBadgeClass(t: Tier): string {
-    return t === 'strong' ? 'green' : t === 'possible' ? 'gold' : 'slate';
+    return t === 'strong' ? 'green' : t === 'possible' ? 'amber' : 'slate';
   }
 
   contactLine(p: Personal): string {

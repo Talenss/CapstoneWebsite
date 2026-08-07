@@ -35,7 +35,7 @@ export class HrDashboard implements OnInit {
   /* ---- finding an opening ----
      The applicant's side has had search, a department filter and a sort
      since it was built; the recruiter's own list had none of it and was
-     stuck in insertion order, so a hotel running two dozen vacancies had
+     stuck in insertion order, so a company running two dozen vacancies had
      to read the whole page to find one. The same three controls, plus the
      one filter only this side needs: open vs closed. */
   query = signal('');
