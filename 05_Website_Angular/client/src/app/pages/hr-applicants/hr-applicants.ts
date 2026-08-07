@@ -236,7 +236,7 @@ export class HrApplicants {
   setModalStatus(e: Event): void { this.modalStatus.set((e.target as HTMLSelectElement).value as AppStatus); }
 
   /* ---------- who already handled this applicant ----------
-     Royce routes departments to different HR owners, so several recruiters
+     Clark Outsourcing routes departments to different HR owners, so several recruiters
      work the same pool. Without this the only thing on screen is the CURRENT
      status: a recruiter opening an applicant cannot tell whether a colleague
      moved them an hour ago or three weeks ago, or who to ask about it. Two

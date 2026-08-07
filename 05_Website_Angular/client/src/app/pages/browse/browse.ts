@@ -94,7 +94,7 @@ export class Browse implements OnInit {
   sub = computed(() => {
     if (!this.loaded()) return "Every posting here is a real vacancy, posted by the hotel's own HR staff.";
     const n = this.postings().length;
-    return `${n} open position${n === 1 ? '' : 's'} at Royce Hotel & Casino — every one posted by their own HR staff.`;
+    return `${n} open position${n === 1 ? '' : 's'} at Clark Outsourcing — every one posted by their own HR staff.`;
   });
 
   filteredRows = computed<BrowseRow[]>(() => {

@@ -303,7 +303,7 @@ router.post('/withdraw', async (req, res) => {
        feature does not need it in order to be honest.
 
      · To the EMPLOYER'S OWN STAFF — the name, because internal accountability
-       is the entire reason changed_by is stored. Royce routes departments to
+       is the entire reason changed_by is stored. Clark Outsourcing routes departments to
        different HR owners, so several recruiters share one applicant pool; a
        recruiter picking up a colleague's work needs to know who already moved
        this person and when, or two people quietly redo each other's decisions.

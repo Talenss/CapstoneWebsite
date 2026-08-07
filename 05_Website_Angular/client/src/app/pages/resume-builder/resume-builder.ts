@@ -15,16 +15,17 @@ const STEPS = ['Details', 'Education', 'Experience', 'Skills', 'Certifications',
 
 type SectionKind = 'education' | 'experience' | 'skills' | 'projects' | 'certifications';
 
-/** Skills that no Royce opening happens to ask for right now, offered so the
+/** Skills that no Clark Outsourcing opening happens to ask for right now, offered so the
  *  list isn't limited to what the demand pool contains. They score nothing
  *  today and the copy says so — but a resume is read by people too, and next
  *  month's opening may well ask for one of them. */
 const OTHER_SKILLS = [
-  'Cash Handling', 'Inventory', 'Bartending', 'Barista Skills', 'Housekeeping', 'Front Desk',
-  'Event Coordination', 'Booking Systems', 'Bookkeeping', 'Payroll', 'Data Entry', 'Filing',
-  'Google Workspace', 'Excel', 'Canva', 'Photoshop', 'Photography', 'Video Editing',
-  'Copywriting', 'Public Speaking', 'Tutoring', 'Driving (Professional License)',
-  'Basic Electrical', 'Carpentry', 'Sewing', 'Baking', 'First Aid', 'Sign Language',
+  'Google Workspace', 'Excel', 'Payroll', 'Filing', 'Typing Speed', 'Transcription',
+  'Live Chat Support', 'Email Support', 'Appointment Setting', 'Lead Generation',
+  'Technical Writing', 'Public Speaking', 'Tutoring', 'Photoshop', 'Photography',
+  'Video Editing', 'Adobe Illustrator', 'Project Management', 'SEO', 'Google Analytics',
+  'Salesforce', 'Xero', 'Basic Accounting', 'Inventory', 'Cash Handling', 'First Aid',
+  'Sign Language', 'Driving (Professional License)',
 ];
 
 function blankResume(id: string | null = null): Resume {
