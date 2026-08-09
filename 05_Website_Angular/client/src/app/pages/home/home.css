@@ -130,4 +130,13 @@
      the longer label wrap instead of setting the floor. */
   .hero-top .acts{flex-direction:column;align-items:stretch}
   .hero-top .acts .btn{width:100%;white-space:normal}
+
+  /* Same failure one section further down, and it only shows below ~360px:
+     .roles is a single-column grid whose track cannot shrink below the
+     card's min-content, and the card's floor was 34px of padding either
+     side plus a 177px non-wrapping button — 245px against a 232px column.
+     Trimming the padding and letting the button wrap drops the floor to
+     roughly 130px, which fits any phone. */
+  .role-card{padding:24px}
+  .role-card .btn{width:100%;white-space:normal}
 }

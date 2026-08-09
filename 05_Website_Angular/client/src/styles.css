@@ -406,3 +406,19 @@ table.tbl tbody tr:hover{background:var(--ivory)}
   .card{border:none;box-shadow:none;padding:0}
   @page{margin:16mm}
 }
+
+/* ---------- very narrow phones ----------
+   .btn declares white-space:nowrap so a label never breaks mid-phrase on a
+   comfortable screen. Below about 380px that turns every button into a floor
+   the page cannot shrink under: a grid track will not go narrower than its
+   widest item's min-content, so one long label — "Approve — create account",
+   "Delete my account permanently", "I'm Clark Outsourcing HR — request
+   access" — pushed whole pages past the viewport and gave them a horizontal
+   scrollbar. It was measured on four separate pages before being traced to
+   this single declaration.
+
+   At this width a wrapped button label is plainly better than a page that
+   slides sideways under the thumb. */
+@media (max-width: 380px) {
+  .btn { white-space: normal; }
+}

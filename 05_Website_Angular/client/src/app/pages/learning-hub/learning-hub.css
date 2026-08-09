@@ -31,3 +31,16 @@ article h3{font-size:19px;margin:22px 0 8px}
 .ladder .r:last-child{border-bottom:none}
 .ladder .r span:last-child{color:var(--muted)}
 .nomatch{padding:40px;text-align:center;color:var(--muted)}
+
+/* The score ladder is a badge and a sentence on one line. Flex with no
+   wrap means its min-content is badge + gap + sentence, which came to
+   251px — and since .hub is a grid whose track cannot shrink below its
+   widest item, that floor pushed the whole learning hub 3px past a 320px
+   viewport and gave the page a horizontal scrollbar.
+
+   Stacking the badge above its explanation below 380px removes the floor
+   and reads better at that width anyway: the tier label gets its own
+   line instead of squeezing the sentence into three words per row. */
+@media(max-width:380px){
+  .ladder .r{flex-direction:column;align-items:flex-start;gap:6px}
+}
