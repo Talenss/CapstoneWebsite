@@ -114,4 +114,20 @@
   .tiles4,.roles,.stats3,.stat-row{grid-template-columns:1fr}
   .dual{grid-template-columns:1fr}
   .plus{display:none}
+
+  /* The landing page scrolled sideways on a phone — 10px at 390px wide.
+     .btn sets white-space:nowrap, so "I'm Clark Outsourcing HR — request
+     access" had a min-content of 378px against a 346px container. A grid
+     track cannot shrink below its widest item's min-content, so the whole
+     hero column was pushed 32px past the viewport and the page gained a
+     horizontal scrollbar. It appeared when the label grew from the former
+     partner's shorter name, and nothing failed: no error, no console
+     warning, only measurement finds it.
+
+     Stacking the two calls to action full-width is the fix and is the
+     better mobile pattern anyway — a 44px-tall target spanning the column
+     rather than two pills competing for one line. white-space:normal lets
+     the longer label wrap instead of setting the floor. */
+  .hero-top .acts{flex-direction:column;align-items:stretch}
+  .hero-top .acts .btn{width:100%;white-space:normal}
 }
