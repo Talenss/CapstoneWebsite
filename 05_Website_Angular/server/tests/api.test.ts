@@ -772,3 +772,114 @@ test('the server survives every malformed request in this suite', async () => {
   const health = await fetch(`http://127.0.0.1:${PORT}/api/health`);
   assert.equal(health.status, 200, 'the process must still be serving');
 });
+
+/* ---------- per-opening scoring weights ----------
+
+   A recruiter can set what each of the three checks is worth for their own
+   opening. Three numbers that scale every score the opening produces, so the
+   route validates them rather than trusting the form — a set totalling 90
+   would compress every applicant's score by a tenth and nothing downstream
+   would look wrong. The same rules exist as a CHECK on the table and in the
+   demo adapter, so no route into the data can bypass them. */
+
+test('a recruiter can set the scoring weights on their own opening', async () => {
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+
+  const made = await hr('postings/save', { posting: {
+    title: 'Weighted Test Role',
+    department: 'Information Technology',
+    description: 'A role used to check that per-opening weights are stored and returned.',
+    skills: ['JavaScript', 'Git'],
+    educationLevel: 'bachelor',
+    minExperienceMonths: 0,
+    weights: { skills: 70, education: 15, experience: 15 },
+  } });
+  assert.equal(made.body.ok, true, made.body.error);
+  // Whole percentages on the wire, the same units the column stores and the
+  // recruiter typed — so "must total 100" stays an exact integer check.
+  assert.deepEqual(made.body.posting.weights, { skills: 70, education: 15, experience: 15 });
+
+  // And they survive a round trip rather than only existing in the response.
+  const back = await hr('postings/get', { id: made.body.posting.id });
+  assert.deepEqual(back.body.posting.weights, { skills: 70, education: 15, experience: 15 });
+});
+
+test('an opening that sets no weights reports none, rather than a copy of the defaults', async () => {
+  /* null and 50/25/25 are different facts. null means "follow the site", so
+     retuning match_settings still moves this opening; a stored copy would
+     silently freeze it at whatever the defaults were on the day it was made. */
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const made = await hr('postings/save', { posting: {
+    title: 'Inheriting Test Role',
+    department: 'Information Technology',
+    description: 'A role used to check that unset weights stay unset.',
+    skills: ['JavaScript'],
+    educationLevel: 'bachelor',
+    minExperienceMonths: 0,
+  } });
+  assert.equal(made.body.ok, true, made.body.error);
+  assert.equal(made.body.posting.weights, null);
+});
+
+test('weights that do not total 100, or fall below the floor, are refused', async () => {
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+
+  const base = {
+    title: 'Rejected Weights Role',
+    department: 'Information Technology',
+    description: 'A role used to check that bad weights never reach the database.',
+    skills: ['JavaScript'],
+    educationLevel: 'bachelor',
+    minExperienceMonths: 0,
+  };
+
+  const bad = [
+    [{ skills: 50, education: 25, experience: 20 }, /add up to 100/i],   // 95
+    [{ skills: 40, education: 40, experience: 40 }, /add up to 100/i],   // 120
+    [{ skills: 90, education: 5, experience: 5 }, /at least 10/i],       // below the floor
+    [{ skills: 80, education: 20, experience: 0 }, /at least 10/i],      // a criterion switched off
+    [{ skills: 50.5, education: 25, experience: 24.5 }, /whole numbers/i],
+  ] as const;
+
+  for (const [weights, expected] of bad) {
+    const res = await hr('postings/save', { posting: { ...base, weights } });
+    assert.equal(res.body.ok, false, `${JSON.stringify(weights)} should have been refused`);
+    assert.match(res.body.error, expected);
+  }
+});
+
+test('the score a seeker is given uses the opening’s own weights', async () => {
+  /* End to end rather than through the engine alone: the weights have to
+     survive being written, read back, and applied by the scorer the seeker
+     actually hits. */
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const made = await hr('postings/save', { posting: {
+    title: 'Scored With Custom Weights',
+    department: 'Information Technology',
+    description: 'Half the required skills, so the weighting is visible in the score.',
+    skills: ['JavaScript', 'Git', 'SQL', 'Excel'],
+    educationLevel: 'none',
+    minExperienceMonths: 0,
+    weights: { skills: 80, education: 10, experience: 10 },
+  } });
+  assert.equal(made.body.ok, true, made.body.error);
+
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const mine = (await seeker('resumes/list')).body.resumes;
+  const scored = await seeker('match/score', { resumeId: mine[0].id, postingId: made.body.posting.id });
+  assert.equal(scored.body.ok, true, scored.body.error);
+
+  // education and experience are both unrequired here, so they contribute
+  // their full weight; only the skills fraction varies.
+  const s = scored.body;
+  const fraction = s.matchedSkills.length / 4;
+  assert.equal(s.score, Math.floor(fraction * 80 + 10 + 10 + 0.5),
+    'the score must be computed on 80/10/10, not the site default');
+  assert.deepEqual(s.weights, { skills: 0.8, education: 0.1, experience: 0.1 },
+    'and it must report the split it used, as fractions');
+});

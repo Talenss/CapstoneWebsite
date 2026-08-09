@@ -243,6 +243,11 @@ export interface Posting {
    *  accepting applications without anyone closing it by hand. */
   deadline?: string | null;
   expired?: boolean;
+  /** This opening's own scoring weights as WHOLE PERCENTAGES totalling 100,
+   *  or null when it inherits the site defaults. Percentages rather than
+   *  fractions all the way to the database, so "must total 100" is an exact
+   *  integer check; the engine divides by 100 where it multiplies. */
+  weights?: { skills: number; education: number; experience: number } | null;
   status: 'open' | 'closed';
   createdAt: number;
   company?: Company;
@@ -299,6 +304,10 @@ export interface MatchResult {
   expMeets: boolean;
   seekerMonths: number;
   tier: Tier;
+  /** The weights this score was computed with, as fractions. Carried on the
+   *  result so a breakdown always adds up to the number beside it — see the
+   *  same field in server/src/lib/engine.ts. */
+  weights: { skills: number; education: number; experience: number };
 }
 
 export interface RecommendationItem extends MatchResult {

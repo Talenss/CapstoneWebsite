@@ -76,7 +76,7 @@
 
       <article class="card" id="skills">
         <h2>Writing the skills section</h2>
-        <p class="kicker">Half of your compatibility score comes from this list alone.</p>
+        <p class="kicker">The single biggest part of your compatibility score — half of it by default, and more on openings that weight skills harder.</p>
         <p>Be specific. The engine — and a real ATS — matches skill against skill. A vague phrase matches nothing.</p>
         <div class="split">
           <div class="yes"><b>Scores</b>JavaScript &middot; HTML/CSS &middot; CRM Software &middot; Data Entry &middot; Bookkeeping &middot; Customer Service</div>
@@ -103,7 +103,7 @@
           <li>Freelance or commissioned work</li>
           <li>Helping run a family business</li>
         </ul>
-        <p>And if you truly have none: apply anyway. Several openings at Clark Outsourcing ask for zero months, and the education and skills sections still carry half the score between them.</p>
+        <p>And if you truly have none: apply anyway. Several openings at Clark Outsourcing ask for zero months, and where they do, the experience check costs you nothing at all &mdash; your skills and education carry the rest.</p>
       </article>
 
       <article class="card" id="sections">
@@ -144,7 +144,9 @@
       <article class="card" id="scores">
         <h2>Reading your compatibility score</h2>
         <p class="kicker">The formula is published, not hidden. You see exactly what the recruiter sees.</p>
-        <p>Your score is three checks against what the posting actually asks for, weighted <b>{{ W.skills * 100 }}% skills, {{ W.education * 100 }}% education, and {{ W.experience * 100 }}% experience</b>. Those are the study&rsquo;s initial weights, refined through testing.</p>
+        <p>Your score is three checks against what the posting actually asks for: the <b>skills</b> you list, your <b>education</b> level, and your <b>months of experience</b>. Nothing else on your resume is scored.</p>
+        <p>How much each of the three is worth is set <b>per opening</b>. Most use the site default &mdash; {{ W.skills * 100 }}% skills, {{ W.education * 100 }}% education, {{ W.experience * 100 }}% experience, the study&rsquo;s initial weights, refined through testing. A recruiter can weight a particular role differently: a developer post might lean harder on skills, a trainee post on education. <b>Whatever an opening uses is printed on the opening itself and in your dashboard breakdown</b>, so you are never scored on a split you were not shown. No criterion can be switched off entirely &mdash; each one is always worth at least 10%.</p>
+        <p>One consequence worth knowing: because two openings can weight things differently, their percentages are not strictly comparable. A 70% on one posting and a 70% on another can mean different things. Read the breakdown, not just the number.</p>
         <div class="ladder">
           <div class="r"><span class="badge green">{{ T.strong }}% and up</span><span>Strong match. You meet most of what they asked for.</span></div>
           <div class="r"><span class="badge amber">{{ T.related }}&ndash;{{ T.strong - 1 }}%</span><span>Possible match. Worth applying — recruiters read every applicant.</span></div>

@@ -291,7 +291,38 @@ CREATE TABLE job_postings (
   min_experience_months INT NOT NULL DEFAULT 0,
   application_deadline  DATE,
   status          TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed')),
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  /* ---------------- per-opening scoring weights ----------------
+     How much each of the three checks is worth for THIS opening,
+     as whole percentages. A developer role can be weighted toward
+     skills while a trainee role leans on education.
+
+     ALL THREE NULL means "use the site defaults" from the
+     match_settings table. That is the default, and it matters: a
+     posting that never customised its weights still follows the
+     researcher retuning the study's global values, exactly as
+     before this column existed.
+
+     The constraint is here as well as in the application because
+     these three numbers scale every score the opening produces. A
+     set totalling 90 would quietly compress every applicant's
+     score by a tenth, and nothing downstream would look wrong.
+     The 10 percent floor is a deliberate policy choice: a
+     recruiter may de-emphasise a criterion but may not switch one
+     off entirely, so no applicant is ever measured on a scale that
+     ignores what they have. */
+  weight_skills      SMALLINT,
+  weight_education   SMALLINT,
+  weight_experience  SMALLINT,
+  CONSTRAINT posting_weights_complete CHECK (
+    (weight_skills IS NULL AND weight_education IS NULL AND weight_experience IS NULL)
+    OR (
+      weight_skills IS NOT NULL AND weight_education IS NOT NULL AND weight_experience IS NOT NULL
+      AND weight_skills + weight_education + weight_experience = 100
+      AND weight_skills >= 10 AND weight_education >= 10 AND weight_experience >= 10
+    )
+  )
 );
 CREATE INDEX idx_post_status ON job_postings (status);
 CREATE INDEX idx_post_company ON job_postings (company_id);

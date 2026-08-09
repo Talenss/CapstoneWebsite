@@ -240,15 +240,15 @@
         <p style="font-size:14px;background:var(--ivory);border-radius:var(--r);padding:14px 16px;margin:16px 0;color:var(--text)">{{ item.posting.description }}</p>
         <div class="breakdown">
           <div class="row">
-            <span><b>Skills matched</b><span class="w">{{ WEIGHTS.skills * 100 }}% of the score</span></span>
+            <span><b>Skills matched</b><span class="w">{{ item.weights.skills * 100 }}% of the score</span></span>
             <b>{{ item.matchedSkills.length }} of {{ item.posting.skills.length }}{{ item.matchedSkills.length ? ' — ' + item.matchedSkills.join(', ') : '' }}</b>
           </div>
           <div class="row">
-            <span><b>Education</b><span class="w">{{ WEIGHTS.education * 100 }}% of the score</span></span>
+            <span><b>Education</b><span class="w">{{ item.weights.education * 100 }}% of the score</span></span>
             <b [style.color]="item.eduMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ item.eduMeets ? 'Meets ' + EDU_LABELS[item.posting.educationLevel] : 'Below ' + EDU_LABELS[item.posting.educationLevel] }}</b>
           </div>
           <div class="row">
-            <span><b>Experience</b><span class="w">{{ WEIGHTS.experience * 100 }}% of the score</span></span>
+            <span><b>Experience</b><span class="w">{{ item.weights.experience * 100 }}% of the score</span></span>
             <b [style.color]="item.expMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ item.seekerMonths }} mo · asks for {{ item.posting.minExperienceMonths || 0 }} mo</b>
           </div>
           <div class="row"><span><b>What happens to a low score</b></span><b style="font-weight:500;color:var(--muted)">Nothing automatic. A recruiter still sees you.</b></div>

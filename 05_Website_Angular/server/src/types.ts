@@ -71,6 +71,10 @@ export interface PostingRow {
   application_deadline: string | null;
   status: 'open' | 'closed';
   created_at: string;
+  /* Whole percentages. All three null together = inherit match_settings. */
+  weight_skills: number | null;
+  weight_education: number | null;
+  weight_experience: number | null;
 }
 
 export interface ApplicationRow {

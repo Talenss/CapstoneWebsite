@@ -5,7 +5,7 @@ import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { Company, MatchResult, Posting, Resume } from '../../core/models';
-import { EDU_LABELS, WEIGHTS, scoreLocal, tierColor, tierLabel, tierOf } from '../../core/engine';
+import { EDU_LABELS, WEIGHTS, scoreLocal, tierColor, tierLabel, tierOf, weightsFor } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 import { Seo } from '../../core/seo';
 
@@ -38,6 +38,12 @@ export class Browse implements OnInit, OnDestroy {
   readonly WEIGHTS = WEIGHTS;
   readonly tierColor = tierColor;
   readonly tierLabel = tierLabel;
+
+  /** The weights an opening is scored with, for the GUEST view — a visitor
+   *  with no resume has no MatchResult to read them off, and the openings
+   *  each carry their own now, so a fixed 50/25/25 here would misdescribe
+   *  any opening the recruiter tuned. */
+  postingWeights = (p: Posting) => weightsFor(p);
 
   loaded = signal(false);
   postings = signal<Posting[]>([]);

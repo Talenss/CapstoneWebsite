@@ -118,11 +118,37 @@ router.post('/save', async (req, res) => {
   if (title.length < 2) return fail(res, 'Give the opening a title.');
   if (dept === '') return fail(res, 'Which department is this for?');
   if (desc.length < 10) return fail(res, 'Describe the role in a sentence or two.');
-  if (!skills.length) return fail(res, "Add at least one required skill — it's half the score.");
+  if (!skills.length) return fail(res, "Add at least one required skill — there is nothing to match an applicant against without one.");
 
   const edu = Object.keys(EDU_RANK).includes(P.educationLevel) ? P.educationLevel : 'bachelor';
   const type = ['full-time', 'part-time', 'contract', 'internship'].includes(P.employmentType) ? P.employmentType : 'full-time';
   const months = Math.max(0, Number(P.minExperienceMonths) || 0);
+
+  /* Optional per-opening weights, sent as whole percentages. Absent means the
+     opening inherits the site defaults, which is what every existing posting
+     does — so this validates only what was actually supplied.
+
+     The floor is policy, not arithmetic: a recruiter may decide education
+     matters less for a role, but may not switch a criterion off, because an
+     applicant whose only strength is the zeroed one would be scored on a
+     scale that cannot see them at all. The same rule is a CHECK constraint on
+     the table, so a bad set cannot arrive by any other route either. */
+  let weights: { skills: number; education: number; experience: number } | null = null;
+  if (P.weights != null) {
+    const W = P.weights;
+    const pct = (v: unknown): number | null => {
+      const n = Number(v);
+      return Number.isFinite(n) && Number.isInteger(n) ? n : null;
+    };
+    const sk = pct(W.skills), ed = pct(W.education), ex = pct(W.experience);
+    if (sk === null || ed === null || ex === null)
+      return fail(res, 'The scoring weights must be whole numbers.');
+    if (sk < 10 || ed < 10 || ex < 10)
+      return fail(res, 'Each part of the score has to be at least 10% — a criterion cannot be switched off entirely.');
+    if (sk + ed + ex !== 100)
+      return fail(res, `The three weights have to add up to 100%. They currently add up to ${sk + ed + ex}%.`);
+    weights = { skills: sk, education: ed, experience: ex };
+  }
 
   // Optional "apply by" date. Must be today or later when set.
   let deadline: string | null = null;
@@ -144,16 +170,25 @@ router.post('/save', async (req, res) => {
     const id = await withTransaction(async (tx) => {
       let pid = P.id ? Number(P.id) : 0;
 
+      // All three or all three null — never a mix, which the CHECK rejects.
+      const wS = weights ? weights.skills : null;
+      const wE = weights ? weights.education : null;
+      const wX = weights ? weights.experience : null;
+
       if (pid) {
         await tx.exec(
-          'UPDATE job_postings SET title=?, department=?, employment_type=?, description=?, education_level=?, min_experience_months=?, application_deadline=? WHERE posting_id=?',
-          [title, dept, type, desc, edu, months, deadline, pid],
+          `UPDATE job_postings SET title=?, department=?, employment_type=?, description=?, education_level=?,
+             min_experience_months=?, application_deadline=?, weight_skills=?, weight_education=?, weight_experience=?
+           WHERE posting_id=?`,
+          [title, dept, type, desc, edu, months, deadline, wS, wE, wX, pid],
         );
       } else {
         const ins = await tx.exec(
-          `INSERT INTO job_postings (company_id, created_by, title, department, employment_type, description, education_level, min_experience_months, application_deadline, status)
-           VALUES (?,?,?,?,?,?,?,?,?,'open') RETURNING posting_id`,
-          [u.company_id, u.user_id, title, dept, type, desc, edu, months, deadline],
+          `INSERT INTO job_postings (company_id, created_by, title, department, employment_type, description,
+             education_level, min_experience_months, application_deadline, weight_skills, weight_education,
+             weight_experience, status)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'open') RETURNING posting_id`,
+          [u.company_id, u.user_id, title, dept, type, desc, edu, months, deadline, wS, wE, wX],
         );
         pid = ins.insertId;
       }

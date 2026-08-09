@@ -61,7 +61,7 @@ export class LearningHub implements OnInit, AfterViewInit, OnDestroy {
         a: 'Name specific, checkable skills rather than vague phrases. "JavaScript", "Customer Service", '
           + '"Bookkeeping" and "Data Entry" are matched against a posting\'s requirements; "computer skills" '
           + 'and "hardworking" match nothing. On ResumeMatch PH this section alone is half of your '
-          + 'compatibility score.',
+          + 'compatibility score by default, and more on openings that weight skills harder.',
       },
       {
         q: 'What do I put on a resume when I have no work experience?',
@@ -79,8 +79,10 @@ export class LearningHub implements OnInit, AfterViewInit, OnDestroy {
       {
         q: 'How is my compatibility score calculated?',
         a: 'From three checks against what the posting actually asks for: the skills you list, your education '
-          + 'level, and your months of experience — weighted 50 percent, 25 percent and 25 percent. The '
-          + 'formula is published rather than hidden, and you see exactly the number the recruiter sees.',
+          + 'level, and your months of experience. How much each is worth is set per opening — most use the '
+          + 'site default of 50 percent skills, 25 percent education and 25 percent experience, and a recruiter '
+          + 'can weight a particular role differently. Whatever an opening uses is shown on the opening itself, '
+          + 'and no criterion can be worth less than 10 percent.',
       },
       {
         q: 'Does a low compatibility score mean I am rejected?',

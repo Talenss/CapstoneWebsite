@@ -301,7 +301,7 @@
                 @for (s of resume().skills; track s; let i = $index) {
                   <span class="tag">{{ s }}<button type="button" [attr.aria-label]="'Remove ' + s" (click)="removeSkill(i)">&times;</button></span>
                 } @empty {
-                  <p style="color:var(--muted);font-size:13.5px">No skills yet. Half of your score depends on this list.</p>
+                  <p style="color:var(--muted);font-size:13.5px">No skills yet. This list is the biggest part of your score on most openings.</p>
                 }
               </div>
             </div>
