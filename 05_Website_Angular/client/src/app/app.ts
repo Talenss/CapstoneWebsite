@@ -1,8 +1,9 @@
 import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
-  NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Router, RouterOutlet,
+  ActivatedRoute, NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Router, RouterOutlet,
 } from '@angular/router';
+import { Seo, SeoData } from './core/seo';
 
 /** Each page owns its own <app-header>/<app-footer> (variants differ too
  *  much across guest/seeker/recruiter/auth/print to share one app shell),
@@ -28,11 +29,17 @@ import {
 })
 export class App {
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private seo = inject(Seo);
 
   navigating = signal(false);
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
+    /* Describes the site rather than any one page, so it is written once and
+       left alone. Every per-page block is keyed and replaced on navigation. */
+    this.seo.siteJsonLd();
+
     this.router.events.pipe(takeUntilDestroyed()).subscribe((e) => {
       if (e instanceof NavigationStart) {
         /* Held back briefly on purpose. An already-cached chunk arrives in a
@@ -49,6 +56,15 @@ export class App {
       if (e instanceof NavigationEnd || e instanceof NavigationCancel || e instanceof NavigationError) {
         if (this.timer) { clearTimeout(this.timer); this.timer = null; }
         this.navigating.set(false);
+      }
+
+      /* Only a completed navigation describes a page that exists. Applying
+         the description on NavigationStart would leave the incoming page's
+         description on screen if a guard then redirected away from it. */
+      if (e instanceof NavigationEnd) {
+        let r = this.route.snapshot;
+        while (r.firstChild) r = r.firstChild;
+        this.seo.apply(r.data['seo'] as SeoData | undefined, e.urlAfterRedirects.split(/[?#]/)[0]);
       }
     });
   }

@@ -4,6 +4,7 @@ import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { SessionService } from '../../core/session.service';
 import { WEIGHTS, THRESHOLDS } from '../../core/engine';
+import { Seo } from '../../core/seo';
 
 /** Port of 04_Website/app/learning-hub.html. The weights/thresholds copy in
  *  the "Reading your score" article is generated from the same WEIGHTS /
@@ -21,6 +22,7 @@ import { WEIGHTS, THRESHOLDS } from '../../core/engine';
 })
 export class LearningHub implements OnInit, AfterViewInit, OnDestroy {
   private el = inject<ElementRef<HTMLElement>>(ElementRef);
+  private seo = inject(Seo);
   session = inject(SessionService);
 
   readonly W = WEIGHTS;
@@ -35,6 +37,62 @@ export class LearningHub implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     // populate session.user() so the recruiter-only CTA below can react to it
     void this.session.ensure();
+
+    /* This page is the site's one genuinely searchable asset: people look up
+       "what is an ATS", "resume with no experience" and "resume skills
+       section" in numbers, whereas nobody searches for a capstone project by
+       name. The FAQ block is what can put those answers in the results page
+       itself.
+
+       Every answer below is a condensed version of what the article beside
+       it already says. None of them adds a claim the page does not make —
+       an FAQ block answering something the page does not answer is both a
+       policy violation and a promise broken to whoever clicked. */
+    this.seo.faq([
+      {
+        q: 'What is an ATS, and why does it matter for my resume?',
+        a: 'An Applicant Tracking System is software that reads your resume before a person does. Most medium '
+          + 'and large employers in the Philippines run applications through it first: it pulls the text out of '
+          + 'your file, looks for the skills and qualifications named in the job posting, and ranks you. If it '
+          + 'cannot read your file properly, a person may never see it.',
+      },
+      {
+        q: 'How do I write the skills section of my resume?',
+        a: 'Name specific, checkable skills rather than vague phrases. "JavaScript", "Customer Service", '
+          + '"Bookkeeping" and "Data Entry" are matched against a posting\'s requirements; "computer skills" '
+          + 'and "hardworking" match nothing. On ResumeMatch PH this section alone is half of your '
+          + 'compatibility score.',
+      },
+      {
+        q: 'What do I put on a resume when I have no work experience?',
+        a: 'Usually you have more than you think, because "no experience" normally means "no full-time job '
+          + 'yet". OJT and internships count, including unpaid ones. So do your capstone or thesis project if '
+          + 'you built something, part-time or seasonal work even when unrelated, and officer roles in an '
+          + 'organisation.',
+      },
+      {
+        q: 'What resume template should I use — chronological, functional or combination?',
+        a: 'Chronological puts your history first and suits you when your education and experience already '
+          + 'point at the role you want. Functional puts skills first and suits a change of direction or a '
+          + 'gap. Combination leads with a short skills summary and then the history.',
+      },
+      {
+        q: 'How is my compatibility score calculated?',
+        a: 'From three checks against what the posting actually asks for: the skills you list, your education '
+          + 'level, and your months of experience — weighted 50 percent, 25 percent and 25 percent. The '
+          + 'formula is published rather than hidden, and you see exactly the number the recruiter sees.',
+      },
+      {
+        q: 'Does a low compatibility score mean I am rejected?',
+        a: 'No. Nothing on ResumeMatch PH is auto-rejected. A low score means the posting asks for things your '
+          + 'resume does not yet show, and you are pointed toward a role that fits better. Every application '
+          + 'reaches a recruiter, and a person sets every status.',
+      },
+    ]);
+    this.seo.breadcrumbs([
+      { name: 'Home', path: '/' },
+      { name: 'Learning hub', path: '/learning-hub' },
+    ]);
   }
 
   ngAfterViewInit(): void {
@@ -71,6 +129,10 @@ export class LearningHub implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.spy?.disconnect();
+    // Leaving this page's FAQ behind would describe whatever comes next as
+    // answering questions it does not answer.
+    this.seo.faq([]);
+    this.seo.breadcrumbs([]);
   }
 
   onSearch(event: Event): void {

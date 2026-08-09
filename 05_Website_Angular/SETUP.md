@@ -195,30 +195,51 @@ Behavior without SMTP configured:
 The `email_codes` table these features use is created automatically the
 first time the server starts — an existing database needs no manual change.
 
-#### Optional — AI resume analysis (`GEMINI_API_KEY`)
+#### Reading an uploaded resume (`RESUME_EXTRACTOR`)
 
-The "Upload & analyze my resume" feature sends an uploaded resume to
-Google's Gemini API, which extracts the details (skills, education,
-experience) to prefill the resume builder. The AI only *extracts* — all
-scoring and job matching stays with the rule-based 50/25/25 engine.
+The "Upload & analyze my resume" feature turns an uploaded document into
+fields the builder can prefill and the engine can score. There are two
+readers, and `RESUME_EXTRACTOR` in `server/.env` chooses between them.
+Either way the reader only *extracts* — all scoring and job matching stays
+with the rule-based 50/25/25 engine.
 
-To enable it in server mode:
+| `RESUME_EXTRACTOR` | Reader | Needs a key | Document leaves the server |
+| --- | --- | --- | --- |
+| `rules` | `lib/parse-resume.ts` | no | no |
+| `gemini` | `lib/extract.ts` | yes | yes, to Google |
+| `auto` (default) | `gemini` if a key is set, else `rules` | no | only when a key is set |
+
+**`rules` — pattern matching, no AI.** Section headings, regular
+expressions, date arithmetic and a lookup against the same skill
+vocabulary the engine scores with. It reads a plain single-column PDF,
+`.docx` or `.txt` well. It **cannot** read a scan or a photo, because
+there is no text in one to read, and it degrades on multi-column layouts.
+Those limits are real and the system reports them to the applicant rather
+than returning a confident empty result. Set this to run the whole system
+with no AI of any kind and no applicant data leaving the server.
+
+**`gemini` — Google's Gemini API.** Reads images and messy layouts better,
+at the cost of sending the applicant's document to a third party.
+
+To use the Gemini reader:
 
 1. Get a free API key at <https://aistudio.google.com/apikey> (Google
    account required, free tier is enough — no billing setup needed).
 2. Put it in `server/.env`:
 
    ```
+   RESUME_EXTRACTOR=auto           # or 'gemini' to require it
    GEMINI_API_KEY=your-key-here
    GEMINI_MODEL=gemini-2.5-flash   # optional, this is the default
    ```
 
 3. Restart the server.
 
-Without a key, everything else works normally — the upload-and-analyze
-page just tells the user the feature isn't configured and points them to
-the builder instead. **Demo mode needs no key at all**: it runs a clearly
-labelled simulated extraction so the flow can be demonstrated offline.
+With `RESUME_EXTRACTOR=gemini` and no key, the upload-and-analyze page
+tells the user the feature isn't configured and points them to the
+builder; everything else works normally. **Demo mode needs no key and no
+server at all**: it runs a clearly labelled simulated extraction so the
+flow can be demonstrated offline.
 
 ### Step 3 — Flip the Angular app to API mode
 
@@ -319,6 +340,104 @@ Protections that are always on, no configuration required:
 - **No account enumeration** — login answers with the same message and
   the same timing whether the email exists or not, and password-reset
   requests answer identically either way.
+
+---
+
+## Part 4 — Search engines
+
+Everything below is already in the build. Two things need a decision from
+you, and one limit is worth understanding before you judge the results.
+
+### Set `SITE_URL` when you build
+
+```bash
+SITE_URL=https://your-domain npm run build:demo
+```
+
+This writes `sitemap.xml` and fills in the `Sitemap:` line of
+`robots.txt`. Both files need fully-qualified URLs, and a domain is a
+deployment fact rather than a source fact, so it comes from the
+environment at build time.
+
+**Without `SITE_URL` no sitemap is written at all, and that is
+deliberate** — a sitemap listing URLs on the wrong domain is worse than
+none, because every URL in it 404s. Four linked pages are found without
+one.
+
+Canonical tags and Open Graph URLs do *not* need this: they are taken
+from the browser's own origin at runtime, so they are correct on
+localhost, on a Netlify preview and on the final domain. Set
+`siteUrl` in `environment.ts` only if you need to force one host to be
+canonical when the same build is served from several.
+
+### Decide about `publishJobPostings`
+
+`environment.ts` carries `publishJobPostings`, which is **off**. Turning
+it on emits schema.org `JobPosting` structured data for every opening —
+the markup that puts a listing in the Google Jobs box, and by a wide
+margin the highest-leverage thing a job site can publish.
+
+It is off because Google's JobPosting policy requires listings to be
+real vacancies that come down when they are filled, and the openings
+this build ships with are **seeded demonstration data**. Publishing them
+would put jobs that do not exist in front of people in Angeles City who
+are actually looking for work, and would expose the site to a manual
+action. Turn it on when the postings are real.
+
+The block itself is built and verified — with the flag on, all seven
+seeded postings emit valid markup with every field Google requires.
+
+### The limit: this is a client-rendered app
+
+The HTML that arrives from the host is an empty `<app-root>`. The title,
+description, canonical, cards and structured data are all written by
+JavaScript afterwards, per route, by `client/src/app/core/seo.ts`.
+
+Google renders JavaScript and will see all of it. Most other crawlers,
+and most social-media link previewers, will not — they read the fallback
+values in `index.html`, which describe the home page. Fixing that
+properly means server-side rendering or prerendering the four public
+routes, which is a build-system change rather than a settings change.
+
+### What is in the build
+
+| Piece | Where |
+|---|---|
+| Per-route title, description, canonical, Open Graph, Twitter card | `client/src/app/app.routes.ts` → `core/seo.ts` |
+| `noindex` on signed-in pages and the 404 route | `app.routes.ts` |
+| WebSite + EducationalOrganization JSON-LD, every page | `core/seo.ts` (`siteJsonLd`) |
+| FAQ JSON-LD, learning hub only | `pages/learning-hub/learning-hub.ts` |
+| BreadcrumbList | `core/seo.ts` (`breadcrumbs`) |
+| JobPosting, gated | `core/seo.ts` (`jobPostings`) |
+| `robots.txt` | `client/public/robots.txt` |
+| `sitemap.xml` | generated — `client/scripts/make-sitemap.mjs` |
+| Social card image | `client/public/og-card.png` |
+
+Check it after any change to the above:
+
+```bash
+cd 05_Website_Angular/client
+SITE_URL=https://your-domain npm run build:demo
+npx http-server dist/client/browser -p 4211 --proxy "http://127.0.0.1:4211?" -s &
+node ../e2e/seo-walkthrough.mjs
+```
+
+That loads every route in a real browser and fails on a missing or
+duplicated description, a missing canonical, a broken card, invalid
+JSON-LD, structured data leaking from one page to the next, or a
+content-security-policy violation.
+
+### What none of this can do
+
+It cannot make the site rank first. Search ranking is mostly domain
+authority, links from other sites, and time — a new domain has none of
+the three. What the work above does is make the site *eligible*: every
+page describes itself accurately, nothing is blocked or duplicated, and
+the local terms someone in Pampanga would actually type are in the
+titles and the copy. The national head terms ("resume builder
+Philippines", "ATS-friendly resume") are already held by established
+sites. The winnable ground is local and specific — Angeles City, Clark
+Freeport Zone, BPO — which is what the titles and descriptions target.
 
 ---
 

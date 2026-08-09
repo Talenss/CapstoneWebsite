@@ -14,8 +14,9 @@
     "test:api": "node -r ts-node/register/transpile-only --test tests/api.test.ts",
     "test:email": "node -r ts-node/register/transpile-only --test tests/email.test.ts",
     "test:analyze": "node -r ts-node/register/transpile-only --test tests/analyze.test.ts",
-    "test:all": "npm test && npm run test:api && npm run test:email && npm run test:analyze && npm run test:parity",
-    "test:parity": "node -r ts-node/register/transpile-only --test tests/mode-parity.test.ts"
+    "test:all": "npm test && npm run test:api && npm run test:email && npm run test:analyze && npm run test:parse && npm run test:parity",
+    "test:parity": "node -r ts-node/register/transpile-only --test tests/mode-parity.test.ts",
+    "test:parse": "node -r ts-node/register/transpile-only --test tests/parse-resume.test.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -29,6 +30,7 @@
     "mammoth": "^1.12.0",
     "multer": "^2.0.0",
     "nodemailer": "^9.0.3",
+    "pdfjs-dist": "^4.10.38",
     "pg": "^8.22.0"
   },
   "devDependencies": {

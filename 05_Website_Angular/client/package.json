@@ -4,12 +4,13 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build && npm run check:csp && npm run check:templates",
+    "build": "ng build && npm run check:csp && npm run check:templates && npm run make:sitemap",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "build:demo": "ng build --configuration demo && npm run check:csp && npm run check:templates",
+    "build:demo": "ng build --configuration demo && npm run check:csp && npm run check:templates && npm run make:sitemap",
     "check:csp": "node scripts/check-csp-safe.mjs",
-    "check:templates": "node scripts/check-template-imports.mjs"
+    "check:templates": "node scripts/check-template-imports.mjs",
+    "make:sitemap": "node scripts/make-sitemap.mjs"
   },
   "private": true,
   "packageManager": "npm@10.9.7",

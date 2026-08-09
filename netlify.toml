@@ -30,6 +30,17 @@
 [build.environment]
   NODE_VERSION = "22"
 
+  # SITE_URL is what writes sitemap.xml and fills in the Sitemap: line of
+  # robots.txt. It is COMMENTED OUT because this repository does not know
+  # the site's final domain, and a sitemap full of URLs on the wrong domain
+  # is worse than no sitemap at all — every URL in it would 404.
+  #
+  # Uncomment with the real domain (no trailing slash) once it is settled.
+  # Everything else — canonical tags, Open Graph URLs — is taken from the
+  # browser's own origin at runtime and needs nothing here.
+  #
+  # SITE_URL = "https://your-domain"
+
 # ---- SPA routing -------------------------------------------
 # Angular does its own routing in the browser, so /browse and
 # /auth are not files on disk. Without this rule a static host
