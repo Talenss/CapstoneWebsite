@@ -92,6 +92,31 @@ export const COOKIE_SECURE = COOKIE_SECURE_RAW;
 // Without a key, the feature shows a friendly "not configured" message;
 // everything else on the site keeps working. Get a free key at
 // https://aistudio.google.com/apikey and put it in .env.
+/* ---------- resume reading ----------
+   Which reader turns an uploaded document into structured fields:
+
+     'rules'   lib/parse-resume.ts — regular expressions, section headings and
+               the skill vocabulary. No network, no model, no data leaves the
+               server. Cannot read a scan or a photo.
+     'gemini'  lib/extract.ts — Google's Gemini API. Reads images, and reads
+               messy layouts better, but sends the applicant's document to a
+               third party and needs a key.
+     'auto'    gemini when a key is configured, rules otherwise. The default,
+               so an existing deployment keeps its behaviour and a keyless one
+               gains reading it did not have.
+
+   Set RESUME_EXTRACTOR=rules to run the study without any AI at all. */
+export type ExtractorMode = 'rules' | 'gemini' | 'auto';
+
+/** Read at the point of use rather than frozen at import. The study compares
+ *  the two readers over the same set of files by flipping this setting between
+ *  runs, so the value has to be readable when the reader is chosen, not only
+ *  when the process booted. */
+export function resumeExtractorMode(): ExtractorMode {
+  const raw = (process.env.RESUME_EXTRACTOR || 'auto').trim().toLowerCase();
+  return raw === 'rules' || raw === 'gemini' ? raw : 'auto';
+}
+
 export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 /* The API host. Overridable so the extraction route can be tested against a

@@ -111,6 +111,18 @@ jobs:
           DB_PASS: postgres
         run: npm run test:analyze
 
+      # The rule-based reader is the no-AI alternative to the extraction above.
+      # It runs on the same documents and must satisfy the same contract, so
+      # RESUME_EXTRACTOR can be flipped without anything downstream noticing.
+      - name: Rule-based resume reader tests
+        working-directory: 05_Website_Angular/server
+        env:
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_USER: postgres
+          DB_PASS: postgres
+        run: npm run test:parse
+
       # Demo mode is a SEPARATE hand-written implementation, and it is the one
       # that gets demonstrated. These drive the same operations through the
       # demo adapter and the real server and assert they agree — on the rules

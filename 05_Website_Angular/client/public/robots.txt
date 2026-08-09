@@ -1,0 +1,37 @@
+# ResumeMatch PH — crawler rules
+#
+# The four public pages are the whole indexable site: the home page, the
+# openings list, the learning hub and the privacy notice. Everything else is
+# behind a login and would show a crawler nothing but a redirect to /auth.
+#
+# Note on Disallow vs noindex: the rules below stop the crawl, which is what
+# saves crawl budget. They do NOT remove a page already in the index — a
+# disallowed page can never be re-crawled, so its noindex is never seen. The
+# pages themselves also send `robots: noindex, nofollow` (see app.routes.ts),
+# and that is the directive that actually removes them.
+
+User-agent: *
+
+# Signed-in areas. Nothing here is useful to a searcher.
+Disallow: /seeker-dashboard
+Disallow: /resume-builder
+Disallow: /upload-resume
+Disallow: /my-resumes
+Disallow: /resume-print
+Disallow: /account
+Disallow: /admin
+Disallow: /hr-dashboard
+Disallow: /hr-applicants
+Disallow: /hr-posting
+Disallow: /hr-company
+
+# The API is data, not pages.
+Disallow: /api/
+
+Allow: /
+
+# Absolute URL required by the sitemap protocol. Generated at build time from
+# the site's own origin — see scripts/make-sitemap.mjs. If you are reading
+# this line in the repository rather than in a build, it has not been filled
+# in yet.
+Sitemap: /sitemap.xml

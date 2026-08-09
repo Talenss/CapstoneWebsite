@@ -1,12 +1,44 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-PH">
 <head>
   <meta charset="utf-8">
-  <title>ResumeMatch PH — Build an ATS-friendly resume. Get matched at Clark Outsourcing.</title>
+
+  <!-- ============================================================
+       These are the FALLBACK values. The app overwrites the title,
+       description, canonical and cards on every navigation from the
+       `seo` block on each route (see core/seo.ts), so what a crawler
+       ends up reading for /browse or /learning-hub is that page's own.
+
+       What is here is what a client sees BEFORE any JavaScript runs:
+       a crawler that does not render, a social-media link previewer,
+       and the first paint of the home page. So it describes the home
+       page, which is the URL those clients almost always arrive at.
+       ============================================================ -->
+  <title>Free Resume Builder &amp; Job Match — Angeles City, Pampanga | ResumeMatch PH</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A free resume builder and ATS-inspired job matching platform for Filipino job seekers. Build a structured resume, see your honest compatibility score against real openings, and apply — no one is ever auto-rejected. Pilot partner: Clark Outsourcing, Clark Freeport Zone.">
+  <meta name="description" content="Build an ATS-friendly resume free, then see your honest match score against real openings in the Clark Freeport Zone, Pampanga. Nobody is auto-rejected.">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <meta name="theme-color" content="#16305C">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+  <!-- Open Graph / Twitter, for the same pre-JavaScript audience. Absolute
+       URLs are required by both specifications and neither accepts a
+       relative path, so these are only correct once the site has a domain —
+       filled in at build time is not possible for a static tag, which is why
+       core/seo.ts rewrites them from the real origin as soon as it runs. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ResumeMatch PH">
+  <meta property="og:title" content="ResumeMatch PH — every applicant gets a seat">
+  <meta property="og:description" content="Build an ATS-friendly resume free, then see your honest match score against openings at Clark Outsourcing, Clark Freeport Zone, Pampanga.">
+  <meta property="og:locale" content="en_PH">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- Geographic signals for local search. These are not ranking factors on
+       their own; they are the machine-readable form of what the pages say in
+       words, and Bing in particular still reads them. -->
+  <meta name="geo.region" content="PH-PAM">
+  <meta name="geo.placename" content="Angeles City, Pampanga">
 </head>
 <body>
   <app-root></app-root>

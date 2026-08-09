@@ -17,7 +17,8 @@
    ============================================================ */
 import { query } from '../db';
 import { EDU_RANK } from './engine';
-import { GEMINI_API_KEY, GEMINI_MODEL, GEMINI_BASE_URL } from '../config';
+import { GEMINI_API_KEY, GEMINI_MODEL, GEMINI_BASE_URL, resumeExtractorMode } from '../config';
+import { parseResume } from './parse-resume';
 
 export type { AnalyzedResume };
 
@@ -99,9 +100,13 @@ function sanitize(raw: any, fileName: string): AnalyzedResume {
     .filter((x: any) => !!x.name);
 
   const p = raw?.personal ?? {};
+  /* The rule-based reader infers a template from the document's shape and the
+     model is never asked for one, so an absent or unrecognised value means
+     chronological — the layout the print sheet was designed around. */
+  const TEMPLATES = ['chronological', 'functional', 'combination'] as const;
   return {
     title: str(raw?.title) || fileName.replace(/\.[^.]+$/, '') || 'Uploaded resume',
-    template: 'chronological',
+    template: TEMPLATES.includes(raw?.template) ? raw.template : 'chronological',
     design: 'classic',
     personal: {
       fullName: str(p?.fullName, 120),
@@ -191,7 +196,19 @@ export interface ExtractResult {
   message?: string;
 }
 
-export const extractionConfigured = (): boolean => !!GEMINI_API_KEY;
+/** Which reader will actually run. Resolves 'auto' to a concrete choice so
+ *  callers, tests and the metrics export all agree on what happened. */
+export function activeExtractor(): 'rules' | 'gemini' {
+  const mode = resumeExtractorMode();
+  if (mode === 'rules') return 'rules';
+  if (mode === 'gemini') return 'gemini';
+  return GEMINI_API_KEY ? 'gemini' : 'rules';
+}
+
+/** True when SOME reader can run. The rule-based one needs nothing, so this is
+ *  only false where the operator has pinned 'gemini' and supplied no key. */
+export const extractionConfigured = (): boolean =>
+  activeExtractor() === 'rules' || !!GEMINI_API_KEY;
 
 /** Document in, structured resume out.
  *
@@ -200,6 +217,20 @@ export const extractionConfigured = (): boolean => !!GEMINI_API_KEY;
  *  still gets their file stored and sent to the recruiter. Every failure is a
  *  status with a message instead. */
 export async function extractResume(buffer: Buffer, mimetype: string, fileName: string): Promise<ExtractResult> {
+  /* The rule-based reader is a drop-in for everything below: same signature,
+     same never-throws contract, and — because its output goes through the
+     SAME sanitize() the model's output does — the same clamped shape. Which
+     one runs is a configuration choice, so both can be measured against the
+     same files without anything downstream being able to tell them apart. */
+  if (activeExtractor() === 'rules') {
+    const r = await parseResume(buffer, mimetype, fileName);
+    return {
+      status: r.status,
+      resume: r.resume ? sanitize(r.resume, fileName) : null,
+      ...(r.message ? { message: r.message } : {}),
+    };
+  }
+
   if (!GEMINI_API_KEY)
     return { status: 'unavailable', resume: null, message: 'Automatic reading is not set up on this server.' };
 

@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
@@ -7,6 +7,7 @@ import { SessionService } from '../../core/session.service';
 import { Company, MatchResult, Posting, Resume } from '../../core/models';
 import { EDU_LABELS, WEIGHTS, scoreLocal, tierColor, tierLabel, tierOf } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
+import { Seo } from '../../core/seo';
 
 interface BrowseRow {
   posting: Posting;
@@ -28,8 +29,9 @@ type SortKey = 'score' | 'new' | 'az';
   templateUrl: './browse.html',
   styleUrl: './browse.css',
 })
-export class Browse implements OnInit {
+export class Browse implements OnInit, OnDestroy {
   private api = inject(ApiService);
+  private seo = inject(Seo);
   session = inject(SessionService);
 
   readonly EDU_LABELS = EDU_LABELS;
@@ -137,6 +139,28 @@ export class Browse implements OnInit {
     const pRes = await this.api.postings.open();
     this.postings.set(pRes.ok ? pRes.postings : []);
     this.loaded.set(true);
+
+    /* Structured data for the openings. Emitted only when the build says
+       these are real vacancies — see Seo.jobPostings, which explains why
+       that is off by default. */
+    this.seo.jobPostings(this.postings().map((p) => ({
+      id: p.id,
+      title: p.title,
+      description: p.description,
+      employmentType: p.employmentType,
+      skills: p.skills,
+      postedAt: p.createdAt,
+      validThrough: p.deadline ?? null,
+      companyName: p.company?.name ?? '',
+      companyWebsite: p.company?.website ?? null,
+      location: p.company?.location ?? null,
+    })));
+  }
+
+  /* A crawler that follows a link away from /browse must not carry this
+     page's job listings onto the next one. */
+  ngOnDestroy(): void {
+    this.seo.jsonLd('ld-jobs', null);
   }
 
   onQueryInput(e: Event): void {

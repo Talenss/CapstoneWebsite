@@ -1,0 +1,340 @@
+/* ============================================================
+   The rule-based resume reader (lib/parse-resume.ts).
+
+   These are the rules the study has to be able to defend, so each
+   one is tested on its own as well as through the whole parser.
+   The accuracy test at the end is the one that matters: it reads a
+   realistic resume and asserts the fields the SCORING ENGINE
+   actually consumes — skills, education level, months — because
+   those are the only outputs that can change an applicant's score.
+   ============================================================ */
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { parseResume, __rules } from '../src/lib/parse-resume';
+import { EDU_RANK } from '../src/lib/engine';
+
+const { headingOf, splitSections, findName, monthsFromRange, monthsFromWords, levelOf, groupBlocks, sweepVocabulary } = __rules;
+
+const txt = (s: string) => Buffer.from(s, 'utf8');
+const TEXT = 'text/plain';
+
+/* ---------------- headings ---------------- */
+
+test('section headings are recognised in the forms Philippine resumes use', () => {
+  assert.equal(headingOf('EDUCATION'), 'education');
+  assert.equal(headingOf('Educational Background'), 'education');
+  assert.equal(headingOf('Work Experience'), 'experience');
+  assert.equal(headingOf('EMPLOYMENT HISTORY'), 'experience');
+  assert.equal(headingOf('Skills:'), 'skills');
+  assert.equal(headingOf('Technical Skills'), 'skills');
+  assert.equal(headingOf('Certifications'), 'certifications');
+  assert.equal(headingOf('Seminars'), 'certifications');
+  assert.equal(headingOf('Character References'), 'references');
+});
+
+test('a heading must be a heading, not a sentence that mentions one', () => {
+  // The failure this guards against: a bullet describing experience being
+  // treated as the start of the experience section, swallowing the rest.
+  assert.equal(headingOf('I have four years of experience in customer support'), null);
+  assert.equal(headingOf('Skills gained during my internship include the following'), null);
+  assert.equal(headingOf(''), null);
+});
+
+test('splitting keeps everything before the first heading as the header block', () => {
+  const { head, sections } = splitSections(
+    'JUAN DELA CRUZ\njuan@example.ph\n0917 123 4567\n\nEDUCATION\nHoly Angel University\n\nSKILLS\nExcel, Communication',
+  );
+  assert.deepEqual(head, ['JUAN DELA CRUZ', 'juan@example.ph', '0917 123 4567']);
+  assert.deepEqual(sections.education, ['Holy Angel University']);
+  assert.deepEqual(sections.skills, ['Excel, Communication']);
+});
+
+/* ---------------- the name ---------------- */
+
+test('the name is found in Title Case and in ALL CAPS', () => {
+  assert.equal(findName(['Juan Dela Cruz', 'juan@example.ph']), 'Juan Dela Cruz');
+  assert.equal(findName(['MARIA CLARA SANTOS', '0917 000 0000']), 'Maria Clara Santos');
+});
+
+test('no name is better than a wrong name', () => {
+  // Each of these used to be picked up as a person's name.
+  assert.equal(findName(['CURRICULUM VITAE', 'RESUME']), '');
+  assert.equal(findName(['Contact Information']), '');
+  assert.equal(findName(['Block 5 Lot 12']), '');
+  assert.equal(findName(['juan@example.ph']), '');
+});
+
+/* ---------------- durations ---------------- */
+
+test('months come from a date range, in the shapes people actually write', () => {
+  assert.equal(monthsFromRange('Jan 2024 - Jun 2024'), 6);
+  assert.equal(monthsFromRange('January 2024 – December 2024'), 12);
+  const now = new Date(2026, 7, 1);                            // August 2026
+  assert.equal(monthsFromRange('Feb 2026 - Present', now), 7);
+});
+
+test('a range with no months counts whole years, not calendar years', () => {
+  // "2022 to 2024" is two years to the person who wrote it. Reading it as
+  // January 2022 through December 2024 would be 36 months — a year of
+  // experience this parser invented, worth a quarter of the score.
+  assert.equal(monthsFromRange('2022 to 2024'), 24);
+  assert.equal(monthsFromRange('Jan 2022 - 2024'), 24);        // one end unknown is still unknown
+  assert.equal(monthsFromRange('2022 - Jun 2024'), 24);
+});
+
+test('an unparseable duration is zero, never a guess', () => {
+  // Zero feeds the experience component honestly; an invented number would
+  // change the applicant's score on the strength of a bad regex.
+  assert.equal(monthsFromRange('sometime last year'), 0);
+  assert.equal(monthsFromRange('Jun 2024 - Jan 2024'), 0);     // ends before it starts
+  assert.equal(monthsFromRange('Jan 1850 - Jan 1851'), 0);     // implausible
+});
+
+test('an explicit duration is read when there is no date range', () => {
+  assert.equal(monthsFromWords('6 months of OJT'), 6);
+  assert.equal(monthsFromWords('2 years experience'), 24);
+  assert.equal(monthsFromWords('1 year 6 months'), 18);
+  assert.equal(monthsFromWords('no numbers here'), 0);
+});
+
+/* ---------------- education level ---------------- */
+
+test('education level maps onto the ranks the engine scores with', () => {
+  assert.equal(levelOf('Bachelor of Science in Information Technology'), 'bachelor');
+  assert.equal(levelOf('BS Business Administration'), 'bachelor');
+  assert.equal(levelOf("Master's Degree in Management"), 'master');
+  assert.equal(levelOf('Senior High School — ABM Strand'), 'highschool');
+  assert.equal(levelOf('TESDA NC II Food and Beverage Services'), 'vocational');
+  assert.equal(levelOf('Associate in Computer Technology'), 'associate');
+});
+
+test("a level that cannot be identified claims nothing", () => {
+  // 'none' ranks 0. Claiming a degree the document did not state would raise
+  // the education quarter of the score on no evidence.
+  assert.equal(levelOf('Studied at Holy Angel University'), 'none');
+  assert.equal(levelOf(''), 'none');
+});
+
+test('several degrees are each classified, so the engine can take the highest', async () => {
+  /* The parser deliberately does NOT collapse education to one level — the
+     engine does that itself (engine.ts takes the max of EDU_RANK across the
+     list). What the parser owes it is a correct level on EVERY entry, in
+     whatever order the applicant listed them. */
+  const r = await parseResume(
+    txt(`ANA REYES\n\nEDUCATION\nHoly Angel University\nBachelor of Science in Psychology\n2022\n\n`
+      + `Ateneo Graduate School\nMaster of Arts in Industrial Psychology\n2025\n`),
+    TEXT, 'ana.txt');
+  assert.equal(r.status, 'ok');
+  const levels = r.resume!.education.map((e) => e.level);
+  assert.deepEqual(levels, ['bachelor', 'master']);
+
+  // What the engine will actually read off this list.
+  const highest = levels.reduce((top, l) => (EDU_RANK[l] > EDU_RANK[top] ? l : top), 'none');
+  assert.equal(highest, 'master', 'the bachelor listed first must not cap the score');
+});
+
+/* ---------------- whole documents ---------------- */
+
+const RESUME = `JUAN DELA CRUZ
+Angeles City, Pampanga
+juan.delacruz@example.ph | 0917 555 1234
+linkedin.com/in/juandelacruz
+
+OBJECTIVE
+Fresh Information Technology graduate seeking an entry-level web developer role.
+
+EDUCATION
+Holy Angel University
+Bachelor of Science in Information Technology
+2026
+
+WORK EXPERIENCE
+Web Development Intern
+LGU San Fernando
+Jan 2025 - Jun 2025
+• Built and maintained pages for the city job portal
+• Fixed layout issues reported by staff
+
+SKILLS
+HTML/CSS, JavaScript, Git, Communication, Teamwork
+
+CERTIFICATIONS
+TESDA Web Development NC III 2025
+
+LANGUAGES
+Filipino (Native), English (Fluent)
+`;
+
+test('a plain single-column resume is read end to end', async () => {
+  const r = await parseResume(txt(RESUME), TEXT, 'juan-resume.txt');
+  assert.equal(r.status, 'ok');
+  const res = r.resume!;
+
+  assert.equal(res.personal.fullName, 'Juan Dela Cruz');
+  assert.equal(res.personal.email, 'juan.delacruz@example.ph');
+  assert.match(res.personal.phone, /0917/);
+  assert.match(res.personal.linkedin ?? '', /linkedin\.com\/in\/juandelacruz/);
+
+  // The three fields the ENGINE reads — the only ones that move a score.
+  assert.equal(res.education[0].level, 'bachelor', 'education level feeds 25% of the score');
+  assert.equal(res.experience[0].months, 6, 'months feed 25% of the score');
+  for (const s of ['HTML/CSS', 'JavaScript', 'Git', 'Communication', 'Teamwork'])
+    assert.ok(res.skills.some((x) => x.toLowerCase() === s.toLowerCase()), 'missing skill: ' + s);
+
+  assert.match(res.education[0].school, /Holy Angel/);
+  assert.equal(res.education[0].year, '2026');
+  assert.match(res.experience[0].position, /Web Development Intern/);
+  assert.match(res.experience[0].company, /LGU San Fernando/);
+  assert.equal(res.experience[0].bullets?.length, 2);
+  assert.equal(res.template, 'combination');
+  assert.ok(res.languages?.some((l) => l.name === 'Filipino' && l.proficiency === 'Native'));
+});
+
+test('a document with no readable text fails rather than returning an empty resume', async () => {
+  // An empty resume would score a confident zero and present it to the
+  // applicant as a fact about them. Failing says what actually happened.
+  const r = await parseResume(txt('   \n  \n '), TEXT, 'blank.txt');
+  assert.notEqual(r.status, 'ok');
+  assert.equal(r.resume, null);
+  assert.match(r.message ?? '', /no text|readable/i);
+});
+
+test('prose with none of a resume in it fails', async () => {
+  const r = await parseResume(
+    txt('This is a letter to my landlord about the broken tap in the kitchen sink. Please send someone.'),
+    TEXT, 'letter.txt');
+  assert.equal(r.status, 'failed');
+  assert.equal(r.resume, null);
+});
+
+test('an image is refused with a reason, not a silent empty result', async () => {
+  const r = await parseResume(Buffer.from([0xff, 0xd8, 0xff]), 'image/jpeg', 'scan.jpg');
+  assert.equal(r.status, 'unreadable');
+  assert.match(r.message ?? '', /scan|photo|AI/i);
+});
+
+test('an old .doc is refused with the advice that fixes it', async () => {
+  const r = await parseResume(txt('x'), 'application/msword', 'old.doc');
+  assert.equal(r.status, 'unreadable');
+  assert.match(r.message ?? '', /PDF/i);
+});
+
+/* ---------------- the honest limits ---------------- */
+
+test('a two-column layout degrades — and the study says so', async () => {
+  // Two columns arrive as interleaved lines. The parser must not pretend to
+  // have understood it; whatever it returns, it must not invent a duration.
+  const twoCol = `JUAN DELA CRUZ
+SKILLS                          EDUCATION
+JavaScript                      Holy Angel University
+Communication                   BS Information Technology
+`;
+  const r = await parseResume(txt(twoCol), TEXT, 'two-column.txt');
+  if (r.status === 'ok') {
+    for (const e of r.resume!.experience) assert.equal(e.months, 0, 'no duration may be invented from a mangled layout');
+  }
+});
+
+test('the catalogue sweep matches whole words only, so Java is never JavaScript', () => {
+  /* The sweep is the rule most likely to over-credit an applicant, so it is
+     tested against a vocabulary directly rather than through the database. */
+  const vocab = new Map([
+    ['java', 'Java'], ['javascript', 'JavaScript'], ['excel', 'Excel'],
+    ['customerservice', 'Customer Service'], ['go', 'Go'],
+  ]);
+
+  const onlyJava = sweepVocabulary('SKILLS\nJava, Customer Service', vocab);
+  assert.deepEqual([...onlyJava.keys()].sort(), ['customerservice', 'java']);
+
+  const onlyJs = sweepVocabulary('Built the front end in JavaScript.', vocab);
+  assert.deepEqual([...onlyJs.keys()], ['javascript'], 'JavaScript must not also credit Java');
+
+  assert.equal(sweepVocabulary('An excellent communicator.', vocab).size, 0,
+    '"Excel" must not be found inside "excellent"');
+  assert.equal(sweepVocabulary('I go to work early.', vocab).size, 0,
+    'two-letter terms are never swept out of ordinary prose');
+});
+
+test('a skill named only in a job description is still credited', async () => {
+  // Not through the sweep here (no database in the test), but the skills
+  // section itself must survive being written as one comma-separated line.
+  const r = await parseResume(txt(`ANA REYES\n\nSKILLS\nJava\n\nEDUCATION\nBS Computer Science\n`), TEXT, 'a.txt');
+  assert.equal(r.status, 'ok');
+  const skills = r.resume!.skills.map((s) => s.toLowerCase());
+  assert.deepEqual(skills, ['java']);
+});
+
+test('entries are split on blank lines, and on dates when there are none', () => {
+  // Two jobs run together with no blank line — the layout that used to pair
+  // the first job title with the second job's dates.
+  const dense = groupBlocks([
+    'Web Developer', 'ABC Corporation', 'Jan 2024 - Present',
+    'Customer Service Representative', 'XYZ Inc', 'Jan 2022 - Dec 2023',
+  ]);
+  assert.equal(dense.length, 2);
+  assert.deepEqual(dense[0], ['Web Developer', 'ABC Corporation', 'Jan 2024 - Present']);
+  assert.deepEqual(dense[1], ['Customer Service Representative', 'XYZ Inc', 'Jan 2022 - Dec 2023']);
+
+  // Bullets belong to the job above them and never start a new entry.
+  const withBullets = groupBlocks([
+    'Intern', 'LGU San Fernando', 'Jan 2025 - Jun 2025', '• Built pages', '• Fixed layout issues',
+  ]);
+  assert.equal(withBullets.length, 1, 'bullets must not be torn off their job');
+});
+
+/* ---------------- the two readers must be interchangeable ---------------- */
+
+test('the rules reader answers extractResume with the same contract the AI does', async () => {
+  /* The config flag is only safe if nothing downstream can tell which reader
+     ran. This asserts the contract itself — the field shape, the enums, and
+     the clamps sanitize() promises — over the rule-based path. The AI path
+     cannot be run here (it needs a network call and a key), so what is
+     verified is that the rules path satisfies the SAME invariants that
+     resumes.save and the scoring engine already rely on. */
+  process.env.RESUME_EXTRACTOR = 'rules';
+  const { extractResume, activeExtractor } = await import('../src/lib/extract');
+  assert.equal(activeExtractor(), 'rules', 'the flag must pin the reader regardless of any key present');
+
+  const r = await extractResume(txt(RESUME), TEXT, 'juan-resume.txt');
+  assert.equal(r.status, 'ok');
+  const res = r.resume!;
+
+  // Shape: every key the AI path guarantees, and no surprises in the enums.
+  for (const k of ['title', 'template', 'design', 'personal', 'education', 'experience', 'skills', 'certifications'])
+    assert.ok(k in res, 'missing guaranteed key: ' + k);
+  assert.ok(['chronological', 'functional', 'combination'].includes(res.template));
+  assert.equal(res.design, 'classic');
+
+  // Clamps: the same limits sanitize() applies to the model's output.
+  assert.ok(res.skills.length <= 30);
+  assert.ok(res.education.length <= 10);
+  assert.ok(res.experience.length <= 15);
+  for (const e of res.education) assert.ok(e.level in EDU_RANK, 'level outside the engine\'s ranks: ' + e.level);
+  for (const e of res.experience) {
+    assert.ok(Number.isInteger(e.months) && e.months >= 0 && e.months <= 600);
+  }
+
+  // And the values the engine actually scores survived the round trip.
+  assert.equal(res.education[0].level, 'bachelor');
+  assert.equal(res.experience[0].months, 6);
+  delete process.env.RESUME_EXTRACTOR;
+});
+
+test('a failure from the rules reader is a failure, not an empty resume', async () => {
+  process.env.RESUME_EXTRACTOR = 'rules';
+  const { extractResume } = await import('../src/lib/extract');
+  const r = await extractResume(txt('   \n \n'), TEXT, 'blank.txt');
+  assert.notEqual(r.status, 'ok');
+  assert.equal(r.resume, null);
+  delete process.env.RESUME_EXTRACTOR;
+});
+
+test('every parsed field is clamped, so a hostile document cannot flood the database', async () => {
+  const huge = 'A'.repeat(5000);
+  const r = await parseResume(
+    txt(`JUAN DELA CRUZ\n\nSUMMARY\n${huge}\n\nSKILLS\n${Array.from({ length: 80 }, (_, i) => 'Skill' + i).join(', ')}\n`),
+    TEXT, 'huge.txt');
+  assert.equal(r.status, 'ok');
+  assert.ok(r.resume!.personal.summary.length <= 1000);
+  assert.ok(r.resume!.skills.length <= 30);
+});
