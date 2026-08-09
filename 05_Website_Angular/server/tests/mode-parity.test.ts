@@ -479,3 +479,53 @@ test('the password policy is the same in both modes', async () => {
     demo.auth.changePassword('demo123', 'goodpass1'),
     api('auth/change-password', { current: 'demo123', next: 'goodpass1' }));
 });
+
+test('a recruiter setting per-opening weights gets the same answer in both modes', async () => {
+  /* Demo mode is a separate hand-written implementation and it is the one
+     that gets demonstrated. Weights scale every score an opening produces, so
+     a validation rule the two modes disagree about would mean the walkthrough
+     shows a posting being saved that the real system refuses — or, worse, an
+     applicant scored on one split in the demo and another on the server. */
+  await demo.auth.login('hr@demo.ph', 'demo123');
+  await api('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+
+  const base = {
+    title: 'Parity Weighted Role',
+    department: 'Information Technology',
+    description: 'Created by the parity suite to compare weight validation across the two modes.',
+    skills: ['JavaScript', 'Git'],
+    educationLevel: 'bachelor',
+    minExperienceMonths: 0,
+  };
+
+  // Every rejection must be a rejection on both sides.
+  for (const weights of [
+    { skills: 50, education: 25, experience: 20 },   // 95
+    { skills: 40, education: 40, experience: 40 },   // 120
+    { skills: 90, education: 5, experience: 5 },     // below the floor
+    { skills: 80, education: 20, experience: 0 },    // a criterion switched off
+  ]) {
+    await agree(
+      `postings.save with weights ${JSON.stringify(weights)}`,
+      demo.postings.save({ ...base, weights } as any),
+      api('postings/save', { posting: { ...base, weights } }),
+    );
+  }
+
+  // And an accepted set must be stored the same way — whole percentages,
+  // never a fraction on one side and a percentage on the other.
+  const good = { skills: 70, education: 15, experience: 15 };
+  const d: any = await demo.postings.save({ ...base, weights: good } as any);
+  const a: any = await api('postings/save', { posting: { ...base, weights: good } });
+  assert.ok(d.ok && a.ok, `both modes must accept ${JSON.stringify(good)}`);
+  assert.deepEqual(d.posting.weights, good, 'demo mode stores whole percentages');
+  assert.deepEqual(a.posting.weights, good, 'api mode stores whole percentages');
+
+  // An opening that sets none reports none in both, rather than a frozen copy
+  // of whatever the defaults happened to be.
+  const d2: any = await demo.postings.save({ ...base, title: 'Parity Inheriting Role' } as any);
+  const a2: any = await api('postings/save', { posting: { ...base, title: 'Parity Inheriting Role' } });
+  assert.ok(d2.ok && a2.ok);
+  assert.equal(d2.posting.weights, null);
+  assert.equal(a2.posting.weights, null);
+});

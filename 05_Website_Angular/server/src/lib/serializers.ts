@@ -201,6 +201,17 @@ export async function serializePosting(p: PostingRow, withCompany = true): Promi
     skills: st.map((r) => r.skill_name),
     educationLevel: p.education_level,
     minExperienceMonths: Number(p.min_experience_months),
+    /* WHOLE PERCENTAGES, the same units the column stores and the recruiter
+       types — so "must total 100" is an exact integer check rather than a
+       float comparison with a tolerance. The engine divides by 100 at the one
+       point it multiplies. null means the opening never set any and inherits
+       the site defaults, which is not the same as 50/25/25: the researcher
+       can retune those and every uncustomised opening follows. */
+    weights: p.weight_skills == null ? null : {
+      skills: Number(p.weight_skills),
+      education: Number(p.weight_education),
+      experience: Number(p.weight_experience),
+    },
     deadline: p.application_deadline || null,
     // past-deadline postings stop accepting applications without anyone
     // having to remember to close them (see postingExpired)

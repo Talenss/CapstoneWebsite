@@ -27,11 +27,15 @@ const resume = (skills: string[], eduLevels: string[] = ['bachelor'], monthsList
   experience: monthsList.map((months) => ({ months })),
 });
 
-const posting = (skills: string[], educationLevel = 'bachelor', minExperienceMonths = 0) => ({
+const posting = (
+  skills: string[], educationLevel = 'bachelor', minExperienceMonths = 0,
+  weights?: { skills: number; education: number; experience: number } | null,
+) => ({
   id: 'p-test',
   skills,
   educationLevel,
   minExperienceMonths,
+  ...(weights !== undefined ? { weights } : {}),
 });
 
 /** Run one case through BOTH engines and assert they agree before
@@ -333,4 +337,93 @@ test('a file is identified by its bytes, not its declared type', () => {
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+/* ---------- per-opening weights ----------
+
+   A recruiter can set what each of the three checks is worth for their own
+   opening. These run through the same score() harness as everything else, so
+   every case below is also asserting that the browser and the server agree —
+   which is what stops a seeker seeing one number on the opening and the
+   recruiter seeing another for the same application. */
+
+test('an opening with its own weights is scored with them, not the site defaults', () => {
+  // Half the skills, meets education, meets experience.
+  const r = resume(['JavaScript', 'Git'], ['bachelor'], [24]);
+
+  const dflt = score(r, posting(['JavaScript', 'Git', 'SQL', 'Excel'], 'bachelor', 12));
+  // 0.5 skills × 50 + 1 × 25 + 1 × 25 = 75
+  assert.equal(dflt.score, 75);
+
+  // The same applicant against a skills-heavy version of the same opening.
+  const heavy = score(r, posting(['JavaScript', 'Git', 'SQL', 'Excel'], 'bachelor', 12,
+    { skills: 80, education: 10, experience: 10 }));
+  // 0.5 × 80 + 1 × 10 + 1 × 10 = 60
+  assert.equal(heavy.score, 60, 'weighting skills harder must cost an applicant who only has half of them');
+
+  // And a version that leans away from skills.
+  const light = score(r, posting(['JavaScript', 'Git', 'SQL', 'Excel'], 'bachelor', 12,
+    { skills: 20, education: 40, experience: 40 }));
+  // 0.5 × 20 + 1 × 40 + 1 × 40 = 90
+  assert.equal(light.score, 90);
+});
+
+test('the weights a score was computed with travel with the score', () => {
+  // The site tells the applicant they see exactly what the recruiter sees, so
+  // a breakdown has to be able to state the split its own number came from.
+  const r = resume(['JavaScript']);
+  const custom = score(r, posting(['JavaScript'], 'bachelor', 0, { skills: 60, education: 20, experience: 20 }));
+  assert.deepEqual(custom.weights, { skills: 0.6, education: 0.2, experience: 0.2 });
+
+  const inherited = score(r, posting(['JavaScript']));
+  assert.deepEqual(inherited.weights, DEFAULT_SETTINGS.weights);
+});
+
+test('an opening that sets no weights inherits whatever the site defaults are', () => {
+  /* Not the same as hardcoding 50/25/25: the study retunes its published
+     weights by editing match_settings, and every opening that never
+     customised has to follow. */
+  const tuned: MatchSettings = {
+    weights: { skills: 0.7, education: 0.2, experience: 0.1 },
+    thresholds: DEFAULT_SETTINGS.thresholds,
+  };
+  const r = resume(['JavaScript', 'Git'], ['bachelor'], [24]);
+  const p = posting(['JavaScript', 'Git', 'SQL', 'Excel'], 'bachelor', 12, null);
+  // 0.5 × 70 + 1 × 20 + 1 × 10 = 65
+  assert.equal(scoreWith(tuned, r, p).score, 65);
+});
+
+test('a malformed weight set falls back to the defaults instead of rescaling the score', () => {
+  /* Normalising 40/40/40 so it sums to 1 would score the applicant on a scale
+     the recruiter never chose, and nothing downstream would look wrong. The
+     published default is at least a number the site can explain. */
+  const r = resume(['JavaScript', 'Git'], ['bachelor'], [24]);
+  const skills = ['JavaScript', 'Git', 'SQL', 'Excel'];
+
+  for (const bad of [
+    { skills: 40, education: 40, experience: 40 },     // sums to 120
+    { skills: 50, education: 25, experience: 20 },     // sums to 95
+    { skills: NaN, education: 25, experience: 25 },
+    { skills: -10, education: 60, experience: 50 },
+  ]) {
+    const got = score(r, posting(skills, 'bachelor', 12, bad as any));
+    assert.equal(got.score, 75, `a weight set of ${JSON.stringify(bad)} must score as the default 50/25/25`);
+    assert.deepEqual(got.weights, DEFAULT_SETTINGS.weights);
+  }
+});
+
+test('the floor keeps every criterion able to move a score', () => {
+  /* 10% is the lowest a recruiter may set any one part (enforced in
+     routes/postings.ts, the demo adapter, and a CHECK on the table). At the
+     floor the criterion still counts, which is the point of having one: an
+     applicant whose only strength is education is not invisible. */
+  const noEdu = resume(['JavaScript', 'Git', 'SQL', 'Excel'], ['none'], [24]);
+  const hasEdu = resume(['JavaScript', 'Git', 'SQL', 'Excel'], ['master'], [24]);
+  const p = posting(['JavaScript', 'Git', 'SQL', 'Excel'], 'bachelor', 12,
+    { skills: 80, education: 10, experience: 10 });
+
+  const a = score(noEdu, p);
+  const b = score(hasEdu, p);
+  assert.ok(b.score > a.score, 'education at the floor must still separate two applicants');
+  assert.equal(b.score - a.score, 10, 'and it separates them by exactly its weight');
 });

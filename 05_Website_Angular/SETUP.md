@@ -343,6 +343,43 @@ Protections that are always on, no configuration required:
 
 ---
 
+## Scoring weights
+
+A score is three checks — skills, education level, months of experience —
+and how much each is worth can be set in two places.
+
+**Site defaults** live in the `match_settings` table (`weight_skills`,
+`weight_education`, `weight_experience`, as fractions). This is how the
+study retunes its published weights without a redeploy; the server
+re-reads them at most once a minute and the browser fetches them at
+startup, so both sides always score with the same numbers.
+
+**Per opening**, a recruiter can override them on the Post-an-opening
+form — `job_postings.weight_skills` / `_education` / `_experience`, stored
+as whole percentages. A developer role can lean on skills while a trainee
+role leans on education.
+
+Three rules hold this together:
+
+- **All three or none.** An opening with no weights stores `NULL`, not a
+  copy of the defaults, so retuning `match_settings` still moves every
+  opening that never customised. A partial set is rejected.
+- **They must total 100**, and **none may be below 10%**. The floor is
+  policy, not arithmetic: a recruiter may decide a criterion matters less
+  for a role, but switching one off would score an applicant whose only
+  strength is that criterion on a scale that cannot see them. Enforced in
+  `routes/postings.ts`, in the demo adapter, and as a `CHECK` constraint
+  on the table, so no route into the data can bypass it.
+- **The applicant is shown the split.** Whatever an opening uses appears
+  on the opening itself and in the dashboard breakdown, because the
+  learning hub promises "you see exactly what the recruiter sees" and
+  that does not survive a recruiter tuning the score in private.
+
+One consequence, stated on the learning hub too: percentages from two
+openings weighted differently are not strictly comparable.
+
+---
+
 ## Part 4 — Search engines
 
 Everything below is already in the build. Two things need a decision from

@@ -54,7 +54,7 @@
       <p style="font-size:13px;color:var(--muted);margin-bottom:20px">These three fields, and only these three, decide how every applicant is scored.</p>
 
       <div class="field" [class.invalid]="skillsInvalid()">
-        <label for="skillInput">Required skills <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">— 50% of the score</span></label>
+        <label for="skillInput">Required skills <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">— {{ wSkills() }}% of the score</span></label>
         <input type="text" id="skillInput" list="skillOpts" [value]="skillInput()" (input)="setSkillInput($event)" (keydown)="onSkillKeydown($event)" placeholder="Type a skill, then press Enter" autocomplete="off">
         <datalist id="skillOpts">
           @for (s of knownSkills(); track s) { <option [value]="s"></option> }
@@ -76,7 +76,7 @@
              and above the chips it pushed them down mid-click. -->
         <div class="tags">
           @if (!skillsVal().length) {
-            <p style="color:var(--muted);font-size:13px">No skills yet — this is half the score, so add at least one.</p>
+            <p style="color:var(--muted);font-size:13px">No skills yet — this is {{ wSkills() }}% of the score, so add at least one.</p>
           } @else {
             @for (s of skillsVal(); track s; let i = $index) {
               <span class="tag">{{ s }}<button type="button" (click)="removeSkill(i)" [attr.aria-label]="'Remove ' + s">&times;</button></span>
@@ -87,13 +87,13 @@
 
       <div class="row2">
         <div class="field">
-          <label for="edu">Minimum education <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">— 25%</span></label>
+          <label for="edu">Minimum education <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">— {{ wEdu() }}%</span></label>
           <select id="edu" [value]="eduVal()" (change)="setEdu($event)">
             @for (k of eduKeys; track k) { <option [value]="k">{{ eduLabels[k] }}</option> }
           </select>
         </div>
         <div class="field">
-          <label for="months">Minimum experience <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">— 25%</span></label>
+          <label for="months">Minimum experience <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">— {{ wExp() }}%</span></label>
           <input type="number" id="months" min="0" step="1" [value]="monthsVal()" (input)="setMonths($event)">
           <p class="hint">In months. Enter 0 to open the role to fresh graduates.</p>
         </div>
@@ -103,6 +103,64 @@
         <label for="deadline">Application deadline <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(optional)</span></label>
         <input type="date" id="deadline" [min]="todayStr" [value]="deadlineVal()" (input)="setDeadline($event)">
         <p class="hint">Past this date the opening stops accepting applications by itself — no need to close it by hand. Leave empty for no deadline.</p>
+      </div>
+
+      <!-- ============ SCORING WEIGHTS ============
+           How much each of the three checks is worth FOR THIS OPENING. Off by
+           default, in which case the opening inherits the site defaults and
+           saves null rather than a copy of them — so retuning the study's
+           published weights still moves every opening that never customised.
+
+           Whatever is set here is shown to the applicant on the opening and
+           in their dashboard breakdown. The site tells them "the formula is
+           published, not hidden — you see exactly what the recruiter sees",
+           and that promise does not survive a recruiter tuning the score in
+           private. -->
+      <div class="field">
+        <label class="wcheck">
+          <input type="checkbox" [checked]="customWeights()" (change)="toggleCustomWeights($event)">
+          <span>Set the scoring weights for this opening</span>
+        </label>
+        <p class="hint">
+          @if (customWeights()) {
+            Applicants see this split on the opening, so they know what this role is judged on.
+          } @else {
+            Using the site defaults — {{ weights.skills * 100 }}% skills, {{ weights.education * 100 }}% education,
+            {{ weights.experience * 100 }}% experience. Tick the box if this role should be weighted differently.
+          }
+        </p>
+
+        @if (customWeights()) {
+          <div class="weights">
+            <div class="wrow">
+              <label for="wSkills">Skills</label>
+              <input type="number" id="wSkills" min="10" max="80" step="1" [value]="wSkills()" (input)="setWSkills($event)">
+              <span class="wpct">%</span>
+              <div class="wbar" aria-hidden="true"><i [style.width.%]="wSkills()" style="background:var(--ink-3)"></i></div>
+            </div>
+            <div class="wrow">
+              <label for="wEdu">Education</label>
+              <input type="number" id="wEdu" min="10" max="80" step="1" [value]="wEdu()" (input)="setWEdu($event)">
+              <span class="wpct">%</span>
+              <div class="wbar" aria-hidden="true"><i [style.width.%]="wEdu()" style="background:var(--ink-3)"></i></div>
+            </div>
+            <div class="wrow">
+              <label for="wExp">Experience</label>
+              <input type="number" id="wExp" min="10" max="80" step="1" [value]="wExp()" (input)="setWExp($event)">
+              <span class="wpct">%</span>
+              <div class="wbar" aria-hidden="true"><i [style.width.%]="wExp()" style="background:var(--ink-3)"></i></div>
+            </div>
+
+            <div class="wtotal" [class.bad]="!weightsValid()">
+              <span>Total</span>
+              <b>{{ weightTotal() }}%</b>
+              <button type="button" class="btn ghost tiny" (click)="resetWeights()">Reset to {{ weights.skills * 100 }}/{{ weights.education * 100 }}/{{ weights.experience * 100 }}</button>
+            </div>
+            @if (weightError(); as we) {
+              <p class="werr" role="alert">{{ we }}</p>
+            }
+          </div>
+        }
       </div>
 
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:26px;flex-wrap:wrap">
@@ -116,11 +174,17 @@
     <aside class="aside">
       <div class="card">
         <h3 style="font-size:19px;margin-bottom:6px">How it will score</h3>
-        <p style="font-size:13px;color:var(--muted)">Fixed weights, applied identically to every applicant.</p>
+        <p style="font-size:13px;color:var(--muted)">
+          @if (customWeights()) {
+            This opening's own weights, applied identically to every applicant who applies to it.
+          } @else {
+            The site defaults, applied identically to every applicant.
+          }
+        </p>
         <div class="weights">
-          <div class="r"><span>Required skills matched</span><b>{{ weights.skills * 100 }}%</b></div>
-          <div class="r"><span>Education level</span><b>{{ weights.education * 100 }}%</b></div>
-          <div class="r"><span>Months of experience</span><b>{{ weights.experience * 100 }}%</b></div>
+          <div class="r"><span>Required skills matched</span><b>{{ wSkills() }}%</b></div>
+          <div class="r"><span>Education level</span><b>{{ wEdu() }}%</b></div>
+          <div class="r"><span>Months of experience</span><b>{{ wExp() }}%</b></div>
           <div class="r"><span>Strong match at</span><b>{{ thresholds.strong }}% and up</b></div>
           <div class="r"><span>Below {{ thresholds.related }}%</span><b>Still shown to you</b></div>
         </div>

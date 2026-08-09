@@ -162,7 +162,28 @@ export function normSkill(s: string): string {
 
 /** Mirrored 1:1 in server/src/lib/engine.ts (rmScore()). Rule-based
  *  only: no ML, no AI. The applicant's uploaded file is never read here. */
-export function scoreLocal(resume: Pick<Resume, 'skills' | 'education' | 'experience'>, posting: Pick<Posting, 'skills' | 'educationLevel' | 'minExperienceMonths'>): MatchResult {
+/** The weights ONE posting is scored with — the browser's mirror of
+ *  weightsFor() in server/src/lib/engine.ts, and it must stay identical: the
+ *  live score shown while a seeker edits their resume has to equal the score
+ *  the server stores when they apply.
+ *
+ *  A posting that names its own overrides the site defaults; one that does not
+ *  inherits them, so retuning match_settings still moves every opening that
+ *  never customised. A malformed or partial set is rejected wholesale rather
+ *  than repaired — normalising it would score the applicant on a scale the
+ *  recruiter never chose. */
+export function weightsFor(posting: Pick<Posting, 'weights'>): typeof WEIGHTS {
+  const w = posting.weights;
+  if (!w) return WEIGHTS;
+  const ok = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
+  if (!ok(w.skills) || !ok(w.education) || !ok(w.experience)) return WEIGHTS;
+  if (w.skills + w.education + w.experience !== 100) return WEIGHTS;
+  // Percentages in, fractions out — the same single conversion the server does.
+  return { skills: w.skills / 100, education: w.education / 100, experience: w.experience / 100 };
+}
+
+export function scoreLocal(resume: Pick<Resume, 'skills' | 'education' | 'experience'>, posting: Pick<Posting, 'skills' | 'educationLevel' | 'minExperienceMonths' | 'weights'>): MatchResult {
+  const W = weightsFor(posting);
   const required = posting.skills || [];
   const have = new Set((resume.skills || []).map(normSkill));
   const matched = required.filter((s) => have.has(normSkill(s)));
@@ -176,7 +197,7 @@ export function scoreLocal(resume: Pick<Resume, 'skills' | 'education' | 'experi
   const reqMonths = Number(posting.minExperienceMonths) || 0;
   const expPart = reqMonths <= 0 ? 1 : Math.min(1, months / reqMonths);
 
-  const raw = (skillPart * WEIGHTS.skills + eduPart * WEIGHTS.education + expPart * WEIGHTS.experience) * 100;
+  const raw = (skillPart * W.skills + eduPart * W.education + expPart * W.experience) * 100;
   const total = Math.floor(raw + 0.5); // half-up, explicitly — must match server rmScore()
 
   return {
@@ -188,6 +209,7 @@ export function scoreLocal(resume: Pick<Resume, 'skills' | 'education' | 'experi
     expMeets: expPart >= 1,
     seekerMonths: months,
     tier: total >= THRESHOLDS.strong ? 'strong' : total >= THRESHOLDS.related ? 'possible' : 'related',
+    weights: W,
   };
 }
 

@@ -49,6 +49,37 @@ export class HrPosting {
   monthsVal = signal(0);
   deadlineVal = signal(''); // optional YYYY-MM-DD; empty = no deadline
   skillInput = signal('');
+
+  /* Per-opening scoring weights, as whole percentages.
+     customWeights false means this opening inherits the site defaults, and
+     saves null rather than a copy of them — so if the study retunes its
+     published weights, every opening that never customised follows along. */
+  customWeights = signal(false);
+  wSkills = signal(Math.round(WEIGHTS.skills * 100));
+  wEdu = signal(Math.round(WEIGHTS.education * 100));
+  wExp = signal(Math.round(WEIGHTS.experience * 100));
+
+  /** The three as the engine will read them, or null when inheriting. */
+  weightPayload = computed(() => (this.customWeights()
+    ? { skills: this.wSkills(), education: this.wEdu(), experience: this.wExp() }
+    : null));
+
+  weightTotal = computed(() => this.wSkills() + this.wEdu() + this.wExp());
+  /* The floor is policy, not arithmetic: a recruiter may decide a criterion
+     matters less for a role, but switching one off entirely would score an
+     applicant whose only strength is that criterion on a scale that cannot
+     see them. Mirrored in routes/postings.ts and as a CHECK on the table. */
+  readonly WEIGHT_FLOOR = 10;
+  weightsBelowFloor = computed(() =>
+    this.wSkills() < this.WEIGHT_FLOOR || this.wEdu() < this.WEIGHT_FLOOR || this.wExp() < this.WEIGHT_FLOOR);
+  weightsValid = computed(() => !this.customWeights()
+    || (this.weightTotal() === 100 && !this.weightsBelowFloor()));
+  weightError = computed(() => {
+    if (!this.customWeights()) return null;
+    if (this.weightsBelowFloor()) return `Each part has to be at least ${this.WEIGHT_FLOOR}% — a criterion cannot be switched off entirely.`;
+    if (this.weightTotal() !== 100) return `The three have to add up to 100%. They add up to ${this.weightTotal()}%.`;
+    return null;
+  });
   todayStr = new Date().toISOString().slice(0, 10);
 
   titleInvalid = signal(false);
@@ -78,7 +109,14 @@ export class HrPosting {
     const skills = this.skillsVal();
     const known = this.knownResumes();
     if (!skills.length || !known.length) return [];
-    const posting = { skills, educationLevel: this.eduVal(), minExperienceMonths: this.monthsVal() };
+    /* The simulation has to score with the weights CURRENTLY in the form,
+       not the site defaults — otherwise dragging a weight changes nothing on
+       screen and the recruiter cannot see what the change does to the very
+       ranking they are tuning. */
+    const posting = {
+      skills, educationLevel: this.eduVal(), minExperienceMonths: this.monthsVal(),
+      weights: this.weightsValid() ? this.weightPayload() : null,
+    };
     return known
       .map((k) => ({ name: k.name, ...scoreLocal(k.resume, posting) }))
       .sort((a, b) => b.score - a.score)
@@ -111,6 +149,12 @@ export class HrPosting {
       this.eduVal.set(p.educationLevel);
       this.monthsVal.set(p.minExperienceMonths || 0);
       this.deadlineVal.set(p.deadline || '');
+      if (p.weights) {
+        this.customWeights.set(true);
+        this.wSkills.set(p.weights.skills);
+        this.wEdu.set(p.weights.education);
+        this.wExp.set(p.weights.experience);
+      }
     }
 
     // Recruiters can only see resumes actually submitted to their company, so
@@ -134,6 +178,28 @@ export class HrPosting {
   setMonths(e: Event): void { this.monthsVal.set(Number((e.target as HTMLInputElement).value) || 0); }
   setDeadline(e: Event): void { this.deadlineVal.set((e.target as HTMLInputElement).value); }
   setSkillInput(e: Event): void { this.skillInput.set((e.target as HTMLInputElement).value); }
+
+  private pct(e: Event): number {
+    const n = Math.round(Number((e.target as HTMLInputElement).value));
+    return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 0;
+  }
+  setWSkills(e: Event): void { this.wSkills.set(this.pct(e)); }
+  setWEdu(e: Event): void { this.wEdu.set(this.pct(e)); }
+  setWExp(e: Event): void { this.wExp.set(this.pct(e)); }
+
+  toggleCustomWeights(e: Event): void {
+    const on = (e.target as HTMLInputElement).checked;
+    this.customWeights.set(on);
+    // Turning it on starts from the site defaults rather than whatever was
+    // last typed, so the recruiter always adjusts from a known 100%.
+    if (on) this.resetWeights();
+  }
+
+  resetWeights(): void {
+    this.wSkills.set(Math.round(WEIGHTS.skills * 100));
+    this.wEdu.set(Math.round(WEIGHTS.education * 100));
+    this.wExp.set(Math.round(WEIGHTS.experience * 100));
+  }
 
   onSkillKeydown(e: KeyboardEvent): void {
     if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); this.addSkill(this.skillInput()); }
@@ -189,6 +255,10 @@ export class HrPosting {
       this.msg.set('Fill in the highlighted fields before publishing.');
       return;
     }
+    if (!this.weightsValid()) {
+      this.msg.set(this.weightError()!);
+      return;
+    }
 
     const payload: Partial<Posting> = {
       title, department, employmentType: this.typeVal(), description,
@@ -196,6 +266,7 @@ export class HrPosting {
       minExperienceMonths: Math.max(0, this.monthsVal() || 0),
       deadline: this.deadlineVal() || null,
       status: this.postingStatus(),
+      weights: this.weightPayload(),
     };
     const id = this.postingId();
     if (id) payload.id = id;

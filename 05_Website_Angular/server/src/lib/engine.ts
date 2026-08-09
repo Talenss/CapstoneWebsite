@@ -126,7 +126,31 @@ export interface SerializedPosting {
   skills: string[];
   educationLevel: string;
   minExperienceMonths: number;
+  /** This opening's own weights as WHOLE PERCENTAGES totalling 100. Absent
+   *  or null means the opening inherits the site defaults. */
+  weights?: { skills: number; education: number; experience: number } | null;
   [k: string]: any;
+}
+
+/** The weights one POSTING is scored with.
+ *
+ *  A posting that names its own overrides the site defaults; one that does not
+ *  inherits them, so retuning match_settings still moves every opening that
+ *  never customised — which is how the study's weights were meant to be
+ *  refined, and stays true now that recruiters can opt out of them.
+ *
+ *  A malformed or partial set is REJECTED WHOLESALE rather than repaired.
+ *  Normalising 40/40/40 to sum to 1 would score every applicant on a scale
+ *  the recruiter never chose and nothing downstream would look wrong; falling
+ *  back to the published defaults is at least a number the site can explain. */
+export function weightsFor(cfg: MatchSettings, posting: SerializedPosting): MatchSettings['weights'] {
+  const w = posting.weights;
+  if (!w) return cfg.weights;
+  const ok = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
+  if (!ok(w.skills) || !ok(w.education) || !ok(w.experience)) return cfg.weights;
+  if (w.skills + w.education + w.experience !== 100) return cfg.weights;
+  // Percentages in, fractions out — the single conversion point in the system.
+  return { skills: w.skills / 100, education: w.education / 100, experience: w.experience / 100 };
 }
 
 export interface MatchResult {
@@ -138,6 +162,16 @@ export interface MatchResult {
   expMeets: boolean;
   seekerMonths: number;
   tier: 'strong' | 'possible' | 'related';
+  /** The weights this score was actually computed with, as fractions.
+   *
+   *  Carried on the result rather than looked up again by whoever displays
+   *  it. The site tells the applicant "the formula is published, not hidden —
+   *  you see exactly what the recruiter sees", and now that each opening can
+   *  set its own split, honouring that means the number and the scale it came
+   *  from have to travel together. A screen that fetched the weights
+   *  separately could show a breakdown that does not add up to the score
+   *  beside it. */
+  weights: { skills: number; education: number; experience: number };
 }
 
 /** The defaults used when the match_settings table has no overrides —
@@ -150,7 +184,11 @@ export const DEFAULT_SETTINGS: MatchSettings = {
 /** The pure scoring function — no database, no I/O. rmScore() wraps it
  *  with the DB-loaded settings; the test suite calls it directly. */
 export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting: SerializedPosting): MatchResult {
-  const W = cfg.weights;
+  /* Resolved from the POSTING first, the site defaults second. Doing it here
+     rather than at each call site is what keeps rmScore, rmFileScore, the
+     browser's live preview and the demo adapter from disagreeing about what
+     an opening is worth. */
+  const W = weightsFor(cfg, posting);
   const T = cfg.thresholds;
 
   const required = posting.skills || [];
@@ -182,6 +220,7 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
     expMeets: expPart >= 1.0,
     seekerMonths: months,
     tier: total >= T.strong ? 'strong' : total >= T.related ? 'possible' : 'related',
+    weights: W,
   };
 }
 

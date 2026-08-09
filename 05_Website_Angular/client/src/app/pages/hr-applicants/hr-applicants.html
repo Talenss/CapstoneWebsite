@@ -134,15 +134,15 @@
             <span class="badge {{ tierBadgeClass(r.tier) }}" style="margin-bottom:8px">{{ tierLabel(r.score) }}</span>
             <div class="breakdown" style="margin:8px 0 0">
               <div class="row">
-                <span><b>Skills</b><span class="w">{{ weights.skills * 100 }}% weight</span></span>
+                <span><b>Skills</b><span class="w">{{ r.weights.skills * 100 }}% weight</span></span>
                 <b>{{ r.matchedSkills.length }} of {{ r.totalSkills }}{{ r.missingSkills.length ? ' · missing ' + r.missingSkills.join(', ') : '' }}</b>
               </div>
               <div class="row">
-                <span><b>Education</b><span class="w">{{ weights.education * 100 }}% weight</span></span>
+                <span><b>Education</b><span class="w">{{ r.weights.education * 100 }}% weight</span></span>
                 <b [style.color]="r.eduMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ r.eduMeets ? 'Meets' : 'Below' }} {{ posting() ? eduLabels[posting()!.educationLevel] : '' }}</b>
               </div>
               <div class="row">
-                <span><b>Experience</b><span class="w">{{ weights.experience * 100 }}% weight</span></span>
+                <span><b>Experience</b><span class="w">{{ r.weights.experience * 100 }}% weight</span></span>
                 <b [style.color]="r.expMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ r.seekerMonths }} mo · asked {{ posting()?.minExperienceMonths || 0 }} mo</b>
               </div>
               <!-- The same posting scored against what software read out of

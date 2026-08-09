@@ -135,4 +135,27 @@ export async function runMigrations(): Promise<void> {
     sort_order   INT NOT NULL DEFAULT 0
   )`);
   await exec('CREATE INDEX IF NOT EXISTS idx_ref_resume ON resume_references (resume_id)');
+
+  /* job_postings.weight_* — per-opening scoring weights, as whole percentages.
+     All three NULL means "use the site defaults" from match_settings, which is
+     what every existing posting gets, so this migration changes no score.
+
+     The constraint is enforced here as well as in the route because these
+     three numbers scale every score the opening produces: a set totalling 90
+     would compress every applicant's score by a tenth and nothing downstream
+     would look wrong. The 10 percent floor is policy — a recruiter may
+     de-emphasise a criterion but not switch it off, so no applicant is
+     measured on a scale that ignores what they have. */
+  await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_skills SMALLINT');
+  await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_education SMALLINT');
+  await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_experience SMALLINT');
+  await exec('ALTER TABLE job_postings DROP CONSTRAINT IF EXISTS posting_weights_complete');
+  await exec(`ALTER TABLE job_postings ADD CONSTRAINT posting_weights_complete CHECK (
+    (weight_skills IS NULL AND weight_education IS NULL AND weight_experience IS NULL)
+    OR (
+      weight_skills IS NOT NULL AND weight_education IS NOT NULL AND weight_experience IS NOT NULL
+      AND weight_skills + weight_education + weight_experience = 100
+      AND weight_skills >= 10 AND weight_education >= 10 AND weight_experience >= 10
+    )
+  )`);
 }

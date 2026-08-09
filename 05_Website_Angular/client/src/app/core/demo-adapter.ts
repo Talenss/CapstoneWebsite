@@ -769,7 +769,7 @@ export class DemoAdapter implements ApiAdapter {
       if (title.length < 2) return apiFail('Give the opening a title.');
       if (dept === '') return apiFail('Which department is this for?');
       if (desc.length < 10) return apiFail('Describe the role in a sentence or two.');
-      if (!skills.length) return apiFail("Add at least one required skill — it's half the score.");
+      if (!skills.length) return apiFail("Add at least one required skill — there is nothing to match an applicant against without one.");
       posting = {
         ...posting, title, department: dept, description: desc, skills,
         educationLevel: (EDU_RANK as any)[posting.educationLevel as string] !== undefined
@@ -778,6 +778,30 @@ export class DemoAdapter implements ApiAdapter {
           .includes(posting.employmentType as string) ? posting.employmentType : 'full-time',
         minExperienceMonths: Math.max(0, Number(posting.minExperienceMonths) || 0),
       };
+
+      /* Per-opening weights. Same three rules as routes/postings.ts, and the
+         same messages: whole numbers, each at least 10%, totalling 100. The
+         demo is what gets demonstrated, so a set the server would reject must
+         be rejected here too — otherwise the walkthrough shows a posting
+         being saved that the real system refuses.
+         Stored as whole percentages, the same units the server's column uses. */
+      if (posting.weights != null) {
+        const W: any = posting.weights;
+        const pct = (v: unknown): number | null => {
+          const n = Number(v);
+          return Number.isFinite(n) && Number.isInteger(n) ? n : null;
+        };
+        const sk = pct(W.skills), ed = pct(W.education), ex = pct(W.experience);
+        if (sk === null || ed === null || ex === null)
+          return apiFail('The scoring weights must be whole numbers.');
+        if (sk < 10 || ed < 10 || ex < 10)
+          return apiFail('Each part of the score has to be at least 10% — a criterion cannot be switched off entirely.');
+        if (sk + ed + ex !== 100)
+          return apiFail(`The three weights have to add up to 100%. They currently add up to ${sk + ed + ex}%.`);
+        posting = { ...posting, weights: { skills: sk, education: ed, experience: ex } };
+      } else {
+        posting = { ...posting, weights: null };
+      }
 
       if (posting.deadline) {
         const d = String(posting.deadline).slice(0, 10);
