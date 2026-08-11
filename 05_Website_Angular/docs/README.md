@@ -97,3 +97,41 @@ worth knowing before the forms are built:
    invitation and enters it on both forms; no list mapping codes to people is
    kept, so responses stay anonymous while still being pairable. Without this
    the paired block cannot be analysed at all.
+
+## Sources, as of 11 August 2026
+
+The citation audit had flagged six references it could not trace. Checking the
+manuscript rather than the audit note:
+
+- **Five are no longer in the paper at all** — no reference entry and no in-text
+  citation anywhere in the body. Miller & Zhang, Stevenson et al., Kumar et al.,
+  Nielsen Norman Group and Albert et al. were removed or replaced in an earlier
+  pass. There is nothing left to fix.
+- **One was replaced, and the replacement now checks out.** Stanica et al. gave
+  the wrong venue for CareProfSys; the entry is Dascălu et al. (2023), and that
+  article is real at exactly the venue and pages cited — *Issues in Information
+  Systems*, 24(3), 71–82.
+- **One entry remains unconfirmed:** Đorđević (2022). The journal and the volume
+  exist; the article did not surface. The entry carries a redalyc PDF link —
+  opening it settles the question either way.
+
+Two further corrections came out of the same check:
+
+- **The SUS benchmark now has a source.** The Method promised a comparison
+  against published norms and named none. It now reports against the mean of
+  approximately 70 from Bangor, Kortum and Miller (2008), with the adjective
+  scale from the same authors (2009) and Lewis (2018) as the review. The figure
+  of 68 quoted almost everywhere online traces to a self-published practitioner
+  guide and is deliberately **not** cited. The comparison is bounded in the
+  text: these are norms for software in general, and no published SUS norm for
+  applicant-facing recruitment systems was found.
+- **"40% more viewing time" was removed.** It was attributed to TheLadders
+  (2018), which does not report it. The 7.4 seconds in the same sentence is
+  correct and confirmed. The sentence now states what that study does report.
+
+The reference list is 55 entries. What has been confirmed is that these works
+**exist** at the venue, volume and pages given, by cross-checking independent
+index records. Nobody has read them. Six method sources in particular are now
+cited and unread — Brooke, Campbell and Stanley, Wilcoxon, Bangor et al. (twice)
+and Lewis — and a source confirmed to exist is not a source confirmed to support
+the sentence it is attached to.
