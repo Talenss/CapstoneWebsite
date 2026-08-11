@@ -7,7 +7,7 @@ documents, not source — the system itself is the folder above.
 |---|---|
 | `ResumeMatch-PH-Design-Specification.pdf` | 20-page design specification: site map, user flows, five wireframes, two mockups, the design system, use case diagram, ERD, the matching algorithm, the API surface, the testing strategy, and the build sequence. Written for the adviser as the "everything you need to start building" document. |
 | `ResumeMatch-PH-Updated-Manuscript-Sections.docx` | Copy-paste-ready replacement text for every section of the capstone paper that the built system has outgrown. Eleven substantive changes, each section reproduced in full between BEGIN/END markers. |
-| `ResumeMatch-PH-Research-Instruments.docx` | The four instruments the study administers — 98 items, all closed — laid out with tick boxes so they can be printed and filled in, plus an administration sheet. Generated from the same source as the manuscript's Appendix A, so the two cannot drift apart. |
+| `ResumeMatch-PH-Research-Instruments.docx` | The five instruments the study administers — 103 items, all closed — laid out with tick boxes so they can be printed and filled in, plus an administration sheet. Instrument E is a ranking task: the recruiter orders five résumés and the study computes Spearman's rank correlation against the system's order. Generated from the same source as the manuscript's Appendix A, so the two cannot drift apart. |
 
 ## What the manuscript revisions cover
 
