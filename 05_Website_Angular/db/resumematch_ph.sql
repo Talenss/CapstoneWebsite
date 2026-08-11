@@ -483,12 +483,12 @@ INSERT INTO users (user_id, role, full_name, email, password_hash) VALUES
 INSERT INTO skills (skill_name, skill_norm, category) VALUES
  ('HTML/CSS','htmlcss','technical'), ('JavaScript','javascript','technical'),
  ('Git','git','technical'), ('Troubleshooting','troubleshooting','technical'),
- ('Windows','windows','technical'), ('Networking','networking','technical'),
+ ('Windows','windows','technical'), ('Networking','computernetworking','technical'),
  ('CRM Software','crmsoftware','technical'), ('Canva','canva','technical'),
  ('Copywriting','copywriting','technical'), ('Data Entry','dataentry','technical'),
  ('QuickBooks','quickbooks','technical'), ('Bookkeeping','bookkeeping','technical'),
  ('Medical Terminology','medicalterminology','technical'),
- ('MS Office','msoffice','technical'), ('Social Media','socialmedia','technical'),
+ ('MS Office','microsoftoffice','technical'), ('Social Media','socialmedia','technical'),
  ('Teamwork','teamwork','soft'), ('Communication','communication','soft'),
  ('Customer Service','customerservice','soft'), ('English Proficiency','englishproficiency','soft'),
  ('Attention to Detail','attentiontodetail','soft'), ('Organization','organization','soft'),
@@ -562,9 +562,9 @@ SELECT 1, skill_id FROM skills WHERE skill_norm IN ('htmlcss','javascript','git'
 INSERT INTO resume_skills (resume_id, skill_id)
 SELECT 2, skill_id FROM skills WHERE skill_norm IN ('htmlcss','javascript','communication','teamwork');
 INSERT INTO resume_skills (resume_id, skill_id)
-SELECT 3, skill_id FROM skills WHERE skill_norm IN ('customerservice','communication','msoffice','englishproficiency','crmsoftware','teamwork');
+SELECT 3, skill_id FROM skills WHERE skill_norm IN ('customerservice','communication','microsoftoffice','englishproficiency','crmsoftware','teamwork');
 INSERT INTO resume_skills (resume_id, skill_id)
-SELECT 4, skill_id FROM skills WHERE skill_norm IN ('communication','recruitment','msoffice','organization','socialmedia');
+SELECT 4, skill_id FROM skills WHERE skill_norm IN ('communication','recruitment','microsoftoffice','organization','socialmedia');
 
 -- ---------- job postings ----------
 -- Posting 6 gets a deadline two weeks out, demoing the "Apply by" chip.
@@ -585,10 +585,10 @@ INSERT INTO job_postings (posting_id, company_id, created_by, title, department,
      'Coordinate scheduling and records for a US healthcare client; liaise with patients by phone and email.', 'bachelor', 12, NULL, 'open');
 
 INSERT INTO posting_skills (posting_id, skill_id) SELECT 1, skill_id FROM skills WHERE skill_norm IN ('htmlcss','javascript','git','teamwork');
-INSERT INTO posting_skills (posting_id, skill_id) SELECT 2, skill_id FROM skills WHERE skill_norm IN ('troubleshooting','windows','networking','communication');
+INSERT INTO posting_skills (posting_id, skill_id) SELECT 2, skill_id FROM skills WHERE skill_norm IN ('troubleshooting','windows','computernetworking','communication');
 INSERT INTO posting_skills (posting_id, skill_id) SELECT 3, skill_id FROM skills WHERE skill_norm IN ('customerservice','communication','englishproficiency','crmsoftware');
-INSERT INTO posting_skills (posting_id, skill_id) SELECT 4, skill_id FROM skills WHERE skill_norm IN ('dataentry','msoffice','organization','attentiontodetail');
-INSERT INTO posting_skills (posting_id, skill_id) SELECT 5, skill_id FROM skills WHERE skill_norm IN ('bookkeeping','quickbooks','msoffice','attentiontodetail');
+INSERT INTO posting_skills (posting_id, skill_id) SELECT 4, skill_id FROM skills WHERE skill_norm IN ('dataentry','microsoftoffice','organization','attentiontodetail');
+INSERT INTO posting_skills (posting_id, skill_id) SELECT 5, skill_id FROM skills WHERE skill_norm IN ('bookkeeping','quickbooks','microsoftoffice','attentiontodetail');
 INSERT INTO posting_skills (posting_id, skill_id) SELECT 6, skill_id FROM skills WHERE skill_norm IN ('socialmedia','copywriting','canva','communication');
 INSERT INTO posting_skills (posting_id, skill_id) SELECT 7, skill_id FROM skills WHERE skill_norm IN ('medicalterminology','customerservice','scheduling','englishproficiency');
 

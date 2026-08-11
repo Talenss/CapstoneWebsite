@@ -14,6 +14,8 @@
    ============================================================ */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { scoreWith, DEFAULT_SETTINGS, skillNorm, SKILL_ALIASES, EDU_RANK, MatchSettings } from '../src/lib/engine';
 import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK } from '../../client/src/app/core/engine';
@@ -426,4 +428,64 @@ test('the floor keeps every criterion able to move a score', () => {
   const b = score(hasEdu, p);
   assert.ok(b.score > a.score, 'education at the floor must still separate two applicants');
   assert.equal(b.score - a.score, 10, 'and it separates them by exactly its weight');
+});
+
+test('every seeded skill stores the norm the engine would compute for it', () => {
+  /* The schema comment on skillNorm says its output is what belongs in
+     `skills.skill_norm`. Two seeded rows once broke that quietly: the
+     catalogue stored 'msoffice' and 'networking' while the engine turned the
+     same display names into 'microsoftoffice' and 'computernetworking'.
+
+     Scoring never noticed, because both sides of a comparison go through
+     skillNorm and so both landed on the alias target. What broke was the
+     lookup in ensureSkill, which searches `WHERE skill_norm = skillNorm(name)`
+     — it missed the seeded row and inserted a SECOND row for the same skill
+     the first time a recruiter typed "MS Office" into a posting. Verified
+     against PostgreSQL at the time: the catalogue grew rows 26 and 27
+     alongside the seeded 6 and 14.
+
+     Nothing visible failed. The recruiter's skill picker de-duplicates by
+     display name, so the catalogue silently accumulated duplicates while
+     every screen looked correct — which is exactly why this is a test and
+     not a comment. It reads the shipped seed file, so a hand-written
+     skill_norm that disagrees with the engine fails here rather than in
+     somebody's database months later. */
+  const sql = readFileSync(join(__dirname, '..', '..', 'db', 'resumematch_ph.sql'), 'utf8');
+  const block = /INSERT INTO skills \(skill_name, skill_norm, category\) VALUES([\s\S]*?);/.exec(sql);
+  assert.ok(block, 'the seed file must contain the skills catalogue');
+
+  const rows = [...block![1].matchAll(/\('([^']+)','([a-z0-9]+)','[a-z]+'\)/g)]
+    .map((m) => ({ name: m[1], stored: m[2] }));
+  assert.ok(rows.length >= 20, `expected a populated catalogue, found ${rows.length} rows`);
+
+  for (const { name, stored } of rows) {
+    assert.equal(stored, skillNorm(name),
+      `seeded skill_norm for "${name}" is '${stored}' but skillNorm() returns `
+      + `'${skillNorm(name)}' — the lookup in ensureSkill would miss this row and `
+      + `insert a duplicate. Fix the seed, not the engine.`);
+  }
+
+  const norms = rows.map((r) => r.stored);
+  assert.equal(new Set(norms).size, norms.length, 'no two catalogue rows may share a skill_norm');
+});
+
+test('every skill a seeded posting or resume requires exists in the catalogue', () => {
+  /* The seed links postings and resumes to skills by `WHERE skill_norm IN
+     (...)`. A norm listed there that no catalogue row carries does not error:
+     the SELECT simply matches nothing, and the posting silently comes up
+     short a required skill. Renaming a catalogue norm without updating these
+     lists is the obvious way to cause it, so the two are checked together. */
+  const sql = readFileSync(join(__dirname, '..', '..', 'db', 'resumematch_ph.sql'), 'utf8');
+  const block = /INSERT INTO skills \(skill_name, skill_norm, category\) VALUES([\s\S]*?);/.exec(sql);
+  const catalogue = new Set([...block![1].matchAll(/\('[^']+','([a-z0-9]+)','[a-z]+'\)/g)].map((m) => m[1]));
+
+  let checked = 0;
+  for (const m of sql.matchAll(/INSERT INTO (posting_skills|resume_skills)[\s\S]*?skill_norm IN \(([^)]*)\)/g)) {
+    for (const q of m[2].matchAll(/'([a-z0-9]+)'/g)) {
+      checked++;
+      assert.ok(catalogue.has(q[1]),
+        `${m[1]} references skill_norm '${q[1]}', which no row in the skills catalogue carries`);
+    }
+  }
+  assert.ok(checked >= 20, `expected the seed to link many skills, found ${checked}`);
 });
