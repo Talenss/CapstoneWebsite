@@ -7,7 +7,10 @@ documents, not source — the system itself is the folder above.
 |---|---|
 | `ResumeMatch-PH-Design-Specification.pdf` | 20-page design specification: site map, user flows, five wireframes, two mockups, the design system, use case diagram, ERD, the matching algorithm, the API surface, the testing strategy, and the build sequence. Written for the adviser as the "everything you need to start building" document. |
 | `ResumeMatch-PH-Updated-Manuscript-Sections.docx` | Copy-paste-ready replacement text for every section of the capstone paper that the built system has outgrown. Eleven substantive changes, each section reproduced in full between BEGIN/END markers. |
-| `ResumeMatch-PH-Research-Instruments.docx` | The five instruments the study administers — 103 items, all closed — laid out with tick boxes so they can be printed and filled in, plus an administration sheet. Instrument E is a ranking task: the recruiter orders five résumés and the study computes Spearman's rank correlation against the system's order. Generated from the same source as the manuscript's Appendix A, so the two cannot drift apart. |
+| `ResumeMatch-PH-Research-Instruments.docx` | The five instruments the study administers — 117 items, all closed — laid out with tick boxes so they can be printed and filled in, plus an administration sheet. Instrument C carries four items repeated word for word from Instrument A, so the change in one respondent's own answer can be tested, and the ten items of the System Usability Scale, scored on their own 0–100 scale. Instrument E is a ranking task: the recruiter orders five résumés and the study computes Spearman's rank correlation against the system's order. Generated from the same source as the manuscript's Appendix A, so the two cannot drift apart. |
+| `ResumeMatch-PH-Google-Forms.docx` | The same five instruments laid out as Google Forms questions — question type, options and section descriptions for every item — plus the checklist for what to do once responses are in. Generated from the same source, for the same reason. |
+| `ResumeMatch-PH-Study-Guide.docx` | The defence study guide: the whole paper section by section, then 120 practice questions with answers written to be said out loud, defence notes, alignment checks and the five figures. Part 4 works every statistic in the study by hand — weighted mean and SD, Wilcoxon signed-rank, the System Usability Scale, Spearman's rho and Cronbach's alpha — on numbers small enough to reproduce with a pen. |
+| `ResumeMatch-PH-Codebase.docx` | Every source file in the repository and what it does, plus the scoring engine in full with its rounding rule, the fourteen database CHECK constraints, the seven steps a single application takes from Apply to a ranked list, and the security that is actually implemented — including the gaps. |
 
 ## What the manuscript revisions cover
 
@@ -40,10 +43,10 @@ where the manuscript and the implementation had diverged:
    zero.
 8. **Six application statuses**, including applicant withdrawal, with an audit
    trail naming the recruiter behind every change.
-9. **Automated testing** — five suites totalling 99 tests under CI (engine,
-   API, email, extraction, and a demo/API parity suite), plus scripted browser
-   walkthroughs that drive the real interface, alongside the ISO 25010
-   evaluation.
+9. **Automated testing** — six suites totalling 140 tests under CI (engine 37,
+   API 46, email 10, extraction 10, demo/API parity 13, and the rule-based
+   document reader 24), plus scripted browser walkthroughs that drive the real
+   interface, alongside the ISO 25010 evaluation.
 10. **Security and data rights** — email verification, hashed passwords,
     role-based access, applicant data export, account deletion.
 11. **Department-based routing** of new applications.
@@ -64,3 +67,33 @@ sections, fourteen designs in place of eight, and the test counts.
 Both documents are generated from scripts kept with the session that produced
 them; they are committed here as finished artifacts. If a document needs to
 change, edit it in Word/Google Docs, or ask for a regeneration.
+
+## Revision of 11 August 2026
+
+The study's method changed, and the documents here changed with it. The
+manuscript's Chapter 3 is now a **quantitative** descriptive design rather
+than a qualitative one, and two things were added inside it:
+
+- **A paired before-and-after block.** Four items of Instrument A are repeated
+  word for word in Instrument C, so the change in a single respondent's own
+  answer can be measured rather than inferred. The pair is tested with the
+  Wilcoxon signed-rank test — the only inferential statistic and the only
+  hypothesis in the study. This makes the job-seeker strand a one-group
+  pretest–posttest, which is pre-experimental: no control group, no random
+  assignment, and therefore no causal claim.
+- **The System Usability Scale.** Ten published items, reproduced unaltered,
+  scored 0–100 by their own procedure and never averaged with the ISO/IEC
+  25010 items. It is included because every other figure the study produces
+  comes from a researcher-made instrument and cannot be compared with anything
+  outside the paper.
+
+The instruments went from 103 items to 117. Two operational consequences are
+worth knowing before the forms are built:
+
+1. One of the four repeated items is **negatively worded**, because its
+   original is. On that item an improvement is a *lower* answer.
+2. The paired test compares each respondent's two answers, so the two forms
+   must be linkable. Each job seeker is issued a **respondent code** with their
+   invitation and enters it on both forms; no list mapping codes to people is
+   kept, so responses stay anonymous while still being pairable. Without this
+   the paired block cannot be analysed at all.
