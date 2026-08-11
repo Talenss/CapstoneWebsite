@@ -1,0 +1,5 @@
+# Nothing is installed at this level in normal use — client/ and server/ each
+# carry their own package.json. A node_modules here only ever appears when
+# someone makes playwright resolvable to the e2e/ suite, whose files import it
+# by bare specifier. That is a local convenience, not part of the project.
+node_modules/

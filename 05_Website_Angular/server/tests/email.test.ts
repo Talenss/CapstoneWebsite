@@ -232,11 +232,11 @@ test('a recruiter can be approved and then actually set a password by email', as
     m.to.some((t) => t.toLowerCase() === lower) && /reset/i.test(m.subject));
 
   const set = await hr('auth/reset-password', {
-    email: typed, code: codeFrom(mail.body), password: 'royce12345',
+    email: typed, code: codeFrom(mail.body), password: 'clark12345',
   });
   assert.equal(set.body.ok, true, 'the approved recruiter must be able to set a password: ' + JSON.stringify(set.body));
 
-  const login = await hr('auth/login', { email: typed, password: 'royce12345' });
+  const login = await hr('auth/login', { email: typed, password: 'clark12345' });
   assert.equal(login.body.ok, true, 'and then sign in with the address they typed');
   assert.equal(login.body.user.role, 'recruiter');
 });

@@ -11,7 +11,14 @@
 .req .facts p { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; padding: 6px 0; border-bottom: 1px solid var(--rule-2); margin: 0; }
 .req .facts p:last-child { border-bottom: none; }
 .req .facts span { color: var(--muted); }
-.req .facts b { font-weight: 600; text-align: right; word-break: break-word; }
+/* overflow-wrap:anywhere, not word-break:break-word — the difference is
+   the whole bug. break-word lets a long word break so it does not spill
+   VISUALLY, but it does not reduce the element's MIN-CONTENT width, and
+   min-content is what a grid track refuses to shrink below. A recruiter
+   address like carlos.mendoza@clarkoutsourcing.com is 317px unbroken, so
+   it set a floor wider than a 320px phone and pushed the admin page
+   sideways. `anywhere` is the one value that lowers min-content too. */
+.req .facts b { font-weight: 600; text-align: right; overflow-wrap: anywhere; }
 .req .note {
   font-size: 13px; color: var(--muted); background: var(--paper); border-left: 2px solid var(--accent);
   padding: 10px 14px; border-radius: 0 var(--r) var(--r) 0; margin: 12px 0 0; line-height: 1.6;

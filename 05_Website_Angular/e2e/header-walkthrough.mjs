@@ -25,7 +25,17 @@ const page = await b.newPage({ viewport: { width: 1366, height: 900 } });
 await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
 
 const login = async (email) => {
-  await page.evaluate(() => { try { sessionStorage.removeItem('rmph_v3_session'); } catch {} }).catch(()=>{});
+  /* Clear BOTH stores. The demo session used to live in sessionStorage
+     alone; since it was made to survive opening the print sheet in a new
+     tab it is written to localStorage too, and the adapter restores the
+     sessionStorage copy from it. Clearing one therefore logs nobody out:
+     the second login() landed on an /auth that redirected an already
+     signed-in user away, and this file died on a 30s timeout waiting for
+     an email field — taking the recruiter and admin header cases with it. */
+  await page.evaluate(() => {
+    try { sessionStorage.removeItem('rmph_v3_session'); } catch {}
+    try { localStorage.removeItem('rmph_v3_session'); } catch {}
+  }).catch(()=>{});
   await page.goto(B + '/auth', { waitUntil: 'networkidle' });
   await page.waitForTimeout(900);
   await page.fill('input[type=email]', email);
