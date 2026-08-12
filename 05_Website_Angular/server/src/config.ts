@@ -123,7 +123,15 @@ export function resumeExtractorMode(): ExtractorMode {
  *  change and the key did not, so the two could disagree about which reader
  *  was configured. A test caught this. */
 export const geminiApiKey = (): string => process.env.GEMINI_API_KEY || '';
-export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+/* NOT gemini-2.5-flash, which this defaulted to until an API key issued in
+   2026 could not call it: Google has closed that model to new keys, and the
+   request comes back 404 "no longer available to new users". It is a confusing
+   failure to inherit, because the model still appears in the /models listing
+   and an older key still works — so it fails only for whoever sets the project
+   up next. Pinned to an exact version rather than the gemini-flash-latest
+   alias, which moves when Google ships a new model and would change extraction
+   results in the middle of data collection. */
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 /* The API host. Overridable so the extraction route can be tested against a
    local stand-in — the value of those tests is in OUR code (the multipart
    handling, the MIME check, and the coercion of whatever the model returns),

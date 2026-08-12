@@ -124,6 +124,37 @@ function sanitize(raw: any, fileName: string): AnalyzedResume {
   };
 }
 
+/* The structure the reply must have. Mirrors the shape spelled out in
+   buildPrompt(); the prompt still carries the RULES (extract only, known skill
+   spellings, no invented bullets), which a schema cannot express. Keep the two
+   in step — a field added to one and not the other is silently dropped.
+
+   Types are the API's own enum spelling (OBJECT/ARRAY/STRING/INTEGER), not
+   JSON Schema's lowercase. */
+const S = (properties: any) => ({ type: 'OBJECT', properties });
+const STR = { type: 'STRING' };
+const STR_LIST = { type: 'ARRAY', items: STR };
+
+const RESPONSE_SCHEMA = S({
+  title: STR,
+  personal: S({
+    fullName: STR, email: STR, phone: STR, address: STR,
+    summary: STR, headline: STR, linkedin: STR, portfolio: STR,
+  }),
+  education: { type: 'ARRAY', items: S({ school: STR, degree: STR, level: STR, year: STR }) },
+  experience: {
+    type: 'ARRAY',
+    items: S({
+      position: STR, company: STR, months: { type: 'INTEGER' },
+      description: STR, bullets: STR_LIST,
+    }),
+  },
+  skills: STR_LIST,
+  certifications: { type: 'ARRAY', items: S({ name: STR, year: STR }) },
+  projects: { type: 'ARRAY', items: S({ name: STR, role: STR, description: STR, link: STR }) },
+  languages: { type: 'ARRAY', items: S({ name: STR, proficiency: STR }) },
+});
+
 async function callGemini(parts: any[]): Promise<any> {
   const url = `${geminiBaseUrl()}/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(geminiApiKey())}`;
   const controller = new AbortController();
@@ -135,7 +166,32 @@ async function callGemini(parts: any[]): Promise<any> {
       signal: controller.signal,
       body: JSON.stringify({
         contents: [{ role: 'user', parts }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0 },
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0,
+          /* DECLARE THE SHAPE, do not just ask for it in the prompt.
+             responseMimeType alone promises JSON and does not deliver it: on
+             gemini-3.5-flash the reply came back repeatedly with its final
+             closing brace missing — reported as finishReason STOP, with a
+             complete HTTP body, so it does not look truncated from the outside
+             and the failure surfaces only as a parse error. Raising
+             maxOutputTokens made no difference. With the schema declared the
+             same call parsed on every attempt and returned byte-identical
+             output, which is also what a study needs to be reproducible. */
+          responseSchema: RESPONSE_SCHEMA,
+          /* A ceiling, not a target. A well-behaved extraction of a long resume
+             lands near 300-800 tokens, so this never binds in normal use — it
+             exists because a degenerate reply already happened once here and
+             cost 65,520 tokens in a single call, which is a whole day of
+             free-tier quota spent on one upload. Better to fail one file and
+             fall through to the rule-based reader than to spend the quota every
+             other applicant depends on. */
+          maxOutputTokens: 4096,
+          /* Thinking off. Extraction copies text out of a document, it does not
+             reason, so the deliberation tokens buy nothing and cost latency on
+             a page an applicant is waiting on. */
+          thinkingConfig: { thinkingBudget: 0 },
+        },
       }),
     });
     if (!res.ok) {
@@ -159,21 +215,33 @@ async function buildPrompt(): Promise<string> {
     `SELECT DISTINCT s.skill_name FROM posting_skills ps JOIN skills s ON s.skill_id = ps.skill_id LIMIT 150`,
   ).catch(() => [] as { skill_name: string }[]);
   const knownList = known.map((k) => k.skill_name).join(', ');
-  const prompt = `You are a resume parser for a job-matching platform. Read the resume provided and extract its content.
+  /* NO JSON TEMPLATE HERE. The shape is declared to the API as RESPONSE_SCHEMA
+     instead, and stating it twice is not belt-and-braces — it is actively
+     harmful. With both present, gemini-3.5-flash ran away: 65,520 output
+     tokens, 164 seconds, finishReason MAX_TOKENS, and a quarter-megabyte reply
+     that of course did not parse. One such call exhausts a day of free-tier
+     quota. The same prompt with the template removed answers in about two
+     seconds and 310 tokens.
 
-Return ONLY a JSON object with exactly this shape (no markdown, no commentary):
-{
-  "title": "a short private label for this resume, e.g. 'IT — fresh graduate'",
-  "personal": { "fullName": "", "email": "", "phone": "", "address": "city/province only", "summary": "the resume's own summary/profile/objective section, copied as written; \"\" if it has none", "headline": "the professional title line the resume itself states under the name; \"\" if it has none", "linkedin": "full profile URL if present", "portfolio": "full portfolio/GitHub URL if present" },
-  "education": [ { "school": "", "degree": "", "level": "one of: none|highschool|vocational|associate|bachelor|master", "year": "graduation year" } ],
-  "experience": [ { "position": "", "company": "", "months": 0, "description": "the role's own description text as written; \"\" if the entry has only bullets", "bullets": [ "each achievement bullet as written" ] } ],
-  "skills": [ "individual skill names" ],
-  "certifications": [ { "name": "", "year": "" } ],
-  "projects": [ { "name": "", "role": "", "description": "", "link": "" } ],
-  "languages": [ { "name": "", "proficiency": "e.g. Native, Fluent, Conversational" } ]
-}
+     What the template DID carry, and the schema cannot, is the per-field
+     guidance — the address granularity, the level vocabulary, which fields are
+     copied verbatim. That is why those moved into the rules below rather than
+     being deleted with it. */
+  const prompt = `You are a resume parser for a job-matching platform. Read the resume provided and extract its content into the required structure.
 
 Rules:
+- "title": a short private label for this resume, e.g. "IT — fresh graduate".
+- "personal.address": city/province only.
+- "personal.summary": the resume's own summary/profile/objective section, copied as written; "" if it has none.
+- "personal.headline": the professional title line the resume itself states under the name; "" if it has none.
+- "personal.linkedin" / "personal.portfolio": the full URL if present.
+- "education.level": exactly one of none|highschool|vocational|associate|bachelor|master.
+- "education.year": the graduation year.
+- "experience.description": the role's own description text as written; "" if the entry has only bullets.
+- "experience.bullets": each achievement bullet as written.
+- "certifications": the name and year as printed.
+- "projects": name, role, description and link as printed.
+- "languages": the language name and the proficiency as stated, e.g. Native, Fluent, Conversational.
 - "months" is the total months worked in that role (integer; estimate from date ranges; use 0 if unknown). Internships and OJT count.
 - "skills": short specific names ("JavaScript", "Customer Service"), never sentences. Include both technical and soft skills that the resume actually evidences.${knownList ? `\n- When a skill is equivalent to one of these known platform skills, use the known spelling exactly: ${knownList}` : ''}
 - "bullets", "projects" and "languages": include them ONLY if the resume actually has them, otherwise return []. Never turn a paragraph into invented bullets.
@@ -299,12 +367,24 @@ export async function extractResume(buffer: Buffer, mimetype: string, fileName: 
     try {
       raw = JSON.parse(jsonText);
     } catch {
+      /* Salvage: the reply is usually valid JSON wrapped in chatter. The greedy
+         match takes the outermost braces, which is right for that case.
+
+         It is WRONG for a truncated reply, and that is the common failure: the
+         last `}` is then some inner object's, so the match ends mid-structure
+         and parsing it throws a second time — with a confusing offset pointing
+         into the middle of the document rather than at its cut-off end. That
+         throw used to escape to the outer catch, which in pinned-gemini mode
+         reported a JSON position as if it were the fault. Guarded here so an
+         unsalvageable reply takes the same route as no match at all. */
       const m = jsonText.match(/\{[\s\S]*\}/);
-      if (!m) {
+      try {
+        if (!m) throw new Error('no JSON object in reply');
+        raw = JSON.parse(m[0]);
+      } catch {
         if (fallbackAllowed()) return runRules();
         return { status: 'failed', resume: null, message: 'The reading came back unusable.' };
       }
-      raw = JSON.parse(m[0]);
     }
     const resume = sanitize(raw, fileName);
     // A document nothing usable came out of is a FAILURE, not an empty
