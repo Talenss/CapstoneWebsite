@@ -17,7 +17,7 @@
    ============================================================ */
 import { query } from '../db';
 import { EDU_RANK } from './engine';
-import { GEMINI_API_KEY, GEMINI_MODEL, GEMINI_BASE_URL, resumeExtractorMode } from '../config';
+import { geminiApiKey, GEMINI_MODEL, geminiBaseUrl, resumeExtractorMode } from '../config';
 import { parseResume } from './parse-resume';
 
 export type { AnalyzedResume };
@@ -125,7 +125,7 @@ function sanitize(raw: any, fileName: string): AnalyzedResume {
 }
 
 async function callGemini(parts: any[]): Promise<any> {
-  const url = `${GEMINI_BASE_URL}/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
+  const url = `${geminiBaseUrl()}/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(geminiApiKey())}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 90_000);
   try {
@@ -194,21 +194,39 @@ export interface ExtractResult {
   resume: AnalyzedResume | null;
   /** Present when status is not 'ok'. Written to be shown to the applicant. */
   message?: string;
+  /** WHICH reader produced this result, which is not always the one that was
+   *  tried first — see the fallback in extractResume. The study compares the
+   *  two readers, so the answer has to travel with the result rather than be
+   *  inferred from configuration afterwards. */
+  reader?: 'rules' | 'gemini';
 }
 
-/** Which reader will actually run. Resolves 'auto' to a concrete choice so
- *  callers, tests and the metrics export all agree on what happened. */
+/** Which reader is TRIED FIRST. Resolves 'auto' to a concrete choice so
+ *  callers, tests and the metrics export all agree on what was attempted.
+ *
+ *  This is also the value the consent notice is written from, and that is the
+ *  reason it reports the attempt rather than the outcome: if Gemini is going to
+ *  be tried, the applicant's document may reach Google, and they have to be
+ *  told that BEFORE they agree — whether or not the attempt later succeeds. */
 export function activeExtractor(): 'rules' | 'gemini' {
   const mode = resumeExtractorMode();
   if (mode === 'rules') return 'rules';
   if (mode === 'gemini') return 'gemini';
-  return GEMINI_API_KEY ? 'gemini' : 'rules';
+  return geminiApiKey() ? 'gemini' : 'rules';
 }
+
+/** True when a Gemini failure should be caught by the rule-based reader.
+ *
+ *  Only in 'auto'. Pinning 'gemini' means the operator asked for that reader
+ *  specifically, and silently answering with a different one would hide the
+ *  very failure they pinned it to observe — which is exactly what the
+ *  extraction test suite asserts, so this is load-bearing rather than tidy. */
+const fallbackAllowed = (): boolean => resumeExtractorMode() === 'auto';
 
 /** True when SOME reader can run. The rule-based one needs nothing, so this is
  *  only false where the operator has pinned 'gemini' and supplied no key. */
 export const extractionConfigured = (): boolean =>
-  activeExtractor() === 'rules' || !!GEMINI_API_KEY;
+  activeExtractor() === 'rules' || !!geminiApiKey();
 
 /** Document in, structured resume out.
  *
@@ -222,17 +240,24 @@ export async function extractResume(buffer: Buffer, mimetype: string, fileName: 
      SAME sanitize() the model's output does — the same clamped shape. Which
      one runs is a configuration choice, so both can be measured against the
      same files without anything downstream being able to tell them apart. */
-  if (activeExtractor() === 'rules') {
+  const runRules = async (): Promise<ExtractResult> => {
     const r = await parseResume(buffer, mimetype, fileName);
     return {
       status: r.status,
       resume: r.resume ? sanitize(r.resume, fileName) : null,
       ...(r.message ? { message: r.message } : {}),
+      reader: 'rules',
     };
-  }
+  };
 
-  if (!GEMINI_API_KEY)
+  if (activeExtractor() === 'rules') return runRules();
+
+  if (!geminiApiKey()) {
+    /* Unreachable in 'auto' — activeExtractor would have chosen rules. This is
+       the operator pinning 'gemini' and forgetting the key, and it is reported
+       rather than quietly answered by the other reader. */
     return { status: 'unavailable', resume: null, message: 'Automatic reading is not set up on this server.' };
+  }
 
   let part: any;
   if (INLINE_MIME.has(mimetype)) {
@@ -245,14 +270,26 @@ export async function extractResume(buffer: Buffer, mimetype: string, fileName: 
       if (!text) return { status: 'unreadable', resume: null, message: 'That Word document appears to be empty.' };
       part = { text: `RESUME DOCUMENT TEXT:\n\n${text.slice(0, 40_000)}` };
     } catch {
+      if (fallbackAllowed()) return runRules();
       return { status: 'unreadable', resume: null, message: "That Word document couldn't be read." };
     }
   } else if (mimetype === 'application/msword') {
     return { status: 'unreadable', resume: null, message: 'Old .doc files cannot be read. Save it as a PDF.' };
   } else {
+    /* A type the GEMINI branch cannot package — plain text is the live case.
+       The rule-based reader handles it, so in auto mode this is a reason to use
+       the other reader rather than to refuse the file. Refusing here would mean
+       a .txt résumé was rejected by a system that can read .txt. */
+    if (fallbackAllowed()) return runRules();
     return { status: 'unreadable', resume: null, message: 'Only PDF, Word (.docx) and image files can be read.' };
   }
 
+  /* From here the document is handed to Google. Every way this can go wrong —
+     a network failure, an exhausted quota, a reply that is not JSON, a reply
+     that yields nothing usable — falls back to the rule-based reader in 'auto'
+     rather than telling the applicant the feature is broken. Reading their
+     document badly is better than not reading it at all, and the alternative
+     is a dead page in the middle of a demonstration. */
   try {
     const data = await callGemini([part, { text: await buildPrompt() }]);
     const text: string = data?.candidates?.[0]?.content?.parts?.map((p: any) => p?.text ?? '').join('') ?? '';
@@ -262,21 +299,27 @@ export async function extractResume(buffer: Buffer, mimetype: string, fileName: 
       raw = JSON.parse(jsonText);
     } catch {
       const m = jsonText.match(/\{[\s\S]*\}/);
-      if (!m) return { status: 'failed', resume: null, message: 'The reading came back unusable.' };
+      if (!m) {
+        if (fallbackAllowed()) return runRules();
+        return { status: 'failed', resume: null, message: 'The reading came back unusable.' };
+      }
       raw = JSON.parse(m[0]);
     }
     const resume = sanitize(raw, fileName);
     // A document nothing usable came out of is a FAILURE, not an empty
     // resume. Scoring an empty resume would produce a confident zero and
     // present it as a finding about the applicant.
-    if (!resume.personal.fullName && !resume.skills.length && !resume.education.length && !resume.experience.length)
+    if (!resume.personal.fullName && !resume.skills.length && !resume.education.length && !resume.experience.length) {
+      if (fallbackAllowed()) return runRules();
       return { status: 'failed', resume: null,
         message: 'Nothing readable was found in that file. If it is a photo or a scan, the text may not be legible to software.' };
-    return { status: 'ok', resume };
+    }
+    return { status: 'ok', resume, reader: 'gemini' };
   } catch (e: any) {
+    console.error('extractResume: gemini failed:', e?.message || e);
+    if (fallbackAllowed()) return runRules();
     if (e?.status === 429)
       return { status: 'failed', resume: null, message: 'The AI quota was reached for now. Try again in a minute.' };
-    console.error('extractResume failed:', e?.message || e);
     return { status: 'failed', resume: null, message: 'The file could not be read automatically just now.' };
   }
 }

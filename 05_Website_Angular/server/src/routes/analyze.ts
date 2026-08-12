@@ -53,11 +53,12 @@ router.post('/resume', upload.single('file'), async (req, res) => {
   if (result.status !== 'ok' || !result.resume)
     return fail(res, result.message || "That file couldn't be read. Try a different file, or build your resume by hand.");
 
-  /* Report the reader that ACTUALLY ran. This was hard-coded to 'gemini',
-     which misreported every run of the rule-based reader — harmless on screen,
+  /* Report the reader that ACTUALLY ran, which after the fallback was added is
+     not always the one that was tried first. This was hard-coded to 'gemini',
+     so it misreported every run of the rule-based reader — harmless on screen,
      but the study compares the two readers over the same files and this is the
      field that says which one produced a result. */
-  ok(res, { resume: result.resume, provider: activeExtractor() });
+  ok(res, { resume: result.resume, provider: result.reader ?? activeExtractor() });
 });
 
 export default router;

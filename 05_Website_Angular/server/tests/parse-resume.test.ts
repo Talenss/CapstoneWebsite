@@ -338,3 +338,48 @@ test('every parsed field is clamped, so a hostile document cannot flood the data
   assert.ok(r.resume!.personal.summary.length <= 1000);
   assert.ok(r.resume!.skills.length <= 30);
 });
+
+/* ---------------- the fallback ---------------- */
+
+test('in auto mode, a Gemini failure is caught by the rules reader', async () => {
+  /* THE POINT OF THE FALLBACK. An exhausted quota, a dropped connection or a
+     reply that is not usable JSON must not turn the Upload page into a dead
+     end — it must produce a worse reading, not no reading. Here Gemini is
+     configured with a base URL that refuses every connection, which is the
+     network-failure path; 'auto' must answer with the rules reader anyway. */
+  process.env.RESUME_EXTRACTOR = 'auto';
+  process.env.GEMINI_API_KEY = 'test-key-not-a-real-one';
+  process.env.GEMINI_BASE_URL = 'http://127.0.0.1:1';   // nothing listens on port 1
+  const { extractResume, activeExtractor } = await import('../src/lib/extract');
+
+  assert.equal(activeExtractor(), 'gemini',
+    'with a key present, auto must TRY gemini first — that is what the consent notice is written from');
+
+  const r = await extractResume(txt(RESUME), TEXT, 'juan-resume.txt');
+  assert.equal(r.status, 'ok', 'a gemini failure must not fail the extraction in auto mode');
+  assert.equal(r.reader, 'rules', 'the result must say which reader actually produced it');
+  assert.ok(r.resume!.skills.length > 0, 'the fallback has to produce a real reading, not an empty one');
+
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.GEMINI_BASE_URL;
+  process.env.RESUME_EXTRACTOR = 'rules';
+});
+
+test('pinned gemini does NOT fall back — a failure stays a failure', async () => {
+  /* The mirror of the test above, and the reason fallbackAllowed() checks for
+     'auto' specifically. An operator who pins gemini is asking to observe that
+     reader; answering with a different one would hide the failure they pinned
+     it to see. The extraction suite depends on this. */
+  process.env.RESUME_EXTRACTOR = 'gemini';
+  process.env.GEMINI_API_KEY = 'test-key-not-a-real-one';
+  process.env.GEMINI_BASE_URL = 'http://127.0.0.1:1';
+  const { extractResume } = await import('../src/lib/extract');
+
+  const r = await extractResume(txt(RESUME), TEXT, 'juan-resume.txt');
+  assert.notEqual(r.status, 'ok', 'a pinned gemini reader must report its own failure');
+  assert.equal(r.resume, null, 'and must never invent a resume out of a failed call');
+
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.GEMINI_BASE_URL;
+  process.env.RESUME_EXTRACTOR = 'rules';
+});
