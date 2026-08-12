@@ -1224,6 +1224,12 @@ export class DemoAdapter implements ApiAdapter {
   }
 
   analyze = {
+    /** Nothing reads anything in demo mode, so the consent notice says exactly
+     *  that. The demo build has no server and no key: the file never leaves the
+     *  browser, and a panelist clicking around sends no document anywhere. */
+    reader: (): Promise<ApiResult<{ reader: 'rules' | 'gemini' | 'demo'; configured: boolean }>> =>
+      Promise.resolve({ ok: true, reader: 'demo' as const, configured: true }),
+
     /** Demo mode can't call a real AI, so this returns a clearly-labeled
      *  simulated extraction after a short delay — enough to demonstrate the
      *  whole upload → review → score journey offline. */

@@ -106,10 +106,15 @@ export interface ApiAdapter {
     assignDepartment(companyId: string, department: string, userId: string | null): Promise<ApiResult<{ companies: RoutingCompany[] }>>;
   };
   analyze: {
-    /** Opt-in AI extraction of an uploaded resume file. Returns a structured
+    /** Opt-in extraction of an uploaded resume file. Returns a structured
      *  resume for the user to review in the builder — never saves anything.
-     *  `simulated` is true in demo mode (no real AI behind it). */
+     *  `simulated` is true in demo mode (nothing real behind it). */
     resume(file: File): Promise<ApiResult<{ resume: AnalyzedResume; provider?: string; simulated?: boolean }>>;
+    /** Which reader is configured, so the consent text can name it.
+     *  'rules'  — read on this server, the document never leaves it
+     *  'gemini' — sent to Google for reading
+     *  'demo'   — nothing is read at all; the demo build fakes it */
+    reader(): Promise<ApiResult<{ reader: 'rules' | 'gemini' | 'demo'; configured: boolean }>>;
   };
   resetDemo(): Promise<ApiResult<object>>;
 }

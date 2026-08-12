@@ -110,6 +110,14 @@ before(async () => {
         DB_NAME: DB, DB_SSL: 'false', DATABASE_URL: '',
         PORT: String(PORT), SESSION_SECRET: 'analyze-test-secret', DEBUG: 'true',
         SMTP_HOST: '',
+        /* PIN THE READER. This suite exists to test the GEMINI path — the
+           multipart handling, the MIME check, and the coercion of whatever the
+           model returns. It inherits process.env, so before this line it also
+           inherited RESUME_EXTRACTOR from the developer's .env, and the moment
+           that was pinned to 'rules' for the study these tests silently started
+           exercising the rule-based reader instead and failed. A test that
+           depends on ambient configuration is not testing what it claims to. */
+        RESUME_EXTRACTOR: 'gemini',
         GEMINI_API_KEY: 'test-key-not-a-real-one',
         GEMINI_BASE_URL: `http://127.0.0.1:${geminiPort}`,
       },

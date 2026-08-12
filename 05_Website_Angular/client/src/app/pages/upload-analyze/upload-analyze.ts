@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
@@ -24,12 +24,31 @@ import { ALLOWED_MIME, MAX_UPLOAD } from '../../core/engine';
   templateUrl: './upload-analyze.html',
   styleUrl: './upload-analyze.css',
 })
-export class UploadAnalyze {
+export class UploadAnalyze implements OnInit {
   private api = inject(ApiService);
   private analysis = inject(AnalysisService);
   private router = inject(Router);
 
+  /* WHICH reader will run, resolved before consent is asked for.
+   *
+   * The consent wording is chosen from this. RA 10173 requires consent to be
+   * informed, and the informing has to happen where the person consents — not
+   * on a privacy page they may never open. "The system's analysis service" is
+   * true of the rule-based reader and materially understates Gemini, which
+   * sends the document to a company outside the country. One checkbox cannot
+   * honestly cover both, so the page asks the server which one is configured
+   * and says that.
+   *
+   * `null` means the question has not been answered yet, and the page refuses
+   * consent until it is. Guessing in either direction produces a false notice. */
+  reader = signal<'rules' | 'gemini' | 'demo' | null>(null);
+
   consented = signal(false);
+
+  async ngOnInit(): Promise<void> {
+    const r = await this.api.analyze.reader();
+    if (r.ok) this.reader.set(r.reader);
+  }
   file = signal<File | null>(null);
   busy = signal(false);
   errorMsg = signal<string | null>(null);

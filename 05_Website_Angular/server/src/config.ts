@@ -117,13 +117,18 @@ export function resumeExtractorMode(): ExtractorMode {
   return raw === 'rules' || raw === 'gemini' ? raw : 'auto';
 }
 
-export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+/** Read at the point of use, for the same reason resumeExtractorMode() is:
+ *  the study flips between the two readers between runs, and a key frozen at
+ *  import made activeExtractor() only half-live — the mode responded to a
+ *  change and the key did not, so the two could disagree about which reader
+ *  was configured. A test caught this. */
+export const geminiApiKey = (): string => process.env.GEMINI_API_KEY || '';
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 /* The API host. Overridable so the extraction route can be tested against a
    local stand-in — the value of those tests is in OUR code (the multipart
    handling, the MIME check, and the coercion of whatever the model returns),
    none of which should require a paid key or a network round trip to verify. */
-export const GEMINI_BASE_URL =
+export const geminiBaseUrl = (): string =>
   process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com';
 
 // ---------- Email sending (verification codes, password reset) ----------

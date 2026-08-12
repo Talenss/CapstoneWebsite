@@ -39,13 +39,54 @@
       <p style="font-size:13.5px;color:var(--muted);margin-bottom:12px">
         This is the one place on the site where software reads a file you upload. It happens only because you choose it here, and only to fill in the builder for your review.
       </p>
-      <label class="consent">
-        <input type="checkbox" [checked]="consented()" (change)="consented.set(!consented())">
-        <span>I agree that this file will be read by the system's analysis service to extract my resume details. Nothing is saved until I review and save it myself. The copy recruiters see is still read by people, never by the matching engine.</span>
-      </label>
+
+      <!-- The wording names the reader that will ACTUALLY run. Consent has to be
+           informed where it is given, and "our analysis service" would understate
+           a transfer to Google as badly as it would overstate reading a file on
+           our own server. Until the server answers, no consent is offered. -->
+      @if (reader() === null) {
+        <p class="notice" style="font-size:13.5px">Checking how this file would be read&hellip;</p>
+      } @else if (reader() === 'gemini') {
+        <p class="notice warn" style="font-size:13.5px">
+          <b>Your file would leave this system.</b> On this server the reading is done by Google's Gemini API, so the
+          contents of your file are sent to Google, a company outside the Philippines, and processed under
+          <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">their API terms</a>. We
+          remain responsible for it either way. If you would rather it did not, close this page and type your resume
+          into the builder instead — everything else works without this.
+        </p>
+        <label class="consent">
+          <input type="checkbox" [checked]="consented()" (change)="consented.set(!consented())">
+          <span>I agree that the contents of this file will be <b>sent to Google's Gemini service, outside the
+            Philippines</b>, to extract my resume details and nothing else. Nothing is saved until I review and save it
+            myself. My file is never scored by the matching engine, and the copy recruiters see is read by people.</span>
+        </label>
+      } @else if (reader() === 'demo') {
+        <p class="notice" style="font-size:13.5px">
+          <b>This is the demonstration build.</b> There is no server behind it. Your file is not uploaded, not read and
+          not sent anywhere — the result you are about to see is a clearly-labelled simulation, so the page can be
+          shown without any real document being processed.
+        </p>
+        <label class="consent">
+          <input type="checkbox" [checked]="consented()" (change)="consented.set(!consented())">
+          <span>I understand this is a demonstration, that my file is not uploaded or read, and that the extraction
+            shown is simulated.</span>
+        </label>
+      } @else {
+        <p class="notice" style="font-size:13.5px">
+          <b>Your file stays on this server.</b> The reading is done here by ResumeMatch PH's own rule-based reader —
+          headings, patterns and dates, with no artificial intelligence and no outside service. Nothing is sent to
+          any third party.
+        </p>
+        <label class="consent">
+          <input type="checkbox" [checked]="consented()" (change)="consented.set(!consented())">
+          <span>I agree that this file will be read <b>on this server</b> by ResumeMatch PH's own reader to extract my
+            resume details. It is not sent to any other company. Nothing is saved until I review and save it myself,
+            and my file is never scored by the matching engine.</span>
+        </label>
+      }
 
       <div style="display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;align-items:center">
-        <button class="btn primary" type="button" [disabled]="!file() || !consented() || busy()" (click)="analyzeNow()">
+        <button class="btn primary" type="button" [disabled]="!file() || !consented() || busy() || reader() === null" (click)="analyzeNow()">
           @if (busy()) { <span class="spinner"></span> Reading your resume&hellip; }
           @else { Analyze my resume }
         </button>
@@ -62,7 +103,7 @@
         @if (simulated()) {
           <span class="badge amber">Simulated analysis &middot; demo mode</span>
         } @else {
-          <span class="badge green">AI analysis</span>
+          <span class="badge green">{{ reader() === 'gemini' ? 'AI analysis' : 'Read on this server' }}</span>
         }
       </div>
       <p style="font-size:13.5px;color:var(--muted);margin-bottom:20px">
