@@ -164,9 +164,9 @@ async function buildPrompt(): Promise<string> {
 Return ONLY a JSON object with exactly this shape (no markdown, no commentary):
 {
   "title": "a short private label for this resume, e.g. 'IT — fresh graduate'",
-  "personal": { "fullName": "", "email": "", "phone": "", "address": "city/province only", "summary": "2-3 sentence professional summary; write one from the resume's content if none exists", "headline": "short professional title line, e.g. 'BS Information Technology graduate'", "linkedin": "full profile URL if present", "portfolio": "full portfolio/GitHub URL if present" },
+  "personal": { "fullName": "", "email": "", "phone": "", "address": "city/province only", "summary": "the resume's own summary/profile/objective section, copied as written; \"\" if it has none", "headline": "the professional title line the resume itself states under the name; \"\" if it has none", "linkedin": "full profile URL if present", "portfolio": "full portfolio/GitHub URL if present" },
   "education": [ { "school": "", "degree": "", "level": "one of: none|highschool|vocational|associate|bachelor|master", "year": "graduation year" } ],
-  "experience": [ { "position": "", "company": "", "months": 0, "description": "one sentence of what they did", "bullets": [ "each achievement bullet as written" ] } ],
+  "experience": [ { "position": "", "company": "", "months": 0, "description": "the role's own description text as written; \"\" if the entry has only bullets", "bullets": [ "each achievement bullet as written" ] } ],
   "skills": [ "individual skill names" ],
   "certifications": [ { "name": "", "year": "" } ],
   "projects": [ { "name": "", "role": "", "description": "", "link": "" } ],
@@ -178,7 +178,8 @@ Rules:
 - "skills": short specific names ("JavaScript", "Customer Service"), never sentences. Include both technical and soft skills that the resume actually evidences.${knownList ? `\n- When a skill is equivalent to one of these known platform skills, use the known spelling exactly: ${knownList}` : ''}
 - "bullets", "projects" and "languages": include them ONLY if the resume actually has them, otherwise return []. Never turn a paragraph into invented bullets.
 - Do not extract references or any third party's contact details.
-- Use "" for missing strings and [] for missing lists. Do not invent information that is not in the resume.`;
+- Use "" for missing strings and [] for missing lists. Do not invent information that is not in the resume.
+- EXTRACT ONLY. Do not write, compose, summarise or rephrase any prose. Every string you return must be text the resume itself contains, copied as written. Where the resume has no text for a field, return "" — an empty field is correct and will be filled in by the applicant.`;
   return prompt;
 }
 
