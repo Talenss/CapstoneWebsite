@@ -133,6 +133,20 @@ export class HttpAdapter implements ApiAdapter {
         return { ok: false, error: e?.error?.error || 'The analysis failed. Check that the server is running and try again.' };
       }
     },
+    reader: async (): Promise<ApiResult<{ reader: 'rules' | 'gemini' | 'demo'; configured: boolean }>> => {
+      try {
+        return await firstValueFrom(
+          this.http.post<ApiResult<{ reader: 'rules' | 'gemini' | 'demo'; configured: boolean }>>(
+            `${this.apiBase}/analyze/reader`, {}, { withCredentials: true }),
+        );
+      } catch {
+        /* Unreachable server must not produce a WRONG consent notice. Failing
+           closed to 'gemini' would ask for consent to a transfer that may not
+           happen; failing to 'rules' would understate one that might. So the
+           page treats an unknown reader as unknown and says so. */
+        return { ok: false, error: 'unknown' };
+      }
+    },
   };
 
   resetDemo(): Promise<ApiResult<object>> {

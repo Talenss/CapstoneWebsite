@@ -19,3 +19,26 @@
 .f-sec .bul{margin:2px 0 8px 18px;padding:0;list-style:disc}
 .f-sec .bul li{font-size:12.5px;color:var(--muted);margin-bottom:2px}
 .f-sec .sum{color:var(--text);font-size:13px;background:var(--ivory);border-radius:var(--r);padding:10px 12px;margin-top:8px}
+
+/* The consent notice. Which one shows depends on the reader the server has
+   configured — see upload-analyze.ts. `warn` is the cross-border case, and it
+   is deliberately the loudest thing on the page: it is the only situation in
+   which an applicant's document leaves the country.
+
+   Built from the theme variables rather than fixed colours, so it stays legible
+   when the site is in dark mode. */
+.notice {
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--slate);
+  background: var(--slate-wash);
+  border-radius: var(--r);
+  padding: 12px 15px;
+  margin: 0 0 14px;
+  line-height: 1.55;
+}
+.notice.warn {
+  border-left-color: var(--wine);
+  background: var(--wine-wash);
+  color: var(--wine);
+}
+.notice.warn a { color: inherit; }

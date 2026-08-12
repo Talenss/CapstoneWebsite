@@ -19,11 +19,25 @@ import { asyncRouter } from '../lib/async-router';
 import multer from 'multer';
 import { ok, fail } from '../lib/http';
 import { requireRole } from '../lib/auth';
-import { extractResume, extractionConfigured } from '../lib/extract';
+import { extractResume, extractionConfigured, activeExtractor } from '../lib/extract';
 import { MAX_UPLOAD } from '../config';
 
 const router = asyncRouter();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_UPLOAD } });
+
+/* Which reader will run, so the CONSENT TEXT can say what actually happens.
+ *
+ * The page cannot ask the user to agree to "an AI service" when the rule-based
+ * reader is configured, and it cannot ask them to agree to something vague when
+ * their document is about to be sent to Google. Consent under the Data Privacy
+ * Act has to be informed AT THE POINT OF CONSENT, not on a page they may never
+ * open, so the wording is chosen from this value rather than hard-coded.
+ *
+ * Public on purpose: it discloses a configuration choice the privacy page
+ * already states, and nothing about a user or a document. */
+router.post('/reader', async (_req, res) => {
+  ok(res, { reader: activeExtractor(), configured: extractionConfigured() });
+});
 
 router.post('/resume', upload.single('file'), async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
@@ -39,7 +53,11 @@ router.post('/resume', upload.single('file'), async (req, res) => {
   if (result.status !== 'ok' || !result.resume)
     return fail(res, result.message || "That file couldn't be read. Try a different file, or build your resume by hand.");
 
-  ok(res, { resume: result.resume, provider: 'gemini' });
+  /* Report the reader that ACTUALLY ran. This was hard-coded to 'gemini',
+     which misreported every run of the rule-based reader — harmless on screen,
+     but the study compares the two readers over the same files and this is the
+     field that says which one produced a result. */
+  ok(res, { resume: result.resume, provider: activeExtractor() });
 });
 
 export default router;
