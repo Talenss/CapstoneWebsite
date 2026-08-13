@@ -230,10 +230,27 @@ To use the Gemini reader:
    ```
    RESUME_EXTRACTOR=auto           # or 'gemini' to require it
    GEMINI_API_KEY=your-key-here
-   GEMINI_MODEL=gemini-2.5-flash   # optional, this is the default
+   GEMINI_MODEL=gemini-3.5-flash   # optional, this is the default
    ```
 
-3. Restart the server.
+3. Restart the server. The key is read from `.env` at boot, so an edit
+   while the server is running has no effect until you restart it.
+
+To check it took, open `/upload-resume`. The consent notice is written
+from whichever reader is actually configured, so with a working key it
+changes to the notice warning that the file is sent to Google. If it
+still says the file stays on this server, the key is not being read.
+
+Do not set `GEMINI_MODEL` back to `gemini-2.5-flash`: Google has closed
+that model to new API keys and a key created now gets 404 "no longer
+available to new users", even though the model still appears in the
+`/models` listing.
+
+The free tier is limited to a small number of requests per day, and the
+limit is per key, not per person. Plan testing sessions around it — and
+note this is exactly why `RESUME_EXTRACTOR` should stay `auto`: when the
+quota runs out the rule-based reader answers instead, so the page keeps
+working rather than failing in front of a participant.
 
 With `RESUME_EXTRACTOR=gemini` and no key, the upload-and-analyze page
 tells the user the feature isn't configured and points them to the
