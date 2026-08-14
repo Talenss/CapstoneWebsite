@@ -5,8 +5,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
-import { AppStatus, Personal, Posting, RankedRow, Resume, StatusEvent, Tier } from '../../core/models';
-import { EDU_LABELS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
+import { AppStatus, Personal, Posting, RankedRow, RejectionReason, Resume, ScreeningNote, SkillEvidence, StatusEvent, Tier } from '../../core/models';
+import { APPLICANT_REASON_LABELS, EDU_LABELS, EVIDENCE_KIND_LABELS, REASON_LABELS, REJECTION_REASONS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 
 /** Port of 04_Website/app/hr-applicants.html — the ranked-applicant list
@@ -47,6 +47,25 @@ export class HrApplicants {
 
   current = signal<RankedRow | null>(null);
   modalStatus = signal<AppStatus>('submitted');
+  /** Only sent on a rejection, and even then optional. See saveStatus(). */
+  modalReason = signal<string>('');
+
+  /* Screening notes for the open applicant. Recruiter-only end to end: no
+     seeker-facing route returns them, which is what makes them worth writing
+     candidly. */
+  notes = signal<ScreeningNote[]>([]);
+  notesLoading = signal(false);
+  noteDraft = signal('');
+  savingNote = signal(false);
+  readonly REASONS = REJECTION_REASONS;
+  readonly REASON_LABELS = REASON_LABELS;
+  /** What the APPLICANT will read for the code currently picked, previewed
+   *  under the control so the recruiter chooses knowing how it lands. A
+   *  method because modalReason is a plain string — the empty case is "no
+   *  reason", not a key. */
+  applicantWording(k: string): string {
+    return APPLICANT_REASON_LABELS[k as RejectionReason] ?? '';
+  }
   savingStatus = signal(false);
 
   // ---- message the applicant (interview invite) ----
@@ -234,6 +253,28 @@ export class HrApplicants {
   setFTier(e: Event): void { this.fTier.set((e.target as HTMLSelectElement).value); }
   setFFile(e: Event): void { this.fFile.set((e.target as HTMLSelectElement).value); }
   setModalStatus(e: Event): void { this.modalStatus.set((e.target as HTMLSelectElement).value as AppStatus); }
+  setModalReason(e: Event): void { this.modalReason.set((e.target as HTMLSelectElement).value); }
+
+  /** How far the resume has moved since the application was made, as a signed
+   *  string. A method rather than template arithmetic because `liveScore` is
+   *  optional — the `scoreDrifted` guard reads as a narrowing to a human but
+   *  not to the template compiler, and casting in the template would hide a
+   *  real absence rather than handle it. */
+  driftLabel(r: RankedRow): string {
+    if (r.liveScore == null) return '';
+    const d = r.liveScore - r.score;
+    return (d > 0 ? '+' : '') + d;
+  }
+  setNoteDraft(e: Event): void { this.noteDraft.set((e.target as HTMLTextAreaElement).value); }
+
+  readonly evidenceKindLabels = EVIDENCE_KIND_LABELS;
+
+  /** Where the applicant said they used one skill, or null if they named no
+   *  source. A method rather than a template lookup so an older resume with
+   *  no map at all reads as "no source" instead of throwing. */
+  evidenceOf(r: RankedRow, skill: string): SkillEvidence | null {
+    return r.resume.skillEvidence?.[skill] ?? null;
+  }
 
   /* ---------- who already handled this applicant ----------
      Clark Outsourcing routes departments to different HR owners, so several recruiters
@@ -253,7 +294,41 @@ export class HrApplicants {
   openModal(r: RankedRow): void {
     this.current.set(r);
     this.modalStatus.set(r.application.status);
+    this.modalReason.set('');
+    this.noteDraft.set('');
     this.loadHistory(r.application.id);
+    this.loadNotes(r.application.id);
+  }
+
+  private async loadNotes(applicationId: string): Promise<void> {
+    this.notes.set([]);
+    this.notesLoading.set(true);
+    const res = await this.api.applications.notes(applicationId);
+    this.notesLoading.set(false);
+    // Same guard as the history load: the recruiter may have moved on, and
+    // painting one applicant's notes onto another would be worse than none.
+    if (this.current()?.application.id !== applicationId) return;
+    if (res.ok) this.notes.set(res.notes);
+  }
+
+  async addNote(): Promise<void> {
+    const r = this.current();
+    const body = this.noteDraft().trim();
+    if (!r || !body || this.savingNote()) return;
+    this.savingNote.set(true);
+    const res = await this.api.applications.noteAdd(r.application.id, body);
+    this.savingNote.set(false);
+    if (!res.ok) { this.showToast(res.error); return; }
+    this.noteDraft.set('');
+    await this.loadNotes(r.application.id);
+  }
+
+  async deleteNote(noteId: string): Promise<void> {
+    const r = this.current();
+    if (!r) return;
+    const res = await this.api.applications.noteDelete(noteId);
+    if (!res.ok) { this.showToast(res.error); return; }
+    await this.loadNotes(r.application.id);
   }
 
   private async loadHistory(applicationId: string): Promise<void> {
@@ -320,7 +395,12 @@ export class HrApplicants {
     if (!r) return;
     this.savingStatus.set(true);
     const next = this.modalStatus();
-    const res = await this.api.applications.setStatus(r.application.id, next);
+    /* The reason is only meaningful on a rejection, and even there it is
+       optional — a recruiter forced to pick one in order to proceed picks the
+       first item on the list, which fills the column with confident nonsense.
+       A blank means nobody stated a reason, which is at least true. */
+    const reason = next === 'rejected' ? (this.modalReason() || null) : null;
+    const res = await this.api.applications.setStatus(r.application.id, next, reason);
     this.savingStatus.set(false);
     if (!res.ok) { this.showToast(res.error); return; }
     const name = r.seeker.name;

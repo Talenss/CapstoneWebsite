@@ -4,10 +4,28 @@
    real departments so all three match tiers actually demonstrate.
    ============================================================ */
 import { ApiAdapter } from './adapter';
-import { AnalyzedResume, ApiResult, AppStatus, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, StatusEvent, User } from './models';
-import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS } from './engine';
+import { AnalyzedResume, ApiResult, AppStatus, Application, Company, EvidenceKind, RejectionReason, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User } from './models';
+import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels } from './engine';
 
 const KEY = 'rmph_v3_db';
+
+/* WHICH SEED THIS BROWSER HOLDS.
+ *
+ * The demo database is written to localStorage on first visit and reused for
+ * ever after. That is correct for a visitor's own work, and wrong for the
+ * SEEDED content: a browser that first opened the site when the partner
+ * company was a hotel kept showing hotel openings long after the seed became
+ * Clark Outsourcing, and kept scoring them by the old arithmetic — so the site
+ * on screen quietly disagreed with the site being described.
+ *
+ * Bump this whenever the seeded data or the scoring rules change. A mismatch
+ * re-seeds, which discards anything created in demo mode; that is the right
+ * trade for a demonstration build whose entire purpose is to show the seeded
+ * content correctly, and demo data is disposable by construction — nothing
+ * here has ever reached a database. Anything a visitor wants to keep is
+ * exported from the resume itself.
+ */
+const SEED_VERSION = '2026-08-14-clark-evidence';
 const SESSION = 'rmph_v3_session';
 const D = 86400000;
 
@@ -36,7 +54,9 @@ interface Db {
   /** Mirrors the server's application_status_history table. Written on
    *  every status change so demo mode can show the same applicant-facing
    *  timeline as api mode rather than a feature that only half exists. */
-  statusHistory: { applicationId: string; from: AppStatus | null; to: AppStatus; at: number; by: 'applicant' | 'employer'; byUserId?: string | null }[];
+  /** The seed this database was built from — see SEED_VERSION. */
+  seedVersion?: string;
+  statusHistory: { applicationId: string; from: AppStatus | null; to: AppStatus; at: number; by: 'applicant' | 'employer'; byUserId?: string | null; reason?: RejectionReason | null }[];
 }
 
 /* ------------------------------------------------------------------
@@ -98,6 +118,16 @@ function seed(): Db {
           location: 'San Fernando, Pampanga', startDate: 'Jun 2025', endDate: 'Sep 2025',
           bullets: ['Rebuilt the job posting pages so they open correctly on a phone', 'Cleared a backlog of 40+ layout issues reported by staff'] }],
         skills: ['HTML/CSS', 'JavaScript', 'Git', 'Teamwork', 'Communication'],
+        /* Where each skill was used. Deliberately incomplete here and in
+           db/resumematch_ph.sql, which this mirrors row for row: the two soft
+           skills carry no source, so the demo shows both states in the
+           recruiter's evidence panel and both halves of the arithmetic. An
+           unsourced skill still counts — at UNEVIDENCED_CREDIT, not zero. */
+        skillEvidence: {
+          'HTML/CSS':   { kind: 'experience', ref: 'Web Development Intern, LGU San Fernando' },
+          'JavaScript': { kind: 'experience', ref: 'Web Development Intern, LGU San Fernando' },
+          'Git':        { kind: 'project',    ref: 'Barangay records system' },
+        },
         certifications: [{ name: 'TESDA Web Development NC III', year: '2025', issuer: 'TESDA', credentialId: 'NC-III-2025-014352' }],
         projects: [{ name: 'Barangay records system', role: 'Front-end developer', startDate: 'Aug 2025', endDate: 'Feb 2026',
           description: 'Web app that replaced a paper logbook for about 1,200 residents; built with a team of four.', link: 'github.com/juandelacruz/brgy-records' }],
@@ -113,6 +143,10 @@ function seed(): Db {
         experience: [{ position: 'Capstone Developer', company: 'Angeles University Foundation', months: 3, description: 'Built a school event portal with a team of four.',
           location: 'Angeles City', startDate: 'Aug 2025', endDate: 'Oct 2025' }],
         skills: ['HTML/CSS', 'JavaScript', 'Communication', 'Teamwork'], certifications: [],
+        skillEvidence: {
+          'HTML/CSS':   { kind: 'project', ref: 'School event portal' },
+          'JavaScript': { kind: 'project', ref: 'School event portal' },
+        },
         projects: [{ name: 'School event portal', role: 'Team lead', startDate: 'Aug 2025', endDate: 'Oct 2025',
           description: 'Registration and attendance for campus events, used by three student organizations.' }],
         ownFile: null, updatedAt: Date.now() - D * 4 },
@@ -126,6 +160,11 @@ function seed(): Db {
           location: 'Clark Freeport Zone', startDate: 'Jan 2025', endDate: 'Jun 2025',
           bullets: ['Handled 40+ inbound enquiries per shift across phone, email and live chat', 'Logged every interaction in the client CRM with no unresolved tickets at handover'] }],
         skills: ['Customer Service', 'Communication', 'MS Office', 'English Proficiency', 'CRM Software', 'Teamwork'],
+        skillEvidence: {
+          'Customer Service':    { kind: 'experience',    ref: 'Customer Support Intern, Clark BPO' },
+          'CRM Software':        { kind: 'experience',    ref: 'Customer Support Intern, Clark BPO' },
+          'English Proficiency': { kind: 'certification', ref: 'Customer Service Excellence' },
+        },
         certifications: [{ name: 'Customer Service Excellence', year: '2025', issuer: 'Clark Outsourcing' }],
         languages: [{ name: 'Filipino', proficiency: 'Native' }, { name: 'English', proficiency: 'Fluent' }, { name: 'Korean', proficiency: 'Basic' }],
         // DUAL-RESUME MODEL: the applicant's OWN file. HR views and downloads it.
@@ -146,6 +185,10 @@ function seed(): Db {
         experience: [{ position: 'HR Intern', company: 'Manufacturing firm', months: 8, description: 'Assisted in screening, interview scheduling, and 201 filing.',
           location: 'San Fernando, Pampanga', startDate: 'Sep 2024', endDate: 'Apr 2025' }],
         skills: ['Communication', 'Recruitment', 'MS Office', 'Organization', 'Social Media'], certifications: [],
+        skillEvidence: {
+          'Recruitment':  { kind: 'experience', ref: 'HR Intern, Manufacturing firm' },
+          'Organization': { kind: 'experience', ref: 'HR Intern, Manufacturing firm' },
+        },
         ownFile: null, updatedAt: Date.now() - D * 7 },
     ] as unknown as Resume[],
     postings: [
@@ -221,6 +264,11 @@ function load(): Db {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const db: Db = JSON.parse(raw);
+      /* A database seeded by an older build is discarded rather than patched.
+         The back-fills below add fields that were missing; they cannot correct
+         seeded CONTENT that has since changed, and a half-updated demo is
+         worse than a fresh one because nothing on screen says which it is. */
+      if (db.seedVersion !== SEED_VERSION) throw new Error('stale seed');
       if (!db.emailCodes) db.emailCodes = []; // databases saved before this field existed
       if (!db.savedJobs) db.savedJobs = [];
       if (!db.deptAssignments) db.deptAssignments = []; // databases saved before department routing existed
@@ -243,7 +291,15 @@ function load(): Db {
       return db;
     }
   } catch { /* ignore */ }
+  /* Re-seeding replaces every user row, so a session pointing at an account
+     from the discarded database has to go with it — otherwise the browser is
+     signed in as somebody who no longer exists. resetDemo() clears both for
+     the same reason; this is the same hazard reached by a different route.
+     Removing the key directly rather than calling setSession(), which is
+     declared below and would also write a redundant empty value. */
+  try { localStorage.removeItem(SESSION); sessionStorage.removeItem(SESSION); } catch { /* ignore */ }
   const db = seed();
+  db.seedVersion = SEED_VERSION;
   persist(db);
   return db;
 }
@@ -605,8 +661,31 @@ export class DemoAdapter implements ApiAdapter {
         return row;
       }).filter(Boolean);
 
+      /* WHERE EACH SKILL WAS USED, checked the same way the server checks it
+         (routes/resumes.ts): the kind must be known and the label must match
+         an entry already on this resume. A link whose entry was renamed or
+         removed is dropped, which costs that skill its full credit and shows
+         up as unsourced the next time the builder opens. Demo mode has to
+         apply the identical rule or the same edit would score differently in
+         the two modes. */
+      const skills = list(resume.skills, 100).map((s) => String(s).trim().slice(0, 80)).filter(Boolean);
+      const labels = evidenceLabels({ experience, projects: projects as any[], certifications, education });
+      const skillEvidence: Record<string, SkillEvidence> = {};
+      const rawEvidence = (resume.skillEvidence ?? {}) as Record<string, any>;
+      for (const name of skills) {
+        const v = rawEvidence[name];
+        const kind = v?.kind as EvidenceKind;
+        const ref = String(v?.ref ?? '').trim().slice(0, 200);
+        if (!EVIDENCE_KINDS.includes(kind) || !ref || !labels[kind].has(ref)) continue;
+        skillEvidence[name] = { kind, ref };
+      }
+
       resume = {
         ...resume,
+        skills,
+        // Always assigned, even when empty: an absent map means "never asked"
+        // to the engine, which would hand back the credit this withholds.
+        skillEvidence,
         title: (String(resume.title ?? '').trim() || 'Untitled resume').slice(0, 120),
         template: ['chronological', 'functional', 'combination'].includes(resume.template as string)
           ? resume.template : 'chronological',
@@ -615,7 +694,6 @@ export class DemoAdapter implements ApiAdapter {
         education,
         experience,
         certifications,
-        skills: list(resume.skills, 100).map((s) => String(s).trim().slice(0, 80)).filter(Boolean),
       } as Resume;
       // Assigned separately so an empty section leaves no key behind on an
       // edit that removed its last entry.
@@ -882,11 +960,30 @@ export class DemoAdapter implements ApiAdapter {
       const rows = db.applications.filter((a) => a.postingId === postingId).map((a) => {
         const resume = db.resumes.find((r) => r.id === a.resumeId)!;
         const seeker = db.users.find((u) => u.id === a.seekerId);
-        return { application: a, resume, seeker: pubUser(seeker as DemoUser), ...scoreLocal(resume, p) };
+        const live = scoreLocal(resume, p);
+
+        /* Mirrors the server: rank on the score RECORDED AT APPLICATION, not the
+           live one, so a resume edited afterwards does not silently reorder the
+           recruiter's shortlist. See routes/applications.ts for the reasoning —
+           the demo has to behave the same or the parity suite is measuring
+           nothing. */
+        const ranked = a.scoreSnapshot ?? live.score;
+        const tier = ranked >= THRESHOLDS.strong ? 'strong'
+                   : ranked >= THRESHOLDS.related ? 'possible' : 'related';
+
+        return {
+          application: a, resume, seeker: pubUser(seeker as DemoUser),
+          ...live,
+          score: ranked,
+          tier,
+          liveScore: live.score,
+          liveTier: live.tier,
+          scoreDrifted: a.scoreSnapshot != null && a.scoreSnapshot !== live.score,
+        };
       }).sort((x, y) => y.score - x.score || x.application.appliedAt - y.application.appliedAt);
       return apiOk({ posting: p, rows: rows as unknown as RankedRow[] });
     },
-    setStatus: (applicationId: string, status: string) => {
+    setStatus: (applicationId: string, status: string, reason?: string | null) => {
       const db = load(); const me = meRow(db);
       if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
       if (STATUS_ORDER.indexOf(status as any) === -1) return apiFail('Unknown status.');
@@ -898,8 +995,11 @@ export class DemoAdapter implements ApiAdapter {
       if (a.status === 'withdrawn') return apiFail('This applicant withdrew their application.');
       const wasStatus = a.status;
       a.status = status as any; a.updatedAt = Date.now(); (a as any).decidedBy = me.id; // a human made this call
+      // and, when they said why, the reason travels with the decision
+      if (reason) (a as any).decidedReason = reason;
       if (wasStatus !== a.status) {
-        db.statusHistory.push({ applicationId: a.id, from: wasStatus, to: a.status, at: a.updatedAt!, by: 'employer', byUserId: me.id });
+        db.statusHistory.push({ applicationId: a.id, from: wasStatus, to: a.status, at: a.updatedAt!, by: 'employer', byUserId: me.id,
+          reason: (reason as RejectionReason) ?? null });
       }
       persist(db);
       return apiOk({ application: a });
@@ -941,6 +1041,60 @@ export class DemoAdapter implements ApiAdapter {
        Visible to the applicant it belongs to and to recruiters at the company
        that owns the posting; one identical message for "no such application"
        and "not yours", so it cannot be used to probe which ids exist. */
+    /* SCREENING NOTES — recruiter-only, mirroring routes/applications.ts.
+       Held on the demo database like everything else here, and returned by no
+       seeker-facing method, so the demo cannot accidentally show an applicant
+       something the real system would never show them. */
+    notes: (applicationId: string) => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
+      const a = db.applications.find((x) => x.id === applicationId);
+      if (!a) return apiFail('Application not found.');
+      const p = db.postings.find((x) => x.id === a.postingId);
+      if (!p || p.companyId !== me.companyId) return apiFail('Application not found.');
+      const all: any[] = (db as any).notes ?? [];
+      return apiOk({
+        notes: all
+          .filter((n) => n.applicationId === applicationId)
+          .sort((x, y) => y.at - x.at)
+          .map((n) => ({
+            id: n.id,
+            body: n.body,
+            at: n.at,
+            authorName: db.users.find((u) => u.id === n.authorId)?.name ?? 'A former colleague',
+            mine: n.authorId === me.id,
+          })),
+      });
+    },
+    noteAdd: (applicationId: string, body: string) => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
+      const text = String(body ?? '').trim().slice(0, 2000);
+      if (!text) return apiFail('Write something first.');
+      const a = db.applications.find((x) => x.id === applicationId);
+      if (!a) return apiFail('Application not found.');
+      const p = db.postings.find((x) => x.id === a.postingId);
+      if (!p || p.companyId !== me.companyId) return apiFail('Application not found.');
+      (db as any).notes = (db as any).notes ?? [];
+      const id = 'n' + Date.now().toString(36);
+      (db as any).notes.push({ id, applicationId, authorId: me.id, body: text, at: Date.now() });
+      persist(db);
+      return apiOk({ id });
+    },
+    /* Author-only, as on the server: a colleague quietly deleting someone
+       else's observation would make the notes untrustworthy to the people who
+       have to rely on them. */
+    noteDelete: (noteId: string) => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
+      const all: any[] = (db as any).notes ?? [];
+      const n = all.find((x) => x.id === noteId);
+      if (!n) return apiFail('Note not found.');
+      if (n.authorId !== me.id) return apiFail('You can only delete your own notes.');
+      (db as any).notes = all.filter((x) => x.id !== noteId);
+      persist(db);
+      return apiOk({});
+    },
     history: (applicationId: string) => {
       const db = load(); const me = meRow(db);
       if (!me) return apiFail('You are not signed in.');
@@ -964,6 +1118,11 @@ export class DemoAdapter implements ApiAdapter {
             const actor = db.users.find((u) => u.id === h.byUserId);
             if (actor) e.byName = actor.name;
           }
+          /* The reason goes to BOTH audiences, unlike the name above — see
+             routes/applications.ts for why the two gates differ. The applicant
+             learns what was decided; they do not learn which staff member
+             decided it. */
+          if (h.reason) e.reason = h.reason;
           return e;
         });
       return apiOk({ events });

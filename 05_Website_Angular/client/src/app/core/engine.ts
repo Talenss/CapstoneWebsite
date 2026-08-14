@@ -6,7 +6,7 @@
    in BOTH modes (the API mode still calls the server for anything
    that must be authoritative, e.g. applying).
    ============================================================ */
-import { AppStatus, EduLevel, MatchResult, Posting, Resume, Tier } from './models';
+import { AppStatus, EduLevel, EvidenceKind, MatchResult, Posting, RejectionReason, Resume, Tier } from './models';
 
 /* The study's published defaults. The SERVER is the authority — it reads
    these from the match_settings table, so an admin can retune them without a
@@ -60,6 +60,100 @@ export function applyMatchSettings(s: {
       THRESHOLDS.strong = st; THRESHOLDS.related = rl;
     }
   }
+}
+
+/* Mirrored 1:1 from server/src/lib/engine.ts. A closed list, so the outcome of
+   a shortlist can be counted rather than read, and so a recruiter in a hurry
+   cannot write something the company would not want to stand behind. */
+export const REJECTION_REASONS: RejectionReason[] = [
+  'not_qualified', 'failed_requirement', 'salary_mismatch', 'unreachable',
+  'position_filled', 'stronger_candidate', 'withdrew_interest', 'other',
+];
+
+/** What the recruiter picks from. Wording is deliberately factual — these are
+ *  read back months later by someone reconstructing a decision. */
+export const REASON_LABELS: Record<RejectionReason, string> = {
+  not_qualified:      'Did not meet the requirements',
+  failed_requirement: 'Missing a required credential or licence',
+  salary_mismatch:    'Salary expectations did not match',
+  unreachable:        'Could not be contacted',
+  position_filled:    'Position filled',
+  stronger_candidate: 'Another candidate was a closer fit',
+  withdrew_interest:  'Withdrew interest',
+  other:              'Other',
+};
+
+/** The SAME codes, written for the person they are about.
+ *
+ *  Not a euphemism of the recruiter's wording — the same fact, in the second
+ *  person, because an applicant reading "Another candidate was a closer fit"
+ *  about themselves is reading a file note, and one reading "The role went to
+ *  another candidate" is being told what happened to them. Where the honest
+ *  answer is actionable it says so, since the whole reason this reaches the
+ *  applicant at all is that "unreachable" is a thing a person can fix.
+ *
+ *  'other' deliberately promises nothing. A code that means "none of these"
+ *  cannot be dressed up as an explanation, and inventing one would be worse
+ *  than the silence this feature exists to end. */
+export const APPLICANT_REASON_LABELS: Record<RejectionReason, string> = {
+  not_qualified:      'Your application did not meet the requirements for this role.',
+  failed_requirement: 'A credential or licence the role requires was missing.',
+  salary_mismatch:    'Salary expectations did not match what the role offers.',
+  unreachable:        'The employer tried to reach you and could not. Check the phone number and email on your resume.',
+  position_filled:    'The position was filled.',
+  stronger_candidate: 'The role went to another candidate whose background was a closer fit.',
+  withdrew_interest:  'This was recorded after you withdrew your interest.',
+  other:              'The employer recorded a reason that does not fit any of the standard ones.',
+};
+
+/* ------------------------------------------------------------
+   EVIDENCE-LINKED SKILLS — mirrored 1:1 from server/src/lib/engine.ts, which
+   carries the full reasoning. The constant below is part of the PUBLISHED
+   formula, not a tuning knob: the applicant is told "a skill you can point to
+   evidence for counts fully; one you cannot counts half", and this is that
+   half. Change it here and it must change there, or the number an applicant
+   previews and the number a recruiter reads stop agreeing.
+   ------------------------------------------------------------ */
+export const UNEVIDENCED_CREDIT = 0.5;
+
+export const EVIDENCE_KINDS: EvidenceKind[] = ['experience', 'project', 'certification', 'education'];
+
+/** What each source type is called on screen. Kept apart from the stored
+ *  value so the wording can be plain without changing what is saved. */
+export const EVIDENCE_KIND_LABELS: Record<EvidenceKind, string> = {
+  experience:    'Work experience',
+  project:       'Project',
+  certification: 'Certification',
+  education:     'Education',
+};
+
+/** How one resume entry is labelled when it is offered as a source.
+ *
+ *  Mirrored from server/src/lib/engine.ts and covered by the parity test. The
+ *  builder offers exactly these strings and the server accepts exactly these
+ *  strings; if the two ever drift, a source the applicant picked would be
+ *  refused on save and their score would drop for no visible reason. */
+export function evidenceLabel(kind: EvidenceKind, e: any): string {
+  const join = (a: unknown, b: unknown) => [String(a ?? '').trim(), String(b ?? '').trim()].filter(Boolean).join(', ');
+  if (kind === 'experience') return join(e?.position, e?.company);
+  if (kind === 'education') return join(e?.degree, e?.school);
+  return String(e?.name ?? '').trim(); // project, certification
+}
+
+/** Every label on this resume a skill may point at, per kind. A source must
+ *  be something already written down elsewhere on the same resume — that is
+ *  the whole mechanism, and it is why this is a picker and not a text box. */
+export function evidenceLabels(resume: {
+  experience?: any[]; projects?: any[]; certifications?: any[]; education?: any[];
+}): Record<EvidenceKind, Set<string>> {
+  const set = (kind: EvidenceKind, rows: any[] | undefined) =>
+    new Set((rows ?? []).map((e) => evidenceLabel(kind, e)).filter(Boolean));
+  return {
+    experience: set('experience', resume.experience),
+    project: set('project', resume.projects),
+    certification: set('certification', resume.certifications),
+    education: set('education', resume.education),
+  };
 }
 
 export const STATUS_LABELS: Record<AppStatus, string> = {
@@ -151,6 +245,59 @@ export const SKILL_ALIASES: Record<string, string> = {
   socmed: 'socialmedia', socialmediamanagement: 'socialmedia',
 };
 
+/* ------------------------------------------------------------
+   SKILL CATEGORIES — keyed by the canonical normalised form, mirroring the
+   `category` column of the seeded skills catalogue. An engine test reads
+   db/resumematch_ph.sql and fails if the two disagree, so this stays a copy
+   of the database rather than a second opinion about it.
+
+   Used for ONE purpose: telling an applicant what KIND of requirement they
+   have not met, without naming it. See missingHint() below for why that
+   distinction exists.
+   ------------------------------------------------------------ */
+export type SkillCategory = 'technical' | 'soft';
+
+export const SKILL_CATEGORY: Record<string, SkillCategory> = {
+  htmlcss: 'technical', javascript: 'technical', git: 'technical',
+  troubleshooting: 'technical', windows: 'technical', computernetworking: 'technical',
+  crmsoftware: 'technical', canva: 'technical', copywriting: 'technical',
+  dataentry: 'technical', quickbooks: 'technical', bookkeeping: 'technical',
+  medicalterminology: 'technical', microsoftoffice: 'technical', socialmedia: 'technical',
+  teamwork: 'soft', communication: 'soft', customerservice: 'soft',
+  englishproficiency: 'soft', attentiontodetail: 'soft', organization: 'soft',
+  recruitment: 'soft', scheduling: 'soft', leadership: 'soft', timemanagement: 'soft',
+};
+
+/** How the applicant is told about a requirement they have not met.
+ *
+ *  NOT BY NAME, and that is the point. The site used to print the missing
+ *  skills as a list — "missing: Troubleshooting, Windows, Networking" — which
+ *  is a ready-made set of words to paste into a resume. Naming them turned an
+ *  explanation into an instruction.
+ *
+ *  So the applicant is told HOW MANY and WHAT KIND, which is enough to act on
+ *  honestly and not enough to copy. Someone who really does troubleshoot reads
+ *  "two technical skills" and goes to check the posting; someone who does not
+ *  is given no word to claim.
+ *
+ *  Be clear about the limit: the opening itself still states what it asks for,
+ *  because a job advert that hides its requirements is not a job advert. What
+ *  this removes is the system doing the comparison and handing over the
+ *  difference. The recruiter's own view is unchanged — see hr-applicants,
+ *  where missing skills are still named, because the person deciding needs to
+ *  know exactly what is absent. */
+export function missingHint(missing: string[]): string {
+  if (!missing.length) return '';
+  let tech = 0, soft = 0;
+  for (const s of missing) (SKILL_CATEGORY[normSkill(s)] === 'soft' ? soft++ : tech++);
+  const parts: string[] = [];
+  if (tech) parts.push(`${tech} technical`);
+  if (soft) parts.push(`${soft} workplace`);
+  const kinds = parts.join(' and ');
+  const n = missing.length;
+  return `${n} ${n === 1 ? 'skill' : 'skills'} this role asks for ${n === 1 ? 'is' : 'are'} not on your resume — ${kinds}`;
+}
+
 /** Normalize a skill to its canonical comparable form: strip case and
  *  punctuation, then fold known synonyms together. Used for BOTH sides
  *  of every comparison, so a resume and a posting that mean the same
@@ -182,12 +329,28 @@ export function weightsFor(posting: Pick<Posting, 'weights'>): typeof WEIGHTS {
   return { skills: w.skills / 100, education: w.education / 100, experience: w.experience / 100 };
 }
 
-export function scoreLocal(resume: Pick<Resume, 'skills' | 'education' | 'experience'>, posting: Pick<Posting, 'skills' | 'educationLevel' | 'minExperienceMonths' | 'weights'>): MatchResult {
+export function scoreLocal(
+  resume: Pick<Resume, 'skills' | 'education' | 'experience'> & { skillEvidence?: Resume['skillEvidence'] },
+  posting: Pick<Posting, 'skills' | 'educationLevel' | 'minExperienceMonths' | 'weights'>,
+): MatchResult {
   const W = weightsFor(posting);
   const required = posting.skills || [];
   const have = new Set((resume.skills || []).map(normSkill));
   const matched = required.filter((s) => have.has(normSkill(s)));
-  const skillPart = required.length ? matched.length / required.length : 1;
+
+  /* Evidence is keyed by the applicant's spelling, `matched` holds the
+     posting's, so the lookup normalises both — the same way the match did.
+     An ABSENT map means the question was never asked (an extracted document,
+     not a built resume) and everything counts in full; an EMPTY one means it
+     was asked and went unanswered. */
+  const evidence = resume.skillEvidence;
+  const evidenced = new Set<string>();
+  if (evidence) {
+    for (const [name, ev] of Object.entries(evidence)) if (ev?.ref) evidenced.add(normSkill(name));
+  }
+  const unevidenced = evidence ? matched.filter((s) => !evidenced.has(normSkill(s))) : [];
+  const credited = matched.length - unevidenced.length * (1 - UNEVIDENCED_CREDIT);
+  const skillPart = required.length ? credited / required.length : 1;
 
   const seekerEdu = Math.max(0, ...(resume.education || []).map((e) => EDU_RANK[e.level] || 0));
   const reqEdu = EDU_RANK[posting.educationLevel] || 0;
@@ -204,6 +367,7 @@ export function scoreLocal(resume: Pick<Resume, 'skills' | 'education' | 'experi
     score: total,
     matchedSkills: matched,
     missingSkills: required.filter((s) => !have.has(normSkill(s))),
+    unevidencedMatches: unevidenced,
     totalSkills: required.length,
     eduMeets: eduPart >= 1,
     expMeets: expPart >= 1,

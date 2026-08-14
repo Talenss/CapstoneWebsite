@@ -6,11 +6,15 @@ documents, not source — the system itself is the folder above.
 | File | What it is |
 |---|---|
 | `ResumeMatch-PH-Design-Specification.pdf` | 20-page design specification: site map, user flows, five wireframes, two mockups, the design system, use case diagram, ERD, the matching algorithm, the API surface, the testing strategy, and the build sequence. Written for the adviser as the "everything you need to start building" document. |
-| `ResumeMatch-PH-Updated-Manuscript-Sections.docx` | Copy-paste-ready replacement text for every section of the capstone paper that the built system has outgrown. Eleven substantive changes, each section reproduced in full between BEGIN/END markers. |
+| `ResumeMatch-PH-Updated-Manuscript-Sections.docx` | Copy-paste-ready replacement text for every section of the capstone paper that the built system has outgrown. Thirteen substantive changes, each section reproduced in full between BEGIN/END markers. Replacement 8 carries the corrected Chapter 3 scoring formula. |
 | `ResumeMatch-PH-Research-Instruments.docx` | The five instruments the study administers — 117 items, all closed — laid out with tick boxes so they can be printed and filled in, plus an administration sheet. Instrument C carries four items repeated word for word from Instrument A, so the change in one respondent's own answer can be tested, and the ten items of the System Usability Scale, scored on their own 0–100 scale. Instrument E is a ranking task: the recruiter orders five résumés and the study computes Spearman's rank correlation against the system's order. Generated from the same source as the manuscript's Appendix A, so the two cannot drift apart. |
 | `ResumeMatch-PH-Google-Forms.docx` | The same five instruments laid out as Google Forms questions — question type, options and section descriptions for every item — plus the checklist for what to do once responses are in. Generated from the same source, for the same reason. |
-| `ResumeMatch-PH-Study-Guide.docx` | The defence study guide: the whole paper section by section, then 120 practice questions with answers written to be said out loud, defence notes, alignment checks and the five figures. Part 4 works every statistic in the study by hand — weighted mean and SD, Wilcoxon signed-rank, the System Usability Scale, Spearman's rho and Cronbach's alpha — on numbers small enough to reproduce with a pen. |
-| `ResumeMatch-PH-Codebase.docx` | Every source file in the repository and what it does, plus the scoring engine in full with its rounding rule, the fourteen database CHECK constraints, the seven steps a single application takes from Apply to a ranked list, and the security that is actually implemented — including the gaps. |
+| `ResumeMatch-PH-Study-Guide.docx` | The defence study guide: the whole paper section by section, then 125 practice questions with answers written to be said out loud, defence notes, alignment checks and the five figures. Part 4 works every statistic in the study by hand — weighted mean and SD, Wilcoxon signed-rank, the System Usability Scale, Spearman's rho and Cronbach's alpha — on numbers small enough to reproduce with a pen. |
+| `ResumeMatch-PH-Codebase.docx` | Every source file in the repository and what it does, plus the scoring engine in full with its rounding rule, the sixteen database CHECK constraints, the seven steps a single application takes from Apply to a ranked list, and the security that is actually implemented — including the gaps. |
+| `ResumeMatch-PH-Start-Here.docx` | The short guide, for a groupmate who did not build the system. The study, the website, the score with a worked example, where the AI is and is not, twelve questions with answers, and the numbers to memorise. About 25 minutes. |
+| `ResumeMatch-PH-Website-Guide.docx` | Every page and every feature, in the order a user meets them, with three worked scores and the design decisions worth being able to defend. |
+| `ResumeMatch-PH-Codebase-Guide.docx` | How the program is built, for whoever answers the technical questions: the two-adapter design, one request followed end to end, the scoring engine in full, the database, the six test suites, and how to run it. |
+| `ResumeMatch-PH-Manuscript-Guide.docx` | The paper chapter by chapter in plain language — what each one argues, what the instruments measure, which statistic is used and why, and a table pointing at where each claim in the manuscript is proved in the software. |
 
 ## What the manuscript revisions cover
 
@@ -43,9 +47,9 @@ where the manuscript and the implementation had diverged:
    zero.
 8. **Six application statuses**, including applicant withdrawal, with an audit
    trail naming the recruiter behind every change.
-9. **Automated testing** — six suites totalling 140 tests under CI (engine 37,
-   API 46, email 10, extraction 10, demo/API parity 13, and the rule-based
-   document reader 24), plus scripted browser walkthroughs that drive the real
+9. **Automated testing** — six suites totalling 160 tests under CI (engine 49,
+   API 52, email 10, extraction 10, demo/API parity 13, and the rule-based
+   document reader 26), plus scripted browser walkthroughs that drive the real
    interface, alongside the ISO 25010 evaluation.
 10. **Security and data rights** — email verification, hashed passwords,
     role-based access, applicant data export, account deletion.
@@ -135,3 +139,118 @@ index records. Nobody has read them. Six method sources in particular are now
 cited and unread — Brooke, Campbell and Stanley, Wilcoxon, Bangor et al. (twice)
 and Lewis — and a source confirmed to exist is not a source confirmed to support
 the sentence it is attached to.
+
+## Revision of 14 August 2026
+
+The four study guides were regenerated against the running code. Two features
+were added to the system since they were written, and both change sentences the
+manuscript already contains:
+
+- **Evidence-linked skills.** The builder asks where each skill was used, and
+  the answer must point at an entry already on the applicant's own resume. A
+  matched skill with a source counts in full; one without still counts, at
+  half. The link is never printed on the resume — the downloaded document is
+  unchanged — and appears only in the recruiter's view of the application. The
+  guides state the limit as plainly as the feature: partial credit makes
+  padding a skills list cost points and makes it visible, it does not prevent
+  it. An applicant with one real skill out of four who types in the other three
+  now reaches 81 rather than 100.
+- **Rejection reasons reach the applicant.** They are told what was decided, in
+  wording written for them; they are not told which member of staff decided it.
+  This reverses the original design, on the grounds that a study whose stated
+  problem is applicants who hear nothing back cannot record the reason and then
+  withhold it from the person whose plans depend on it.
+
+Three counts moved with them: 22 tables, 16 CHECK constraints, and 160 tests
+across six suites. **The scoring formula printed in the manuscript's Chapter 3
+is now incomplete** — it reads matched ÷ required and should read
+(matched − unsourced × 0.5) ÷ required. That edit has not been made to the
+paper yet, and the Manuscript Guide lists it under what is still open.
+
+## The three older documents, brought in line
+
+`ResumeMatch-PH-Codebase.docx`, `-Study-Guide.docx` and
+`-Complete-Documentation.docx` predate the two features above, and had drifted
+further than that. All three were updated in place on 14 August 2026:
+
+- **Codebase.docx** promises in its own opening that line counts are read from
+  the repository at generation time, so every count in it was refreshed from
+  the working tree rather than hand-patched — seventeen files had moved, some
+  by hundreds of lines. Also: 22 tables, sixteen CHECK constraints, the engine
+  listing with its evidence term, and the end-to-end walkthrough corrected to
+  say the ranked list sorts on the snapshot.
+- **Study-Guide.docx** carries the answers the group says out loud, so the edit
+  that matters most is **Q89 — "state the formula"**, which now includes the
+  half-credit term. A new subsection 3.6 adds five questions (Q112a–e) on
+  evidence-linked skills and on what a rejected applicant is told, each written
+  to concede the limit before a panelist finds it. Test counts and the
+  pre-defence checklist were updated; the checklist now has a fourth item, the
+  Chapter 3 formula correction.
+- **Complete-Documentation.docx** was the most out of date: 55 endpoints rather
+  than 45, 160 tests rather than 56, fourteen résumé designs rather than eight,
+  and a claim that there is no projects section — there is, along with
+  languages and references, none of which is scored.
+
+Line counts, table counts, endpoint counts and test counts in all seven
+documents were read from the repository at `e26ded0`, not carried over.
+
+## Chapter 3's formula, and a document that was never committed
+
+`ResumeMatch-PH-Updated-Manuscript-Sections.docx` now carries the corrected
+scoring formula, in Replacement 8 — Development and Testing:
+
+```
+Score  =  ( S × 0.50  +  E × 0.25  +  X × 0.25 ) × 100
+
+S  =  ( matched  −  unsourced × 0.5 )  ÷  total required skills
+```
+
+Three paragraphs were added to that section stating the rule, the fact that the
+recorded source is never printed on the résumé, and the extent of the measure —
+that partial credit attaches a cost to padding a skills list rather than
+preventing it, and that the frozen ranking score is what addresses the same
+behaviour after an application is sent.
+
+**Worth knowing before trusting this file:** it was dated 27 July, and the
+"Revision of 30 July 2026" recorded further up this README had never reached
+it. Both changes that revision describes were still absent — the document
+claimed the uploaded file "is never parsed and can never lower a score" in four
+separate places, and counted eight résumé designs rather than fourteen. Anyone
+pasting from it between those dates would have moved a false statement into the
+manuscript. Both are now corrected throughout, along with the test counts
+(160 across six suites, not 76 across four) and the walkthrough count.
+
+## A full sweep, 14 August 2026
+
+The section above was written after fixing Chapter 3, and it understated the
+problem. Fixing documents section by section had left stale claims standing in
+the parts nobody had looked at — and half of them were inside **tables**, which
+a paragraph-only search reports as clean.
+
+So every document in this folder was swept mechanically against a list of
+claims the running system contradicts, checking table cells as well as body
+text. Forty-six findings across six documents, all corrected:
+
+| Claim found | What is true |
+|---|---|
+| eight résumé designs (19 places) | fourteen |
+| the uploaded file "is never parsed" / "can never lower a score" (5 places) | it is read and scored separately; that score is reported and never ranked on |
+| 24 / 30 / 26 / 56 / 76 / 140 / 142 tests | 160, across six suites |
+| four or five automated suites | six |
+| two browser walkthroughs | nine |
+| 18 or 21 database tables | 22 |
+| 45 endpoints | 55 |
+| fourteen CHECK constraints | sixteen |
+| S = matched ÷ required | S = (matched − unsourced × 0.5) ÷ required |
+
+`ResumeMatch-PH-Defense-Preparation.docx` carried seventeen of them on its own,
+including the "numbers memorised" line — the one sentence in the folder most
+likely to be recited verbatim at a defence.
+
+One apparent hit was left alone deliberately: the Study Guide's *"Why three
+characteristics and not all eight?"* refers to ISO/IEC 25010's eight quality
+characteristics, not to résumé designs.
+
+The sweep script checks a fixed list of patterns. It cannot find a claim nobody
+thought to list, and it does not read the manuscript itself, which is not in
+this repository.

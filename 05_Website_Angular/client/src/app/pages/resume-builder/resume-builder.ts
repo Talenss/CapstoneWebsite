@@ -8,8 +8,8 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { AnalysisService } from '../../core/analysis.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { DESIGN_ORDER, EDU_LABELS } from '../../core/engine';
-import { Education, EduLevel, Experience, Language, Project, Reference, Resume, ResumeDesign, Template } from '../../core/models';
+import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels } from '../../core/engine';
+import { Education, EduLevel, EvidenceKind, Experience, Language, Project, Reference, Resume, ResumeDesign, Template } from '../../core/models';
 
 const STEPS = ['Details', 'Education', 'Experience', 'Skills', 'Certifications', 'More sections', 'Finish'];
 
@@ -512,9 +512,72 @@ export class ResumeBuilder implements OnInit {
     this.markDirty();
   }
   removeSkill(i: number): void {
-    this.resume.update((r) => ({ ...r, skills: r.skills.filter((_, idx) => idx !== i) }));
+    this.resume.update((r) => {
+      const gone = r.skills[i];
+      const ev = { ...(r.skillEvidence ?? {}) };
+      delete ev[gone]; // a source for a skill that is no longer claimed is noise
+      return { ...r, skills: r.skills.filter((_, idx) => idx !== i), skillEvidence: ev };
+    });
     this.markDirty();
   }
+
+  /* ---------- WHERE EACH SKILL WAS USED ----------
+     The applicant picks a source from what they have ALREADY written on this
+     resume — a job, a project, a certification, a course. It is a picker and
+     never a text box, which is the entire point: a source that could be typed
+     freely could be invented in the same breath as the skill it justifies.
+
+     None of this reaches the printed sheet. The preview to the right and the
+     downloaded document both render `skills` as a flat list, exactly as they
+     did before; the source is read only by the recruiter's applicant view,
+     and by the engine, which counts an unsourced skill at half. */
+
+  /** The options offered, grouped by section, skipping empty sections and
+   *  entries that have not been filled in enough to name yet. */
+  evidenceOptions = computed(() => {
+    const r = this.resume();
+    const labels = evidenceLabels(r);
+    return EVIDENCE_KINDS
+      .map((kind) => ({ kind, label: EVIDENCE_KIND_LABELS[kind], items: [...labels[kind]] }))
+      .filter((g) => g.items.length);
+  });
+
+  /** True when there is nothing on the resume to point at yet, so the picker
+   *  can say why it is empty rather than showing a dropdown with one dead
+   *  option in it. */
+  noEvidenceSources = computed(() => this.evidenceOptions().length === 0);
+
+  /** The select's current value, as "kind|label". Empty when the skill has no
+   *  source — including when it points at an entry that has since been
+   *  renamed or deleted, which is honest: that source no longer exists. */
+  evidenceValue(skill: string): string {
+    const ev = this.resume().skillEvidence?.[skill];
+    if (!ev) return '';
+    const known = this.evidenceOptions().find((g) => g.kind === ev.kind && g.items.includes(ev.ref));
+    return known ? `${ev.kind}|${ev.ref}` : '';
+  }
+
+  setEvidence(skill: string, e: Event): void {
+    const raw = (e.target as HTMLSelectElement).value;
+    this.resume.update((r) => {
+      const ev = { ...(r.skillEvidence ?? {}) };
+      if (!raw) delete ev[skill];
+      else {
+        const cut = raw.indexOf('|');
+        ev[skill] = { kind: raw.slice(0, cut) as EvidenceKind, ref: raw.slice(cut + 1) };
+      }
+      return { ...r, skillEvidence: ev };
+    });
+    this.markDirty();
+  }
+
+  /** How many claimed skills have no source. Shown as a plain count with the
+   *  consequence spelled out — not as a warning icon, because nothing here is
+   *  wrong. Half credit is a rule, not an error. */
+  unsourcedSkills = computed(() => {
+    const r = this.resume();
+    return r.skills.filter((s) => !this.evidenceValue(s)).length;
+  });
   /** A suggestion chip is a toggle, so the chip that added a skill by mistake
    *  is the one that takes it off again — in place, without hunting for it
    *  in the list above. */

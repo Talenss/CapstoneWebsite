@@ -8,7 +8,7 @@
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ApiAdapter } from './adapter';
-import { AdminRecruiter, AnalyzedResume, Application, ApiResult, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, StatusEvent, User } from './models';
+import { AdminRecruiter, AnalyzedResume, Application, ApiResult, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User } from './models';
 import { MAX_UPLOAD, ALLOWED_MIME } from './engine';
 
 export class HttpAdapter implements ApiAdapter {
@@ -87,7 +87,11 @@ export class HttpAdapter implements ApiAdapter {
     apply: (resumeId: string, postingId: string) => this.call<{ application: Application }>('applications', 'apply', { resumeId, postingId }),
     mine: () => this.call<{ applications: Application[] }>('applications', 'mine'),
     ranked: (postingId: string) => this.call<{ posting: Posting; rows: RankedRow[] }>('applications', 'ranked', { postingId }),
-    setStatus: (id: string, status: string) => this.call<{ application: Application }>('applications', 'set-status', { id, status }),
+    setStatus: (id: string, status: string, reason?: string | null) =>
+      this.call<{ application: Application }>('applications', 'set-status', { id, status, reason: reason ?? null }),
+    notes: (id: string) => this.call<{ notes: ScreeningNote[] }>('applications', 'notes', { id }),
+    noteAdd: (id: string, body: string) => this.call<{ id: string }>('applications', 'note-add', { id, body }),
+    noteDelete: (id: string) => this.call<Record<string, never>>('applications', 'note-delete', { id }),
     withdraw: (id: string) => this.call<{ application: Application }>('applications', 'withdraw', { id }),
     invite: (id: string, message: string) => this.call<{ sent?: boolean; simulated?: boolean }>('applications', 'invite', { id, message }),
     history: (id: string) => this.call<{ events: StatusEvent[] }>('applications', 'history', { id }),

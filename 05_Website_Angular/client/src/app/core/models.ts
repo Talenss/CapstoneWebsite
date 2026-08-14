@@ -224,6 +224,12 @@ export interface Resume {
   languages?: Language[];
   references?: Reference[];
   skills: string[];
+  /** Where each skill was used, keyed by the skill exactly as it appears in
+   *  `skills`. Optional, and an absent key is not an error — it means the
+   *  applicant named no source for that skill, which is allowed and costs
+   *  partial credit rather than the whole match. NEVER rendered by the print
+   *  sheet or any of the fourteen designs. */
+  skillEvidence?: Record<string, SkillEvidence>;
   certifications: Certification[];
   ownFile: OwnFile | null;
   updatedAt?: number;
@@ -281,6 +287,13 @@ export interface Application {
  *  ROLE, never a person: the applicant is told what was decided and when,
  *  which is what affects them, without naming the individual HR staff member
  *  who did it. */
+/** Why a recruiter moved an application. A closed list so outcomes can be
+ *  counted, mirrored as a runtime constant in core/engine.ts and again in
+ *  server/src/lib/engine.ts. */
+export type RejectionReason =
+  | 'not_qualified' | 'failed_requirement' | 'salary_mismatch' | 'unreachable'
+  | 'position_filled' | 'stronger_candidate' | 'withdrew_interest' | 'other';
+
 export interface StatusEvent {
   /** null for the first event — applying has no previous status. */
   from: AppStatus | null;
@@ -293,12 +306,54 @@ export interface StatusEvent {
    *  naming an HR staff member to an applicant is a different disclosure.
    *  Treat `undefined` as "not disclosed", never as "unknown actor". */
   byName?: string;
+  /** Why the change was made, as one of REJECTION_REASONS.
+   *
+   *  Shown to BOTH audiences — unlike `byName` directly above, which stays
+   *  employer-only. The applicant learns what was decided; they do not learn
+   *  which member of staff decided it. The wording differs by audience:
+   *  REASON_LABELS is what the recruiter files under, APPLICANT_REASON_LABELS
+   *  is the same fact addressed to the person it is about. */
+  reason?: RejectionReason;
+}
+
+/* ------------------------------------------------------------
+   EVIDENCE-LINKED SKILLS — mirrored from server/src/lib/engine.ts, where the
+   reasoning is written out in full. In short: the builder asks where each
+   skill was used and the answer must point at an entry already on the
+   applicant's own resume. A skill with a source counts in full; one without
+   still counts, at partial credit. The link is never printed on the resume —
+   the downloaded document is unchanged — and is shown only in the
+   recruiter's applicant view.
+   ------------------------------------------------------------ */
+export type EvidenceKind = 'experience' | 'project' | 'certification' | 'education';
+
+export interface SkillEvidence {
+  kind: EvidenceKind;
+  /** The label of the entry it points at, as the applicant wrote it —
+   *  "Web Development Intern, Clark Outsourcing". */
+  ref: string;
+}
+
+/** A recruiter's working note on one application — "called 3pm, no answer".
+ *  INTERNAL: no route returns these to the applicant. */
+export interface ScreeningNote {
+  id: string;
+  body: string;
+  at: number;
+  authorName: string;
+  /** True when the signed-in recruiter wrote it. Only the author may delete. */
+  mine: boolean;
 }
 
 export interface MatchResult {
   score: number;
   matchedSkills: string[];
   missingSkills: string[];
+  /** Matched skills the applicant named no source for. Each still counts,
+   *  at UNEVIDENCED_CREDIT rather than in full — see engine.ts. Empty when
+   *  evidence does not apply (the uploaded-document score, which was never
+   *  asked the question). */
+  unevidencedMatches: string[];
   totalSkills: number;
   eduMeets: boolean;
   expMeets: boolean;
@@ -327,6 +382,23 @@ export interface RankedRow extends MatchResult {
    *  but never used FOR the ranking: a misread scan must not move a person
    *  down the list. */
   fileScore?: MatchResult;
+
+  /* `score` and `tier` above are the values RECORDED WHEN THE APPLICATION WAS
+     MADE, because a shortlist that reorders itself between two visits is not a
+     record of a decision. The three fields below describe the resume as it
+     stands today, so an applicant who improved it is visible as a labelled
+     change rather than a silent move up the list. */
+
+  /** What this resume would score against this posting right now. */
+  liveScore?: number;
+  liveTier?: Tier;
+  /** True when the resume has changed since the application was submitted. */
+  scoreDrifted?: boolean;
+
+  /** Required skills first claimed on the day this application was made.
+   *  Context for an interview question and nothing else — it does not affect
+   *  the score, the tier, the ordering, or whether the applicant is shown. */
+  skillsClaimedOnApplyDay?: string[];
 }
 
 export interface HrStats {

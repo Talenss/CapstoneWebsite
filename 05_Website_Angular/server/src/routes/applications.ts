@@ -4,8 +4,8 @@ import { query, queryOne, exec, withTransaction } from '../db';
 import { ApplicationRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
 import { requireRole, requireUser } from '../lib/auth';
-import { fetchResume, fetchPosting, postingExpired, serializeResume, serializePosting, serializeApplication } from '../lib/serializers';
-import { rmScore, rmFileScore, cacheScore } from '../lib/engine';
+import { fetchResume, fetchPosting, postingExpired, serializeResume, serializePosting, serializeApplication, ts } from '../lib/serializers';
+import { rmScore, rmFileScore, cacheScore, getSettings, REJECTION_REASONS } from '../lib/engine';
 import { notifyStatusChange, notifyNewApplication, sendInterviewInvite } from '../lib/notify';
 import { UserRow } from '../types';
 
@@ -145,6 +145,7 @@ router.post('/ranked', async (req, res) => {
   if (!p || p.company_id !== u.company_id) return fail(res, 'Opening not found.');
 
   const posting = await serializePosting(p);
+  const T = (await getSettings()).thresholds;   // once, not once per applicant
 
   const rows = await query<any>(
     `SELECT a.*, u.user_id AS s_id, u.full_name AS s_name, u.email AS s_email
@@ -185,8 +186,59 @@ router.post('/ranked', async (req, res) => {
        cannot move anybody down the list. `fileScore` sits beside it as
        information about the document, not as a verdict on the person. */
     const fs = await rmFileScore(resume.ownFile?.extract, posting);
+
+    /* RANK ON THE SCORE RECORDED AT APPLICATION, NOT THE LIVE ONE.
+     *
+     * This list used to sort on the score recomputed on each load, which meant
+     * an applicant editing their resume after applying silently reordered a
+     * recruiter's shortlist — the list seen on Monday could not be reproduced
+     * on Wednesday, and nothing on screen said why. A shortlist a recruiter
+     * cannot reproduce is not a record of a decision, and the manuscript's
+     * claim that the stored score makes an application reproducible was not
+     * true of the screen anybody actually looked at.
+     *
+     * It also removed the cost of overstating a skill: read the missing ones
+     * off the posting, add them afterwards, move up. Ranking on the snapshot
+     * means a later edit changes the applicant's NEXT application, not this
+     * one. The live score is still returned, so the recruiter can see that the
+     * resume moved and by how much — shown as a labelled change rather than an
+     * invisible reordering.
+     *
+     * Applications recorded before this column was populated have no snapshot;
+     * they fall back to the live score, which is the old behaviour and the best
+     * available answer for a row that never stored one. */
+    const ranked = a.score_snapshot ?? s.score;
+
+    /* The tier has to be derived from the number being shown. Spreading the
+       live result and overwriting only `score` would leave a 63 labelled
+       "strong" whenever the resume had improved since applying — a mismatch
+       the recruiter would read as a bug in the scoring, and rightly. */
+    const rankedTier = ranked >= T.strong ? 'strong' : ranked >= T.related ? 'possible' : 'related';
+
+    /* REQUIRED SKILLS CLAIMED ON THE DAY OF THE APPLICATION.
+     *
+     * Reported, never acted on: it does not change the score, the tier or the
+     * order, and it never hides anybody. A required skill added the same day
+     * someone applied has an innocent explanation as often as not — people
+     * update a resume when they see a job they want. What it is worth is a
+     * question at interview, and a recruiter is qualified to weigh the answer
+     * where the software is not. Deciding for them here would break the
+     * study's central claim that the system decides nothing. */
+    const addedAt: Record<string, number> = (resume as any).skillsAddedAt ?? {};
+    const appliedOn = new Date(ts(a.applied_at)).toISOString().slice(0, 10);
+    const sameDayRequired = s.matchedSkills.filter((name) => {
+      const at = addedAt[name];
+      return at != null && new Date(at).toISOString().slice(0, 10) === appliedOn;
+    });
+
     out.push({
       ...s,
+      score: ranked,
+      tier: rankedTier,
+      liveScore: s.score,
+      liveTier: s.tier,
+      scoreDrifted: a.score_snapshot != null && a.score_snapshot !== s.score,
+      ...(sameDayRequired.length ? { skillsClaimedOnApplyDay: sameDayRequired } : {}),
       application: serializeApplication(a),
       resume,
       seeker: { id: String(a.s_id), name: a.s_name, email: a.s_email, role: 'seeker' },
@@ -208,6 +260,20 @@ router.post('/set-status', async (req, res) => {
 
   if (!['submitted', 'review', 'shortlisted', 'rejected', 'hired'].includes(status)) return fail(res, 'Unknown status.');
 
+  /* WHY, when the recruiter gave one.
+   *
+   * Optional on purpose. Requiring it would have made every existing caller
+   * invalid overnight, and — more to the point — a recruiter who is made to
+   * pick something in order to proceed picks the first item on the list, which
+   * produces a column full of confident nonsense. The applicant view asks for
+   * one on a rejection and the recruiter can still decline; a blank here means
+   * nobody stated a reason, which is honest, where a defaulted code would not
+   * be. */
+  const rawReason = req.body?.reason == null ? null : String(req.body.reason);
+  if (rawReason !== null && !REJECTION_REASONS.includes(rawReason as any))
+    return fail(res, 'Unknown reason.');
+  const reason = rawReason || null;
+
   const a = await queryOne<ApplicationRow & { company_id: number }>(
     `SELECT a.*, p.company_id
        FROM applications a
@@ -224,8 +290,8 @@ router.post('/set-status', async (req, res) => {
   await withTransaction(async (tx) => {
     await tx.exec('UPDATE applications SET status = ? WHERE application_id = ?', [status, aid]);
     await tx.exec(
-      'INSERT INTO application_status_history (application_id, old_status, new_status, changed_by) VALUES (?,?,?,?)',
-      [aid, a.status, status, u.user_id],
+      'INSERT INTO application_status_history (application_id, old_status, new_status, changed_by, reason) VALUES (?,?,?,?,?)',
+      [aid, a.status, status, u.user_id, reason],
     );
   });
 
@@ -336,9 +402,9 @@ router.post('/history', async (req, res) => {
 
   const rows = await query<{
     old_status: string | null; new_status: string; changed_at: unknown;
-    changed_by: number | null; actor_name: string | null;
+    changed_by: number | null; actor_name: string | null; reason: string | null;
   }>(
-    `SELECT h.old_status, h.new_status, h.changed_at, h.changed_by,
+    `SELECT h.old_status, h.new_status, h.changed_at, h.changed_by, h.reason,
             u.full_name AS actor_name
        FROM application_status_history h
        LEFT JOIN users u ON u.user_id = h.changed_by
@@ -359,9 +425,117 @@ router.post('/history', async (req, res) => {
       // applicant's own action (that person is the applicant themselves —
       // the recruiter already knows who they are from the row they clicked).
       if (maySeeNames && by === 'employer' && r.actor_name) e['byName'] = r.actor_name;
+
+      /* THE REASON GOES TO THE APPLICANT TOO — unlike the name beside it.
+         This was built the other way round first, and the argument for hiding
+         it was real: a code its subject will read is a code some recruiters
+         will soften, and "stronger_candidate" turns into "other" the first
+         time someone pictures it quoted back at them.
+
+         It is still the wrong call for THIS study. Chapter 1's stated problem
+         is applicants who apply and hear nothing at all; a system that
+         finally records why, and then withholds precisely that from the one
+         person whose plans depend on it, argues against its own thesis. A
+         recruiter who would only be candid in secret is a cost worth paying
+         for an applicant who learns they were unreachable rather than
+         unqualified, and can fix their phone number before the next
+         application.
+
+         The distinction that survives is between the DECISION and the
+         DECIDER: the applicant learns what was decided, not which member of
+         staff decided it. That is why `byName` above keeps the narrower gate
+         and this does not. The wording each side reads differs too — the
+         recruiter's list is filing language, the applicant's is written to be
+         read by the person it is about (REASON_LABELS against
+         APPLICANT_REASON_LABELS in client/src/app/core/engine.ts). */
+      if (r.reason) e['reason'] = r.reason;
       return e;
     }),
   });
+});
+
+/* SCREENING NOTES — what a recruiter writes down while working a shortlist.
+   "Called 3pm, no answer." "Wants 35k, budget is 28." "Referred by Ops."
+
+   Without a place for these, HR keeps a spreadsheet beside the system, and a
+   system people work beside instead of in is not the system. That is the whole
+   justification for the feature; it screens nobody and scores nothing.
+
+   Visible to the employer's own staff and to no one else — never to the
+   applicant, on this route or any other. A note the subject may read is a note
+   nobody writes honestly, and most of these are provisional by nature.        */
+router.post('/notes', async (req, res) => {
+  const u = await requireRole(req, res, 'recruiter');
+  if (!u) return;
+  const aid = idOf(req.body?.id);
+
+  const a = await queryOne<{ company_id: number }>(
+    `SELECT p.company_id FROM applications a
+       JOIN job_postings p ON p.posting_id = a.posting_id
+      WHERE a.application_id = ?`, [aid],
+  );
+  if (!a || a.company_id !== u.company_id) return fail(res, 'Application not found.');
+
+  const rows = await query<any>(
+    `SELECT n.note_id, n.body, n.created_at, n.author_id, us.full_name AS author_name
+       FROM application_notes n
+       LEFT JOIN users us ON us.user_id = n.author_id
+      WHERE n.application_id = ?
+      ORDER BY n.created_at DESC, n.note_id DESC`, [aid],
+  );
+
+  ok(res, {
+    notes: rows.map((r) => ({
+      id: String(r.note_id),
+      body: r.body,
+      at: ts(r.created_at),
+      authorName: r.author_name ?? 'A former colleague',
+      mine: Number(r.author_id) === u.user_id,
+    })),
+  });
+});
+
+router.post('/note-add', async (req, res) => {
+  const u = await requireRole(req, res, 'recruiter');
+  if (!u) return;
+  const aid = idOf(req.body?.id);
+  const body = String(req.body?.body ?? '').trim().slice(0, 2000);
+  if (!body) return fail(res, 'Write something first.');
+
+  const a = await queryOne<{ company_id: number }>(
+    `SELECT p.company_id FROM applications a
+       JOIN job_postings p ON p.posting_id = a.posting_id
+      WHERE a.application_id = ?`, [aid],
+  );
+  if (!a || a.company_id !== u.company_id) return fail(res, 'Application not found.');
+
+  const ins = await exec(
+    'INSERT INTO application_notes (application_id, author_id, body) VALUES (?,?,?) RETURNING note_id',
+    [aid, u.user_id, body],
+  );
+  ok(res, { id: String(ins.insertId) });
+});
+
+/* Only the author may delete, and only their own note. A colleague quietly
+   removing someone else's observation would make the notes untrustworthy to
+   the very people who have to rely on them. */
+router.post('/note-delete', async (req, res) => {
+  const u = await requireRole(req, res, 'recruiter');
+  if (!u) return;
+  const nid = idOf(req.body?.id);
+
+  const n = await queryOne<{ author_id: number; company_id: number }>(
+    `SELECT n.author_id, p.company_id
+       FROM application_notes n
+       JOIN applications a ON a.application_id = n.application_id
+       JOIN job_postings p ON p.posting_id = a.posting_id
+      WHERE n.note_id = ?`, [nid],
+  );
+  if (!n || n.company_id !== u.company_id) return fail(res, 'Note not found.');
+  if (Number(n.author_id) !== u.user_id) return fail(res, 'You can only delete your own notes.');
+
+  await exec('DELETE FROM application_notes WHERE note_id = ?', [nid]);
+  ok(res, {});
 });
 
 /* A recruiter's personal message to an applicant — typically the

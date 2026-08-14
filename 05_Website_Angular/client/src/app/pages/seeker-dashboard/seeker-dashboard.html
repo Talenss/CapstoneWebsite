@@ -60,9 +60,15 @@
                     </div>
                     <span class="score-ring" [style.--p]="item.score" [style.--c]="tierColor(item.score)"><b>{{ item.score }}%</b></span>
                   </div>
+                  <!-- Only what the applicant HAS is named; the rest is a
+                       count. Same reasoning as the openings page — see
+                       missingHint() in core/engine.ts. -->
                   <div>
-                    @for (s of item.posting.skills; track s) {
-                      <span class="chip" [class.miss]="!item.matchedSkills.includes(s)">{{ s }}</span>
+                    @for (s of item.matchedSkills; track s) {
+                      <span class="chip">{{ s }}</span>
+                    }
+                    @if (item.missingSkills.length) {
+                      <span class="chip more">+{{ item.missingSkills.length }} more asked for</span>
                     }
                   </div>
                   <div class="req">
@@ -84,7 +90,7 @@
         }
       }
       @if (reco() && !reco()!.strong.length && !reco()!.possible.length) {
-        <div class="note" style="margin-top:26px">Nothing above {{ THRESHOLDS.related }}% yet — but the related roles above share skills you already have. Adding the missing skills to your resume (the crossed-out ones) is usually the fastest way to move a score up.</div>
+        <div class="note" style="margin-top:26px">Nothing above {{ THRESHOLDS.related }}% yet — but the related roles above share skills you already have. Open a role to see what it asks for; listing a skill you genuinely have, and saying where you used it, is usually the fastest way to move a score up.</div>
       }
     }
   </div>
@@ -197,6 +203,16 @@
                     <b>{{ historyLabel(e) }}</b>
                     @if (historyBy(e); as who) { <span class="who">&#32;{{ who }}</span> }
                     <span class="when">{{ historyMoment(e.at) }}@if (historyGap($index); as gap) { · {{ gap }} }</span>
+                    <!-- WHY, when the employer recorded one. This is the line
+                         the whole study is about: the stated problem is
+                         applicants who apply and hear nothing back, so a
+                         system that records the reason and then keeps it from
+                         the one person whose plans depend on it would be
+                         arguing against itself. The employer's name is here;
+                         the individual's is not. -->
+                    @if (e.reason) {
+                      <span class="why">{{ reasonText(e) }}</span>
+                    }
                   </div>
                 </li>
               }
@@ -257,14 +273,22 @@
         @if (projectedScore(item); as goal) {
           <div class="coach">
             <b>How to raise this score</b>
+            <!-- This used to name the unmet requirements and put the score
+                 they would unlock beside them, which reads as an instruction
+                 rather than advice: here are the exact words, here is what
+                 they are worth. It now says how many and what kind. Someone
+                 who really does hold the skill has enough to go and check the
+                 posting; someone who does not is given no word to claim. -->
             <p>
-              You can apply right now — this is guidance, not a requirement. But if you genuinely have
-              @if (item.missingSkills.length === 1) { <b>{{ item.missingSkills[0] }}</b> }
-              @else { these {{ item.missingSkills.length }} skills — @for (s of item.missingSkills; track s; let last = $last) { <b>{{ s }}</b>{{ last ? '' : ', ' }} } }
-              and simply haven't listed
+              You can apply right now — this is guidance, not a requirement. There
+              {{ item.missingSkills.length === 1 ? 'is' : 'are' }}
+              <b>{{ missingHint(item.missingSkills) }}</b>.
+              Open the posting to read what it asks for. If you genuinely have
+              {{ item.missingSkills.length === 1 ? 'it' : 'them' }} and simply haven't listed
               {{ item.missingSkills.length === 1 ? 'it' : 'them' }} yet, adding
-              {{ item.missingSkills.length === 1 ? 'it' : 'them' }} to your resume would take this from
-              <b>{{ item.score }}%</b> to <b>{{ goal }}%</b> — {{ projectedTier(item) }}.
+              {{ item.missingSkills.length === 1 ? 'it' : 'them' }} — and saying where you used
+              {{ item.missingSkills.length === 1 ? 'it' : 'them' }} — would take this from
+              <b>{{ item.score }}%</b> to <b>{{ goal }}%</b>.
             </p>
             <a class="btn ghost sm" routerLink="/resume-builder" [queryParams]="{ id: activeId() }">Edit my resume</a>
           </div>

@@ -132,11 +132,49 @@
           <span class="score-ring lg" [style.--p]="r.score" [style.--c]="tierColor(r.score)"><b>{{ r.score }}%</b></span>
           <div style="flex:1;min-width:200px">
             <span class="badge {{ tierBadgeClass(r.tier) }}" style="margin-bottom:8px">{{ tierLabel(r.score) }}</span>
+            <span class="w" style="display:block;margin-bottom:8px">score at application &middot; {{ day(r.application.appliedAt) }}</span>
+
+            <!-- The resume changed after this application was made. Ranking
+                 deliberately stays on the score recorded at the time, so the
+                 shortlist stays reproducible; this line is how the recruiter
+                 learns the applicant has moved, instead of the list quietly
+                 reordering itself between two visits. -->
+            @if (r.scoreDrifted) {
+              <p class="notice" style="font-size:13px;margin:0 0 10px">
+                <b>This resume changed after applying.</b>
+                It would score <b>{{ r.liveScore }}%</b> today ({{ driftLabel(r) }}).
+                The ranking above uses the score recorded when they applied, so your
+                shortlist does not reorder itself. Worth asking about at interview.
+              </p>
+            }
+
+            <!-- Reported, never acted on. The score, the tier and the position
+                 on this list are all identical whether this line appears or
+                 not — it is a prompt for a question, not a verdict, and the
+                 wording says so because a recruiter reading it in a hurry
+                 should not mistake it for a judgement the system has made. -->
+            @if (r.skillsClaimedOnApplyDay?.length) {
+              <p class="notice" style="font-size:13px;margin:0 0 10px">
+                <b>{{ r.skillsClaimedOnApplyDay!.length }} required
+                {{ r.skillsClaimedOnApplyDay!.length === 1 ? 'skill was' : 'skills were' }}
+                first listed on the day they applied:</b>
+                {{ r.skillsClaimedOnApplyDay!.join(', ') }}.
+                People often update a resume when they see a job they want, so this is
+                not a mark against them — it is a good thing to ask about.
+                It has not changed their score or their position on this list.
+              </p>
+            }
             <div class="breakdown" style="margin:8px 0 0">
               <div class="row">
                 <span><b>Skills</b><span class="w">{{ r.weights.skills * 100 }}% weight</span></span>
                 <b>{{ r.matchedSkills.length }} of {{ r.totalSkills }}{{ r.missingSkills.length ? ' · missing ' + r.missingSkills.join(', ') : '' }}</b>
               </div>
+              @if (r.unevidencedMatches.length) {
+                <div class="row">
+                  <span><b>Counted at half</b><span class="w">no source given</span></span>
+                  <b style="color:var(--muted);font-weight:500">{{ r.unevidencedMatches.join(', ') }}</b>
+                </div>
+              }
               <div class="row">
                 <span><b>Education</b><span class="w">{{ r.weights.education * 100 }}% weight</span></span>
                 <b [style.color]="r.eduMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ r.eduMeets ? 'Meets' : 'Below' }} {{ posting() ? eduLabels[posting()!.educationLevel] : '' }}</b>
@@ -229,6 +267,34 @@
                     }
                   </div>
                 </div>
+
+                <!-- WHERE EACH SKILL WAS USED — this panel and nowhere else.
+                     The applicant answered this in the builder, and the answer
+                     is deliberately absent from the document they download and
+                     from the Skills list directly above: a resume with a
+                     company name welded onto every skill parses badly in an
+                     ATS and reads badly to a person. Here it is the thing
+                     worth reading, because it is what separates a skill
+                     someone can account for from one they cannot.
+
+                     "No source given" is context, not an accusation. It has
+                     already been priced into the score at half credit; saying
+                     so on the same screen keeps the recruiter from counting
+                     the same fact twice. -->
+                <div class="p-sec evsec">
+                  <h4>Where they used each skill</h4>
+                  <p class="evnote">Answered by the applicant when they built the resume. Not printed on their resume &mdash; this view is the only place it appears.</p>
+                  @for (s of r.resume.skills; track s) {
+                    <div class="evrow">
+                      <b [class.hit]="r.matchedSkills.includes(s)">{{ s }}</b>
+                      @if (evidenceOf(r, s); as ev) {
+                        <span>{{ evidenceKindLabels[ev.kind] }} &mdash; {{ ev.ref }}</span>
+                      } @else {
+                        <span class="nosrc">No source given{{ r.matchedSkills.includes(s) ? ' · counted at half' : '' }}</span>
+                      }
+                    </div>
+                  }
+                </div>
               }
               <!-- The optional sections. They score nothing, but the applicant
                    put them on the document and the recruiter is reading the
@@ -320,6 +386,55 @@
            an hour ago or three weeks ago, or who to ask. Names are shown here
            and never to the applicant — internal accountability is exactly
            what the stored actor is for. -->
+      <!-- SCREENING NOTES. Without somewhere to write "called 3pm, no answer"
+           or "wants 35k, budget is 28", a recruiter keeps a spreadsheet beside
+           this page and the system stops being where the work happens. That is
+           the whole justification: it screens nobody and scores nothing.
+
+           The line about the applicant not seeing them is not reassurance for
+           the recruiter, it is the reason the feature works — a note its
+           subject may read is a note nobody writes honestly. -->
+      <div class="handled" style="margin-bottom:16px">
+        <div class="handled-head">
+          <b>Your notes on this applicant</b>
+          <span class="wait">not visible to the applicant</span>
+        </div>
+
+        <textarea [value]="noteDraft()" (input)="setNoteDraft($event)" rows="2"
+                  placeholder="Called 3pm, no answer. Following up Thursday."
+                  aria-label="Add a screening note"
+                  style="width:100%;padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px;resize:vertical"></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px">
+          <button class="btn ghost sm" type="button" (click)="addNote()"
+                  [disabled]="!noteDraft().trim() || savingNote()">
+            @if (savingNote()) { <span class="spinner"></span> Saving… } @else { Add note }
+          </button>
+        </div>
+
+        @if (notesLoading()) {
+          <div class="loading sm"><span class="spinner"></span> Loading…</div>
+        } @else if (!notes().length) {
+          <p class="handled-empty">No notes yet.</p>
+        } @else {
+          <ol class="trail">
+            @for (n of notes(); track n.id) {
+              <li>
+                <span>{{ n.body }}</span>
+                <span class="actor"> — {{ n.authorName }}</span>
+                <span class="at"> · {{ day(n.at) }}</span>
+                <!-- Author-only, matching the server. A colleague quietly
+                     removing someone else's observation would make the notes
+                     untrustworthy to the people who rely on them. -->
+                @if (n.mine) {
+                  <button class="btn ghost sm" type="button" (click)="deleteNote(n.id)"
+                          style="margin-left:8px">Delete</button>
+                }
+              </li>
+            }
+          </ol>
+        }
+      </div>
+
       <div class="handled">
         <div class="handled-head">
           <b>Who has handled this</b>
@@ -353,6 +468,34 @@
         <select [value]="modalStatus()" (change)="setModalStatus($event)" style="padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px">
           @for (k of statusOrder; track k) { <option [value]="k">{{ statusLabels[k] }}</option> }
         </select>
+
+        <!-- Asked for on a rejection only, and answerable with "prefer not to
+             say" — a recruiter made to choose in order to proceed picks the
+             first item, and the column fills with confident nonsense. Left
+             blank it records that nobody gave a reason, which is at least
+             true.
+
+             THE APPLICANT READS THIS. The label says so plainly, above the
+             control rather than in a tooltip, because a recruiter who learns
+             it afterwards has already written something they assumed was
+             private. What the applicant does not get is the name of the
+             person who chose it. -->
+        @if (modalStatus() === 'rejected') {
+          <label style="font-size:12.5px;color:var(--muted);margin-bottom:-6px">
+            Reason — optional. <b>The applicant is shown this</b>, in plainer wording. Your name is not.
+          </label>
+          <select [value]="modalReason()" (change)="setModalReason($event)"
+                  aria-label="Reason for not proceeding — optional, and shown to the applicant"
+                  style="padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px">
+            <option value="">No reason given</option>
+            @for (k of REASONS; track k) { <option [value]="k">{{ REASON_LABELS[k] }}</option> }
+          </select>
+          @if (modalReason(); as k) {
+            <p style="font-size:12.5px;color:var(--muted);margin:-4px 0 0;padding-left:10px;border-left:2px solid var(--rule)">
+              They will read: “{{ applicantWording(k) }}”
+            </p>
+          }
+        }
         <button class="btn primary" type="button" (click)="saveStatus()" [disabled]="savingStatus()">
           @if (savingStatus()) { <span class="spinner"></span> Saving… } @else { Update status }
         </button>

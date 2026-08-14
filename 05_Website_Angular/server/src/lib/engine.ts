@@ -6,6 +6,102 @@
    ============================================================ */
 import { query, exec } from '../db';
 
+/* WHY a recruiter moved an application, as a closed list.
+   Free text would be unanalysable and would tempt a hurried recruiter into
+   writing something the company would not want to stand behind; a code can be
+   counted, and the study can report the distribution of outcomes without
+   reading anybody's prose. Mirrored in client/src/app/core/engine.ts. */
+export const REJECTION_REASONS = [
+  'not_qualified', 'failed_requirement', 'salary_mismatch', 'unreachable',
+  'position_filled', 'stronger_candidate', 'withdrew_interest', 'other',
+] as const;
+export type RejectionReason = (typeof REJECTION_REASONS)[number];
+
+/* ------------------------------------------------------------
+   EVIDENCE-LINKED SKILLS
+
+   A skill on a resume is a claim. Until now the engine treated every claim
+   identically, which is what made the ranking gameable: a posting publishes
+   the skills it wants, and an applicant can type those exact words into their
+   skills list minutes before applying at no cost. Nothing in the arithmetic
+   could tell that apart from a decade of practice.
+
+   So the builder asks a second question — WHERE did you use this? — and the
+   answer has to point at something already on the applicant's own resume: a
+   job, a project, a certification, or a course. It cannot be free text, so it
+   cannot be invented in the same keystroke as the skill itself; padding the
+   list now means also inventing the job it came from, which is a different
+   kind of act and one an interviewer can check.
+
+   Two rules keep this fair, and both were chosen over stricter alternatives:
+
+     · A skill WITHOUT a source still counts. Plenty of real skills are self-
+       taught, or come from work too small to list. Refusing to count them
+       would punish exactly the applicants this study exists to help. It
+       counts at UNEVIDENCED_CREDIT instead of in full.
+
+     · The link is NEVER printed on the resume. The document the applicant
+       downloads is unchanged — a flat skills list, the same as it has always
+       been, so no ATS parser and none of the fourteen designs are affected.
+       The evidence is shown only in the recruiter's applicant view.
+
+   Honest about what this does and does not do: partial credit REDUCES the
+   payoff for padding, it does not remove it. On a four-skill opening at the
+   default weights, an applicant with one real skill who types in the other
+   three moves from 63 to 81 rather than from 63 to 100. What stops the
+   padding from working on an application already sent is the score snapshot
+   (routes/applications.ts); this makes the padding cost something, and gives
+   the recruiter the panel to ask about it.
+   ------------------------------------------------------------ */
+export const EVIDENCE_KINDS = ['experience', 'project', 'certification', 'education'] as const;
+export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];
+export interface SkillEvidence {
+  kind: EvidenceKind;
+  /** The label of the entry it points at, as the applicant wrote it. */
+  ref: string;
+}
+
+/** What a matched skill is worth when the applicant named no source for it.
+ *
+ *  Half, and the value is published rather than tuned: "a skill you can point
+ *  to evidence for counts fully; one you cannot counts half" is a sentence an
+ *  applicant can be told and a recruiter can repeat. A smaller number scores
+ *  closer to calling an unsourced skill a lie, which it is not. */
+export const UNEVIDENCED_CREDIT = 0.5;
+
+/** How one resume entry is labelled when it is offered as a source, and when
+ *  a stored source is checked back against the resume.
+ *
+ *  Mirrored in client/src/app/core/engine.ts and covered by the parity test.
+ *  The two must agree exactly: the builder offers these strings, the server
+ *  accepts only these strings, and a mismatch would look to the applicant
+ *  like the source they picked had been thrown away. */
+export function evidenceLabel(kind: EvidenceKind, e: any): string {
+  const join = (a: unknown, b: unknown) => [String(a ?? '').trim(), String(b ?? '').trim()].filter(Boolean).join(', ');
+  if (kind === 'experience') return join(e?.position, e?.company);
+  if (kind === 'education') return join(e?.degree, e?.school);
+  return String(e?.name ?? '').trim(); // project, certification
+}
+
+/** Every label on this resume that a skill is allowed to point at, per kind.
+ *
+ *  A source has to be something the applicant already wrote down elsewhere.
+ *  That is the whole mechanism: free text would let the skill and its
+ *  justification be invented in the same keystroke, which is precisely the
+ *  padding this feature is meant to make expensive. */
+export function evidenceLabels(resume: {
+  experience?: any[]; projects?: any[]; certifications?: any[]; education?: any[];
+}): Record<EvidenceKind, Set<string>> {
+  const set = (kind: EvidenceKind, rows: any[] | undefined) =>
+    new Set((rows ?? []).map((e) => evidenceLabel(kind, e)).filter(Boolean));
+  return {
+    experience: set('experience', resume.experience),
+    project: set('project', resume.projects),
+    certification: set('certification', resume.certifications),
+    education: set('education', resume.education),
+  };
+}
+
 export const EDU_RANK: Record<string, number> = {
   none: 0, highschool: 1, vocational: 2, associate: 3, bachelor: 4, master: 5,
 };
@@ -119,6 +215,16 @@ export interface SerializedResume {
   skills: string[];
   education: { level: string }[];
   experience: { months: number }[];
+  /** Where each skill was used, keyed by the skill as the applicant wrote it.
+   *
+   *  ABSENT and EMPTY mean different things and the engine treats them
+   *  differently. An empty object means the applicant was asked and named no
+   *  sources, so their matched skills take partial credit. Absent means the
+   *  question was never put — the only caller in that position is
+   *  rmFileScore, scoring a document a machine read, where there was no
+   *  builder to ask in. Penalising that would be scoring the applicant for a
+   *  screen they were never shown. */
+  skillEvidence?: Record<string, SkillEvidence>;
   [k: string]: any;
 }
 export interface SerializedPosting {
@@ -157,6 +263,11 @@ export interface MatchResult {
   score: number;
   matchedSkills: string[];
   missingSkills: string[];
+  /** Of the matched skills, the ones the applicant named no source for —
+   *  each counted at UNEVIDENCED_CREDIT rather than in full. Always empty
+   *  when evidence does not apply, which is why the applicant's uploaded
+   *  file never shows an unsourced skill it was never asked about. */
+  unevidencedMatches: string[];
   totalSkills: number;
   eduMeets: boolean;
   expMeets: boolean;
@@ -196,7 +307,21 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
   const matched: string[] = [];
   const missing: string[] = [];
   for (const s of required) (have.has(skillNorm(s)) ? matched : missing).push(s);
-  const skillPart = required.length ? matched.length / required.length : 1.0;
+
+  /* Evidence is keyed by the skill as the APPLICANT wrote it; `matched` holds
+     the skill as the POSTING wrote it. They are the same skill and often not
+     the same string ("JS" against "JavaScript"), so the lookup goes through
+     the same normalisation the match itself did. */
+  const evidence = resume.skillEvidence;
+  const evidenced = new Set<string>();
+  if (evidence) {
+    for (const [name, ev] of Object.entries(evidence)) if (ev?.ref) evidenced.add(skillNorm(name));
+  }
+  /* An ABSENT map means the question was never asked (see SerializedResume),
+     so every match counts in full and nothing is reported as unsourced. */
+  const unevidenced = evidence ? matched.filter((s) => !evidenced.has(skillNorm(s))) : [];
+  const credited = matched.length - unevidenced.length * (1 - UNEVIDENCED_CREDIT);
+  const skillPart = required.length ? credited / required.length : 1.0;
 
   let seekerEdu = 0;
   for (const e of resume.education || []) seekerEdu = Math.max(seekerEdu, EDU_RANK[e.level] ?? 0);
@@ -215,6 +340,7 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
     score: total,
     matchedSkills: matched,
     missingSkills: missing,
+    unevidencedMatches: unevidenced,
     totalSkills: required.length,
     eduMeets: eduPart >= 1.0,
     expMeets: expPart >= 1.0,

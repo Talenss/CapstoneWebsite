@@ -883,3 +883,248 @@ test('the score a seeker is given uses the opening’s own weights', async () =>
   assert.deepEqual(s.weights, { skills: 0.8, education: 0.1, experience: 0.1 },
     'and it must report the split it used, as fractions');
 });
+
+test('editing a resume after applying does not reorder the recruiter’s shortlist', async () => {
+  /* THE ANTI-GAMING GUARANTEE, and the reason the ranked list reads
+     score_snapshot rather than the live score.
+
+     Required skills are printed on the posting, so an applicant can always
+     work out their own gap. What must not follow is that closing the gap
+     AFTER applying moves them up a shortlist the recruiter has already
+     worked from. This test would have passed before the fix for the wrong
+     reason — nothing asserted the ordering at all — so it exists to keep
+     the behaviour from being quietly reverted. */
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+
+  const made = await hr('postings/save', { posting: {
+    title: 'Snapshot Ranking Check',
+    department: 'Information Technology',
+    description: 'Requires four skills so a later edit can visibly change the live score.',
+    skills: ['JavaScript', 'Git', 'SQL', 'Excel'],
+    educationLevel: 'none',
+    minExperienceMonths: 0,
+  } });
+  assert.equal(made.body.ok, true, made.body.error);
+  const postingId = made.body.posting.id;
+
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const resume = (await seeker('resumes/list')).body.resumes[0];
+
+  const applied = await seeker('applications/apply', { resumeId: resume.id, postingId });
+  assert.equal(applied.body.ok, true, applied.body.error);
+
+  const first = (await hr('applications/ranked', { postingId })).body
+    .rows.find((r: any) => String(r.resume.id) === String(resume.id));
+  assert.ok(first, 'the applicant should be on the shortlist');
+  const scoreAtApplication = first.score;
+  assert.equal(first.scoreDrifted, false, 'nothing has changed yet');
+
+  // Now add every required skill — the exact exploit the review described.
+  // Each one is given a source, so this test stays about SNAPSHOT RANKING and
+  // is not quietly weakened by the separate half-credit rule; the evidence
+  // feature has its own tests below.
+  const full = (await seeker('resumes/get', { id: resume.id })).body.resume;
+  full.skills = ['JavaScript', 'Git', 'SQL', 'Excel'];
+  /* An earlier test in this file leaves a bare resume at the top of the list,
+     so this one may have no entries at all. Give it a job, and point all four
+     skills at it: that keeps this test about SNAPSHOT RANKING rather than
+     letting the separate half-credit rule quietly change what it measures.
+     The posting asks for no experience, so the added months move nothing. */
+  full.experience = [{ position: 'Web Development Intern', company: 'LGU San Fernando', months: 4, description: '' }];
+  const source = { kind: 'experience', ref: 'Web Development Intern, LGU San Fernando' };
+  full.skillEvidence = { JavaScript: source, Git: source, SQL: source, Excel: source };
+  const saved = await seeker('resumes/save', { resume: full });
+  assert.equal(saved.body.ok, true, saved.body.error);
+
+  const after = (await hr('applications/ranked', { postingId })).body
+    .rows.find((r: any) => String(r.resume.id) === String(resume.id));
+
+  assert.equal(after.score, scoreAtApplication,
+    'the ranked score must stay at the value recorded when they applied');
+  assert.equal(after.liveScore, 100,
+    'the live score should reflect the improved resume');
+  assert.equal(after.scoreDrifted, true,
+    'and the recruiter must be told the resume changed');
+});
+
+test('a skill’s first-seen date survives an unrelated save', async () => {
+  /* resumes.ts deletes and recreates every child row on save, so a column with
+     a database default would be re-stamped every time the applicant edited
+     anything at all — and would then report that every skill was added today.
+     The route carries the old timestamps forward; this is the test for that,
+     because the failure is silent and the column would look populated. */
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const listed = (await seeker('resumes/list')).body.resumes[0];
+
+  const before = (await seeker('resumes/get', { id: listed.id })).body.resume;
+  assert.ok(before.skillsAddedAt, 'the serializer should report first-seen dates');
+  const originals = { ...before.skillsAddedAt };
+  const anExistingSkill = Object.keys(originals)[0];
+  assert.ok(anExistingSkill, 'the seeded resume should already have skills');
+
+  // Change something that has nothing to do with skills, and add one new skill.
+  before.personal.summary = 'Edited for the first-seen-date test.';
+  before.skills = [...before.skills, 'Zendesk'];
+  const saved = await seeker('resumes/save', { resume: before });
+  assert.equal(saved.body.ok, true, saved.body.error);
+
+  const after = (await seeker('resumes/get', { id: listed.id })).body.resume;
+  assert.equal(after.skillsAddedAt[anExistingSkill], originals[anExistingSkill],
+    'an existing skill must keep the date it was first listed');
+  assert.ok(after.skillsAddedAt['Zendesk'] >= originals[anExistingSkill],
+    'and a genuinely new skill is dated when it was actually added');
+});
+
+test('the applicant is told WHY, but never WHO — and screening notes stay internal', async () => {
+  /* Two rules that look alike and are not, so they are tested together to
+     keep them from being collapsed into one gate again:
+
+       · the REASON reaches the applicant. The study's stated problem is
+         applicants who apply and hear nothing back; recording why and then
+         withholding it from the person whose plans depend on it would argue
+         against the paper's own thesis.
+       · the DECIDER's name does not, and neither do SCREENING NOTES. A note
+         its subject may read is a note nobody writes honestly, and naming an
+         individual staff member to a rejected applicant is a different
+         disclosure from telling them what was decided. */
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const ranked = (await hr('applications/ranked', { postingId: '1' })).body;
+  const row = ranked.rows.find((r: any) => r.application.status !== 'withdrawn');
+  assert.ok(row, 'expected a non-withdrawn applicant on posting 1');
+
+  const set = await hr('applications/set-status', {
+    id: row.application.id, status: 'rejected', reason: 'stronger_candidate',
+  });
+  assert.equal(set.body.ok, true, set.body.error);
+
+  const noted = await hr('applications/note-add', {
+    id: row.application.id, body: 'Called 3pm, no answer. Following up Thursday.',
+  });
+  assert.equal(noted.body.ok, true, noted.body.error);
+
+  // The recruiter sees both.
+  const hrHistory = (await hr('applications/history', { id: row.application.id })).body;
+  assert.ok(hrHistory.events.some((e: any) => e.reason === 'stronger_candidate'),
+    'the employer’s own staff should see the reason');
+  const hrNotes = (await hr('applications/notes', { id: row.application.id })).body;
+  assert.equal(hrNotes.notes.length, 1);
+
+  // The applicant sees the reason, not the notes — and has no route for them.
+  const seeker = client();
+  await seeker('auth/login', { email: row.seeker.email, password: 'demo123' });
+
+  const theirHistory = (await seeker('applications/history', { id: row.application.id })).body;
+  assert.equal(theirHistory.ok, true, 'the applicant may read their own trail');
+  assert.ok(theirHistory.events.some((e: any) => e.reason === 'stronger_candidate'),
+    'the applicant must be told the reason their application did not proceed');
+  for (const e of theirHistory.events) {
+    assert.equal(e.byName, undefined, 'but never the name of the staff member who decided it');
+  }
+
+  const theirNotes = await seeker('applications/notes', { id: row.application.id });
+  assert.equal(theirNotes.body.ok, false, 'the notes route is recruiter-only');
+});
+
+test('a skill with no source scores less than the same skill with one', async () => {
+  /* END TO END, through the real save route and the real serializer: the same
+     resume, the same posting, the same skills — the ONLY difference is whether
+     the applicant said where they used them. The engine tests pin the
+     arithmetic; this proves the source actually survives the round trip
+     through the database, which is where a feature like this silently dies. */
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const made = await hr('postings/save', { posting: {
+    title: 'Evidence Round Trip',
+    department: 'Information Technology',
+    description: 'Two required skills, so the half-credit difference is a whole tier.',
+    skills: ['JavaScript', 'Git'],
+    educationLevel: 'none',
+    minExperienceMonths: 0,
+  } });
+  assert.equal(made.body.ok, true, made.body.error);
+
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const listed = (await seeker('resumes/list')).body.resumes[0];
+  const r = (await seeker('resumes/get', { id: listed.id })).body.resume;
+  const postingId = made.body.posting.id;
+
+  /* A source must point at an entry the resume actually carries, so the
+     resume needs one. An earlier test leaves a bare resume at the top of the
+     list, which is exactly the state this feature has to handle: with nothing
+     to point at, no skill can be sourced at all. */
+  const source = { kind: 'experience', ref: 'Web Development Intern, LGU San Fernando' };
+  r.experience = [{ position: 'Web Development Intern', company: 'LGU San Fernando', months: 4, description: '' }];
+  r.skills = ['JavaScript', 'Git'];
+  r.skillEvidence = { JavaScript: source, Git: source };
+  assert.equal((await seeker('resumes/save', { resume: r })).body.ok, true);
+
+  const sourced = (await seeker('match/score', { resumeId: r.id, postingId })).body;
+  assert.equal(sourced.ok, true, sourced.error);
+  assert.deepEqual(sourced.unevidencedMatches, []);
+
+  // Same skills, sources removed.
+  const again = (await seeker('resumes/get', { id: listed.id })).body.resume;
+  assert.deepEqual(again.skillEvidence, { JavaScript: source, Git: source },
+    'the source must survive the save — it is stored on resume_skills, which is deleted and rewritten every save');
+  again.skillEvidence = {};
+  assert.equal((await seeker('resumes/save', { resume: again })).body.ok, true);
+
+  const unsourced = (await seeker('match/score', { resumeId: r.id, postingId })).body;
+  assert.ok(unsourced.score < sourced.score,
+    `an unsourced skill must score lower (${unsourced.score} vs ${sourced.score})`);
+  assert.ok(unsourced.score > 0, 'but it must still count — half credit, not zero');
+  assert.deepEqual(unsourced.unevidencedMatches.sort(), ['Git', 'JavaScript']);
+});
+
+test('a source the resume does not contain is refused', async () => {
+  /* The whole mechanism rests on a source being something the applicant
+     already wrote down elsewhere. If free text got through, the skill and its
+     justification could be invented in the same keystroke and the feature
+     would be theatre. */
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const listed = (await seeker('resumes/list')).body.resumes[0];
+  const r = (await seeker('resumes/get', { id: listed.id })).body.resume;
+
+  r.experience = [{ position: 'Web Development Intern', company: 'LGU San Fernando', months: 4, description: '' }];
+  r.skills = ['JavaScript'];
+  r.skillEvidence = { JavaScript: { kind: 'experience', ref: 'Chief Architect, NASA' } };
+  const saved = await seeker('resumes/save', { resume: r });
+  assert.equal(saved.body.ok, true, 'the save itself still succeeds — only the bad source is dropped');
+  assert.deepEqual(saved.body.resume.skillEvidence, {},
+    'a source naming a job that is not on the resume must not be stored');
+
+  // And an unknown kind is refused just as firmly.
+  r.skillEvidence = { JavaScript: { kind: 'vibes', ref: 'Web Development Intern, LGU San Fernando' } };
+  const second = await seeker('resumes/save', { resume: r });
+  assert.equal(second.body.ok, true);
+  assert.deepEqual(second.body.resume.skillEvidence, {});
+});
+
+test('the source is never part of the resume’s own skills list', async () => {
+  /* The applicant was promised the link stays off their resume. The printed
+     sheet renders `skills`, so the guarantee is that `skills` stays a flat
+     list of plain names with no company welded on — checked here rather than
+     trusted, because the day someone folds the two together to save a query
+     is the day fourteen resume designs start printing employer names. */
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const listed = (await seeker('resumes/list')).body.resumes[0];
+  const r = (await seeker('resumes/get', { id: listed.id })).body.resume;
+
+  r.experience = [{ position: 'Web Development Intern', company: 'LGU San Fernando', months: 4, description: '' }];
+  r.skills = ['JavaScript'];
+  r.skillEvidence = { JavaScript: { kind: 'experience', ref: 'Web Development Intern, LGU San Fernando' } };
+  const saved = (await seeker('resumes/save', { resume: r })).body.resume;
+
+  assert.deepEqual(saved.skills, ['JavaScript']);
+  for (const s of saved.skills) {
+    assert.equal(typeof s, 'string');
+    assert.ok(!s.includes('LGU San Fernando'), 'the employer name must never appear in the printed skills list');
+  }
+});

@@ -297,13 +297,47 @@
                  visible while choosing without looking down here. -->
             <div class="chosen">
               <b>Your skills &mdash; {{ resume().skills.length }}</b>
-              <div class="tags">
+              @if (resume().skills.length) {
+                <!-- WHERE EACH SKILL WAS USED. Said plainly, including the
+                     consequence, because the applicant is entitled to know how
+                     the number in front of them is made. Nothing here is a
+                     warning: leaving a source blank is allowed. -->
+                <p class="hint" style="margin:2px 0 10px">
+                  Say where you used each skill. A skill you can point to counts in full; one you can't still counts,
+                  at half. Choose from what's already on this resume &mdash; and don't worry, <b>none of this is printed
+                  on your resume</b>. Only the recruiter reading your application sees it.
+                </p>
+              }
+              <div class="tags evidence-list">
                 @for (s of resume().skills; track s; let i = $index) {
-                  <span class="tag">{{ s }}<button type="button" [attr.aria-label]="'Remove ' + s" (click)="removeSkill(i)">&times;</button></span>
+                  <div class="ev-row">
+                    <span class="tag">{{ s }}<button type="button" [attr.aria-label]="'Remove ' + s" (click)="removeSkill(i)">&times;</button></span>
+                    @if (noEvidenceSources()) {
+                      <span class="ev-none">Add a job, project, certification or school first, then you can point this skill at it.</span>
+                    } @else {
+                      <select class="ev-pick" [attr.aria-label]="'Where did you use ' + s + '?'"
+                              [value]="evidenceValue(s)" (change)="setEvidence(s, $event)">
+                        <option value="">Where did you use this? &mdash; counts half if left blank</option>
+                        @for (g of evidenceOptions(); track g.kind) {
+                          <optgroup [label]="g.label">
+                            @for (o of g.items; track o) {
+                              <option [value]="g.kind + '|' + o">{{ o }}</option>
+                            }
+                          </optgroup>
+                        }
+                      </select>
+                    }
+                  </div>
                 } @empty {
                   <p style="color:var(--muted);font-size:13.5px">No skills yet. This list is the biggest part of your score on most openings.</p>
                 }
               </div>
+              @if (unsourcedSkills(); as n) {
+                <p class="hint" style="margin-top:9px">
+                  {{ n }} of your {{ resume().skills.length }} skills {{ n === 1 ? 'has' : 'have' }} no source yet.
+                  {{ n === 1 ? 'It' : 'They' }} still count &mdash; at half &mdash; on every opening that asks for {{ n === 1 ? 'it' : 'them' }}.
+                </p>
+              }
             </div>
           </section>
         }
