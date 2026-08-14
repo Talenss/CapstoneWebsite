@@ -6,6 +6,17 @@
    ============================================================ */
 import { query, exec } from '../db';
 
+/* WHY a recruiter moved an application, as a closed list.
+   Free text would be unanalysable and would tempt a hurried recruiter into
+   writing something the company would not want to stand behind; a code can be
+   counted, and the study can report the distribution of outcomes without
+   reading anybody's prose. Mirrored in client/src/app/core/engine.ts. */
+export const REJECTION_REASONS = [
+  'not_qualified', 'failed_requirement', 'salary_mismatch', 'unreachable',
+  'position_filled', 'stronger_candidate', 'withdrew_interest', 'other',
+] as const;
+export type RejectionReason = (typeof REJECTION_REASONS)[number];
+
 export const EDU_RANK: Record<string, number> = {
   none: 0, highschool: 1, vocational: 2, associate: 3, bachelor: 4, master: 5,
 };

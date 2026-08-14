@@ -142,8 +142,7 @@
             @if (r.scoreDrifted) {
               <p class="notice" style="font-size:13px;margin:0 0 10px">
                 <b>This resume changed after applying.</b>
-                It would score <b>{{ r.liveScore }}%</b> today
-                ({{ r.liveScore > r.score ? '+' : '' }}{{ r.liveScore - r.score }}).
+                It would score <b>{{ r.liveScore }}%</b> today ({{ driftLabel(r) }}).
                 The ranking above uses the score recorded when they applied, so your
                 shortlist does not reorder itself. Worth asking about at interview.
               </p>
@@ -353,6 +352,55 @@
            an hour ago or three weeks ago, or who to ask. Names are shown here
            and never to the applicant — internal accountability is exactly
            what the stored actor is for. -->
+      <!-- SCREENING NOTES. Without somewhere to write "called 3pm, no answer"
+           or "wants 35k, budget is 28", a recruiter keeps a spreadsheet beside
+           this page and the system stops being where the work happens. That is
+           the whole justification: it screens nobody and scores nothing.
+
+           The line about the applicant not seeing them is not reassurance for
+           the recruiter, it is the reason the feature works — a note its
+           subject may read is a note nobody writes honestly. -->
+      <div class="handled" style="margin-bottom:16px">
+        <div class="handled-head">
+          <b>Your notes on this applicant</b>
+          <span class="wait">not visible to the applicant</span>
+        </div>
+
+        <textarea [value]="noteDraft()" (input)="setNoteDraft($event)" rows="2"
+                  placeholder="Called 3pm, no answer. Following up Thursday."
+                  aria-label="Add a screening note"
+                  style="width:100%;padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px;resize:vertical"></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px">
+          <button class="btn ghost sm" type="button" (click)="addNote()"
+                  [disabled]="!noteDraft().trim() || savingNote()">
+            @if (savingNote()) { <span class="spinner"></span> Saving… } @else { Add note }
+          </button>
+        </div>
+
+        @if (notesLoading()) {
+          <div class="loading sm"><span class="spinner"></span> Loading…</div>
+        } @else if (!notes().length) {
+          <p class="handled-empty">No notes yet.</p>
+        } @else {
+          <ol class="trail">
+            @for (n of notes(); track n.id) {
+              <li>
+                <span>{{ n.body }}</span>
+                <span class="actor"> — {{ n.authorName }}</span>
+                <span class="at"> · {{ day(n.at) }}</span>
+                <!-- Author-only, matching the server. A colleague quietly
+                     removing someone else's observation would make the notes
+                     untrustworthy to the people who rely on them. -->
+                @if (n.mine) {
+                  <button class="btn ghost sm" type="button" (click)="deleteNote(n.id)"
+                          style="margin-left:8px">Delete</button>
+                }
+              </li>
+            }
+          </ol>
+        }
+      </div>
+
       <div class="handled">
         <div class="handled-head">
           <b>Who has handled this</b>
@@ -386,6 +434,20 @@
         <select [value]="modalStatus()" (change)="setModalStatus($event)" style="padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px">
           @for (k of statusOrder; track k) { <option [value]="k">{{ statusLabels[k] }}</option> }
         </select>
+
+        <!-- Asked for on a rejection only, and answerable with "prefer not to
+             say" — a recruiter made to choose in order to proceed picks the
+             first item, and the column fills with confident nonsense. Left
+             blank it records that nobody gave a reason, which is at least
+             true. Never shown to the applicant. -->
+        @if (modalStatus() === 'rejected') {
+          <select [value]="modalReason()" (change)="setModalReason($event)"
+                  aria-label="Reason for not proceeding (optional, internal)"
+                  style="padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px">
+            <option value="">Reason (optional, internal)</option>
+            @for (k of REASONS; track k) { <option [value]="k">{{ REASON_LABELS[k] }}</option> }
+          </select>
+        }
         <button class="btn primary" type="button" (click)="saveStatus()" [disabled]="savingStatus()">
           @if (savingStatus()) { <span class="spinner"></span> Saving… } @else { Update status }
         </button>

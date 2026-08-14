@@ -5,7 +5,7 @@ import { ApplicationRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
 import { requireRole, requireUser } from '../lib/auth';
 import { fetchResume, fetchPosting, postingExpired, serializeResume, serializePosting, serializeApplication, ts } from '../lib/serializers';
-import { rmScore, rmFileScore, cacheScore, getSettings } from '../lib/engine';
+import { rmScore, rmFileScore, cacheScore, getSettings, REJECTION_REASONS } from '../lib/engine';
 import { notifyStatusChange, notifyNewApplication, sendInterviewInvite } from '../lib/notify';
 import { UserRow } from '../types';
 
@@ -260,6 +260,20 @@ router.post('/set-status', async (req, res) => {
 
   if (!['submitted', 'review', 'shortlisted', 'rejected', 'hired'].includes(status)) return fail(res, 'Unknown status.');
 
+  /* WHY, when the recruiter gave one.
+   *
+   * Optional on purpose. Requiring it would have made every existing caller
+   * invalid overnight, and — more to the point — a recruiter who is made to
+   * pick something in order to proceed picks the first item on the list, which
+   * produces a column full of confident nonsense. The applicant view asks for
+   * one on a rejection and the recruiter can still decline; a blank here means
+   * nobody stated a reason, which is honest, where a defaulted code would not
+   * be. */
+  const rawReason = req.body?.reason == null ? null : String(req.body.reason);
+  if (rawReason !== null && !REJECTION_REASONS.includes(rawReason as any))
+    return fail(res, 'Unknown reason.');
+  const reason = rawReason || null;
+
   const a = await queryOne<ApplicationRow & { company_id: number }>(
     `SELECT a.*, p.company_id
        FROM applications a
@@ -276,8 +290,8 @@ router.post('/set-status', async (req, res) => {
   await withTransaction(async (tx) => {
     await tx.exec('UPDATE applications SET status = ? WHERE application_id = ?', [status, aid]);
     await tx.exec(
-      'INSERT INTO application_status_history (application_id, old_status, new_status, changed_by) VALUES (?,?,?,?)',
-      [aid, a.status, status, u.user_id],
+      'INSERT INTO application_status_history (application_id, old_status, new_status, changed_by, reason) VALUES (?,?,?,?,?)',
+      [aid, a.status, status, u.user_id, reason],
     );
   });
 
@@ -388,9 +402,9 @@ router.post('/history', async (req, res) => {
 
   const rows = await query<{
     old_status: string | null; new_status: string; changed_at: unknown;
-    changed_by: number | null; actor_name: string | null;
+    changed_by: number | null; actor_name: string | null; reason: string | null;
   }>(
-    `SELECT h.old_status, h.new_status, h.changed_at, h.changed_by,
+    `SELECT h.old_status, h.new_status, h.changed_at, h.changed_by, h.reason,
             u.full_name AS actor_name
        FROM application_status_history h
        LEFT JOIN users u ON u.user_id = h.changed_by
@@ -411,9 +425,104 @@ router.post('/history', async (req, res) => {
       // applicant's own action (that person is the applicant themselves —
       // the recruiter already knows who they are from the row they clicked).
       if (maySeeNames && by === 'employer' && r.actor_name) e['byName'] = r.actor_name;
+
+      /* The reason rides the same gate as the name: the employer's own staff
+         see it, the applicant never does. This is a deliberate limit on the
+         transparency the rest of the system is built around, and the reason is
+         that a code the subject will read is a code nobody records candidly —
+         "stronger_candidate" becomes "other" the first time someone imagines
+         it being quoted back at them, and the trail stops being worth keeping.
+         An applicant retains their RA 10173 right to request what is held
+         about them; what they do not get is a channel that would quietly
+         corrupt the record at the point of writing. */
+      if (maySeeNames && r.reason) e['reason'] = r.reason;
       return e;
     }),
   });
+});
+
+/* SCREENING NOTES — what a recruiter writes down while working a shortlist.
+   "Called 3pm, no answer." "Wants 35k, budget is 28." "Referred by Ops."
+
+   Without a place for these, HR keeps a spreadsheet beside the system, and a
+   system people work beside instead of in is not the system. That is the whole
+   justification for the feature; it screens nobody and scores nothing.
+
+   Visible to the employer's own staff and to no one else — never to the
+   applicant, on this route or any other. A note the subject may read is a note
+   nobody writes honestly, and most of these are provisional by nature.        */
+router.post('/notes', async (req, res) => {
+  const u = await requireRole(req, res, 'recruiter');
+  if (!u) return;
+  const aid = idOf(req.body?.id);
+
+  const a = await queryOne<{ company_id: number }>(
+    `SELECT p.company_id FROM applications a
+       JOIN job_postings p ON p.posting_id = a.posting_id
+      WHERE a.application_id = ?`, [aid],
+  );
+  if (!a || a.company_id !== u.company_id) return fail(res, 'Application not found.');
+
+  const rows = await query<any>(
+    `SELECT n.note_id, n.body, n.created_at, n.author_id, us.full_name AS author_name
+       FROM application_notes n
+       LEFT JOIN users us ON us.user_id = n.author_id
+      WHERE n.application_id = ?
+      ORDER BY n.created_at DESC, n.note_id DESC`, [aid],
+  );
+
+  ok(res, {
+    notes: rows.map((r) => ({
+      id: String(r.note_id),
+      body: r.body,
+      at: ts(r.created_at),
+      authorName: r.author_name ?? 'A former colleague',
+      mine: Number(r.author_id) === u.user_id,
+    })),
+  });
+});
+
+router.post('/note-add', async (req, res) => {
+  const u = await requireRole(req, res, 'recruiter');
+  if (!u) return;
+  const aid = idOf(req.body?.id);
+  const body = String(req.body?.body ?? '').trim().slice(0, 2000);
+  if (!body) return fail(res, 'Write something first.');
+
+  const a = await queryOne<{ company_id: number }>(
+    `SELECT p.company_id FROM applications a
+       JOIN job_postings p ON p.posting_id = a.posting_id
+      WHERE a.application_id = ?`, [aid],
+  );
+  if (!a || a.company_id !== u.company_id) return fail(res, 'Application not found.');
+
+  const ins = await exec(
+    'INSERT INTO application_notes (application_id, author_id, body) VALUES (?,?,?) RETURNING note_id',
+    [aid, u.user_id, body],
+  );
+  ok(res, { id: String(ins.insertId) });
+});
+
+/* Only the author may delete, and only their own note. A colleague quietly
+   removing someone else's observation would make the notes untrustworthy to
+   the very people who have to rely on them. */
+router.post('/note-delete', async (req, res) => {
+  const u = await requireRole(req, res, 'recruiter');
+  if (!u) return;
+  const nid = idOf(req.body?.id);
+
+  const n = await queryOne<{ author_id: number; company_id: number }>(
+    `SELECT n.author_id, p.company_id
+       FROM application_notes n
+       JOIN applications a ON a.application_id = n.application_id
+       JOIN job_postings p ON p.posting_id = a.posting_id
+      WHERE n.note_id = ?`, [nid],
+  );
+  if (!n || n.company_id !== u.company_id) return fail(res, 'Note not found.');
+  if (Number(n.author_id) !== u.user_id) return fail(res, 'You can only delete your own notes.');
+
+  await exec('DELETE FROM application_notes WHERE note_id = ?', [nid]);
+  ok(res, {});
 });
 
 /* A recruiter's personal message to an applicant — typically the

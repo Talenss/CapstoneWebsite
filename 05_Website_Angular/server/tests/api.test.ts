@@ -966,3 +966,46 @@ test('a skill’s first-seen date survives an unrelated save', async () => {
   assert.ok(after.skillsAddedAt['Zendesk'] >= originals[anExistingSkill],
     'and a genuinely new skill is dated when it was actually added');
 });
+
+test('a rejection reason and screening notes never reach the applicant', async () => {
+  /* Both features are only worth having because they are internal: a note its
+     subject may read is a note nobody writes honestly, and a reason code the
+     subject will read becomes "other" the first time someone imagines it
+     quoted back at them. That makes this test the feature, not a detail of it. */
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const ranked = (await hr('applications/ranked', { postingId: '1' })).body;
+  const row = ranked.rows.find((r: any) => r.application.status !== 'withdrawn');
+  assert.ok(row, 'expected a non-withdrawn applicant on posting 1');
+
+  const set = await hr('applications/set-status', {
+    id: row.application.id, status: 'rejected', reason: 'stronger_candidate',
+  });
+  assert.equal(set.body.ok, true, set.body.error);
+
+  const noted = await hr('applications/note-add', {
+    id: row.application.id, body: 'Called 3pm, no answer. Following up Thursday.',
+  });
+  assert.equal(noted.body.ok, true, noted.body.error);
+
+  // The recruiter sees both.
+  const hrHistory = (await hr('applications/history', { id: row.application.id })).body;
+  assert.ok(hrHistory.events.some((e: any) => e.reason === 'stronger_candidate'),
+    'the employer’s own staff should see the reason');
+  const hrNotes = (await hr('applications/notes', { id: row.application.id })).body;
+  assert.equal(hrNotes.notes.length, 1);
+
+  // The applicant sees neither — and has no route that returns notes at all.
+  const seeker = client();
+  await seeker('auth/login', { email: row.seeker.email, password: 'demo123' });
+
+  const theirHistory = (await seeker('applications/history', { id: row.application.id })).body;
+  assert.equal(theirHistory.ok, true, 'the applicant may read their own trail');
+  for (const e of theirHistory.events) {
+    assert.equal(e.reason, undefined, 'the applicant must never see a reason code');
+    assert.equal(e.byName, undefined, 'nor the name of the staff member');
+  }
+
+  const theirNotes = await seeker('applications/notes', { id: row.application.id });
+  assert.equal(theirNotes.body.ok, false, 'the notes route is recruiter-only');
+});

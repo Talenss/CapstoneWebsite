@@ -6,7 +6,7 @@
    in BOTH modes (the API mode still calls the server for anything
    that must be authoritative, e.g. applying).
    ============================================================ */
-import { AppStatus, EduLevel, MatchResult, Posting, Resume, Tier } from './models';
+import { AppStatus, EduLevel, MatchResult, Posting, RejectionReason, Resume, Tier } from './models';
 
 /* The study's published defaults. The SERVER is the authority — it reads
    these from the match_settings table, so an admin can retune them without a
@@ -61,6 +61,27 @@ export function applyMatchSettings(s: {
     }
   }
 }
+
+/* Mirrored 1:1 from server/src/lib/engine.ts. A closed list, so the outcome of
+   a shortlist can be counted rather than read, and so a recruiter in a hurry
+   cannot write something the company would not want to stand behind. */
+export const REJECTION_REASONS: RejectionReason[] = [
+  'not_qualified', 'failed_requirement', 'salary_mismatch', 'unreachable',
+  'position_filled', 'stronger_candidate', 'withdrew_interest', 'other',
+];
+
+/** What the recruiter picks from. Wording is deliberately factual — these are
+ *  read back months later by someone reconstructing a decision. */
+export const REASON_LABELS: Record<RejectionReason, string> = {
+  not_qualified:      'Did not meet the requirements',
+  failed_requirement: 'Missing a required credential or licence',
+  salary_mismatch:    'Salary expectations did not match',
+  unreachable:        'Could not be contacted',
+  position_filled:    'Position filled',
+  stronger_candidate: 'Another candidate was a closer fit',
+  withdrew_interest:  'Withdrew interest',
+  other:              'Other',
+};
 
 export const STATUS_LABELS: Record<AppStatus, string> = {
   submitted: 'Submitted', review: 'Under review', shortlisted: 'Shortlisted', rejected: 'Not selected', hired: 'Hired',

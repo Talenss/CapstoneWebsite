@@ -905,7 +905,7 @@ export class DemoAdapter implements ApiAdapter {
       }).sort((x, y) => y.score - x.score || x.application.appliedAt - y.application.appliedAt);
       return apiOk({ posting: p, rows: rows as unknown as RankedRow[] });
     },
-    setStatus: (applicationId: string, status: string) => {
+    setStatus: (applicationId: string, status: string, reason?: string | null) => {
       const db = load(); const me = meRow(db);
       if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
       if (STATUS_ORDER.indexOf(status as any) === -1) return apiFail('Unknown status.');
@@ -917,6 +917,8 @@ export class DemoAdapter implements ApiAdapter {
       if (a.status === 'withdrawn') return apiFail('This applicant withdrew their application.');
       const wasStatus = a.status;
       a.status = status as any; a.updatedAt = Date.now(); (a as any).decidedBy = me.id; // a human made this call
+      // and, when they said why, the reason travels with the decision
+      if (reason) (a as any).decidedReason = reason;
       if (wasStatus !== a.status) {
         db.statusHistory.push({ applicationId: a.id, from: wasStatus, to: a.status, at: a.updatedAt!, by: 'employer', byUserId: me.id });
       }
@@ -960,6 +962,60 @@ export class DemoAdapter implements ApiAdapter {
        Visible to the applicant it belongs to and to recruiters at the company
        that owns the posting; one identical message for "no such application"
        and "not yours", so it cannot be used to probe which ids exist. */
+    /* SCREENING NOTES — recruiter-only, mirroring routes/applications.ts.
+       Held on the demo database like everything else here, and returned by no
+       seeker-facing method, so the demo cannot accidentally show an applicant
+       something the real system would never show them. */
+    notes: (applicationId: string) => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
+      const a = db.applications.find((x) => x.id === applicationId);
+      if (!a) return apiFail('Application not found.');
+      const p = db.postings.find((x) => x.id === a.postingId);
+      if (!p || p.companyId !== me.companyId) return apiFail('Application not found.');
+      const all: any[] = (db as any).notes ?? [];
+      return apiOk({
+        notes: all
+          .filter((n) => n.applicationId === applicationId)
+          .sort((x, y) => y.at - x.at)
+          .map((n) => ({
+            id: n.id,
+            body: n.body,
+            at: n.at,
+            authorName: db.users.find((u) => u.id === n.authorId)?.name ?? 'A former colleague',
+            mine: n.authorId === me.id,
+          })),
+      });
+    },
+    noteAdd: (applicationId: string, body: string) => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
+      const text = String(body ?? '').trim().slice(0, 2000);
+      if (!text) return apiFail('Write something first.');
+      const a = db.applications.find((x) => x.id === applicationId);
+      if (!a) return apiFail('Application not found.');
+      const p = db.postings.find((x) => x.id === a.postingId);
+      if (!p || p.companyId !== me.companyId) return apiFail('Application not found.');
+      (db as any).notes = (db as any).notes ?? [];
+      const id = 'n' + Date.now().toString(36);
+      (db as any).notes.push({ id, applicationId, authorId: me.id, body: text, at: Date.now() });
+      persist(db);
+      return apiOk({ id });
+    },
+    /* Author-only, as on the server: a colleague quietly deleting someone
+       else's observation would make the notes untrustworthy to the people who
+       have to rely on them. */
+    noteDelete: (noteId: string) => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
+      const all: any[] = (db as any).notes ?? [];
+      const n = all.find((x) => x.id === noteId);
+      if (!n) return apiFail('Note not found.');
+      if (n.authorId !== me.id) return apiFail('You can only delete your own notes.');
+      (db as any).notes = all.filter((x) => x.id !== noteId);
+      persist(db);
+      return apiOk({});
+    },
     history: (applicationId: string) => {
       const db = load(); const me = meRow(db);
       if (!me) return apiFail('You are not signed in.');

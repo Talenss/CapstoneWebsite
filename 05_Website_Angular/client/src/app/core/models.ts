@@ -281,6 +281,13 @@ export interface Application {
  *  ROLE, never a person: the applicant is told what was decided and when,
  *  which is what affects them, without naming the individual HR staff member
  *  who did it. */
+/** Why a recruiter moved an application. A closed list so outcomes can be
+ *  counted, mirrored as a runtime constant in core/engine.ts and again in
+ *  server/src/lib/engine.ts. */
+export type RejectionReason =
+  | 'not_qualified' | 'failed_requirement' | 'salary_mismatch' | 'unreachable'
+  | 'position_filled' | 'stronger_candidate' | 'withdrew_interest' | 'other';
+
 export interface StatusEvent {
   /** null for the first event — applying has no previous status. */
   from: AppStatus | null;
@@ -293,6 +300,21 @@ export interface StatusEvent {
    *  naming an HR staff member to an applicant is a different disclosure.
    *  Treat `undefined` as "not disclosed", never as "unknown actor". */
   byName?: string;
+  /** Why the change was made, as one of REJECTION_REASONS. Present on the
+   *  same terms as `byName`: employer staff only, never the applicant. A
+   *  reason the subject will read is a reason nobody records candidly. */
+  reason?: RejectionReason;
+}
+
+/** A recruiter's working note on one application — "called 3pm, no answer".
+ *  INTERNAL: no route returns these to the applicant. */
+export interface ScreeningNote {
+  id: string;
+  body: string;
+  at: number;
+  authorName: string;
+  /** True when the signed-in recruiter wrote it. Only the author may delete. */
+  mine: boolean;
 }
 
 export interface MatchResult {

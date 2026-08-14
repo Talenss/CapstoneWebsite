@@ -5,7 +5,7 @@
    ApiService without caring which mode is active.
    ============================================================ */
 import {
-  AdminRecruiter, AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, StatusEvent, User,
+  AdminRecruiter, AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User,
 } from './models';
 
 export interface ApiAdapter {
@@ -63,7 +63,16 @@ export interface ApiAdapter {
     apply(resumeId: string, postingId: string): Promise<ApiResult<{ application: Application }>>;
     mine(): Promise<ApiResult<{ applications: Application[] }>>;
     ranked(postingId: string): Promise<ApiResult<{ posting: Posting; rows: RankedRow[] }>>;
-    setStatus(applicationId: string, status: string): Promise<ApiResult<{ application: Application }>>;
+    /** `reason` is optional and only meaningful on a rejection. It is recorded
+     *  on the history row and shown to the employer's own staff — never to the
+     *  applicant, so that it stays worth recording candidly. */
+    setStatus(applicationId: string, status: string, reason?: string | null): Promise<ApiResult<{ application: Application }>>;
+
+    /* SCREENING NOTES. Recruiter-only on every route: the applicant has no
+       endpoint that returns them. See routes/applications.ts for why. */
+    notes(applicationId: string): Promise<ApiResult<{ notes: ScreeningNote[] }>>;
+    noteAdd(applicationId: string, body: string): Promise<ApiResult<{ id: string }>>;
+    noteDelete(noteId: string): Promise<ApiResult<Record<string, never>>>;
     /** The applicant withdraws their own application. Seeker-only, and
      *  refused once a final decision (hired/not selected) has been made. */
     withdraw(applicationId: string): Promise<ApiResult<{ application: Application }>>;
