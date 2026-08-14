@@ -5,7 +5,7 @@ import { ApplicationRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
 import { requireRole, requireUser } from '../lib/auth';
 import { fetchResume, fetchPosting, postingExpired, serializeResume, serializePosting, serializeApplication } from '../lib/serializers';
-import { rmScore, rmFileScore, cacheScore } from '../lib/engine';
+import { rmScore, rmFileScore, cacheScore, getSettings } from '../lib/engine';
 import { notifyStatusChange, notifyNewApplication, sendInterviewInvite } from '../lib/notify';
 import { UserRow } from '../types';
 
@@ -145,6 +145,7 @@ router.post('/ranked', async (req, res) => {
   if (!p || p.company_id !== u.company_id) return fail(res, 'Opening not found.');
 
   const posting = await serializePosting(p);
+  const T = (await getSettings()).thresholds;   // once, not once per applicant
 
   const rows = await query<any>(
     `SELECT a.*, u.user_id AS s_id, u.full_name AS s_name, u.email AS s_email
@@ -185,8 +186,42 @@ router.post('/ranked', async (req, res) => {
        cannot move anybody down the list. `fileScore` sits beside it as
        information about the document, not as a verdict on the person. */
     const fs = await rmFileScore(resume.ownFile?.extract, posting);
+
+    /* RANK ON THE SCORE RECORDED AT APPLICATION, NOT THE LIVE ONE.
+     *
+     * This list used to sort on the score recomputed on each load, which meant
+     * an applicant editing their resume after applying silently reordered a
+     * recruiter's shortlist — the list seen on Monday could not be reproduced
+     * on Wednesday, and nothing on screen said why. A shortlist a recruiter
+     * cannot reproduce is not a record of a decision, and the manuscript's
+     * claim that the stored score makes an application reproducible was not
+     * true of the screen anybody actually looked at.
+     *
+     * It also removed the cost of overstating a skill: read the missing ones
+     * off the posting, add them afterwards, move up. Ranking on the snapshot
+     * means a later edit changes the applicant's NEXT application, not this
+     * one. The live score is still returned, so the recruiter can see that the
+     * resume moved and by how much — shown as a labelled change rather than an
+     * invisible reordering.
+     *
+     * Applications recorded before this column was populated have no snapshot;
+     * they fall back to the live score, which is the old behaviour and the best
+     * available answer for a row that never stored one. */
+    const ranked = a.score_snapshot ?? s.score;
+
+    /* The tier has to be derived from the number being shown. Spreading the
+       live result and overwriting only `score` would leave a 63 labelled
+       "strong" whenever the resume had improved since applying — a mismatch
+       the recruiter would read as a bug in the scoring, and rightly. */
+    const rankedTier = ranked >= T.strong ? 'strong' : ranked >= T.related ? 'possible' : 'related';
+
     out.push({
       ...s,
+      score: ranked,
+      tier: rankedTier,
+      liveScore: s.score,
+      liveTier: s.tier,
+      scoreDrifted: a.score_snapshot != null && a.score_snapshot !== s.score,
       application: serializeApplication(a),
       resume,
       seeker: { id: String(a.s_id), name: a.s_name, email: a.s_email, role: 'seeker' },

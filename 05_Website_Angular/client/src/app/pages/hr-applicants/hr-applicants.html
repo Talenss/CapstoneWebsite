@@ -132,6 +132,22 @@
           <span class="score-ring lg" [style.--p]="r.score" [style.--c]="tierColor(r.score)"><b>{{ r.score }}%</b></span>
           <div style="flex:1;min-width:200px">
             <span class="badge {{ tierBadgeClass(r.tier) }}" style="margin-bottom:8px">{{ tierLabel(r.score) }}</span>
+            <span class="w" style="display:block;margin-bottom:8px">score at application &middot; {{ day(r.application.appliedAt) }}</span>
+
+            <!-- The resume changed after this application was made. Ranking
+                 deliberately stays on the score recorded at the time, so the
+                 shortlist stays reproducible; this line is how the recruiter
+                 learns the applicant has moved, instead of the list quietly
+                 reordering itself between two visits. -->
+            @if (r.scoreDrifted) {
+              <p class="notice" style="font-size:13px;margin:0 0 10px">
+                <b>This resume changed after applying.</b>
+                It would score <b>{{ r.liveScore }}%</b> today
+                ({{ r.liveScore > r.score ? '+' : '' }}{{ r.liveScore - r.score }}).
+                The ranking above uses the score recorded when they applied, so your
+                shortlist does not reorder itself. Worth asking about at interview.
+              </p>
+            }
             <div class="breakdown" style="margin:8px 0 0">
               <div class="row">
                 <span><b>Skills</b><span class="w">{{ r.weights.skills * 100 }}% weight</span></span>

@@ -882,7 +882,26 @@ export class DemoAdapter implements ApiAdapter {
       const rows = db.applications.filter((a) => a.postingId === postingId).map((a) => {
         const resume = db.resumes.find((r) => r.id === a.resumeId)!;
         const seeker = db.users.find((u) => u.id === a.seekerId);
-        return { application: a, resume, seeker: pubUser(seeker as DemoUser), ...scoreLocal(resume, p) };
+        const live = scoreLocal(resume, p);
+
+        /* Mirrors the server: rank on the score RECORDED AT APPLICATION, not the
+           live one, so a resume edited afterwards does not silently reorder the
+           recruiter's shortlist. See routes/applications.ts for the reasoning —
+           the demo has to behave the same or the parity suite is measuring
+           nothing. */
+        const ranked = a.scoreSnapshot ?? live.score;
+        const tier = ranked >= THRESHOLDS.strong ? 'strong'
+                   : ranked >= THRESHOLDS.related ? 'possible' : 'related';
+
+        return {
+          application: a, resume, seeker: pubUser(seeker as DemoUser),
+          ...live,
+          score: ranked,
+          tier,
+          liveScore: live.score,
+          liveTier: live.tier,
+          scoreDrifted: a.scoreSnapshot != null && a.scoreSnapshot !== live.score,
+        };
       }).sort((x, y) => y.score - x.score || x.application.appliedAt - y.application.appliedAt);
       return apiOk({ posting: p, rows: rows as unknown as RankedRow[] });
     },

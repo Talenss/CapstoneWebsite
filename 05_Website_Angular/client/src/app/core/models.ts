@@ -327,6 +327,18 @@ export interface RankedRow extends MatchResult {
    *  but never used FOR the ranking: a misread scan must not move a person
    *  down the list. */
   fileScore?: MatchResult;
+
+  /* `score` and `tier` above are the values RECORDED WHEN THE APPLICATION WAS
+     MADE, because a shortlist that reorders itself between two visits is not a
+     record of a decision. The three fields below describe the resume as it
+     stands today, so an applicant who improved it is visible as a labelled
+     change rather than a silent move up the list. */
+
+  /** What this resume would score against this posting right now. */
+  liveScore?: number;
+  liveTier?: Tier;
+  /** True when the resume has changed since the application was submitted. */
+  scoreDrifted?: boolean;
 }
 
 export interface HrStats {

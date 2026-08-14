@@ -883,3 +883,57 @@ test('the score a seeker is given uses the opening’s own weights', async () =>
   assert.deepEqual(s.weights, { skills: 0.8, education: 0.1, experience: 0.1 },
     'and it must report the split it used, as fractions');
 });
+
+test('editing a resume after applying does not reorder the recruiter’s shortlist', async () => {
+  /* THE ANTI-GAMING GUARANTEE, and the reason the ranked list reads
+     score_snapshot rather than the live score.
+
+     Required skills are printed on the posting, so an applicant can always
+     work out their own gap. What must not follow is that closing the gap
+     AFTER applying moves them up a shortlist the recruiter has already
+     worked from. This test would have passed before the fix for the wrong
+     reason — nothing asserted the ordering at all — so it exists to keep
+     the behaviour from being quietly reverted. */
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+
+  const made = await hr('postings/save', { posting: {
+    title: 'Snapshot Ranking Check',
+    department: 'Information Technology',
+    description: 'Requires four skills so a later edit can visibly change the live score.',
+    skills: ['JavaScript', 'Git', 'SQL', 'Excel'],
+    educationLevel: 'none',
+    minExperienceMonths: 0,
+  } });
+  assert.equal(made.body.ok, true, made.body.error);
+  const postingId = made.body.posting.id;
+
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const resume = (await seeker('resumes/list')).body.resumes[0];
+
+  const applied = await seeker('applications/apply', { resumeId: resume.id, postingId });
+  assert.equal(applied.body.ok, true, applied.body.error);
+
+  const first = (await hr('applications/ranked', { postingId })).body
+    .rows.find((r: any) => String(r.resume.id) === String(resume.id));
+  assert.ok(first, 'the applicant should be on the shortlist');
+  const scoreAtApplication = first.score;
+  assert.equal(first.scoreDrifted, false, 'nothing has changed yet');
+
+  // Now add every required skill — the exact exploit the review described.
+  const full = (await seeker('resumes/get', { id: resume.id })).body.resume;
+  full.skills = ['JavaScript', 'Git', 'SQL', 'Excel'];
+  const saved = await seeker('resumes/save', { resume: full });
+  assert.equal(saved.body.ok, true, saved.body.error);
+
+  const after = (await hr('applications/ranked', { postingId })).body
+    .rows.find((r: any) => String(r.resume.id) === String(resume.id));
+
+  assert.equal(after.score, scoreAtApplication,
+    'the ranked score must stay at the value recorded when they applied');
+  assert.equal(after.liveScore, 100,
+    'the live score should reflect the improved resume');
+  assert.equal(after.scoreDrifted, true,
+    'and the recruiter must be told the resume changed');
+});
