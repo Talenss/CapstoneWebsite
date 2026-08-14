@@ -11,6 +11,10 @@ documents, not source — the system itself is the folder above.
 | `ResumeMatch-PH-Google-Forms.docx` | The same five instruments laid out as Google Forms questions — question type, options and section descriptions for every item — plus the checklist for what to do once responses are in. Generated from the same source, for the same reason. |
 | `ResumeMatch-PH-Study-Guide.docx` | The defence study guide: the whole paper section by section, then 120 practice questions with answers written to be said out loud, defence notes, alignment checks and the five figures. Part 4 works every statistic in the study by hand — weighted mean and SD, Wilcoxon signed-rank, the System Usability Scale, Spearman's rho and Cronbach's alpha — on numbers small enough to reproduce with a pen. |
 | `ResumeMatch-PH-Codebase.docx` | Every source file in the repository and what it does, plus the scoring engine in full with its rounding rule, the fourteen database CHECK constraints, the seven steps a single application takes from Apply to a ranked list, and the security that is actually implemented — including the gaps. |
+| `ResumeMatch-PH-Start-Here.docx` | The short guide, for a groupmate who did not build the system. The study, the website, the score with a worked example, where the AI is and is not, twelve questions with answers, and the numbers to memorise. About 25 minutes. |
+| `ResumeMatch-PH-Website-Guide.docx` | Every page and every feature, in the order a user meets them, with three worked scores and the design decisions worth being able to defend. |
+| `ResumeMatch-PH-Codebase-Guide.docx` | How the program is built, for whoever answers the technical questions: the two-adapter design, one request followed end to end, the scoring engine in full, the database, the six test suites, and how to run it. |
+| `ResumeMatch-PH-Manuscript-Guide.docx` | The paper chapter by chapter in plain language — what each one argues, what the instruments measure, which statistic is used and why, and a table pointing at where each claim in the manuscript is proved in the software. |
 
 ## What the manuscript revisions cover
 
@@ -43,9 +47,9 @@ where the manuscript and the implementation had diverged:
    zero.
 8. **Six application statuses**, including applicant withdrawal, with an audit
    trail naming the recruiter behind every change.
-9. **Automated testing** — six suites totalling 140 tests under CI (engine 37,
-   API 46, email 10, extraction 10, demo/API parity 13, and the rule-based
-   document reader 24), plus scripted browser walkthroughs that drive the real
+9. **Automated testing** — six suites totalling 160 tests under CI (engine 49,
+   API 52, email 10, extraction 10, demo/API parity 13, and the rule-based
+   document reader 26), plus scripted browser walkthroughs that drive the real
    interface, alongside the ISO 25010 evaluation.
 10. **Security and data rights** — email verification, hashed passwords,
     role-based access, applicant data export, account deletion.
@@ -135,3 +139,30 @@ index records. Nobody has read them. Six method sources in particular are now
 cited and unread — Brooke, Campbell and Stanley, Wilcoxon, Bangor et al. (twice)
 and Lewis — and a source confirmed to exist is not a source confirmed to support
 the sentence it is attached to.
+
+## Revision of 14 August 2026
+
+The four study guides were regenerated against the running code. Two features
+were added to the system since they were written, and both change sentences the
+manuscript already contains:
+
+- **Evidence-linked skills.** The builder asks where each skill was used, and
+  the answer must point at an entry already on the applicant's own resume. A
+  matched skill with a source counts in full; one without still counts, at
+  half. The link is never printed on the resume — the downloaded document is
+  unchanged — and appears only in the recruiter's view of the application. The
+  guides state the limit as plainly as the feature: partial credit makes
+  padding a skills list cost points and makes it visible, it does not prevent
+  it. An applicant with one real skill out of four who types in the other three
+  now reaches 81 rather than 100.
+- **Rejection reasons reach the applicant.** They are told what was decided, in
+  wording written for them; they are not told which member of staff decided it.
+  This reverses the original design, on the grounds that a study whose stated
+  problem is applicants who hear nothing back cannot record the reason and then
+  withhold it from the person whose plans depend on it.
+
+Three counts moved with them: 22 tables, 16 CHECK constraints, and 160 tests
+across six suites. **The scoring formula printed in the manuscript's Chapter 3
+is now incomplete** — it reads matched ÷ required and should read
+(matched − unsourced × 0.5) ÷ required. That edit has not been made to the
+paper yet, and the Manuscript Guide lists it under what is still open.
