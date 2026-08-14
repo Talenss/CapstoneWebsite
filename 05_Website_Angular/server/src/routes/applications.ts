@@ -4,7 +4,7 @@ import { query, queryOne, exec, withTransaction } from '../db';
 import { ApplicationRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
 import { requireRole, requireUser } from '../lib/auth';
-import { fetchResume, fetchPosting, postingExpired, serializeResume, serializePosting, serializeApplication } from '../lib/serializers';
+import { fetchResume, fetchPosting, postingExpired, serializeResume, serializePosting, serializeApplication, ts } from '../lib/serializers';
 import { rmScore, rmFileScore, cacheScore, getSettings } from '../lib/engine';
 import { notifyStatusChange, notifyNewApplication, sendInterviewInvite } from '../lib/notify';
 import { UserRow } from '../types';
@@ -215,6 +215,22 @@ router.post('/ranked', async (req, res) => {
        the recruiter would read as a bug in the scoring, and rightly. */
     const rankedTier = ranked >= T.strong ? 'strong' : ranked >= T.related ? 'possible' : 'related';
 
+    /* REQUIRED SKILLS CLAIMED ON THE DAY OF THE APPLICATION.
+     *
+     * Reported, never acted on: it does not change the score, the tier or the
+     * order, and it never hides anybody. A required skill added the same day
+     * someone applied has an innocent explanation as often as not — people
+     * update a resume when they see a job they want. What it is worth is a
+     * question at interview, and a recruiter is qualified to weigh the answer
+     * where the software is not. Deciding for them here would break the
+     * study's central claim that the system decides nothing. */
+    const addedAt: Record<string, number> = (resume as any).skillsAddedAt ?? {};
+    const appliedOn = new Date(ts(a.applied_at)).toISOString().slice(0, 10);
+    const sameDayRequired = s.matchedSkills.filter((name) => {
+      const at = addedAt[name];
+      return at != null && new Date(at).toISOString().slice(0, 10) === appliedOn;
+    });
+
     out.push({
       ...s,
       score: ranked,
@@ -222,6 +238,7 @@ router.post('/ranked', async (req, res) => {
       liveScore: s.score,
       liveTier: s.tier,
       scoreDrifted: a.score_snapshot != null && a.score_snapshot !== s.score,
+      ...(sameDayRequired.length ? { skillsClaimedOnApplyDay: sameDayRequired } : {}),
       application: serializeApplication(a),
       resume,
       seeker: { id: String(a.s_id), name: a.s_name, email: a.s_email, role: 'seeker' },

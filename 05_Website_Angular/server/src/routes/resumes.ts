@@ -101,6 +101,25 @@ router.post('/save', async (req, res) => {
         }
       }
 
+      /* WHEN EACH SKILL FIRST APPEARED, preserved across a save.
+       *
+       * Children are replaced wholesale below, which is simple and always
+       * consistent — but it means a skill row is deleted and recreated every
+       * time the resume is saved for any reason. A first-seen timestamp with a
+       * database default would therefore be reset by an unrelated edit and
+       * record nothing at all. So the existing timestamps are read before the
+       * delete and carried onto the rows that come back; only a genuinely new
+       * skill gets today's date.
+       *
+       * This is not a judgement about the applicant. It exists so a recruiter
+       * can see that three of four required skills were added the same day as
+       * the application and ask about it at interview, which is a question a
+       * person is qualified to weigh and the software is not. */
+      const priorSkillDates = new Map<number, string>();
+      for (const row of await tx.query<{ skill_id: number; added_at: string }>(
+        'SELECT skill_id, added_at FROM resume_skills WHERE resume_id = ?', [id],
+      )) priorSkillDates.set(Number(row.skill_id), row.added_at);
+
       // Children are replaced wholesale — simpler, and always consistent.
       await tx.exec('DELETE FROM education WHERE resume_id = ?', [id]);
       await tx.exec('DELETE FROM work_experience WHERE resume_id = ?', [id]);
@@ -186,7 +205,12 @@ router.post('/save', async (req, res) => {
         const trimmed = String(s).trim().slice(0, 80);
         if (!trimmed) continue;
         const sid = await skillId(trimmed);
-        await tx.exec('INSERT INTO resume_skills (resume_id, skill_id) VALUES (?,?) ON CONFLICT DO NOTHING', [id, sid]);
+        const firstSeen = priorSkillDates.get(sid) ?? null;   // null → the column default, i.e. now
+        await tx.exec(
+          `INSERT INTO resume_skills (resume_id, skill_id, added_at)
+           VALUES (?,?, COALESCE(?::timestamptz, now())) ON CONFLICT DO NOTHING`,
+          [id, sid, firstSeen],
+        );
       }
 
       await tx.exec('UPDATE resumes SET updated_at = NOW() WHERE resume_id = ?', [id]);

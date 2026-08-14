@@ -158,4 +158,18 @@ export async function runMigrations(): Promise<void> {
       AND weight_skills >= 10 AND weight_education >= 10 AND weight_experience >= 10
     )
   )`);
+
+  /* WHEN A SKILL FIRST APPEARED ON A RESUME.
+     Existing rows get the resume's own created_at rather than today's date:
+     stamping every historical skill with the migration's timestamp would tell
+     a recruiter that every applicant added every skill on the same day, which
+     is both false and exactly the pattern the column exists to surface. A
+     resume's creation date is the earliest defensible answer for a skill we
+     have no record of. */
+  await exec('ALTER TABLE resume_skills ADD COLUMN IF NOT EXISTS added_at TIMESTAMPTZ');
+  await exec(`UPDATE resume_skills rs SET added_at = r.created_at
+                FROM resumes r WHERE r.resume_id = rs.resume_id AND rs.added_at IS NULL`);
+  await exec('ALTER TABLE resume_skills ALTER COLUMN added_at SET DEFAULT now()');
+  await exec(`UPDATE resume_skills SET added_at = now() WHERE added_at IS NULL`);
+  await exec('ALTER TABLE resume_skills ALTER COLUMN added_at SET NOT NULL');
 }

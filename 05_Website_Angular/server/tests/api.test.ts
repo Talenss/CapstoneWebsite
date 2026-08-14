@@ -937,3 +937,32 @@ test('editing a resume after applying does not reorder the recruiter’s shortli
   assert.equal(after.scoreDrifted, true,
     'and the recruiter must be told the resume changed');
 });
+
+test('a skill’s first-seen date survives an unrelated save', async () => {
+  /* resumes.ts deletes and recreates every child row on save, so a column with
+     a database default would be re-stamped every time the applicant edited
+     anything at all — and would then report that every skill was added today.
+     The route carries the old timestamps forward; this is the test for that,
+     because the failure is silent and the column would look populated. */
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const listed = (await seeker('resumes/list')).body.resumes[0];
+
+  const before = (await seeker('resumes/get', { id: listed.id })).body.resume;
+  assert.ok(before.skillsAddedAt, 'the serializer should report first-seen dates');
+  const originals = { ...before.skillsAddedAt };
+  const anExistingSkill = Object.keys(originals)[0];
+  assert.ok(anExistingSkill, 'the seeded resume should already have skills');
+
+  // Change something that has nothing to do with skills, and add one new skill.
+  before.personal.summary = 'Edited for the first-seen-date test.';
+  before.skills = [...before.skills, 'Zendesk'];
+  const saved = await seeker('resumes/save', { resume: before });
+  assert.equal(saved.body.ok, true, saved.body.error);
+
+  const after = (await seeker('resumes/get', { id: listed.id })).body.resume;
+  assert.equal(after.skillsAddedAt[anExistingSkill], originals[anExistingSkill],
+    'an existing skill must keep the date it was first listed');
+  assert.ok(after.skillsAddedAt['Zendesk'] >= originals[anExistingSkill],
+    'and a genuinely new skill is dated when it was actually added');
+});

@@ -339,6 +339,11 @@ export interface RankedRow extends MatchResult {
   liveTier?: Tier;
   /** True when the resume has changed since the application was submitted. */
   scoreDrifted?: boolean;
+
+  /** Required skills first claimed on the day this application was made.
+   *  Context for an interview question and nothing else — it does not affect
+   *  the score, the tier, the ordering, or whether the applicant is shown. */
+  skillsClaimedOnApplyDay?: string[];
 }
 
 export interface HrStats {

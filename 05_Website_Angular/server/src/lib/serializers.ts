@@ -82,11 +82,18 @@ export async function serializeResume(r: ResumeRow): Promise<any> {
     ...(e.bullets ? { bullets: String(e.bullets).split('\n').map((b: string) => b.trim()).filter(Boolean) } : {}),
   }));
 
-  const sk = await query<{ skill_name: string }>(
-    'SELECT s.skill_name FROM resume_skills rs JOIN skills s ON s.skill_id=rs.skill_id WHERE rs.resume_id=? ORDER BY s.skill_name',
+  const sk = await query<{ skill_name: string; added_at: any }>(
+    `SELECT s.skill_name, rs.added_at FROM resume_skills rs
+       JOIN skills s ON s.skill_id = rs.skill_id
+      WHERE rs.resume_id = ? ORDER BY s.skill_name`,
     [id],
   );
   const skills = sk.map((r2) => r2.skill_name);
+  /* Kept beside the flat list rather than folded into it, so nothing that
+     scores or matches has to know this exists. Only the recruiter's applicant
+     view reads it. */
+  const skillsAddedAt: Record<string, number> = {};
+  for (const r2 of sk) if (r2.added_at) skillsAddedAt[r2.skill_name] = ts(r2.added_at);
 
   const ce = await query<any>(
     `SELECT cert_name, year_taken, issuer, credential_id
@@ -168,6 +175,7 @@ export async function serializeResume(r: ResumeRow): Promise<any> {
       ...((r as any).portfolio ? { portfolio: (r as any).portfolio } : {}),
     },
     education, experience, skills, certifications, ownFile,
+    ...(Object.keys(skillsAddedAt).length ? { skillsAddedAt } : {}),
     // Only present when non-empty — an empty array would still be truthy in
     // a template and could render a heading with nothing under it.
     ...(projects.length ? { projects } : {}),

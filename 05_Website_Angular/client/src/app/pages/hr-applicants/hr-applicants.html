@@ -148,6 +148,23 @@
                 shortlist does not reorder itself. Worth asking about at interview.
               </p>
             }
+
+            <!-- Reported, never acted on. The score, the tier and the position
+                 on this list are all identical whether this line appears or
+                 not — it is a prompt for a question, not a verdict, and the
+                 wording says so because a recruiter reading it in a hurry
+                 should not mistake it for a judgement the system has made. -->
+            @if (r.skillsClaimedOnApplyDay?.length) {
+              <p class="notice" style="font-size:13px;margin:0 0 10px">
+                <b>{{ r.skillsClaimedOnApplyDay!.length }} required
+                {{ r.skillsClaimedOnApplyDay!.length === 1 ? 'skill was' : 'skills were' }}
+                first listed on the day they applied:</b>
+                {{ r.skillsClaimedOnApplyDay!.join(', ') }}.
+                People often update a resume when they see a job they want, so this is
+                not a mark against them — it is a good thing to ask about.
+                It has not changed their score or their position on this list.
+              </p>
+            }
             <div class="breakdown" style="margin:8px 0 0">
               <div class="row">
                 <span><b>Skills</b><span class="w">{{ r.weights.skills * 100 }}% weight</span></span>

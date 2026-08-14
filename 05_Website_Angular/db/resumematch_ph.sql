@@ -271,6 +271,13 @@ CREATE TABLE skills (
 CREATE TABLE resume_skills (
   resume_id INT NOT NULL REFERENCES resumes(resume_id) ON DELETE CASCADE,
   skill_id  INT NOT NULL REFERENCES skills(skill_id)   ON DELETE CASCADE,
+  -- When this skill FIRST appeared on this resume. The rows here are deleted
+  -- and rewritten on every save, so routes/resumes.ts carries the existing
+  -- value forward rather than letting the default fire again; without that,
+  -- an unrelated edit would reset every date and this column would say
+  -- nothing. Shown to a recruiter only as context for an interview question,
+  -- never used to score, filter or rank.
+  added_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (resume_id, skill_id)
 );
 
