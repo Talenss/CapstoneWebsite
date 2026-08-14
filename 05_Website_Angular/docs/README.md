@@ -6,7 +6,7 @@ documents, not source — the system itself is the folder above.
 | File | What it is |
 |---|---|
 | `ResumeMatch-PH-Design-Specification.pdf` | 20-page design specification: site map, user flows, five wireframes, two mockups, the design system, use case diagram, ERD, the matching algorithm, the API surface, the testing strategy, and the build sequence. Written for the adviser as the "everything you need to start building" document. |
-| `ResumeMatch-PH-Updated-Manuscript-Sections.docx` | Copy-paste-ready replacement text for every section of the capstone paper that the built system has outgrown. Eleven substantive changes, each section reproduced in full between BEGIN/END markers. |
+| `ResumeMatch-PH-Updated-Manuscript-Sections.docx` | Copy-paste-ready replacement text for every section of the capstone paper that the built system has outgrown. Thirteen substantive changes, each section reproduced in full between BEGIN/END markers. Replacement 8 carries the corrected Chapter 3 scoring formula. |
 | `ResumeMatch-PH-Research-Instruments.docx` | The five instruments the study administers — 117 items, all closed — laid out with tick boxes so they can be printed and filled in, plus an administration sheet. Instrument C carries four items repeated word for word from Instrument A, so the change in one respondent's own answer can be tested, and the ten items of the System Usability Scale, scored on their own 0–100 scale. Instrument E is a ranking task: the recruiter orders five résumés and the study computes Spearman's rank correlation against the system's order. Generated from the same source as the manuscript's Appendix A, so the two cannot drift apart. |
 | `ResumeMatch-PH-Google-Forms.docx` | The same five instruments laid out as Google Forms questions — question type, options and section descriptions for every item — plus the checklist for what to do once responses are in. Generated from the same source, for the same reason. |
 | `ResumeMatch-PH-Study-Guide.docx` | The defence study guide: the whole paper section by section, then 120 practice questions with answers written to be said out loud, defence notes, alignment checks and the five figures. Part 4 works every statistic in the study by hand — weighted mean and SD, Wilcoxon signed-rank, the System Usability Scale, Spearman's rho and Cronbach's alpha — on numbers small enough to reproduce with a pen. |
@@ -193,3 +193,29 @@ further than that. All three were updated in place on 14 August 2026:
 
 Line counts, table counts, endpoint counts and test counts in all seven
 documents were read from the repository at `e26ded0`, not carried over.
+
+## Chapter 3's formula, and a document that was never committed
+
+`ResumeMatch-PH-Updated-Manuscript-Sections.docx` now carries the corrected
+scoring formula, in Replacement 8 — Development and Testing:
+
+```
+Score  =  ( S × 0.50  +  E × 0.25  +  X × 0.25 ) × 100
+
+S  =  ( matched  −  unsourced × 0.5 )  ÷  total required skills
+```
+
+Three paragraphs were added to that section stating the rule, the fact that the
+recorded source is never printed on the résumé, and the extent of the measure —
+that partial credit attaches a cost to padding a skills list rather than
+preventing it, and that the frozen ranking score is what addresses the same
+behaviour after an application is sent.
+
+**Worth knowing before trusting this file:** it was dated 27 July, and the
+"Revision of 30 July 2026" recorded further up this README had never reached
+it. Both changes that revision describes were still absent — the document
+claimed the uploaded file "is never parsed and can never lower a score" in four
+separate places, and counted eight résumé designs rather than fourteen. Anyone
+pasting from it between those dates would have moved a false statement into the
+manuscript. Both are now corrected throughout, along with the test counts
+(160 across six suites, not 76 across four) and the walkthrough count.
