@@ -8,6 +8,24 @@ import { AnalyzedResume, ApiResult, AppStatus, Application, Company, EvidenceKin
 import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels } from './engine';
 
 const KEY = 'rmph_v3_db';
+
+/* WHICH SEED THIS BROWSER HOLDS.
+ *
+ * The demo database is written to localStorage on first visit and reused for
+ * ever after. That is correct for a visitor's own work, and wrong for the
+ * SEEDED content: a browser that first opened the site when the partner
+ * company was a hotel kept showing hotel openings long after the seed became
+ * Clark Outsourcing, and kept scoring them by the old arithmetic — so the site
+ * on screen quietly disagreed with the site being described.
+ *
+ * Bump this whenever the seeded data or the scoring rules change. A mismatch
+ * re-seeds, which discards anything created in demo mode; that is the right
+ * trade for a demonstration build whose entire purpose is to show the seeded
+ * content correctly, and demo data is disposable by construction — nothing
+ * here has ever reached a database. Anything a visitor wants to keep is
+ * exported from the resume itself.
+ */
+const SEED_VERSION = '2026-08-14-clark-evidence';
 const SESSION = 'rmph_v3_session';
 const D = 86400000;
 
@@ -36,6 +54,8 @@ interface Db {
   /** Mirrors the server's application_status_history table. Written on
    *  every status change so demo mode can show the same applicant-facing
    *  timeline as api mode rather than a feature that only half exists. */
+  /** The seed this database was built from — see SEED_VERSION. */
+  seedVersion?: string;
   statusHistory: { applicationId: string; from: AppStatus | null; to: AppStatus; at: number; by: 'applicant' | 'employer'; byUserId?: string | null; reason?: RejectionReason | null }[];
 }
 
@@ -244,6 +264,11 @@ function load(): Db {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const db: Db = JSON.parse(raw);
+      /* A database seeded by an older build is discarded rather than patched.
+         The back-fills below add fields that were missing; they cannot correct
+         seeded CONTENT that has since changed, and a half-updated demo is
+         worse than a fresh one because nothing on screen says which it is. */
+      if (db.seedVersion !== SEED_VERSION) throw new Error('stale seed');
       if (!db.emailCodes) db.emailCodes = []; // databases saved before this field existed
       if (!db.savedJobs) db.savedJobs = [];
       if (!db.deptAssignments) db.deptAssignments = []; // databases saved before department routing existed
@@ -266,7 +291,15 @@ function load(): Db {
       return db;
     }
   } catch { /* ignore */ }
+  /* Re-seeding replaces every user row, so a session pointing at an account
+     from the discarded database has to go with it — otherwise the browser is
+     signed in as somebody who no longer exists. resetDemo() clears both for
+     the same reason; this is the same hazard reached by a different route.
+     Removing the key directly rather than calling setSession(), which is
+     declared below and would also write a redundant empty value. */
+  try { localStorage.removeItem(SESSION); sessionStorage.removeItem(SESSION); } catch { /* ignore */ }
   const db = seed();
+  db.seedVersion = SEED_VERSION;
   persist(db);
   return db;
 }
