@@ -219,3 +219,38 @@ separate places, and counted eight résumé designs rather than fourteen. Anyone
 pasting from it between those dates would have moved a false statement into the
 manuscript. Both are now corrected throughout, along with the test counts
 (160 across six suites, not 76 across four) and the walkthrough count.
+
+## A full sweep, 14 August 2026
+
+The section above was written after fixing Chapter 3, and it understated the
+problem. Fixing documents section by section had left stale claims standing in
+the parts nobody had looked at — and half of them were inside **tables**, which
+a paragraph-only search reports as clean.
+
+So every document in this folder was swept mechanically against a list of
+claims the running system contradicts, checking table cells as well as body
+text. Forty-six findings across six documents, all corrected:
+
+| Claim found | What is true |
+|---|---|
+| eight résumé designs (19 places) | fourteen |
+| the uploaded file "is never parsed" / "can never lower a score" (5 places) | it is read and scored separately; that score is reported and never ranked on |
+| 24 / 30 / 26 / 56 / 76 / 140 / 142 tests | 160, across six suites |
+| four or five automated suites | six |
+| two browser walkthroughs | nine |
+| 18 or 21 database tables | 22 |
+| 45 endpoints | 55 |
+| fourteen CHECK constraints | sixteen |
+| S = matched ÷ required | S = (matched − unsourced × 0.5) ÷ required |
+
+`ResumeMatch-PH-Defense-Preparation.docx` carried seventeen of them on its own,
+including the "numbers memorised" line — the one sentence in the folder most
+likely to be recited verbatim at a defence.
+
+One apparent hit was left alone deliberately: the Study Guide's *"Why three
+characteristics and not all eight?"* refers to ISO/IEC 25010's eight quality
+characteristics, not to résumé designs.
+
+The sweep script checks a fixed list of patterns. It cannot find a claim nobody
+thought to list, and it does not read the manuscript itself, which is not in
+this repository.
