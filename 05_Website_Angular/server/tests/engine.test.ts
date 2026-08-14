@@ -17,8 +17,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { scoreWith, DEFAULT_SETTINGS, skillNorm, SKILL_ALIASES, EDU_RANK, MatchSettings } from '../src/lib/engine';
-import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK } from '../../client/src/app/core/engine';
+import { scoreWith, DEFAULT_SETTINGS, skillNorm, SKILL_ALIASES, EDU_RANK, MatchSettings, UNEVIDENCED_CREDIT, EVIDENCE_KINDS, EvidenceKind, evidenceLabels } from '../src/lib/engine';
+import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK, UNEVIDENCED_CREDIT as CLIENT_UNEVIDENCED_CREDIT, evidenceLabels as clientEvidenceLabels } from '../../client/src/app/core/engine';
 
 // ---------- helpers ----------
 
@@ -51,6 +51,7 @@ function score(r: ReturnType<typeof resume>, p: ReturnType<typeof posting>) {
   assert.equal(client.expMeets, server.expMeets);
   assert.deepEqual(client.matchedSkills, server.matchedSkills);
   assert.deepEqual(client.missingSkills, server.missingSkills);
+  assert.deepEqual(client.unevidencedMatches, server.unevidencedMatches);
   return server;
 }
 
@@ -488,4 +489,161 @@ test('every skill a seeded posting or resume requires exists in the catalogue', 
     }
   }
   assert.ok(checked >= 20, `expected the seed to link many skills, found ${checked}`);
+});
+
+/* ============================================================
+   EVIDENCE-LINKED SKILLS
+
+   A matched skill the applicant can point to counts in full; one they
+   cannot still counts, at UNEVIDENCED_CREDIT. These tests pin the
+   constant, both branches of the arithmetic, and the one distinction the
+   whole design rests on: an ABSENT evidence map means the question was
+   never asked (full credit) while an EMPTY one means it was asked and
+   went unanswered (partial credit).
+   ============================================================ */
+
+/** A resume plus the evidence map, keyed by the skill as written. */
+const resumeEv = (
+  skills: string[],
+  evidence: Record<string, { kind: EvidenceKind; ref: string }> | undefined,
+  eduLevels: string[] = ['bachelor'], monthsList: number[] = [12],
+) => ({ ...resume(skills, eduLevels, monthsList), ...(evidence === undefined ? {} : { skillEvidence: evidence }) });
+
+const usedAt = (ref: string) => ({ kind: 'experience' as EvidenceKind, ref });
+
+test('the unevidenced credit is the published half, and the client mirrors it', () => {
+  assert.equal(UNEVIDENCED_CREDIT, 0.5);
+  assert.equal(CLIENT_UNEVIDENCED_CREDIT, UNEVIDENCED_CREDIT);
+});
+
+test('a skill with a source counts in full', () => {
+  const s = score(
+    resumeEv(['MySQL', 'JavaScript', 'Teamwork', 'Git'], {
+      MySQL: usedAt('Developer, Acme'), JavaScript: usedAt('Developer, Acme'),
+      Teamwork: usedAt('Developer, Acme'), Git: usedAt('Developer, Acme'),
+    }),
+    posting(['MySQL', 'JavaScript', 'Teamwork', 'Git']),
+  );
+  assert.equal(s.score, 100);
+  assert.deepEqual(s.unevidencedMatches, []);
+});
+
+test('a skill with NO source still counts — at half, never at zero', () => {
+  // 4 of 4 matched, none sourced: 4 − 4×0.5 = 2 credited → skills 50% × 0.5
+  const s = score(resumeEv(['MySQL', 'JavaScript', 'Teamwork', 'Git'], {}),
+                  posting(['MySQL', 'JavaScript', 'Teamwork', 'Git']));
+  assert.equal(s.score, 75);
+  assert.ok(s.score > 50, 'half credit must still clear the related tier — an unsourced skill is not a lie');
+  assert.deepEqual(s.unevidencedMatches, ['MySQL', 'JavaScript', 'Teamwork', 'Git']);
+});
+
+test('sourced and unsourced skills mix in one score', () => {
+  // 4 matched, 2 sourced: 4 − 2×0.5 = 3 credited → 0.75 × 50 + 25 + 25 = 87.5 → 88
+  const s = score(
+    resumeEv(['MySQL', 'JavaScript', 'Teamwork', 'Git'], {
+      MySQL: usedAt('Developer, Acme'), JavaScript: usedAt('Developer, Acme'),
+    }),
+    posting(['MySQL', 'JavaScript', 'Teamwork', 'Git']),
+  );
+  assert.equal(s.score, 88);
+  assert.deepEqual(s.unevidencedMatches, ['Teamwork', 'Git']);
+});
+
+test('an ABSENT evidence map means the question was never asked, so nothing is docked', () => {
+  /* This is the uploaded-document path (rmFileScore): a machine read the
+     file, there was no builder to ask in, and penalising the applicant for
+     a screen they were never shown would be indefensible. Absent must NOT
+     behave like empty. */
+  const asked = score(resumeEv(['MySQL', 'JavaScript'], {}), posting(['MySQL', 'JavaScript']));
+  const neverAsked = score(resumeEv(['MySQL', 'JavaScript'], undefined), posting(['MySQL', 'JavaScript']));
+  assert.equal(neverAsked.score, 100);
+  assert.equal(asked.score, 75);
+  assert.deepEqual(neverAsked.unevidencedMatches, [],
+    'a resume that was never asked must not report skills as unsourced');
+});
+
+test('evidence is matched through the same alias folding as the skill itself', () => {
+  // The applicant wrote "JavaScript" and sourced it; the posting asks for "JS".
+  // Failing to fold both sides would quietly halve a skill that IS sourced.
+  const s = score(
+    resumeEv(['JavaScript'], { JavaScript: usedAt('Developer, Acme') }),
+    posting(['JS']),
+  );
+  assert.deepEqual(s.unevidencedMatches, []);
+  assert.equal(s.score, 100);
+});
+
+test('unevidencedMatches never reports a skill the applicant does not claim', () => {
+  const s = score(resumeEv(['MySQL'], {}), posting(['MySQL', 'Kubernetes']));
+  assert.deepEqual(s.missingSkills, ['Kubernetes']);
+  assert.deepEqual(s.unevidencedMatches, ['MySQL'],
+    'only MATCHED skills can be unsourced — a skill they never claimed is missing, not unsourced');
+});
+
+test('a source on a skill the posting never asked for changes nothing', () => {
+  const bare = score(resumeEv(['MySQL', 'Baking'], { MySQL: usedAt('Developer, Acme') }), posting(['MySQL']));
+  const both = score(resumeEv(['MySQL', 'Baking'],
+    { MySQL: usedAt('Developer, Acme'), Baking: usedAt('Baker, Bakery') }), posting(['MySQL']));
+  assert.equal(bare.score, both.score);
+});
+
+test('padding the skills list is cheaper than it was, and still not free', () => {
+  /* The exploit this feature answers, priced honestly. An applicant with one
+     real skill who types in the other three used to reach a perfect score.
+     They now reach 81 — lower, but NOT excluded. The paper must say both
+     halves of that: partial credit reduces the payoff, the score snapshot in
+     routes/applications.ts is what stops it moving an application already
+     sent, and the recruiter's evidence panel is what makes it visible. */
+  const required = ['MySQL', 'JavaScript', 'Teamwork', 'Git'];
+  const honest = score(
+    resumeEv(['MySQL', 'JavaScript', 'Teamwork'], {
+      MySQL: usedAt('Developer, Acme'), JavaScript: usedAt('Developer, Acme'), Teamwork: usedAt('Developer, Acme'),
+    }), posting(required));
+  const padded = score(
+    resumeEv(required, { MySQL: usedAt('Developer, Acme') }), posting(required));
+
+  assert.equal(honest.score, 88);
+  assert.equal(padded.score, 81);
+  assert.ok(padded.score < 100, 'padding must no longer produce a perfect score');
+  assert.ok(padded.score < honest.score,
+    'three sourceless skills must not outrank three sourced ones');
+});
+
+test('the source labels the builder offers are exactly the ones the server accepts', () => {
+  /* The builder fills its dropdown with evidenceLabels(); the save route
+     accepts a source ONLY if it appears in evidenceLabels(). If the two
+     implementations ever drift, a source the applicant picked would be
+     dropped on save and their score would fall for no visible reason. */
+  const r = {
+    experience: [{ position: 'Web Development Intern', company: 'Clark Outsourcing' }, { position: '', company: 'Solo' }],
+    projects: [{ name: 'Barangay records system' }, { name: '' }],
+    certifications: [{ name: 'TESDA Web Development NC III' }],
+    education: [{ degree: 'BS Information Technology', school: 'Holy Angel University' }],
+  };
+  const server = evidenceLabels(r);
+  const client = clientEvidenceLabels(r);
+  for (const kind of EVIDENCE_KINDS) {
+    assert.deepEqual([...client[kind]].sort(), [...server[kind]].sort(), `evidence labels differ for ${kind}`);
+  }
+  assert.deepEqual([...server.experience].sort(), ['Solo', 'Web Development Intern, Clark Outsourcing']);
+  assert.deepEqual([...server.education], ['BS Information Technology, Holy Angel University']);
+  assert.deepEqual([...server.project], ['Barangay records system'], 'a nameless entry is not offerable as a source');
+});
+
+test('both engines agree on which matches were unsourced', () => {
+  const r = resumeEv(['MySQL', 'JavaScript', 'Teamwork'], { MySQL: usedAt('Developer, Acme') });
+  const p = posting(['MySQL', 'JavaScript', 'Teamwork']);
+  assert.deepEqual(
+    scoreLocal(r as any, p as any).unevidencedMatches,
+    scoreWith(DEFAULT_SETTINGS, r as any, p as any).unevidencedMatches,
+  );
+});
+
+test('the schema will accept exactly the four source kinds the engine names', () => {
+  const sql = readFileSync(join(__dirname, '..', '..', 'db', 'resumematch_ph.sql'), 'utf8');
+  const check = /evidence_kind TEXT CHECK \(evidence_kind IN \(([^)]*)\)\)/.exec(sql);
+  assert.ok(check, 'resume_skills.evidence_kind must carry a CHECK constraint');
+  const allowed = [...check![1].matchAll(/'([a-z]+)'/g)].map((m) => m[1]);
+  assert.deepEqual(allowed.sort(), [...EVIDENCE_KINDS].sort(),
+    'a kind the engine accepts but the database rejects would fail the save with a 500');
 });

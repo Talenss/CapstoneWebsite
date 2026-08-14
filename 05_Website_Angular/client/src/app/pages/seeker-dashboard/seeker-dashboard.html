@@ -197,6 +197,16 @@
                     <b>{{ historyLabel(e) }}</b>
                     @if (historyBy(e); as who) { <span class="who">&#32;{{ who }}</span> }
                     <span class="when">{{ historyMoment(e.at) }}@if (historyGap($index); as gap) { · {{ gap }} }</span>
+                    <!-- WHY, when the employer recorded one. This is the line
+                         the whole study is about: the stated problem is
+                         applicants who apply and hear nothing back, so a
+                         system that records the reason and then keeps it from
+                         the one person whose plans depend on it would be
+                         arguing against itself. The employer's name is here;
+                         the individual's is not. -->
+                    @if (e.reason) {
+                      <span class="why">{{ reasonText(e) }}</span>
+                    }
                   </div>
                 </li>
               }

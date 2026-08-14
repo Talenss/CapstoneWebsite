@@ -6,7 +6,7 @@
    in BOTH modes (the API mode still calls the server for anything
    that must be authoritative, e.g. applying).
    ============================================================ */
-import { AppStatus, EduLevel, MatchResult, Posting, RejectionReason, Resume, Tier } from './models';
+import { AppStatus, EduLevel, EvidenceKind, MatchResult, Posting, RejectionReason, Resume, Tier } from './models';
 
 /* The study's published defaults. The SERVER is the authority — it reads
    these from the match_settings table, so an admin can retune them without a
@@ -82,6 +82,79 @@ export const REASON_LABELS: Record<RejectionReason, string> = {
   withdrew_interest:  'Withdrew interest',
   other:              'Other',
 };
+
+/** The SAME codes, written for the person they are about.
+ *
+ *  Not a euphemism of the recruiter's wording — the same fact, in the second
+ *  person, because an applicant reading "Another candidate was a closer fit"
+ *  about themselves is reading a file note, and one reading "The role went to
+ *  another candidate" is being told what happened to them. Where the honest
+ *  answer is actionable it says so, since the whole reason this reaches the
+ *  applicant at all is that "unreachable" is a thing a person can fix.
+ *
+ *  'other' deliberately promises nothing. A code that means "none of these"
+ *  cannot be dressed up as an explanation, and inventing one would be worse
+ *  than the silence this feature exists to end. */
+export const APPLICANT_REASON_LABELS: Record<RejectionReason, string> = {
+  not_qualified:      'Your application did not meet the requirements for this role.',
+  failed_requirement: 'A credential or licence the role requires was missing.',
+  salary_mismatch:    'Salary expectations did not match what the role offers.',
+  unreachable:        'The employer tried to reach you and could not. Check the phone number and email on your resume.',
+  position_filled:    'The position was filled.',
+  stronger_candidate: 'The role went to another candidate whose background was a closer fit.',
+  withdrew_interest:  'This was recorded after you withdrew your interest.',
+  other:              'The employer recorded a reason that does not fit any of the standard ones.',
+};
+
+/* ------------------------------------------------------------
+   EVIDENCE-LINKED SKILLS — mirrored 1:1 from server/src/lib/engine.ts, which
+   carries the full reasoning. The constant below is part of the PUBLISHED
+   formula, not a tuning knob: the applicant is told "a skill you can point to
+   evidence for counts fully; one you cannot counts half", and this is that
+   half. Change it here and it must change there, or the number an applicant
+   previews and the number a recruiter reads stop agreeing.
+   ------------------------------------------------------------ */
+export const UNEVIDENCED_CREDIT = 0.5;
+
+export const EVIDENCE_KINDS: EvidenceKind[] = ['experience', 'project', 'certification', 'education'];
+
+/** What each source type is called on screen. Kept apart from the stored
+ *  value so the wording can be plain without changing what is saved. */
+export const EVIDENCE_KIND_LABELS: Record<EvidenceKind, string> = {
+  experience:    'Work experience',
+  project:       'Project',
+  certification: 'Certification',
+  education:     'Education',
+};
+
+/** How one resume entry is labelled when it is offered as a source.
+ *
+ *  Mirrored from server/src/lib/engine.ts and covered by the parity test. The
+ *  builder offers exactly these strings and the server accepts exactly these
+ *  strings; if the two ever drift, a source the applicant picked would be
+ *  refused on save and their score would drop for no visible reason. */
+export function evidenceLabel(kind: EvidenceKind, e: any): string {
+  const join = (a: unknown, b: unknown) => [String(a ?? '').trim(), String(b ?? '').trim()].filter(Boolean).join(', ');
+  if (kind === 'experience') return join(e?.position, e?.company);
+  if (kind === 'education') return join(e?.degree, e?.school);
+  return String(e?.name ?? '').trim(); // project, certification
+}
+
+/** Every label on this resume a skill may point at, per kind. A source must
+ *  be something already written down elsewhere on the same resume — that is
+ *  the whole mechanism, and it is why this is a picker and not a text box. */
+export function evidenceLabels(resume: {
+  experience?: any[]; projects?: any[]; certifications?: any[]; education?: any[];
+}): Record<EvidenceKind, Set<string>> {
+  const set = (kind: EvidenceKind, rows: any[] | undefined) =>
+    new Set((rows ?? []).map((e) => evidenceLabel(kind, e)).filter(Boolean));
+  return {
+    experience: set('experience', resume.experience),
+    project: set('project', resume.projects),
+    certification: set('certification', resume.certifications),
+    education: set('education', resume.education),
+  };
+}
 
 export const STATUS_LABELS: Record<AppStatus, string> = {
   submitted: 'Submitted', review: 'Under review', shortlisted: 'Shortlisted', rejected: 'Not selected', hired: 'Hired',
@@ -203,12 +276,28 @@ export function weightsFor(posting: Pick<Posting, 'weights'>): typeof WEIGHTS {
   return { skills: w.skills / 100, education: w.education / 100, experience: w.experience / 100 };
 }
 
-export function scoreLocal(resume: Pick<Resume, 'skills' | 'education' | 'experience'>, posting: Pick<Posting, 'skills' | 'educationLevel' | 'minExperienceMonths' | 'weights'>): MatchResult {
+export function scoreLocal(
+  resume: Pick<Resume, 'skills' | 'education' | 'experience'> & { skillEvidence?: Resume['skillEvidence'] },
+  posting: Pick<Posting, 'skills' | 'educationLevel' | 'minExperienceMonths' | 'weights'>,
+): MatchResult {
   const W = weightsFor(posting);
   const required = posting.skills || [];
   const have = new Set((resume.skills || []).map(normSkill));
   const matched = required.filter((s) => have.has(normSkill(s)));
-  const skillPart = required.length ? matched.length / required.length : 1;
+
+  /* Evidence is keyed by the applicant's spelling, `matched` holds the
+     posting's, so the lookup normalises both — the same way the match did.
+     An ABSENT map means the question was never asked (an extracted document,
+     not a built resume) and everything counts in full; an EMPTY one means it
+     was asked and went unanswered. */
+  const evidence = resume.skillEvidence;
+  const evidenced = new Set<string>();
+  if (evidence) {
+    for (const [name, ev] of Object.entries(evidence)) if (ev?.ref) evidenced.add(normSkill(name));
+  }
+  const unevidenced = evidence ? matched.filter((s) => !evidenced.has(normSkill(s))) : [];
+  const credited = matched.length - unevidenced.length * (1 - UNEVIDENCED_CREDIT);
+  const skillPart = required.length ? credited / required.length : 1;
 
   const seekerEdu = Math.max(0, ...(resume.education || []).map((e) => EDU_RANK[e.level] || 0));
   const reqEdu = EDU_RANK[posting.educationLevel] || 0;
@@ -225,6 +314,7 @@ export function scoreLocal(resume: Pick<Resume, 'skills' | 'education' | 'experi
     score: total,
     matchedSkills: matched,
     missingSkills: required.filter((s) => !have.has(normSkill(s))),
+    unevidencedMatches: unevidenced,
     totalSkills: required.length,
     eduMeets: eduPart >= 1,
     expMeets: expPart >= 1,

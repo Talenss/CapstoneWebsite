@@ -224,6 +224,12 @@ export interface Resume {
   languages?: Language[];
   references?: Reference[];
   skills: string[];
+  /** Where each skill was used, keyed by the skill exactly as it appears in
+   *  `skills`. Optional, and an absent key is not an error — it means the
+   *  applicant named no source for that skill, which is allowed and costs
+   *  partial credit rather than the whole match. NEVER rendered by the print
+   *  sheet or any of the fourteen designs. */
+  skillEvidence?: Record<string, SkillEvidence>;
   certifications: Certification[];
   ownFile: OwnFile | null;
   updatedAt?: number;
@@ -300,10 +306,32 @@ export interface StatusEvent {
    *  naming an HR staff member to an applicant is a different disclosure.
    *  Treat `undefined` as "not disclosed", never as "unknown actor". */
   byName?: string;
-  /** Why the change was made, as one of REJECTION_REASONS. Present on the
-   *  same terms as `byName`: employer staff only, never the applicant. A
-   *  reason the subject will read is a reason nobody records candidly. */
+  /** Why the change was made, as one of REJECTION_REASONS.
+   *
+   *  Shown to BOTH audiences — unlike `byName` directly above, which stays
+   *  employer-only. The applicant learns what was decided; they do not learn
+   *  which member of staff decided it. The wording differs by audience:
+   *  REASON_LABELS is what the recruiter files under, APPLICANT_REASON_LABELS
+   *  is the same fact addressed to the person it is about. */
   reason?: RejectionReason;
+}
+
+/* ------------------------------------------------------------
+   EVIDENCE-LINKED SKILLS — mirrored from server/src/lib/engine.ts, where the
+   reasoning is written out in full. In short: the builder asks where each
+   skill was used and the answer must point at an entry already on the
+   applicant's own resume. A skill with a source counts in full; one without
+   still counts, at partial credit. The link is never printed on the resume —
+   the downloaded document is unchanged — and is shown only in the
+   recruiter's applicant view.
+   ------------------------------------------------------------ */
+export type EvidenceKind = 'experience' | 'project' | 'certification' | 'education';
+
+export interface SkillEvidence {
+  kind: EvidenceKind;
+  /** The label of the entry it points at, as the applicant wrote it —
+   *  "Web Development Intern, Clark Outsourcing". */
+  ref: string;
 }
 
 /** A recruiter's working note on one application — "called 3pm, no answer".
@@ -321,6 +349,11 @@ export interface MatchResult {
   score: number;
   matchedSkills: string[];
   missingSkills: string[];
+  /** Matched skills the applicant named no source for. Each still counts,
+   *  at UNEVIDENCED_CREDIT rather than in full — see engine.ts. Empty when
+   *  evidence does not apply (the uploaded-document score, which was never
+   *  asked the question). */
+  unevidencedMatches: string[];
   totalSkills: number;
   eduMeets: boolean;
   expMeets: boolean;

@@ -4,8 +4,8 @@
    real departments so all three match tiers actually demonstrate.
    ============================================================ */
 import { ApiAdapter } from './adapter';
-import { AnalyzedResume, ApiResult, AppStatus, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, StatusEvent, User } from './models';
-import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS } from './engine';
+import { AnalyzedResume, ApiResult, AppStatus, Application, Company, EvidenceKind, RejectionReason, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User } from './models';
+import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels } from './engine';
 
 const KEY = 'rmph_v3_db';
 const SESSION = 'rmph_v3_session';
@@ -36,7 +36,7 @@ interface Db {
   /** Mirrors the server's application_status_history table. Written on
    *  every status change so demo mode can show the same applicant-facing
    *  timeline as api mode rather than a feature that only half exists. */
-  statusHistory: { applicationId: string; from: AppStatus | null; to: AppStatus; at: number; by: 'applicant' | 'employer'; byUserId?: string | null }[];
+  statusHistory: { applicationId: string; from: AppStatus | null; to: AppStatus; at: number; by: 'applicant' | 'employer'; byUserId?: string | null; reason?: RejectionReason | null }[];
 }
 
 /* ------------------------------------------------------------------
@@ -98,6 +98,16 @@ function seed(): Db {
           location: 'San Fernando, Pampanga', startDate: 'Jun 2025', endDate: 'Sep 2025',
           bullets: ['Rebuilt the job posting pages so they open correctly on a phone', 'Cleared a backlog of 40+ layout issues reported by staff'] }],
         skills: ['HTML/CSS', 'JavaScript', 'Git', 'Teamwork', 'Communication'],
+        /* Where each skill was used. Deliberately incomplete here and in
+           db/resumematch_ph.sql, which this mirrors row for row: the two soft
+           skills carry no source, so the demo shows both states in the
+           recruiter's evidence panel and both halves of the arithmetic. An
+           unsourced skill still counts — at UNEVIDENCED_CREDIT, not zero. */
+        skillEvidence: {
+          'HTML/CSS':   { kind: 'experience', ref: 'Web Development Intern, LGU San Fernando' },
+          'JavaScript': { kind: 'experience', ref: 'Web Development Intern, LGU San Fernando' },
+          'Git':        { kind: 'project',    ref: 'Barangay records system' },
+        },
         certifications: [{ name: 'TESDA Web Development NC III', year: '2025', issuer: 'TESDA', credentialId: 'NC-III-2025-014352' }],
         projects: [{ name: 'Barangay records system', role: 'Front-end developer', startDate: 'Aug 2025', endDate: 'Feb 2026',
           description: 'Web app that replaced a paper logbook for about 1,200 residents; built with a team of four.', link: 'github.com/juandelacruz/brgy-records' }],
@@ -113,6 +123,10 @@ function seed(): Db {
         experience: [{ position: 'Capstone Developer', company: 'Angeles University Foundation', months: 3, description: 'Built a school event portal with a team of four.',
           location: 'Angeles City', startDate: 'Aug 2025', endDate: 'Oct 2025' }],
         skills: ['HTML/CSS', 'JavaScript', 'Communication', 'Teamwork'], certifications: [],
+        skillEvidence: {
+          'HTML/CSS':   { kind: 'project', ref: 'School event portal' },
+          'JavaScript': { kind: 'project', ref: 'School event portal' },
+        },
         projects: [{ name: 'School event portal', role: 'Team lead', startDate: 'Aug 2025', endDate: 'Oct 2025',
           description: 'Registration and attendance for campus events, used by three student organizations.' }],
         ownFile: null, updatedAt: Date.now() - D * 4 },
@@ -126,6 +140,11 @@ function seed(): Db {
           location: 'Clark Freeport Zone', startDate: 'Jan 2025', endDate: 'Jun 2025',
           bullets: ['Handled 40+ inbound enquiries per shift across phone, email and live chat', 'Logged every interaction in the client CRM with no unresolved tickets at handover'] }],
         skills: ['Customer Service', 'Communication', 'MS Office', 'English Proficiency', 'CRM Software', 'Teamwork'],
+        skillEvidence: {
+          'Customer Service':    { kind: 'experience',    ref: 'Customer Support Intern, Clark BPO' },
+          'CRM Software':        { kind: 'experience',    ref: 'Customer Support Intern, Clark BPO' },
+          'English Proficiency': { kind: 'certification', ref: 'Customer Service Excellence' },
+        },
         certifications: [{ name: 'Customer Service Excellence', year: '2025', issuer: 'Clark Outsourcing' }],
         languages: [{ name: 'Filipino', proficiency: 'Native' }, { name: 'English', proficiency: 'Fluent' }, { name: 'Korean', proficiency: 'Basic' }],
         // DUAL-RESUME MODEL: the applicant's OWN file. HR views and downloads it.
@@ -146,6 +165,10 @@ function seed(): Db {
         experience: [{ position: 'HR Intern', company: 'Manufacturing firm', months: 8, description: 'Assisted in screening, interview scheduling, and 201 filing.',
           location: 'San Fernando, Pampanga', startDate: 'Sep 2024', endDate: 'Apr 2025' }],
         skills: ['Communication', 'Recruitment', 'MS Office', 'Organization', 'Social Media'], certifications: [],
+        skillEvidence: {
+          'Recruitment':  { kind: 'experience', ref: 'HR Intern, Manufacturing firm' },
+          'Organization': { kind: 'experience', ref: 'HR Intern, Manufacturing firm' },
+        },
         ownFile: null, updatedAt: Date.now() - D * 7 },
     ] as unknown as Resume[],
     postings: [
@@ -605,8 +628,31 @@ export class DemoAdapter implements ApiAdapter {
         return row;
       }).filter(Boolean);
 
+      /* WHERE EACH SKILL WAS USED, checked the same way the server checks it
+         (routes/resumes.ts): the kind must be known and the label must match
+         an entry already on this resume. A link whose entry was renamed or
+         removed is dropped, which costs that skill its full credit and shows
+         up as unsourced the next time the builder opens. Demo mode has to
+         apply the identical rule or the same edit would score differently in
+         the two modes. */
+      const skills = list(resume.skills, 100).map((s) => String(s).trim().slice(0, 80)).filter(Boolean);
+      const labels = evidenceLabels({ experience, projects: projects as any[], certifications, education });
+      const skillEvidence: Record<string, SkillEvidence> = {};
+      const rawEvidence = (resume.skillEvidence ?? {}) as Record<string, any>;
+      for (const name of skills) {
+        const v = rawEvidence[name];
+        const kind = v?.kind as EvidenceKind;
+        const ref = String(v?.ref ?? '').trim().slice(0, 200);
+        if (!EVIDENCE_KINDS.includes(kind) || !ref || !labels[kind].has(ref)) continue;
+        skillEvidence[name] = { kind, ref };
+      }
+
       resume = {
         ...resume,
+        skills,
+        // Always assigned, even when empty: an absent map means "never asked"
+        // to the engine, which would hand back the credit this withholds.
+        skillEvidence,
         title: (String(resume.title ?? '').trim() || 'Untitled resume').slice(0, 120),
         template: ['chronological', 'functional', 'combination'].includes(resume.template as string)
           ? resume.template : 'chronological',
@@ -615,7 +661,6 @@ export class DemoAdapter implements ApiAdapter {
         education,
         experience,
         certifications,
-        skills: list(resume.skills, 100).map((s) => String(s).trim().slice(0, 80)).filter(Boolean),
       } as Resume;
       // Assigned separately so an empty section leaves no key behind on an
       // edit that removed its last entry.
@@ -920,7 +965,8 @@ export class DemoAdapter implements ApiAdapter {
       // and, when they said why, the reason travels with the decision
       if (reason) (a as any).decidedReason = reason;
       if (wasStatus !== a.status) {
-        db.statusHistory.push({ applicationId: a.id, from: wasStatus, to: a.status, at: a.updatedAt!, by: 'employer', byUserId: me.id });
+        db.statusHistory.push({ applicationId: a.id, from: wasStatus, to: a.status, at: a.updatedAt!, by: 'employer', byUserId: me.id,
+          reason: (reason as RejectionReason) ?? null });
       }
       persist(db);
       return apiOk({ application: a });
@@ -1039,6 +1085,11 @@ export class DemoAdapter implements ApiAdapter {
             const actor = db.users.find((u) => u.id === h.byUserId);
             if (actor) e.byName = actor.name;
           }
+          /* The reason goes to BOTH audiences, unlike the name above — see
+             routes/applications.ts for why the two gates differ. The applicant
+             learns what was decided; they do not learn which staff member
+             decided it. */
+          if (h.reason) e.reason = h.reason;
           return e;
         });
       return apiOk({ events });

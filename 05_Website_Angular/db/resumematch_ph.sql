@@ -278,6 +278,22 @@ CREATE TABLE resume_skills (
   -- nothing. Shown to a recruiter only as context for an interview question,
   -- never used to score, filter or rank.
   added_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- WHERE THE APPLICANT USED THIS SKILL: which entry already on their own
+  -- resume backs the claim. evidence_kind says which section it points into;
+  -- evidence_ref is the label of that entry as the applicant wrote it
+  -- ("Web Development Intern, Clark Outsourcing").
+  --
+  -- Two things about this pair matter enough to write down here:
+  --   1. It is NEVER printed on the resume. The printed sheet lists skills
+  --      flat, exactly as it always has, so nothing about ATS parsing or the
+  --      fourteen designs changes. The evidence is shown only in the
+  --      recruiter's applicant view.
+  --   2. It DOES affect the score. A matched skill with evidence counts in
+  --      full; one without counts at UNEVIDENCED_CREDIT (see lib/engine.ts).
+  --      Both are still counted — a skill you cannot point at is not a lie,
+  --      it is just weaker proof, and the arithmetic says so.
+  evidence_kind TEXT CHECK (evidence_kind IN ('experience','project','certification','education')),
+  evidence_ref  VARCHAR(200),
   PRIMARY KEY (resume_id, skill_id)
 );
 
@@ -605,6 +621,23 @@ INSERT INTO resume_skills (resume_id, skill_id)
 SELECT 3, skill_id FROM skills WHERE skill_norm IN ('customerservice','communication','microsoftoffice','englishproficiency','crmsoftware','teamwork');
 INSERT INTO resume_skills (resume_id, skill_id)
 SELECT 4, skill_id FROM skills WHERE skill_norm IN ('communication','recruitment','microsoftoffice','organization','socialmedia');
+
+-- Where these applicants say they used each skill. Deliberately incomplete:
+-- the soft skills below are left without a source so both states are visible
+-- in the demo — the recruiter's evidence panel shows sourced and unsourced
+-- side by side, and those skills score at partial credit rather than zero.
+UPDATE resume_skills rs SET evidence_kind = 'experience', evidence_ref = 'Web Development Intern, LGU San Fernando'
+  FROM skills s WHERE s.skill_id = rs.skill_id AND rs.resume_id = 1 AND s.skill_norm IN ('htmlcss','javascript');
+UPDATE resume_skills rs SET evidence_kind = 'project', evidence_ref = 'Barangay records system'
+  FROM skills s WHERE s.skill_id = rs.skill_id AND rs.resume_id = 1 AND s.skill_norm = 'git';
+UPDATE resume_skills rs SET evidence_kind = 'project', evidence_ref = 'School event portal'
+  FROM skills s WHERE s.skill_id = rs.skill_id AND rs.resume_id = 2 AND s.skill_norm IN ('htmlcss','javascript');
+UPDATE resume_skills rs SET evidence_kind = 'experience', evidence_ref = 'Customer Support Intern, Clark BPO'
+  FROM skills s WHERE s.skill_id = rs.skill_id AND rs.resume_id = 3 AND s.skill_norm IN ('customerservice','crmsoftware');
+UPDATE resume_skills rs SET evidence_kind = 'certification', evidence_ref = 'Customer Service Excellence'
+  FROM skills s WHERE s.skill_id = rs.skill_id AND rs.resume_id = 3 AND s.skill_norm = 'englishproficiency';
+UPDATE resume_skills rs SET evidence_kind = 'experience', evidence_ref = 'HR Intern, Manufacturing firm'
+  FROM skills s WHERE s.skill_id = rs.skill_id AND rs.resume_id = 4 AND s.skill_norm IN ('recruitment','organization');
 
 -- ---------- job postings ----------
 -- Posting 6 gets a deadline two weeks out, demoing the "Apply by" chip.

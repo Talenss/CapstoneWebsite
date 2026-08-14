@@ -169,6 +169,12 @@
                 <span><b>Skills</b><span class="w">{{ r.weights.skills * 100 }}% weight</span></span>
                 <b>{{ r.matchedSkills.length }} of {{ r.totalSkills }}{{ r.missingSkills.length ? ' · missing ' + r.missingSkills.join(', ') : '' }}</b>
               </div>
+              @if (r.unevidencedMatches.length) {
+                <div class="row">
+                  <span><b>Counted at half</b><span class="w">no source given</span></span>
+                  <b style="color:var(--muted);font-weight:500">{{ r.unevidencedMatches.join(', ') }}</b>
+                </div>
+              }
               <div class="row">
                 <span><b>Education</b><span class="w">{{ r.weights.education * 100 }}% weight</span></span>
                 <b [style.color]="r.eduMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ r.eduMeets ? 'Meets' : 'Below' }} {{ posting() ? eduLabels[posting()!.educationLevel] : '' }}</b>
@@ -260,6 +266,34 @@
                       <span [class.hit]="r.matchedSkills.includes(s)">{{ s }}</span>
                     }
                   </div>
+                </div>
+
+                <!-- WHERE EACH SKILL WAS USED — this panel and nowhere else.
+                     The applicant answered this in the builder, and the answer
+                     is deliberately absent from the document they download and
+                     from the Skills list directly above: a resume with a
+                     company name welded onto every skill parses badly in an
+                     ATS and reads badly to a person. Here it is the thing
+                     worth reading, because it is what separates a skill
+                     someone can account for from one they cannot.
+
+                     "No source given" is context, not an accusation. It has
+                     already been priced into the score at half credit; saying
+                     so on the same screen keeps the recruiter from counting
+                     the same fact twice. -->
+                <div class="p-sec evsec">
+                  <h4>Where they used each skill</h4>
+                  <p class="evnote">Answered by the applicant when they built the resume. Not printed on their resume &mdash; this view is the only place it appears.</p>
+                  @for (s of r.resume.skills; track s) {
+                    <div class="evrow">
+                      <b [class.hit]="r.matchedSkills.includes(s)">{{ s }}</b>
+                      @if (evidenceOf(r, s); as ev) {
+                        <span>{{ evidenceKindLabels[ev.kind] }} &mdash; {{ ev.ref }}</span>
+                      } @else {
+                        <span class="nosrc">No source given{{ r.matchedSkills.includes(s) ? ' · counted at half' : '' }}</span>
+                      }
+                    </div>
+                  }
                 </div>
               }
               <!-- The optional sections. They score nothing, but the applicant
@@ -439,14 +473,28 @@
              say" — a recruiter made to choose in order to proceed picks the
              first item, and the column fills with confident nonsense. Left
              blank it records that nobody gave a reason, which is at least
-             true. Never shown to the applicant. -->
+             true.
+
+             THE APPLICANT READS THIS. The label says so plainly, above the
+             control rather than in a tooltip, because a recruiter who learns
+             it afterwards has already written something they assumed was
+             private. What the applicant does not get is the name of the
+             person who chose it. -->
         @if (modalStatus() === 'rejected') {
+          <label style="font-size:12.5px;color:var(--muted);margin-bottom:-6px">
+            Reason — optional. <b>The applicant is shown this</b>, in plainer wording. Your name is not.
+          </label>
           <select [value]="modalReason()" (change)="setModalReason($event)"
-                  aria-label="Reason for not proceeding (optional, internal)"
+                  aria-label="Reason for not proceeding — optional, and shown to the applicant"
                   style="padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px">
-            <option value="">Reason (optional, internal)</option>
+            <option value="">No reason given</option>
             @for (k of REASONS; track k) { <option [value]="k">{{ REASON_LABELS[k] }}</option> }
           </select>
+          @if (modalReason(); as k) {
+            <p style="font-size:12.5px;color:var(--muted);margin:-4px 0 0;padding-left:10px;border-left:2px solid var(--rule)">
+              They will read: “{{ applicantWording(k) }}”
+            </p>
+          }
         }
         <button class="btn primary" type="button" (click)="saveStatus()" [disabled]="savingStatus()">
           @if (savingStatus()) { <span class="spinner"></span> Saving… } @else { Update status }

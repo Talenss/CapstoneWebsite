@@ -426,16 +426,29 @@ router.post('/history', async (req, res) => {
       // the recruiter already knows who they are from the row they clicked).
       if (maySeeNames && by === 'employer' && r.actor_name) e['byName'] = r.actor_name;
 
-      /* The reason rides the same gate as the name: the employer's own staff
-         see it, the applicant never does. This is a deliberate limit on the
-         transparency the rest of the system is built around, and the reason is
-         that a code the subject will read is a code nobody records candidly —
-         "stronger_candidate" becomes "other" the first time someone imagines
-         it being quoted back at them, and the trail stops being worth keeping.
-         An applicant retains their RA 10173 right to request what is held
-         about them; what they do not get is a channel that would quietly
-         corrupt the record at the point of writing. */
-      if (maySeeNames && r.reason) e['reason'] = r.reason;
+      /* THE REASON GOES TO THE APPLICANT TOO — unlike the name beside it.
+         This was built the other way round first, and the argument for hiding
+         it was real: a code its subject will read is a code some recruiters
+         will soften, and "stronger_candidate" turns into "other" the first
+         time someone pictures it quoted back at them.
+
+         It is still the wrong call for THIS study. Chapter 1's stated problem
+         is applicants who apply and hear nothing at all; a system that
+         finally records why, and then withholds precisely that from the one
+         person whose plans depend on it, argues against its own thesis. A
+         recruiter who would only be candid in secret is a cost worth paying
+         for an applicant who learns they were unreachable rather than
+         unqualified, and can fix their phone number before the next
+         application.
+
+         The distinction that survives is between the DECISION and the
+         DECIDER: the applicant learns what was decided, not which member of
+         staff decided it. That is why `byName` above keeps the narrower gate
+         and this does not. The wording each side reads differs too — the
+         recruiter's list is filing language, the applicant's is written to be
+         read by the person it is about (REASON_LABELS against
+         APPLICANT_REASON_LABELS in client/src/app/core/engine.ts). */
+      if (r.reason) e['reason'] = r.reason;
       return e;
     }),
   });

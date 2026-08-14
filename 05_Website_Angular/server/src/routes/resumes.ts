@@ -10,7 +10,7 @@ import { ResumeRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
 import { requireUser, requireRole } from '../lib/auth';
 import { fetchResume, serializeResume, recruiterMayReadResume } from '../lib/serializers';
-import { EDU_RANK, skillId } from '../lib/engine';
+import { EDU_RANK, EVIDENCE_KINDS, EvidenceKind, evidenceLabels, skillId, skillNorm } from '../lib/engine';
 import { extractResume } from '../lib/extract';
 import { UPLOAD_DIR, MAX_UPLOAD, ALLOWED_MIME } from '../config';
 import { sniffFileType, typeMatches } from '../lib/file-type';
@@ -69,6 +69,28 @@ router.post('/save', async (req, res) => {
   const projects = cap<any>(R.projects, 20);
   const languages = cap<any>(R.languages, 20);
   const references = cap<any>(R.references, 10);
+
+  /* WHERE EACH SKILL WAS USED. Accepted only when the kind is one we know and
+     the label matches an entry ALREADY ON THIS RESUME — the point of the
+     feature is that a source cannot be invented alongside the skill it is
+     meant to justify, so free text is not an option.
+
+     A link whose entry has since been renamed or deleted is DROPPED rather
+     than kept or rejected. Keeping it would show a recruiter a source the
+     resume no longer contains; rejecting the whole save would block an
+     applicant from fixing a job title. Dropping it costs that one skill its
+     full credit, and the builder shows it as unsourced the moment the resume
+     is reopened, so nothing disappears quietly. */
+  const labels = evidenceLabels({ experience, projects, certifications, education });
+  const rawEvidence = R.skillEvidence && typeof R.skillEvidence === 'object' ? R.skillEvidence : {};
+  const skillEvidence = new Map<string, { kind: EvidenceKind; ref: string }>();
+  for (const [name, v] of Object.entries(rawEvidence as Record<string, any>)) {
+    const kind = v?.kind as EvidenceKind;
+    const ref = String(v?.ref ?? '').trim().slice(0, 200);
+    if (!EVIDENCE_KINDS.includes(kind) || !ref) continue;
+    if (!labels[kind].has(ref)) continue;
+    skillEvidence.set(skillNorm(name), { kind, ref });
+  }
 
   // Ownership check up front so we can send a clean 403 (an error thrown
   // inside the transaction surfaces only as a generic 500).
@@ -206,10 +228,13 @@ router.post('/save', async (req, res) => {
         if (!trimmed) continue;
         const sid = await skillId(trimmed);
         const firstSeen = priorSkillDates.get(sid) ?? null;   // null → the column default, i.e. now
+        // Looked up on the normalized name so "JS" and "JavaScript" reach the
+        // same row the engine will later score — the same folding skillId did.
+        const ev = skillEvidence.get(skillNorm(trimmed)) ?? null;
         await tx.exec(
-          `INSERT INTO resume_skills (resume_id, skill_id, added_at)
-           VALUES (?,?, COALESCE(?::timestamptz, now())) ON CONFLICT DO NOTHING`,
-          [id, sid, firstSeen],
+          `INSERT INTO resume_skills (resume_id, skill_id, added_at, evidence_kind, evidence_ref)
+           VALUES (?,?, COALESCE(?::timestamptz, now()), ?, ?) ON CONFLICT DO NOTHING`,
+          [id, sid, firstSeen, ev?.kind ?? null, ev?.ref ?? null],
         );
       }
 
@@ -284,8 +309,13 @@ router.post('/duplicate', async (req, res) => {
          SELECT ?, cert_name, year_taken, sort_order FROM certifications WHERE resume_id = ?`, [nid, id],
       );
       await tx.exec(
-        `INSERT INTO resume_skills (resume_id, skill_id)
-         SELECT ?, skill_id FROM resume_skills WHERE resume_id = ?`, [nid, id],
+        /* The copy carries the sources across. A duplicated resume is the same
+           claims under a new title — dropping the evidence would score the
+           copy lower than the original for no reason the applicant could see.
+           added_at deliberately does NOT come along: this resume is new, and
+           its skills genuinely first appear on it today. */
+        `INSERT INTO resume_skills (resume_id, skill_id, evidence_kind, evidence_ref)
+         SELECT ?, skill_id, evidence_kind, evidence_ref FROM resume_skills WHERE resume_id = ?`, [nid, id],
       );
       return nid;
     });

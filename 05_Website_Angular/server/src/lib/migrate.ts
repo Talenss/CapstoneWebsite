@@ -192,4 +192,24 @@ export async function runMigrations(): Promise<void> {
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
   )`);
   await exec('CREATE INDEX IF NOT EXISTS idx_notes_app ON application_notes (application_id)');
+
+  /* WHERE EACH SKILL WAS USED — the entry on the applicant's own resume that
+     backs the claim. Both columns are nullable and every existing row gets
+     NULL, which is the honest answer: nobody was ever asked.
+
+     That nullability is not free, and the choice is deliberate. A matched
+     skill with no source scores at partial credit (lib/engine.ts,
+     UNEVIDENCED_CREDIT), so this migration DOES lower the live score of
+     resumes saved before the feature existed, until their owner opens the
+     builder and fills the sources in. Applications already submitted are
+     unaffected: they are ranked on the score snapshotted when they were sent
+     (routes/applications.ts), so no decision already made moves underneath
+     anybody. Backfilling a guessed source instead would have put words in an
+     applicant's mouth and shown a recruiter evidence nobody offered. */
+  await exec(`ALTER TABLE resume_skills ADD COLUMN IF NOT EXISTS evidence_kind TEXT`);
+  await exec(`ALTER TABLE resume_skills ADD COLUMN IF NOT EXISTS evidence_ref VARCHAR(200)`);
+  await exec('ALTER TABLE resume_skills DROP CONSTRAINT IF EXISTS skill_evidence_kind_known');
+  await exec(`ALTER TABLE resume_skills ADD CONSTRAINT skill_evidence_kind_known CHECK (
+    evidence_kind IS NULL OR evidence_kind IN ('experience','project','certification','education')
+  )`);
 }

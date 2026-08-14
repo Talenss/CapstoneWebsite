@@ -82,8 +82,8 @@ export async function serializeResume(r: ResumeRow): Promise<any> {
     ...(e.bullets ? { bullets: String(e.bullets).split('\n').map((b: string) => b.trim()).filter(Boolean) } : {}),
   }));
 
-  const sk = await query<{ skill_name: string; added_at: any }>(
-    `SELECT s.skill_name, rs.added_at FROM resume_skills rs
+  const sk = await query<{ skill_name: string; added_at: any; evidence_kind: string | null; evidence_ref: string | null }>(
+    `SELECT s.skill_name, rs.added_at, rs.evidence_kind, rs.evidence_ref FROM resume_skills rs
        JOIN skills s ON s.skill_id = rs.skill_id
       WHERE rs.resume_id = ? ORDER BY s.skill_name`,
     [id],
@@ -94,6 +94,21 @@ export async function serializeResume(r: ResumeRow): Promise<any> {
      view reads it. */
   const skillsAddedAt: Record<string, number> = {};
   for (const r2 of sk) if (r2.added_at) skillsAddedAt[r2.skill_name] = ts(r2.added_at);
+
+  /* WHERE EACH SKILL WAS USED. Always emitted, even when it is empty: the
+     engine reads an empty object as "asked, no sources given" (partial
+     credit) and an absent one as "never asked" (full credit), so dropping
+     the key when nothing is linked would quietly hand back the credit this
+     feature exists to withhold. Skills with no source simply have no entry.
+
+     This never reaches the printed sheet. resume-print renders `skills`, a
+     flat list of strings, and has no idea this map exists. */
+  const skillEvidence: Record<string, { kind: string; ref: string }> = {};
+  for (const r2 of sk) {
+    if (r2.evidence_kind && r2.evidence_ref) {
+      skillEvidence[r2.skill_name] = { kind: r2.evidence_kind, ref: r2.evidence_ref };
+    }
+  }
 
   const ce = await query<any>(
     `SELECT cert_name, year_taken, issuer, credential_id
@@ -176,6 +191,7 @@ export async function serializeResume(r: ResumeRow): Promise<any> {
     },
     education, experience, skills, certifications, ownFile,
     ...(Object.keys(skillsAddedAt).length ? { skillsAddedAt } : {}),
+    skillEvidence, // always present, even empty — see above
     // Only present when non-empty — an empty array would still be truthy in
     // a template and could render a heading with nothing under it.
     ...(projects.length ? { projects } : {}),

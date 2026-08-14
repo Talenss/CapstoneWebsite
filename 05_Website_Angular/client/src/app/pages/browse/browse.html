@@ -138,6 +138,17 @@
               <span><b>Skills matched</b><span class="w">{{ row.s.weights.skills * 100 }}% of the score</span></span>
               <b>{{ row.s.matchedSkills.length }} of {{ row.posting.skills.length }}{{ row.s.missingSkills.length ? ' — missing: ' + row.s.missingSkills.join(', ') : '' }}</b>
             </div>
+            <!-- The applicant is told which of their skills are counting at
+                 half, and where to fix it. The site's claim is that the
+                 formula is published rather than hidden, and a deduction the
+                 person cannot see is a hidden formula whatever the code
+                 comments say. -->
+            @if (row.s.unevidencedMatches.length) {
+              <div class="row">
+                <span><b>Counting at half</b><span class="w">no source on your resume</span></span>
+                <b>{{ row.s.unevidencedMatches.join(', ') }} — <a routerLink="/resume-builder" [queryParams]="{ id: resume()?.id }">say where you used {{ row.s.unevidencedMatches.length === 1 ? 'it' : 'them' }}</a></b>
+              </div>
+            }
             <div class="row">
               <span><b>Education</b><span class="w">{{ row.s.weights.education * 100 }}% of the score</span></span>
               <b [style.color]="row.s.eduMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ row.s.eduMeets ? 'Meets' : 'Below' }} {{ EDU_LABELS[row.posting.educationLevel] }}</b>

@@ -5,8 +5,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
-import { AppStatus, Personal, Posting, RankedRow, Resume, ScreeningNote, StatusEvent, Tier } from '../../core/models';
-import { EDU_LABELS, REASON_LABELS, REJECTION_REASONS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
+import { AppStatus, Personal, Posting, RankedRow, RejectionReason, Resume, ScreeningNote, SkillEvidence, StatusEvent, Tier } from '../../core/models';
+import { APPLICANT_REASON_LABELS, EDU_LABELS, EVIDENCE_KIND_LABELS, REASON_LABELS, REJECTION_REASONS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 
 /** Port of 04_Website/app/hr-applicants.html — the ranked-applicant list
@@ -59,6 +59,13 @@ export class HrApplicants {
   savingNote = signal(false);
   readonly REASONS = REJECTION_REASONS;
   readonly REASON_LABELS = REASON_LABELS;
+  /** What the APPLICANT will read for the code currently picked, previewed
+   *  under the control so the recruiter chooses knowing how it lands. A
+   *  method because modalReason is a plain string — the empty case is "no
+   *  reason", not a key. */
+  applicantWording(k: string): string {
+    return APPLICANT_REASON_LABELS[k as RejectionReason] ?? '';
+  }
   savingStatus = signal(false);
 
   // ---- message the applicant (interview invite) ----
@@ -259,6 +266,15 @@ export class HrApplicants {
     return (d > 0 ? '+' : '') + d;
   }
   setNoteDraft(e: Event): void { this.noteDraft.set((e.target as HTMLTextAreaElement).value); }
+
+  readonly evidenceKindLabels = EVIDENCE_KIND_LABELS;
+
+  /** Where the applicant said they used one skill, or null if they named no
+   *  source. A method rather than a template lookup so an older resume with
+   *  no map at all reads as "no source" instead of throwing. */
+  evidenceOf(r: RankedRow, skill: string): SkillEvidence | null {
+    return r.resume.skillEvidence?.[skill] ?? null;
+  }
 
   /* ---------- who already handled this applicant ----------
      Clark Outsourcing routes departments to different HR owners, so several recruiters

@@ -64,8 +64,10 @@ export interface ApiAdapter {
     mine(): Promise<ApiResult<{ applications: Application[] }>>;
     ranked(postingId: string): Promise<ApiResult<{ posting: Posting; rows: RankedRow[] }>>;
     /** `reason` is optional and only meaningful on a rejection. It is recorded
-     *  on the history row and shown to the employer's own staff — never to the
-     *  applicant, so that it stays worth recording candidly. */
+     *  on the history row and read by BOTH audiences — the employer's staff in
+     *  their own filing wording, the applicant in the second person. What the
+     *  applicant does not learn is which staff member chose it. See
+     *  routes/applications.ts for why those two gates differ. */
     setStatus(applicationId: string, status: string, reason?: string | null): Promise<ApiResult<{ application: Application }>>;
 
     /* SCREENING NOTES. Recruiter-only on every route: the applicant has no
