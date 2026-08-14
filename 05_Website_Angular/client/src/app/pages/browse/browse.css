@@ -27,3 +27,12 @@
 }
 .scored-from b{ color:var(--text); font-weight:600 }
 .scored-from a{ color:var(--accent-deep); margin-left:6px }
+
+/* The counter that replaced the struck-through list of unmet requirements.
+   Deliberately quiet — it is a note that something is not matched yet, not a
+   warning and not a checklist. See missingHint() in core/engine.ts. */
+.chip.more {
+  border-style: dashed;
+  color: var(--muted);
+  background: transparent;
+}

@@ -6,7 +6,7 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { TourService } from '../../shared/tour/tour.service';
 import { AppStatus, Application, Posting, RecommendationItem, Resume, StatusEvent } from '../../core/models';
-import { APPLICANT_REASON_LABELS, EDU_LABELS, STATUS_LABELS, THRESHOLDS, WEIGHTS, scoreLocal, statusBadge, tierColor, tierLabel, tierOf } from '../../core/engine';
+import { APPLICANT_REASON_LABELS, EDU_LABELS, missingHint, STATUS_LABELS, THRESHOLDS, WEIGHTS, scoreLocal, statusBadge, tierColor, tierLabel, tierOf } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 
 type TierKey = 'strong' | 'possible' | 'related';
@@ -114,6 +114,10 @@ export class SeekerDashboard implements OnInit {
     if (e.to === 'withdrawn') return 'You withdrew this application';
     return 'Moved to ' + STATUS_LABELS[e.to].toLowerCase();
   }
+
+  /** How many requirements are unmet and of what kind, never which ones —
+   *  see missingHint() in core/engine.ts. */
+  readonly missingHint = missingHint;
 
   /** Why the employer moved this application, addressed to the person it is
    *  about rather than filed in the recruiter's own wording. Empty when no

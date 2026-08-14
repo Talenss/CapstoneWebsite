@@ -67,9 +67,24 @@
               }
             </div>
             <p class="desc">{{ row.posting.description }}</p>
+            <!-- WITH a resume, only the skills the applicant HAS are named; the
+                 rest are a count. The struck-through list that used to be here
+                 named every requirement they lacked, which is a set of words to
+                 paste rather than an explanation. WITHOUT a resume this is a
+                 plain job advert and lists what the role asks for, because an
+                 advert that hides its requirements is not an advert. -->
             <div>
-              @for (sk of row.posting.skills; track sk) {
-                <span class="chip" [class.miss]="!!row.s && !row.s.matchedSkills.includes(sk)">{{ sk }}</span>
+              @if (row.s) {
+                @for (sk of row.s.matchedSkills; track sk) {
+                  <span class="chip">{{ sk }}</span>
+                }
+                @if (row.s.missingSkills.length) {
+                  <span class="chip more">+{{ row.s.missingSkills.length }} more asked for</span>
+                }
+              } @else {
+                @for (sk of row.posting.skills; track sk) {
+                  <span class="chip">{{ sk }}</span>
+                }
               }
             </div>
             <div class="req">
@@ -136,13 +151,21 @@
           @if (row.s) {
             <div class="row">
               <span><b>Skills matched</b><span class="w">{{ row.s.weights.skills * 100 }}% of the score</span></span>
-              <b>{{ row.s.matchedSkills.length }} of {{ row.posting.skills.length }}{{ row.s.missingSkills.length ? ' — missing: ' + row.s.missingSkills.join(', ') : '' }}</b>
+              <b>{{ row.s.matchedSkills.length }} of {{ row.posting.skills.length }}</b>
             </div>
             <!-- The applicant is told which of their skills are counting at
                  half, and where to fix it. The site's claim is that the
                  formula is published rather than hidden, and a deduction the
                  person cannot see is a hidden formula whatever the code
                  comments say. -->
+            <!-- How many, and what kind. Enough to act on if the skill is
+                 genuinely yours; not enough to copy if it is not. -->
+            @if (missingHint(row.s.missingSkills); as hint) {
+              <div class="row">
+                <span><b>Not yet matched</b><span class="w">read the full posting below</span></span>
+                <b style="font-weight:500">{{ hint }}</b>
+              </div>
+            }
             @if (row.s.unevidencedMatches.length) {
               <div class="row">
                 <span><b>Counting at half</b><span class="w">no source on your resume</span></span>
@@ -159,9 +182,16 @@
             </div>
             <div class="row"><span><b>If your score is low</b></span><b style="font-weight:500;color:var(--muted)">You still appear on the recruiter’s list.</b></div>
           } @else {
-            <div class="row"><span><b>Skills asked for</b></span><b>{{ row.posting.skills.join(', ') }}</b></div>
             <div class="row"><span><b>How scoring works</b></span><b style="font-weight:500;color:var(--muted)">Skills {{ postingWeights(row.posting).skills * 100 }}% · education {{ postingWeights(row.posting).education * 100 }}% · experience {{ postingWeights(row.posting).experience * 100 }}%</b></div>
           }
+          <!-- What the role asks for, stated plainly and WITHOUT marking which
+               ones this applicant has. Shown to everyone, because a job advert
+               that will not say what it requires is not usable — a person has
+               to be able to judge whether a role suits them. What is missing
+               here is the comparison: the applicant can read the requirements
+               and check themselves, and the system does not do the diff for
+               them and hand over the difference as a list. -->
+          <div class="row"><span><b>Skills asked for</b><span class="w">the role's requirements, unmarked</span></span><b style="font-weight:500">{{ row.posting.skills.join(', ') }}</b></div>
         </div>
       </div>
       <!-- One way out, not two. The close-x above is the standard placement and

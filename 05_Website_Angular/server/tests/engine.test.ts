@@ -18,7 +18,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { scoreWith, DEFAULT_SETTINGS, skillNorm, SKILL_ALIASES, EDU_RANK, MatchSettings, UNEVIDENCED_CREDIT, EVIDENCE_KINDS, EvidenceKind, evidenceLabels } from '../src/lib/engine';
-import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK, UNEVIDENCED_CREDIT as CLIENT_UNEVIDENCED_CREDIT, evidenceLabels as clientEvidenceLabels } from '../../client/src/app/core/engine';
+import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK, UNEVIDENCED_CREDIT as CLIENT_UNEVIDENCED_CREDIT, evidenceLabels as clientEvidenceLabels, SKILL_CATEGORY, missingHint } from '../../client/src/app/core/engine';
 
 // ---------- helpers ----------
 
@@ -646,4 +646,44 @@ test('the schema will accept exactly the four source kinds the engine names', ()
   const allowed = [...check![1].matchAll(/'([a-z]+)'/g)].map((m) => m[1]);
   assert.deepEqual(allowed.sort(), [...EVIDENCE_KINDS].sort(),
     'a kind the engine accepts but the database rejects would fail the save with a 500');
+});
+
+test('the skill categories the applicant hint uses match the seeded catalogue', () => {
+  /* The applicant is no longer told WHICH requirements they have not met —
+     only how many and of what kind. That hint reads SKILL_CATEGORY in the
+     client engine, which is a copy of the `category` column in the skills
+     catalogue. A copy that drifted would tell an applicant they are short two
+     technical skills when they are short two soft ones, which is worse than
+     saying nothing: it would send them to look at the wrong part of their own
+     resume. So the copy is checked against the seed rather than trusted. */
+  const sql = readFileSync(join(__dirname, '..', '..', 'db', 'resumematch_ph.sql'), 'utf8');
+  const block = /INSERT INTO skills \(skill_name, skill_norm, category\) VALUES([\s\S]*?);/.exec(sql);
+  const rows = [...block![1].matchAll(/\('[^']+','([a-z0-9]+)','([a-z]+)'\)/g)];
+  assert.ok(rows.length >= 20, `expected a seeded catalogue, found ${rows.length}`);
+
+  for (const [, norm, category] of rows) {
+    assert.equal(SKILL_CATEGORY[norm], category,
+      `skills.category says "${norm}" is ${category}, SKILL_CATEGORY says ${SKILL_CATEGORY[norm] ?? 'nothing'}`);
+  }
+  for (const norm of Object.keys(SKILL_CATEGORY)) {
+    assert.ok(rows.some(([, n]) => n === norm),
+      `SKILL_CATEGORY carries "${norm}", which no row in the seeded catalogue has`);
+  }
+});
+
+test('the applicant is told how many requirements are unmet, never which', () => {
+  /* The behaviour the recruiter still gets — missingSkills, by name — is
+     unchanged and tested elsewhere. This pins the APPLICANT-facing summary:
+     it must carry the count and the kind, and must not carry a skill name
+     that could be pasted into a resume. */
+  const hint = missingHint(['Troubleshooting', 'Windows', 'Teamwork']);
+  assert.match(hint, /3 skills/);
+  assert.match(hint, /2 technical/);
+  assert.match(hint, /1 workplace/);
+  for (const named of ['Troubleshooting', 'Windows', 'Teamwork']) {
+    assert.ok(!hint.includes(named), `the hint must not name "${named}" — it reads "${hint}"`);
+  }
+
+  assert.equal(missingHint([]), '', 'nothing to say when nothing is unmet');
+  assert.match(missingHint(['Teamwork']), /1 skill this role asks for is not on your resume/);
 });

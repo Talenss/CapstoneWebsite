@@ -245,6 +245,59 @@ export const SKILL_ALIASES: Record<string, string> = {
   socmed: 'socialmedia', socialmediamanagement: 'socialmedia',
 };
 
+/* ------------------------------------------------------------
+   SKILL CATEGORIES — keyed by the canonical normalised form, mirroring the
+   `category` column of the seeded skills catalogue. An engine test reads
+   db/resumematch_ph.sql and fails if the two disagree, so this stays a copy
+   of the database rather than a second opinion about it.
+
+   Used for ONE purpose: telling an applicant what KIND of requirement they
+   have not met, without naming it. See missingHint() below for why that
+   distinction exists.
+   ------------------------------------------------------------ */
+export type SkillCategory = 'technical' | 'soft';
+
+export const SKILL_CATEGORY: Record<string, SkillCategory> = {
+  htmlcss: 'technical', javascript: 'technical', git: 'technical',
+  troubleshooting: 'technical', windows: 'technical', computernetworking: 'technical',
+  crmsoftware: 'technical', canva: 'technical', copywriting: 'technical',
+  dataentry: 'technical', quickbooks: 'technical', bookkeeping: 'technical',
+  medicalterminology: 'technical', microsoftoffice: 'technical', socialmedia: 'technical',
+  teamwork: 'soft', communication: 'soft', customerservice: 'soft',
+  englishproficiency: 'soft', attentiontodetail: 'soft', organization: 'soft',
+  recruitment: 'soft', scheduling: 'soft', leadership: 'soft', timemanagement: 'soft',
+};
+
+/** How the applicant is told about a requirement they have not met.
+ *
+ *  NOT BY NAME, and that is the point. The site used to print the missing
+ *  skills as a list — "missing: Troubleshooting, Windows, Networking" — which
+ *  is a ready-made set of words to paste into a resume. Naming them turned an
+ *  explanation into an instruction.
+ *
+ *  So the applicant is told HOW MANY and WHAT KIND, which is enough to act on
+ *  honestly and not enough to copy. Someone who really does troubleshoot reads
+ *  "two technical skills" and goes to check the posting; someone who does not
+ *  is given no word to claim.
+ *
+ *  Be clear about the limit: the opening itself still states what it asks for,
+ *  because a job advert that hides its requirements is not a job advert. What
+ *  this removes is the system doing the comparison and handing over the
+ *  difference. The recruiter's own view is unchanged — see hr-applicants,
+ *  where missing skills are still named, because the person deciding needs to
+ *  know exactly what is absent. */
+export function missingHint(missing: string[]): string {
+  if (!missing.length) return '';
+  let tech = 0, soft = 0;
+  for (const s of missing) (SKILL_CATEGORY[normSkill(s)] === 'soft' ? soft++ : tech++);
+  const parts: string[] = [];
+  if (tech) parts.push(`${tech} technical`);
+  if (soft) parts.push(`${soft} workplace`);
+  const kinds = parts.join(' and ');
+  const n = missing.length;
+  return `${n} ${n === 1 ? 'skill' : 'skills'} this role asks for ${n === 1 ? 'is' : 'are'} not on your resume — ${kinds}`;
+}
+
 /** Normalize a skill to its canonical comparable form: strip case and
  *  punctuation, then fold known synonyms together. Used for BOTH sides
  *  of every comparison, so a resume and a posting that mean the same
