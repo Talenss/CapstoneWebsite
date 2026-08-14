@@ -254,3 +254,39 @@ characteristics, not to résumé designs.
 The sweep script checks a fixed list of patterns. It cannot find a claim nobody
 thought to list, and it does not read the manuscript itself, which is not in
 this repository.
+
+## Consistency pass, 14 August 2026 (second)
+
+Changing what the applicant is told about unmet requirements turned out to
+touch a claim the paper leans on. The site used to name them — "missing:
+Troubleshooting, Windows, Networking" — and now reports how many and of what
+kind. **Thirty-five statements across eight documents said the system names
+them**, and several were not descriptions but commitments:
+
+- an **objective** in Replacement 3: *"states plainly which required skills an
+  applicant is missing"*
+- the **Scope**, the **Introduction** and the **Technical Background** in
+  Replacements 1, 4 and 8
+- the study's **ethical differentiator** in the defence documents: *"the score
+  is shown to the person being scored, with the missing skills named"*
+- one of the **four rules → four decisions** lines that maps the theoretical
+  framework onto the build: *"explanation → published weights and named missing
+  skills"*
+
+All corrected. The transparency claim is narrower now and still substantive:
+the applicant sees the score, the three components, the weights, which of their
+skills matched, how many did not and of what kind, the posting's own list of
+requirements, and — since the previous change — the reason recorded for a
+decision. A commercial system shows none of it.
+
+**Study Guide Q31 is the one to re-read.** It is the panel question about
+exactly this — *"you tell applicants which skills they are missing and you do
+not verify what they type, is that not an invitation to lie?"* — and its old
+answer conceded the point and bounded the consequence. The new answer says the
+design changed, names the three things that bound what is left (half credit for
+an unsourced skill, ranking on the snapshot, the recruiter's evidence panel),
+and still refuses to claim the exploit is closed, because the posting states its
+requirements and always will.
+
+Recorded as change 14 in the replacement-text document, so it reaches the
+manuscript with the rest.

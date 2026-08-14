@@ -262,7 +262,13 @@
             </div>
             <div class="sugg">
               <b>Skills Clark Outsourcing is currently asking for</b>
-              <p class="hint" style="margin:-4px 0 9px">The number is how many open positions ask for it. Click to add, click again to take it back off — chosen skills stay where they are.</p>
+              <!-- This pool is aggregate market information — what employers here
+                   ask for across all their openings — not a per-application diff,
+                   and it is deliberately kept. Knowing what the market wants is the
+                   point of the learning hub too. What the copy has to do is stop it
+                   reading as a shopping list, which is why the half-credit rule is
+                   stated right here rather than only in the list below. -->
+              <p class="hint" style="margin:-4px 0 9px">The number is how many open positions ask for it. Click to add, click again to take it back off — chosen skills stay where they are. Add only what you have actually done: below, each skill asks where you used it, and one you cannot point to counts half.</p>
               <div class="pool">
                 @for (s of poolAll(); track s) {
                   <button type="button" [class.on]="skillListed(s)" [attr.aria-pressed]="skillListed(s)"
