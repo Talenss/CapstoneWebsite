@@ -10,7 +10,7 @@ documents, not source — the system itself is the folder above.
 | `ResumeMatch-PH-Research-Instruments.docx` | The five instruments the study administers — 117 items, all closed — laid out with tick boxes so they can be printed and filled in, plus an administration sheet. Instrument C carries four items repeated word for word from Instrument A, so the change in one respondent's own answer can be tested, and the ten items of the System Usability Scale, scored on their own 0–100 scale. Instrument E is a ranking task: the recruiter orders five résumés and the study computes Spearman's rank correlation against the system's order. Generated from the same source as the manuscript's Appendix A, so the two cannot drift apart. |
 | `ResumeMatch-PH-Google-Forms.docx` | The same five instruments laid out as Google Forms questions — question type, options and section descriptions for every item — plus the checklist for what to do once responses are in. Generated from the same source, for the same reason. |
 | `ResumeMatch-PH-Study-Guide.docx` | The defence study guide: the whole paper section by section, then 120 practice questions with answers written to be said out loud, defence notes, alignment checks and the five figures. Part 4 works every statistic in the study by hand — weighted mean and SD, Wilcoxon signed-rank, the System Usability Scale, Spearman's rho and Cronbach's alpha — on numbers small enough to reproduce with a pen. |
-| `ResumeMatch-PH-Codebase.docx` | Every source file in the repository and what it does, plus the scoring engine in full with its rounding rule, the fourteen database CHECK constraints, the seven steps a single application takes from Apply to a ranked list, and the security that is actually implemented — including the gaps. |
+| `ResumeMatch-PH-Codebase.docx` | Every source file in the repository and what it does, plus the scoring engine in full with its rounding rule, the sixteen database CHECK constraints, the seven steps a single application takes from Apply to a ranked list, and the security that is actually implemented — including the gaps. |
 | `ResumeMatch-PH-Start-Here.docx` | The short guide, for a groupmate who did not build the system. The study, the website, the score with a worked example, where the AI is and is not, twelve questions with answers, and the numbers to memorise. About 25 minutes. |
 | `ResumeMatch-PH-Website-Guide.docx` | Every page and every feature, in the order a user meets them, with three worked scores and the design decisions worth being able to defend. |
 | `ResumeMatch-PH-Codebase-Guide.docx` | How the program is built, for whoever answers the technical questions: the two-adapter design, one request followed end to end, the scoring engine in full, the database, the six test suites, and how to run it. |
@@ -166,3 +166,30 @@ across six suites. **The scoring formula printed in the manuscript's Chapter 3
 is now incomplete** — it reads matched ÷ required and should read
 (matched − unsourced × 0.5) ÷ required. That edit has not been made to the
 paper yet, and the Manuscript Guide lists it under what is still open.
+
+## The three older documents, brought in line
+
+`ResumeMatch-PH-Codebase.docx`, `-Study-Guide.docx` and
+`-Complete-Documentation.docx` predate the two features above, and had drifted
+further than that. All three were updated in place on 14 August 2026:
+
+- **Codebase.docx** promises in its own opening that line counts are read from
+  the repository at generation time, so every count in it was refreshed from
+  the working tree rather than hand-patched — seventeen files had moved, some
+  by hundreds of lines. Also: 22 tables, sixteen CHECK constraints, the engine
+  listing with its evidence term, and the end-to-end walkthrough corrected to
+  say the ranked list sorts on the snapshot.
+- **Study-Guide.docx** carries the answers the group says out loud, so the edit
+  that matters most is **Q89 — "state the formula"**, which now includes the
+  half-credit term. A new subsection 3.6 adds five questions (Q112a–e) on
+  evidence-linked skills and on what a rejected applicant is told, each written
+  to concede the limit before a panelist finds it. Test counts and the
+  pre-defence checklist were updated; the checklist now has a fourth item, the
+  Chapter 3 formula correction.
+- **Complete-Documentation.docx** was the most out of date: 55 endpoints rather
+  than 45, 160 tests rather than 56, fourteen résumé designs rather than eight,
+  and a claim that there is no projects section — there is, along with
+  languages and references, none of which is scored.
+
+Line counts, table counts, endpoint counts and test counts in all seven
+documents were read from the repository at `e26ded0`, not carried over.
