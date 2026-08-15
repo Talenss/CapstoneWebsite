@@ -11,6 +11,7 @@ documents, not source — the system itself is the folder above.
 | `ResumeMatch-PH-Google-Forms.docx` | The same five instruments laid out as Google Forms questions — question type, options and section descriptions for every item — plus the checklist for what to do once responses are in. Generated from the same source, for the same reason. |
 | `ResumeMatch-PH-Study-Guide.docx` | The defence study guide: the whole paper section by section, then 125 practice questions with answers written to be said out loud, defence notes, alignment checks and the five figures. Part 4 works every statistic in the study by hand — weighted mean and SD, Wilcoxon signed-rank, the System Usability Scale, Spearman's rho and Cronbach's alpha — on numbers small enough to reproduce with a pen. |
 | `ResumeMatch-PH-Codebase.docx` | Every source file in the repository and what it does, plus the scoring engine in full with its rounding rule, the sixteen database CHECK constraints, the seven steps a single application takes from Apply to a ranked list, and the security that is actually implemented — including the gaps. |
+| `ResumeMatch-PH-Explained-Simply.docx` | The system and the study for someone starting from zero — no code, no statistics vocabulary, no assumed knowledge. Covers the problem, the site, the score with a worked example, the four rules that make padding a skills list expensive, the questionnaires, what each statistic is FOR, how many respondents and why, and a word list defining every term used anywhere in this project. Read this before any other document. |
 | `ResumeMatch-PH-Start-Here.docx` | The short guide, for a groupmate who did not build the system. The study, the website, the score with a worked example, where the AI is and is not, twelve questions with answers, and the numbers to memorise. About 25 minutes. |
 | `ResumeMatch-PH-Website-Guide.docx` | Every page and every feature, in the order a user meets them, with three worked scores and the design decisions worth being able to defend. |
 | `ResumeMatch-PH-Codebase-Guide.docx` | How the program is built, for whoever answers the technical questions: the two-adapter design, one request followed end to end, the scoring engine in full, the database, the six test suites, and how to run it. |
@@ -290,3 +291,37 @@ requirements and always will.
 
 Recorded as change 14 in the replacement-text document, so it reaches the
 manuscript with the rest.
+
+## Written for people who did not build it, 15 August 2026
+
+`ResumeMatch-PH-Explained-Simply.docx` is new and should be the first thing a
+group member reads. It assumes nothing — not the code, not the method, not the
+vocabulary — and its section 9 is a word list covering every term in this
+folder, from "ATS" and "parsing" through to "effect size", "pre-experimental"
+and "total enumeration".
+
+The five main guides now open with a short "start here if this is new to you"
+note pointing at it, so somebody who opens the wrong document first is
+redirected rather than discouraged. The guides themselves were not rewritten:
+the Study Guide's answers are meant to be said out loud at a defence and are
+precise on purpose, and the Codebase Guide's value is in its exactness. The
+plain-language document carries the simplicity; those carry the detail.
+
+**Two corrections went in with it, both in the Study Guide:**
+
+- **Q55 said the study has no power calculation** — *"we test no hypothesis and
+  make no inferential claim"*. That was true before the Wilcoxon signed-rank
+  test was added in the 11 August revision, and false afterwards. It now gives
+  the calculation: 35 complete pairs to detect a medium change (dz = 0.5) at
+  80% power, α = .05 two-tailed; 40 as the target; 55–60 invited, because the
+  before and after questionnaires fall on different days and losing one
+  respondent loses a whole pair. Its follow-up trap now covers the Slovin
+  question, which is the likeliest one to be asked.
+- **Q54 did not mention** that respondents may be employed and looking for
+  different work, though Instrument A item 2 has a box for exactly that. The
+  Method text still needs the same widening — see the open item below.
+
+Still open: `Updated-Manuscript-Sections.docx` Replacement 9 describes the
+40 job seekers without the employed-and-looking category its own instrument
+admits, and carries no power justification. Both are drafted above and neither
+has been written into that document yet.
