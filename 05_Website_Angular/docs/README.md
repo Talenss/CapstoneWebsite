@@ -7,6 +7,7 @@ documents, not source — the system itself is the folder above.
 |---|---|
 | `ResumeMatch-PH-Design-Specification.pdf` | 20-page design specification: site map, user flows, five wireframes, two mockups, the design system, use case diagram, ERD, the matching algorithm, the API surface, the testing strategy, and the build sequence. Written for the adviser as the "everything you need to start building" document. |
 | `ResumeMatch-PH-Updated-Manuscript-Sections.docx` | Copy-paste-ready replacement text for every section of the capstone paper that the built system has outgrown. Thirteen substantive changes, each section reproduced in full between BEGIN/END markers. Replacement 8 carries the corrected Chapter 3 scoring formula. |
+| `ResumeMatch-PH-Appendix-B-and-C.docx` | The consent form and the two task sheets — the appendices the instruments refer to and that did not exist. Appendix B goes at the top of every Google Form; Appendix C is what a respondent works through before answering Instrument C or D, so that every respondent has done the same things before being asked about them. Drafts, for the adviser to review. |
 | `ResumeMatch-PH-Research-Instruments.docx` | The five instruments the study administers — 117 items, all closed — laid out with tick boxes so they can be printed and filled in, plus an administration sheet. Instrument C carries four items repeated word for word from Instrument A, so the change in one respondent's own answer can be tested, and the ten items of the System Usability Scale, scored on their own 0–100 scale. Instrument E is a ranking task: the recruiter orders five résumés and the study computes Spearman's rank correlation against the system's order. Generated from the same source as the manuscript's Appendix A, so the two cannot drift apart. |
 | `ResumeMatch-PH-Google-Forms.docx` | The same five instruments laid out as Google Forms questions — question type, options and section descriptions for every item — plus the checklist for what to do once responses are in. Generated from the same source, for the same reason. |
 | `ResumeMatch-PH-Study-Guide.docx` | The defence study guide: the whole paper section by section, then 125 practice questions with answers written to be said out loud, defence notes, alignment checks and the five figures. Part 4 works every statistic in the study by hand — weighted mean and SD, Wilcoxon signed-rank, the System Usability Scale, Spearman's rho and Cronbach's alpha — on numbers small enough to reproduce with a pen. |
@@ -325,3 +326,39 @@ Still open: `Updated-Manuscript-Sections.docx` Replacement 9 describes the
 40 job seekers without the employed-and-looking category its own instrument
 admits, and carries no power justification. Both are drafted above and neither
 has been written into that document yet.
+
+## The missing appendices, 15 August 2026
+
+An audit of what the documents refer to found four things referenced and not
+written. Two of them block data collection outright:
+
+- **Appendix B, the consent form.** The instruments say it is "the first page
+  of each Google Form, before any item is shown." It did not exist. Now
+  drafted, covering what is collected, the respondent code and why it means an
+  individual response cannot be withdrawn after submission, voluntariness,
+  storage and disposal, RA 10173, and the transfer to Google if the document
+  reader is enabled.
+- **Appendix C, Task Sheets 1 and 2.** Referenced eight times — Instrument C is
+  administered "after the respondent has completed Task Sheet 1" — and never
+  written. Without them each respondent does something different before the
+  "after" questionnaire, which makes those answers non-comparable. Now drafted
+  for both groups, sequenced to exercise exactly what the instruments ask
+  about, and written to be worked through with no researcher beside the
+  respondent.
+- **Appendix D, the signed permission letter and approval sheet.** Cannot be
+  drafted here — these need signatures from Clark Outsourcing and the School of
+  Computing.
+- **The manuscript itself** is still not in this repository, so no document in
+  this folder can be checked against it.
+
+The task sheets surfaced four setup jobs that had not been written down
+anywhere: a practice opening seeded with applicants at varying scores, practice
+recruiter accounts so HR respondents do not spend a session waiting for
+verification codes, five printed résumés for the Instrument E ranking task that
+must be the same five for every recruiter and must be on paper, and a decision
+about which build the sessions run on. That last one matters — the paper's
+claims about passwords, storage and the database are true of the API build and
+not of the public demo.
+
+Replacement 9 in the manuscript text now carries the sample-size justification
+and the widened respondent definition, recorded as change 15.
