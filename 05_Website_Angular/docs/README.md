@@ -12,6 +12,7 @@ documents, not source — the system itself is the folder above.
 | `ResumeMatch-PH-Google-Forms.docx` | The same five instruments laid out as Google Forms questions — question type, options and section descriptions for every item — plus the checklist for what to do once responses are in. Generated from the same source, for the same reason. |
 | `ResumeMatch-PH-Study-Guide.docx` | The defence study guide: the whole paper section by section, then 125 practice questions with answers written to be said out loud, defence notes, alignment checks and the five figures. Part 4 works every statistic in the study by hand — weighted mean and SD, Wilcoxon signed-rank, the System Usability Scale, Spearman's rho and Cronbach's alpha — on numbers small enough to reproduce with a pen. |
 | `ResumeMatch-PH-Codebase.docx` | Every source file in the repository and what it does, plus the scoring engine in full with its rounding rule, the sixteen database CHECK constraints, the seven steps a single application takes from Apply to a ranked list, and the security that is actually implemented — including the gaps. |
+| `ResumeMatch-PH-Reviewer.docx` | The single document a group member studies from. Ten parts: the study on one page, the website, the four rules that make padding a skills list expensive, the code in repeatable words, the paper chapter by chapter, the research method, how many respondents and why, thirty practice questions with answers, the numbers to know, and what to say when you do not know. Written as simply as the material allows without being made wrong. |
 | `ResumeMatch-PH-Explained-Simply.docx` | The system and the study for someone starting from zero — no code, no statistics vocabulary, no assumed knowledge. Covers the problem, the site, the score with a worked example, the four rules that make padding a skills list expensive, the questionnaires, what each statistic is FOR, how many respondents and why, and a word list defining every term used anywhere in this project. Section 8 works through effect size with two sets of ten real answers, because it is the one idea in the method that has to be seen rather than described. Read this before any other document. |
 | `ResumeMatch-PH-Start-Here.docx` | The short guide, for a groupmate who did not build the system. The study, the website, the score with a worked example, where the AI is and is not, twelve questions with answers, and the numbers to memorise. About 25 minutes. |
 | `ResumeMatch-PH-Website-Guide.docx` | Every page and every feature, in the order a user meets them, with three worked scores and the design decisions worth being able to defend. |
@@ -362,3 +363,25 @@ not of the public demo.
 
 Replacement 9 in the manuscript text now carries the sample-size justification
 and the widened respondent definition, recorded as change 15.
+
+## The reviewer pack, 15 August 2026
+
+`ResumeMatch-PH-Reviewer.docx` is new and is now the single document to hand a
+group member. It covers the same ground as the four guides — website, code,
+manuscript, method — at the reading level of `Explained-Simply`, and adds two
+things neither had: **thirty practice questions with answers written to be said
+out loud in ordinary words**, and a part on what to do when you do not know an
+answer.
+
+That last part is deliberate. The most common way a defence goes wrong is not a
+gap in knowledge, it is what somebody says in the five seconds after being asked
+something they cannot answer. The document gives them the sentence.
+
+The guides were left alone again, for the reason given above: the Study Guide's
+answers are written for a panel and are precise rather than gentle, and the
+Codebase Guide's value is its exactness. The Reviewer carries the simplicity.
+
+A packaged set for distribution — the Reviewer, Explained Simply, Start Here,
+the four guides and the quick reference, with a reading order — can be
+regenerated from these files at any time; it is not committed, since the
+documents here are the source of truth.
