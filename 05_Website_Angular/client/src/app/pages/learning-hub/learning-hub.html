@@ -24,6 +24,7 @@
       <a routerLink="/learning-hub" fragment="experience">When you have no experience</a>
       <a routerLink="/learning-hub" fragment="sections">Projects, languages, references</a>
       <a routerLink="/learning-hub" fragment="templates">Templates and designs</a>
+      <a routerLink="/learning-hub" fragment="demand">What employers here ask for</a>
       <a routerLink="/learning-hub" fragment="scores">Reading your score</a>
       <a routerLink="/learning-hub" fragment="applying">After you apply</a>
       <a routerLink="/learning-hub" fragment="mistakes">Common mistakes</a>
@@ -89,7 +90,7 @@
           <li>Say where you used each skill. A skill you can point to an entry on your own resume for counts in full; one you cannot still counts, at half.</li>
           <li>Add a skill the moment you learn it, even from a short course or an OJT.</li>
         </ul>
-        <p>The builder shows you which skills Clark Outsourcing is currently asking for, ranked by how many openings need them. That list is the shortest path to a higher score.</p>
+        <p>The builder lists the skills these openings use, spelled the way the system reads them, so that your wording is not what costs you a match. It is not ordered by what is worth the most — see <a routerLink="/learning-hub" fragment="demand">what employers here are asking for</a> below if you want to know where the demand actually is.</p>
       </article>
 
       <article class="card" id="experience">
@@ -140,6 +141,38 @@
           <li><b>Graduate</b> and <b>Technical</b> — these two also <i>change the order</i>. Graduate puts Education, Projects and Certifications first, for applicants whose schooling is their strongest card. Technical leads with Skills and Projects. Because they set their own order they override the template choice above, and the builder says so on screen when that is happening.</li>
         </ul>
         <p>Switching either one never loses anything you typed. Try a few and watch the live preview beside the form.</p>
+      </article>
+
+      <!-- The demand figures used to sit in the resume builder, as a number
+           beside every suggested skill with the pool sorted by it and an add
+           button on each chip. That made it a ranked list of what was worth
+           claiming, right where claiming costs one click. The same information
+           is genuinely useful — it is what a person deciding what to learn
+           needs — so it was moved here, where it is read as advice, carries no
+           add button, and is not marked up against any particular reader's
+           resume. -->
+      <article class="card" id="demand">
+        <h2>What employers here are asking for</h2>
+        <p>Across the openings on this site right now, these are the skills that come up most. This is a count of job adverts, nothing more — no judgement about you, and nothing here is compared against your resume.</p>
+        @if (demandRows().length) {
+          <table class="demand">
+            <thead><tr><th>Skill</th><th>Openings asking for it</th></tr></thead>
+            <tbody>
+              @for (d of demandRows(); track d.name) {
+                <tr><td>{{ d.name }}</td><td>{{ d.n }} of {{ openCount() }}</td></tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="hint">No openings are posted at the moment, so there is nothing to count.</p>
+        }
+        <h3>How to use this honestly</h3>
+        <ul>
+          <li>Read it as a list of what is worth <b>learning</b>, not a list of what is worth <b>typing</b>. A short course, an OJT or a real project is what turns one of these into something you can put your name to.</li>
+          <li>Only claim what you could talk about for two minutes if a recruiter asked. That is a better test than any rule the system can enforce.</li>
+          <li>A skill you can point to — a job, a project, a certification, a course on your own resume — counts in full when a role asks for it. One you cannot point to still counts, at half.</li>
+          <li>The skills near the bottom are not worthless. One opening is still an opening, and the mix changes as companies post new roles.</li>
+        </ul>
       </article>
 
       <article class="card" id="scores">

@@ -261,19 +261,29 @@
               <p class="hint">Type anything — the list below is only a shortcut. A skill no opening asks for scores nothing today, but it still goes on your resume, and openings change.</p>
             </div>
             <div class="sugg">
-              <b>Skills Clark Outsourcing is currently asking for</b>
-              <!-- This pool is aggregate market information — what employers here
-                   ask for across all their openings — not a per-application diff,
-                   and it is deliberately kept. Knowing what the market wants is the
-                   point of the learning hub too. What the copy has to do is stop it
-                   reading as a shopping list, which is why the half-credit rule is
-                   stated right here rather than only in the list below. -->
-              <p class="hint" style="margin:-4px 0 9px">The number is how many open positions ask for it. Click to add, click again to take it back off — chosen skills stay where they are. Add only what you have actually done: below, each skill asks where you used it, and one you cannot point to counts half.</p>
+              <b>Skills these openings use, spelled as the system reads them</b>
+              <!-- VOCABULARY HELP, NOT A RANKING.
+                   This pool exists so an applicant writes "Git" rather than
+                   "GitHub" and is not silently denied credit for a skill they
+                   actually hold — the false negative created by wording alone,
+                   which is the unfairness this project argues against.
+
+                   It used to carry a demand count per skill and sort by it,
+                   which turned it into something else: every chip is ticked or
+                   not according to what this applicant already lists, so a
+                   demand-ordered pool of unticked chips was a ranked list of
+                   the most valuable things they do not claim — the same
+                   personalised gap that was removed from the openings page,
+                   with an add button beside it. The counts are gone, the order
+                   is alphabetical, and what employers here are asking for now
+                   lives in the learning hub as advice rather than as a
+                   one-click shortcut. -->
+              <p class="hint" style="margin:-4px 0 9px">Click to add, click again to take it back off — chosen skills stay where they are. These are spelled the way the system recognises them, so use these rather than your own wording. Add only what you have actually done: below, each skill asks where you used it, and one you cannot point to counts half.</p>
               <div class="pool">
                 @for (s of poolAll(); track s) {
                   <button type="button" [class.on]="skillListed(s)" [attr.aria-pressed]="skillListed(s)"
                           [attr.title]="skillListed(s) ? 'Remove ' + s + ' from your skills' : 'Add ' + s + ' to your skills'"
-                          (click)="toggleSkill(s)"><span class="mark" aria-hidden="true">{{ skillListed(s) ? '&check;' : '+' }}</span>{{ s }} <span class="n">&middot; {{ demanded()[s] }}</span></button>
+                          (click)="toggleSkill(s)"><span class="mark" aria-hidden="true">{{ skillListed(s) ? '&check;' : '+' }}</span>{{ s }}</button>
                 } @empty {
                   <p style="color:var(--muted);font-size:13px">No positions are open right now, so there is nothing to match against today. Add the skills you have — the openings change.</p>
                 }

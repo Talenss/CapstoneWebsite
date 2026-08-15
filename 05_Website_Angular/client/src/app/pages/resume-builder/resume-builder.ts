@@ -280,7 +280,13 @@ export class ResumeBuilder implements OnInit {
       for (const p of pRes.postings) for (const s of p.skills) demandedMap[s] = (demandedMap[s] || 0) + 1;
     }
     this.demanded.set(demandedMap);
-    this.poolAll.set(Object.keys(demandedMap).sort((a, b) => demandedMap[b] - demandedMap[a] || a.localeCompare(b)));
+    /* ALPHABETICAL, deliberately. This used to sort by demand, and removing
+       the printed count while keeping that order would have changed nothing:
+       the most-asked-for skills would still have been first, merely no longer
+       saying so. The order must carry no signal about what is worth claiming.
+       `demanded` is still computed — the datalist and the "you already list
+       every skill asked for" note read it — but nothing renders the number. */
+    this.poolAll.set(Object.keys(demandedMap).sort((a, b) => a.localeCompare(b)));
 
     this.ready.set(true);
 

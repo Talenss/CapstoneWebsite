@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { SessionService } from '../../core/session.service';
+import { ApiService } from '../../core/api.service';
 import { WEIGHTS, THRESHOLDS } from '../../core/engine';
 import { Seo } from '../../core/seo';
 
@@ -23,7 +24,16 @@ import { Seo } from '../../core/seo';
 export class LearningHub implements OnInit, AfterViewInit, OnDestroy {
   private el = inject<ElementRef<HTMLElement>>(ElementRef);
   private seo = inject(Seo);
+  private api = inject(ApiService);
   session = inject(SessionService);
+
+  /* WHAT EMPLOYERS HERE ASK FOR — a tally of open postings, read live rather
+     than written into the article, so the page cannot claim a demand that the
+     openings no longer show. It is public data: every one of these postings is
+     readable without an account, and the count is not compared against
+     anybody's resume. */
+  demandRows = signal<{ name: string; n: number }[]>([]);
+  openCount = signal(0);
 
   readonly W = WEIGHTS;
   readonly T = THRESHOLDS;
@@ -37,6 +47,7 @@ export class LearningHub implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     // populate session.user() so the recruiter-only CTA below can react to it
     void this.session.ensure();
+    void this.loadDemand();
 
     /* This page is the site's one genuinely searchable asset: people look up
        "what is an ATS", "resume with no experience" and "resume skills
@@ -155,4 +166,22 @@ export class LearningHub implements OnInit, AfterViewInit, OnDestroy {
     });
     this.noMatches.set(hits === 0);
   }
+
+  /** Tally every open posting's required skills. Ordered by count here —
+   *  unlike the builder's pool, which is alphabetical — because ordering is
+   *  the entire point of an article about where the demand is, and there is
+   *  no add button on this page to turn that order into a shortcut. */
+  private async loadDemand(): Promise<void> {
+    const res = await this.api.postings.open();
+    if (!res.ok) return;
+    const tally: Record<string, number> = {};
+    for (const p of res.postings) for (const s of p.skills) tally[s] = (tally[s] || 0) + 1;
+    this.openCount.set(res.postings.length);
+    this.demandRows.set(
+      Object.entries(tally)
+        .map(([name, n]) => ({ name, n }))
+        .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name)),
+    );
+  }
+
 }
