@@ -48,6 +48,6 @@ async function main(): Promise<void> {
 
 main().catch((e) => {
   console.error('Failed:', e?.message || e);
-  console.error('(Is MySQL running, and are the DB_* settings in .env correct?)');
+  console.error('(Is PostgreSQL reachable, and are DATABASE_URL / the DB_* settings in .env correct?)');
   process.exit(1);
 });
