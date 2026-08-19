@@ -268,6 +268,32 @@ export interface ExtractResult {
    *  two readers, so the answer has to travel with the result rather than be
    *  inferred from configuration afterwards. */
   reader?: 'rules' | 'gemini';
+  /* How the answer was arrived at, for the study's own counting: whether the
+     rules reader was enough, and when it was not, whether the model helped. */
+  path?: ExtractPath;
+  /** Which fields were empty when escalation was triggered. */
+  escalatedBecause?: string[];
+}
+
+/** The four fields a usable reading produces, and how many came back empty.
+ *
+ *  This exists because "did it fail?" is not the question. The rules reader
+ *  reports 'ok' for a document whose headings it did not recognise — it found
+ *  a name, found no section it understood, and returned a resume that is
+ *  technically valid and practically empty. A status of 'ok' with nothing in
+ *  it is worse than a failure, because a failure at least says so.
+ *
+ *  Two of four empty is the line. One empty field is ordinary: plenty of real
+ *  applicants have no certifications, and a fresh graduate may genuinely have
+ *  zero months. Two is a document the reader did not understand. */
+export function thinReading(r: AnalyzedResume | null): { thin: boolean; empty: string[] } {
+  if (!r) return { thin: true, empty: ['name', 'skills', 'education', 'experience'] };
+  const empty: string[] = [];
+  if (!r.personal?.fullName) empty.push('name');
+  if (!r.skills?.length) empty.push('skills');
+  if (!r.education?.length) empty.push('education');
+  if (!r.experience?.reduce((t, e) => t + (Number(e.months) || 0), 0)) empty.push('experience');
+  return { thin: empty.length >= 2, empty };
 }
 
 /** Which reader is TRIED FIRST. Resolves 'auto' to a concrete choice so
@@ -281,8 +307,21 @@ export function activeExtractor(): 'rules' | 'gemini' {
   const mode = resumeExtractorMode();
   if (mode === 'rules') return 'rules';
   if (mode === 'gemini') return 'gemini';
+  /* 'escalate' tries the rules reader first, so that is what is ATTEMPTED —
+     and the consent notice is written from this value. Reporting 'gemini'
+     here would warn every applicant that their document may reach Google
+     when most documents never will; reporting 'rules' and then escalating
+     would be the same promise broken the other way. The notice therefore
+     says the model MAY be called, and this returns the reader that runs
+     first. See the consent copy in the analyze route. */
+  if (mode === 'escalate') return 'rules';
   return geminiApiKey() ? 'gemini' : 'rules';
 }
+
+/** True when the rules reader may hand a document it could not read on to
+ *  the model. Distinct from fallbackAllowed(), which is the other direction:
+ *  a Gemini failure caught by the rules reader. */
+const escalationAllowed = (): boolean => resumeExtractorMode() === 'escalate' && !!geminiApiKey();
 
 /** True when a Gemini failure should be caught by the rule-based reader.
  *
@@ -297,29 +336,29 @@ const fallbackAllowed = (): boolean => resumeExtractorMode() === 'auto';
 export const extractionConfigured = (): boolean =>
   activeExtractor() === 'rules' || !!geminiApiKey();
 
-/** Document in, structured resume out.
- *
- *  NEVER THROWS. One caller is a background step attached to a file upload,
- *  and a failure there must not take the upload down with it — the applicant
- *  still gets their file stored and sent to the recruiter. Every failure is a
- *  status with a message instead. */
-export async function extractResume(buffer: Buffer, mimetype: string, fileName: string): Promise<ExtractResult> {
-  /* The rule-based reader is a drop-in for everything below: same signature,
-     same never-throws contract, and — because its output goes through the
-     SAME sanitize() the model's output does — the same clamped shape. Which
-     one runs is a configuration choice, so both can be measured against the
-     same files without anything downstream being able to tell them apart. */
-  const runRules = async (): Promise<ExtractResult> => {
-    const r = await parseResume(buffer, mimetype, fileName);
-    return {
-      status: r.status,
-      resume: r.resume ? sanitize(r.resume, fileName) : null,
-      ...(r.message ? { message: r.message } : {}),
-      reader: 'rules',
-    };
-  };
+/** Reported alongside a result so the study can count how often escalation
+ *  actually fired, rather than inferring it from configuration afterwards. */
+export type ExtractPath = 'rules' | 'gemini' | 'rules-then-gemini' | 'rules-kept';
 
-  if (activeExtractor() === 'rules') return runRules();
+/** The rule-based reader, wrapped so its output goes through the SAME
+ *  sanitize() the model's output does — same clamped shape, so nothing
+ *  downstream can tell which reader answered. */
+async function runRulesOn(buffer: Buffer, mimetype: string, fileName: string): Promise<ExtractResult> {
+  const r = await parseResume(buffer, mimetype, fileName);
+  return {
+    status: r.status,
+    resume: r.resume ? sanitize(r.resume, fileName) : null,
+    ...(r.message ? { message: r.message } : {}),
+    reader: 'rules',
+  };
+}
+
+/** The model path, on its own so BOTH entry points can reach it: the plain
+ *  'gemini'/'auto' modes below, and the escalation in 'escalate' mode above.
+ *  Before this was extracted the model path lived inside extractResume and
+ *  escalation had nothing to call. */
+async function runGemini(buffer: Buffer, mimetype: string, fileName: string): Promise<ExtractResult> {
+  const runRules = () => runRulesOn(buffer, mimetype, fileName);
 
   if (!geminiApiKey()) {
     /* Unreachable in 'auto' — activeExtractor would have chosen rules. This is
@@ -403,4 +442,43 @@ export async function extractResume(buffer: Buffer, mimetype: string, fileName: 
       return { status: 'failed', resume: null, message: 'The AI quota was reached for now. Try again in a minute.' };
     return { status: 'failed', resume: null, message: 'The file could not be read automatically just now.' };
   }
+}
+
+/** Document in, structured resume out.
+ *
+ *  NEVER THROWS. One caller is a background step attached to a file upload,
+ *  and a failure there must not take the upload down with it — the applicant
+ *  still gets their file stored and sent to the recruiter. Every failure is a
+ *  status with a message instead. */
+export async function extractResume(buffer: Buffer, mimetype: string, fileName: string): Promise<ExtractResult> {
+  const runRules = () => runRulesOn(buffer, mimetype, fileName);
+
+  if (activeExtractor() === 'rules') {
+    const first = await runRules();
+
+    /* ESCALATION. The rules reader ran and cost nothing. Spend a request only
+       on the documents it could not read — the two-column layouts, the scans,
+       the resumes whose headings it has never seen. A plain single-column
+       resume, which is most of them, never reaches Google at all.
+
+       Note this is checked on a reading that says 'ok'. A document the rules
+       reader reported as FAILED is handled by the same branch, because
+       thinReading(null) is thin by definition. */
+    if (!escalationAllowed()) return first;
+    const { thin, empty } = thinReading(first.resume);
+    if (!thin) return { ...first, path: 'rules-kept' };
+
+    const escalated = await runGemini(buffer, mimetype, fileName);
+    /* If the model did no better, keep the rules reading rather than the
+       model's. Two readers failing is not a reason to prefer the one that
+       cost money, and the applicant is better served by the reader whose
+       behaviour we can explain. */
+    if (escalated.status !== 'ok' || thinReading(escalated.resume).thin) {
+      return { ...first, path: 'rules-kept', escalatedBecause: empty };
+    }
+    return { ...escalated, path: 'rules-then-gemini', escalatedBecause: empty };
+  }
+
+  const g = await runGemini(buffer, mimetype, fileName);
+  return { path: g.reader === 'rules' ? 'rules' : 'gemini', ...g };
 }

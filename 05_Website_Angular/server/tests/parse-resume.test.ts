@@ -11,6 +11,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseResume, __rules } from '../src/lib/parse-resume';
+import { thinReading } from '../src/lib/extract';
 import { EDU_RANK } from '../src/lib/engine';
 
 const { headingOf, headingTail, undoubleSpace, splitSections, findName, monthsFromRange, monthsFromWords, levelOf, groupBlocks, sweepVocabulary } = __rules;
@@ -464,4 +465,49 @@ test('pinned gemini does NOT fall back — a failure stays a failure', async () 
   delete process.env.GEMINI_API_KEY;
   delete process.env.GEMINI_BASE_URL;
   process.env.RESUME_EXTRACTOR = 'rules';
+});
+
+/* ---------------- the confidence check ---------------- */
+
+const reading = (o: any) => ({
+  title: '', template: 'chronological', design: 'classic',
+  personal: { fullName: '', email: '', phone: '', address: '', summary: '' },
+  education: [], experience: [], skills: [], certifications: [], ...o,
+} as any);
+
+test('a reading with nothing in it is thin, and so is no reading at all', () => {
+  assert.equal(thinReading(null).thin, true);
+  assert.deepEqual(thinReading(null).empty, ['name', 'skills', 'education', 'experience']);
+  assert.equal(thinReading(reading({})).thin, true);
+});
+
+test('one empty field is ordinary, two is a document we did not understand', () => {
+  // A fresh graduate with no paid work is the case this must NOT escalate on:
+  // name, skills and education all present, experience genuinely zero.
+  const fresh = reading({
+    personal: { fullName: 'Juan Dela Cruz', email: '', phone: '', address: '', summary: '' },
+    skills: ['JavaScript'],
+    education: [{ school: 'HAU', degree: 'BSIT', level: 'bachelor', year: '2025' }],
+    experience: [],
+  });
+  assert.equal(thinReading(fresh).thin, false);
+  assert.deepEqual(thinReading(fresh).empty, ['experience']);
+
+  // The online-builder case: a name was found and nothing else was.
+  const nameOnly = reading({
+    personal: { fullName: 'Paolo Reyes', email: '', phone: '', address: '', summary: '' },
+  });
+  assert.equal(thinReading(nameOnly).thin, true);
+});
+
+test('experience counts MONTHS, not entries', () => {
+  // An entry the parser split badly can carry a title and no duration. That
+  // is exactly the shape the double-spacing bug produced, and it must read as
+  // empty — months are what the score uses.
+  const zeroMonths = reading({
+    personal: { fullName: 'Liza Cruz', email: '', phone: '', address: '', summary: '' },
+    experience: [{ position: 'Accounting Clerk', company: '', months: 0, description: '' }],
+  });
+  assert.deepEqual(thinReading(zeroMonths).empty, ['skills', 'education', 'experience']);
+  assert.equal(thinReading(zeroMonths).thin, true);
 });
