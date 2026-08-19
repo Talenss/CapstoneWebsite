@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import { parseResume, __rules } from '../src/lib/parse-resume';
 import { EDU_RANK } from '../src/lib/engine';
 
-const { headingOf, headingTail, splitSections, findName, monthsFromRange, monthsFromWords, levelOf, groupBlocks, sweepVocabulary } = __rules;
+const { headingOf, headingTail, undoubleSpace, splitSections, findName, monthsFromRange, monthsFromWords, levelOf, groupBlocks, sweepVocabulary } = __rules;
 
 const txt = (s: string) => Buffer.from(s, 'utf8');
 const TEXT = 'text/plain';
@@ -88,6 +88,21 @@ test('a letter-spaced heading of two words stays two words', () => {
   // experience section was read as header text.
   assert.equal(headingOf('W O R K   E X P E R I E N C E'), 'experience');
   assert.equal(headingOf('E D U C A T I O N'), 'education');
+});
+
+test('a uniformly double-spaced document is un-doubled before grouping', () => {
+  // mammoth.extractRawText joins .docx paragraphs with a blank line, so every
+  // real Word document arrives double-spaced. Blank lines are how one job is
+  // told from the next, so this shattered every entry into single lines: a
+  // title, its employer and its dates became three jobs with no dates at all.
+  const doubled = ['Accounting Clerk', '', 'Santos Trading', '',
+                   'January 2023 - June 2025', '', '', '', 'EDUCATION', ''];
+  assert.deepEqual(undoubleSpace(doubled),
+    ['Accounting Clerk', 'Santos Trading', 'January 2023 - June 2025', '', 'EDUCATION']);
+
+  // Human spacing has SOME pair of lines touching, and must be left alone.
+  const human = ['Accounting Clerk', 'Santos Trading', '', 'Cashier', 'SM Clark'];
+  assert.deepEqual(undoubleSpace(human), human);
 });
 
 test('a label line is never mistaken for the applicant name', () => {

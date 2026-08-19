@@ -178,10 +178,41 @@ function tidy(lines: string[]): string[] {
   return out;
 }
 
+/** Undo the blank line some extractors put after EVERY paragraph.
+ *
+ *  mammoth.extractRawText joins .docx paragraphs with a blank line, so a real
+ *  Word document arrives uniformly double-spaced. That is fatal rather than
+ *  untidy: a blank line is the signal groupBlocks uses to tell one job from
+ *  the next, so every entry shattered into one-line fragments — a job title,
+ *  its employer and its dates became three separate jobs, and the dates were
+ *  lost with them.
+ *
+ *  The test for "these blanks are padding" is that NO two non-empty lines are
+ *  adjacent anywhere in the document. A human-written blank line always
+ *  leaves some pair of lines touching; a mechanical one never does.
+ *
+ *  Runs are then treated by length, which preserves the real structure: a run
+ *  of one was only the paragraph joiner and goes, a run of two or more was an
+ *  actual empty paragraph and collapses to a single blank. */
+function undoubleSpace(lines: string[]): string[] {
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim() && lines[i - 1].trim()) return lines; // human spacing — leave it
+  }
+  const out: string[] = [];
+  let run = 0;
+  for (const line of lines) {
+    if (!line.trim()) { run++; continue; }
+    if (run >= 2) out.push('');
+    run = 0;
+    out.push(line);
+  }
+  return out;
+}
+
 /** The document split into its sections, plus everything before the first
  *  heading (which is where the name and contact details live). */
 function splitSections(text: string): { head: string[]; sections: Record<string, string[]> } {
-  const lines = text.split(/\r?\n/).map((l) => l.replace(/\s+$/g, ''));
+  const lines = undoubleSpace(text.split(/\r?\n/).map((l) => l.replace(/\s+$/g, '')));
   const head: string[] = [];
   const raw: Record<string, string[]> = {};
   let current: Section | null = null;
@@ -605,6 +636,7 @@ export async function parseResume(buffer: Buffer, mimetype: string, fileName: st
 
 /* Exported for tests — these are the rules the study would have to defend. */
 export const __rules = {
+  undoubleSpace,
   headingTail,
   headingOf, splitSections, findName, monthsFromRange, monthsFromWords, levelOf, inferTemplate,
   groupBlocks, sweepVocabulary, clean,
