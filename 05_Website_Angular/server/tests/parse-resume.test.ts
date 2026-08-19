@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import { parseResume, __rules } from '../src/lib/parse-resume';
 import { EDU_RANK } from '../src/lib/engine';
 
-const { headingOf, splitSections, findName, monthsFromRange, monthsFromWords, levelOf, groupBlocks, sweepVocabulary } = __rules;
+const { headingOf, headingTail, splitSections, findName, monthsFromRange, monthsFromWords, levelOf, groupBlocks, sweepVocabulary } = __rules;
 
 const txt = (s: string) => Buffer.from(s, 'utf8');
 const TEXT = 'text/plain';
@@ -30,6 +30,73 @@ test('section headings are recognised in the forms Philippine resumes use', () =
   assert.equal(headingOf('Certifications'), 'certifications');
   assert.equal(headingOf('Seminars'), 'certifications');
   assert.equal(headingOf('Character References'), 'references');
+});
+
+test('the section names Philippine fresh-graduate resumes actually use', () => {
+  // This study's population is fresh graduates, whose entire experience
+  // section is OJT or practicum. Reading those as "no experience" zeroed a
+  // quarter of the score for exactly the people the system exists to help.
+  assert.equal(headingOf('OJT'), 'experience');
+  assert.equal(headingOf('On-the-Job Training'), 'experience');
+  assert.equal(headingOf('PRACTICUM'), 'experience');
+  assert.equal(headingOf('Work Immersion'), 'experience');
+  assert.equal(headingOf('EDUCATIONAL ATTAINMENT'), 'education');
+  assert.equal(headingOf('Tertiary Education'), 'education');
+  assert.equal(headingOf('Skills and Abilities'), 'skills');
+  assert.equal(headingOf('QUALIFICATIONS'), 'skills');
+  assert.equal(headingOf('Awards and Recognition'), 'certifications');
+  assert.equal(headingOf('Seminars Attended'), 'certifications');
+  assert.equal(headingOf('Capstone Project'), 'projects');
+});
+
+test('a heading survives the ornament a template puts in front of it', () => {
+  assert.equal(headingOf('1. EDUCATION'), 'education');
+  assert.equal(headingOf('2) Work Experience'), 'experience');
+  assert.equal(headingOf('\u25aa SKILLS'), 'skills');
+  assert.equal(headingOf('> Projects'), 'projects');
+});
+
+test('a heading with its content on the same line is still a heading', () => {
+  // "SKILLS: HTML, CSS" is one line doing two jobs, and compact resumes
+  // written to fit one page do this constantly.
+  assert.equal(headingOf('SKILLS: HTML, CSS, JavaScript'), 'skills');
+  assert.equal(headingOf('Education: BS Information Technology'), 'education');
+  // But a sentence that merely contains a colon is not a heading.
+  assert.equal(headingOf('My objective is the following: to grow as a developer'), null);
+});
+
+test('letter-spaced headings are read, and real short words are not', () => {
+  assert.equal(headingOf('E D U C A T I O N'), 'education');
+  assert.equal(headingOf('S K I L L S'), 'skills');
+  // Only collapse when EVERY token is one letter, so this stays untouched.
+  assert.equal(headingOf('R and D'), null);
+});
+
+test('content sharing a line with its heading is kept, not dropped', () => {
+  // Found by the reader-comparison harness: "SKILLS: HTML, CSS" was matched
+  // as a heading and the skills after the colon were thrown away, so a
+  // compact one-page resume scored zero on half of every posting.
+  assert.equal(headingTail('SKILLS: HTML/CSS, JavaScript, Git'), 'HTML/CSS, JavaScript, Git');
+  assert.equal(headingTail('SKILLS'), '');
+  const { sections } = splitSections('SKILLS: HTML/CSS, JavaScript\nGit\n');
+  assert.deepEqual(sections.skills, ['HTML/CSS, JavaScript', 'Git']);
+});
+
+test('a letter-spaced heading of two words stays two words', () => {
+  // Also found by the harness: every token is a single letter, so the naive
+  // collapse produced "workexperience", which matches nothing — and the whole
+  // experience section was read as header text.
+  assert.equal(headingOf('W O R K   E X P E R I E N C E'), 'experience');
+  assert.equal(headingOf('E D U C A T I O N'), 'education');
+});
+
+test('a label line is never mistaken for the applicant name', () => {
+  // Two capitalised words, no digits, no email — every other test in
+  // findName passes, and "Personal Information" was being returned as a name.
+  assert.equal(findName(['PERSONAL INFORMATION', 'Juan Dela Cruz']), 'Juan Dela Cruz');
+  assert.equal(findName(['Personal Data', 'Maria Santos']), 'Maria Santos');
+  assert.equal(findName(['BIODATA', 'Ana Reyes']), 'Ana Reyes');
+  assert.equal(findName(['Applicant Details']), '');
 });
 
 test('a heading must be a heading, not a sentence that mentions one', () => {
