@@ -5,7 +5,7 @@
     <div>
       <span class="eyebrow" id="coName">{{ coLabel() || 'Your company' }}</span>
       <h1>{{ hello() }}</h1>
-      <p>Applicants arrive scored and ranked, with the maths shown. The ranking is a starting point — <b>every decision here is yours</b>.</p>
+      <p>Applicants arrive scored and ranked, with the maths shown. The ranking is a starting point, <b>every decision here is yours</b>.</p>
     </div>
     <a class="btn primary" routerLink="/hr-posting">+ Post an opening</a>
   </div>
@@ -21,7 +21,7 @@
 
   <section id="pipeSection">
     <h2 style="font-size:24px;margin-bottom:2px">The pipeline</h2>
-    <p style="color:var(--muted);font-size:13.5px">Everyone who applied is somewhere in here. The system moves nobody — you do.</p>
+    <p style="color:var(--muted);font-size:13.5px">Everyone who applied is somewhere in here. The system moves nobody, you do.</p>
     <div class="pipe" id="pipe">
       @if (stats(); as s) {
         @for (k of statusOrder; track k) {
@@ -80,7 +80,7 @@
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                 <h3>{{ p.title }}</h3>
                 @if (p.status === 'open' && p.expired) {
-                  <span class="badge wine" title="The application deadline has passed — it no longer accepts applications. Edit it to extend the deadline.">Deadline passed</span>
+                  <span class="badge wine" title="The application deadline has passed. It no longer accepts applications. Edit it to extend the deadline.">Deadline passed</span>
                 } @else if (p.status === 'open') {
                   <span class="badge green">Open</span>
                 } @else {

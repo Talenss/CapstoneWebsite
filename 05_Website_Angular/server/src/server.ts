@@ -2,8 +2,9 @@
    ResumeMatch PH — Node/Express API server
    ------------------------------------------------------------
    Port of the api/*.php endpoints (PDO+MySQL) to Express+TypeScript
-   (mysql2+MySQL). Same database, same schema, same JSON contract
-   philosophy as api/_lib.php — see src/lib/engine.ts and
+   on PostgreSQL. The schema and the JSON contract carried over
+   unchanged; only the database engine beneath them changed. Same
+   contract philosophy as api/_lib.php — see src/lib/engine.ts and
    src/lib/serializers.ts for the 1:1 ports of the matching engine
    and row serializers.
    ============================================================ */

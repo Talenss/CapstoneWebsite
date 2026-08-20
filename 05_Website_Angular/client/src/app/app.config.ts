@@ -14,7 +14,7 @@ export const appConfig: ApplicationConfig = {
        which is what the learning hub's guide links rely on. Those links go
        through the router (routerLink + fragment) rather than a bare
        href="#id", because index.html sets <base href="/"> and a browser
-       resolves a bare fragment against the base — sending the reader to the
+       resolves a bare fragment against the base, sending the reader to the
        home page instead of the guide.
 
        scrollPositionRestoration is deliberately left at its default of
@@ -28,7 +28,7 @@ export const appConfig: ApplicationConfig = {
     ),
     provideHttpClient(withFetch()),
     // Load the signed-in user once at startup so session.user() is populated
-    // on every page — including public routes with no guard (home, privacy,
+    // on every page, including public routes with no guard (home, privacy,
     // 404). Fire-and-forget: the app paints immediately and the header's
     // `auto` variant upgrades to the user's own nav when /me resolves.
     provideAppInitializer(() => { void inject(SessionService).ensure(); }),

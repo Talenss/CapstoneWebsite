@@ -44,3 +44,11 @@ article h3{font-size:19px;margin:22px 0 8px}
 @media(max-width:380px){
   .ladder .r{flex-direction:column;align-items:flex-start;gap:6px}
 }
+
+/* The demand table. Plain and unemphatic on purpose — it is reference
+   material about the job market, not a scoreboard. */
+table.demand { width: 100%; border-collapse: collapse; margin: 14px 0 18px; font-size: 14px; }
+table.demand th { text-align: left; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted); border-bottom: 1px solid var(--rule); padding: 0 0 7px; font-weight: 600; }
+table.demand td { padding: 7px 0; border-bottom: 1px solid var(--rule-2); }
+table.demand td:last-child { text-align: right; color: var(--muted); white-space: nowrap; }

@@ -12,58 +12,58 @@
     <h2>What we collect</h2>
     <p>Only what you type in, and only what the system needs to do its job.</p>
     <ul>
-      <li><b>Account details</b> — your name, email address, and password (stored hashed, never in readable form).</li>
-      <li><b>Resume content</b> — the education, work experience, skills, and certifications you enter in the builder (or approve from an AI extraction — see below), plus the summary and contact details you choose to include.</li>
+      <li><b>Account details</b>. Your name, email address, and password (stored hashed, never in readable form).</li>
+      <li><b>Resume content</b>. The education, work experience, skills, and certifications you enter in the builder (or approve from an AI extraction, see below), plus the summary and contact details you choose to include.</li>
       <li><b>Your uploaded resume file</b>, if you attach one. This is optional.</li>
-      <li><b>Application records</b> — which openings you applied to, with which resume, and the status a recruiter has given each one.</li>
+      <li><b>Application records</b>, which openings you applied to, with which resume, and the status a recruiter has given each one.</li>
     </ul>
     <p>We do not collect browsing history, we do not track you across other websites, and we do not run advertising of any kind.</p>
 
     <h2>What we use it for</h2>
     <p>Two things, and nothing else: creating your resume, and matching you to job openings. Your resume data is compared against the requirements of postings to produce a compatibility score. That's the whole purpose.</p>
-    <p>Your email address is additionally used for two narrow things. First, account security: a one-time code to verify the address when you register, and a one-time code if you ask to reset your password. Second, application updates: an email when a recruiter moves your application to a new status (or, for recruiters, when a new application arrives) — these are on by default and can be switched off any time in <a routerLink="/account">My account</a>. No newsletters, no marketing, no other mail.</p>
-    <p>Your data is never sold and never used for advertising. The only third-party processing is the optional AI analysis described below — and it happens only when you explicitly choose it.</p>
+    <p>Your email address is additionally used for two narrow things. First, account security: a one-time code to verify the address when you register, and a one-time code if you ask to reset your password. Second, application updates: an email when a recruiter moves your application to a new status (or, for recruiters, when a new application arrives). These are on by default and can be switched off any time in <a routerLink="/account">My account</a>. No newsletters, no marketing, no other mail.</p>
+    <p>Your data is never sold and never used for advertising. The only third-party processing is the optional AI analysis described below. And it happens only when you explicitly choose it.</p>
 
     <h2>Who can see it</h2>
     <ul>
-      <li><b>You</b> — always, in full.</li>
-      <li><b>A recruiter</b> — only once you apply to one of their openings, and only the resume you chose to send with that application. Recruiters cannot browse resumes they haven't received, and cannot see resumes you never submitted.</li>
+      <li><b>You</b>, always, in full.</li>
+      <li><b>A recruiter</b>, only once you apply to one of their openings, and only the resume you chose to send with that application. Recruiters cannot browse resumes they haven't received, and cannot see resumes you never submitted.</li>
       <li><b>Nobody else.</b> Other job seekers cannot see your data at all.</li>
     </ul>
     <p>Uploaded resume files are served through an access-checked route, not a public URL, so a file cannot be reached by guessing an address.</p>
 
-    <h2>Automated processing — and its limits</h2>
+    <h2>Automated processing, and its limits</h2>
     <p>The system calculates a compatibility score using a fixed, published, rule-based formula: skills at 50%, education at 25%, experience at 25%. The scoring itself is not machine learning, it does not adapt, and it does not make decisions.</p>
-    <p><b>No application is ever rejected automatically.</b> The score ranks a list for a human recruiter to read. Every hiring outcome — including a rejection — is a decision made by a person at the partner company, and it is recorded against their account. If your score falls below the threshold, you are still shown to the recruiter, and the system additionally suggests roles that better fit the skills you have.</p>
-    <p>The resume file you attach is read twice: by the recruiter, and by the same AI service described above, which extracts its text so the rule-based formula can score it as well. That second score is shown to you and to the recruiter, clearly labelled as a machine reading of your document. <b>It is never what you are ranked by</b> — that stays with the resume you typed and can correct. If you would rather no software read your file, do not attach one: everything else on this site works without it.</p>
+    <p><b>No application is ever rejected automatically.</b> The score ranks a list for a human recruiter to read. Every hiring outcome, including a rejection, is a decision made by a person at the partner company, and it is recorded against their account. If your score falls below the threshold, you are still shown to the recruiter, and the system additionally suggests roles that better fit the skills you have.</p>
+    <p>The resume file you attach is read twice: by the recruiter, and by the same AI service described above, which extracts its text so the rule-based formula can score it as well. That second score is shown to you and to the recruiter, clearly labelled as a machine reading of your document. <b>It is never what you are ranked by</b>. That stays with the resume you typed and can correct. If you would rather no software read your file, do not attach one: everything else on this site works without it.</p>
 
-    <h2>Optional AI analysis — only when you ask for it</h2>
-    <p>There is one place on the site where software reads a file you upload: the <b>"Upload &amp; analyze my resume"</b> option. It runs only when you explicitly choose it and tick its consent box — never automatically, and never on the copy you attach for recruiters.</p>
+    <h2>Optional AI analysis, only when you ask for it</h2>
+    <p>There is one place on the site where software reads a file you upload: the <b>"Upload &amp; analyze my resume"</b> option. It runs only when you explicitly choose it and tick its consent box, never automatically, and never on the copy you attach for recruiters.</p>
     <ul>
-      <li><b>What it does:</b> the file you submit for analysis is read by an AI service (Google's Gemini API) which extracts your details — skills, education, experience — to prefill the resume builder. You review, correct, and approve everything before anything is saved.</li>
+      <li><b>What it does:</b> the file you submit for analysis is read by an AI service (Google's Gemini API) which extracts your details, skills, education, experience, to prefill the resume builder. You review, correct, and approve everything before anything is saved.</li>
       <li><b>What it doesn't do:</b> the AI never scores you, never ranks you, and never recommends anything on its own. Once you save, the same published rule-based formula above does the matching, identically to a hand-typed resume.</li>
-      <li><b>Where the file goes:</b> when you use this option, the file's content is sent to Google for processing under <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">Google's API terms</a>. If you'd rather not, simply type your resume into the builder instead — the feature is entirely optional and everything else works without it.</li>
+      <li><b>Where the file goes:</b> when you use this option, the file's content is sent to Google for processing under <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">Google's API terms</a>. If you'd rather not, simply type your resume into the builder instead. The feature is entirely optional and everything else works without it.</li>
     </ul>
 
     <h2>Your rights</h2>
     <p>Under RA 10173 you may:</p>
     <ul>
-      <li><b>See your data</b> — everything you've given us is visible in your account.</li>
-      <li><b>See what was done with it</b> — every application keeps a dated record of each status it has held. Open <b>History</b> next to any application on your <a routerLink="/seeker-dashboard">dashboard</a> to read it: when you applied, when a recruiter moved it, and how long each step took. Nothing is ever removed from that record.</li>
-      <li><b>Take a copy</b> — download the whole lot as a file from <a routerLink="/account">My account</a>: your account details, every resume, every application with the score it carried, the dated history above, and the openings you saved. Uploaded files download separately from My resumes, since they are already in the format you gave us.</li>
-      <li><b>Correct it</b> — edit any resume at any time.</li>
-      <li><b>Erase it</b> — delete your account from <a routerLink="/account">My account</a>. This removes your account, resumes, uploaded files, and applications permanently.</li>
-      <li><b>Object or withdraw consent</b> — withdraw any single application from your <a routerLink="/seeker-dashboard">dashboard</a>, or delete your account entirely. Either way it takes effect immediately and needs no one's approval.</li>
+      <li><b>See your data</b>, everything you've given us is visible in your account.</li>
+      <li><b>See what was done with it</b>. Every application keeps a dated record of each status it has held. Open <b>History</b> next to any application on your <a routerLink="/seeker-dashboard">dashboard</a> to read it: when you applied, when a recruiter moved it, and how long each step took. Nothing is ever removed from that record.</li>
+      <li><b>Take a copy</b>, download the whole lot as a file from <a routerLink="/account">My account</a>: your account details, every resume, every application with the score it carried, the dated history above, and the openings you saved. Uploaded files download separately from My resumes, since they are already in the format you gave us.</li>
+      <li><b>Correct it</b>, edit any resume at any time.</li>
+      <li><b>Erase it</b>, delete your account from <a routerLink="/account">My account</a>. This removes your account, resumes, uploaded files, and applications permanently.</li>
+      <li><b>Object or withdraw consent</b>, withdraw any single application from your <a routerLink="/seeker-dashboard">dashboard</a>, or delete your account entirely. Either way it takes effect immediately and needs no one's approval.</li>
     </ul>
     <p>You do not need to email anyone or wait for a response to exercise any of these. They are buttons.</p>
 
     <h2>How long we keep it</h2>
-    <p>Until you delete it. If you delete your account, your data is removed immediately, including applications already submitted — which means the recruiter loses access to them too.</p>
+    <p>Until you delete it. If you delete your account, your data is removed immediately, including applications already submitted, which means the recruiter loses access to them too.</p>
     <p>Because this is a time-bound academic study, all research data collected for evaluation purposes is anonymised, and the deployment is decommissioned at the end of the study unless the partner company agrees otherwise.</p>
 
     <h2>Security</h2>
     <ul>
-      <li>Passwords are hashed with bcrypt. Nobody — including the researchers — can read them.</li>
+      <li>Passwords are hashed with bcrypt. Nobody, including the researchers, can read them.</li>
       <li>Access is role-based: seekers reach only their own records, recruiters reach only applications sent to their own company.</li>
       <li>Uploaded files are restricted to PDF, Word, and image formats, size-capped, and stored outside the public web directory.</li>
       <li>All database queries use prepared statements.</li>

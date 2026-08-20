@@ -19,7 +19,7 @@
     } @else if (!resumes().length) {
       <div class="card empty crest">
         <h2>No resumes yet</h2>
-        <p>Set one up and the system will score it against every open position at Clark Outsourcing — and show you which roles you nearly fit, not just the ones you already do.</p>
+        <p>Set one up and the system will score it against every open position at Clark Outsourcing. And show you which roles you nearly fit, not just the ones you already do.</p>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
           <a class="btn primary" routerLink="/upload-resume">Upload my existing resume</a>
           <a class="btn ghost" routerLink="/resume-builder">Build it from scratch</a>
@@ -51,7 +51,7 @@
                 <p class="extras">Also on this resume: {{ extra }}</p>
               }
               @if (r.ownFile) {
-                <p><span class="clip">📎</span> <b>{{ r.ownFile.name }}</b> attached — recruiters read it, and it is scored too. Only the resume you typed here decides your ranking.</p>
+                <p><span class="clip">📎</span> <b>{{ r.ownFile.name }}</b> attached, recruiters read it, and it is scored too. Only the resume you typed here decides your ranking.</p>
               } @else {
                 <p>No file attached. You can add your own resume document in the builder’s last step.</p>
               }

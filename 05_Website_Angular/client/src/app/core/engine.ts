@@ -1,5 +1,5 @@
 /* ============================================================
-   Matching engine + shared constants — ported 1:1 from
+   Matching engine + shared constants, ported 1:1 from
    04_Website/app/assets/api.js (score(), WEIGHTS, THRESHOLDS, …)
    Used by demo mode directly, and by the builder/browse/hr-posting
    pages for instant client-side "how would this score" previews
@@ -8,7 +8,7 @@
    ============================================================ */
 import { AppStatus, EduLevel, EvidenceKind, MatchResult, Posting, RejectionReason, Resume, Tier } from './models';
 
-/* The study's published defaults. The SERVER is the authority — it reads
+/* The study's published defaults. The SERVER is the authority, it reads
    these from the match_settings table, so an admin can retune them without a
    redeploy. These objects are MUTATED (never reassigned) by applyMatchSettings()
    at startup in api mode, so every call site below keeps working while the
@@ -48,7 +48,7 @@ export function applyMatchSettings(s: {
   const w = s?.weights;
   if (w) {
     const sk = num(w.skills), ed = num(w.education), ex = num(w.experience);
-    // All three or none — a partial set would silently change the total scale.
+    // All three or none. A partial set would silently change the total scale.
     if (sk !== null && ed !== null && ex !== null && sk >= 0 && ed >= 0 && ex >= 0) {
       WEIGHTS.skills = sk; WEIGHTS.education = ed; WEIGHTS.experience = ex;
     }
@@ -70,7 +70,7 @@ export const REJECTION_REASONS: RejectionReason[] = [
   'position_filled', 'stronger_candidate', 'withdrew_interest', 'other',
 ];
 
-/** What the recruiter picks from. Wording is deliberately factual — these are
+/** What the recruiter picks from. Wording is deliberately factual, these are
  *  read back months later by someone reconstructing a decision. */
 export const REASON_LABELS: Record<RejectionReason, string> = {
   not_qualified:      'Did not meet the requirements',
@@ -85,7 +85,7 @@ export const REASON_LABELS: Record<RejectionReason, string> = {
 
 /** The SAME codes, written for the person they are about.
  *
- *  Not a euphemism of the recruiter's wording — the same fact, in the second
+ *  Not a euphemism of the recruiter's wording, the same fact, in the second
  *  person, because an applicant reading "Another candidate was a closer fit"
  *  about themselves is reading a file note, and one reading "The role went to
  *  another candidate" is being told what happened to them. Where the honest
@@ -107,7 +107,7 @@ export const APPLICANT_REASON_LABELS: Record<RejectionReason, string> = {
 };
 
 /* ------------------------------------------------------------
-   EVIDENCE-LINKED SKILLS — mirrored 1:1 from server/src/lib/engine.ts, which
+   EVIDENCE-LINKED SKILLS, mirrored 1:1 from server/src/lib/engine.ts, which
    carries the full reasoning. The constant below is part of the PUBLISHED
    formula, not a tuning knob: the applicant is told "a skill you can point to
    evidence for counts fully; one you cannot counts half", and this is that
@@ -141,7 +141,7 @@ export function evidenceLabel(kind: EvidenceKind, e: any): string {
 }
 
 /** Every label on this resume a skill may point at, per kind. A source must
- *  be something already written down elsewhere on the same resume — that is
+ *  be something already written down elsewhere on the same resume: that is
  *  the whole mechanism, and it is why this is a picker and not a text box. */
 export function evidenceLabels(resume: {
   experience?: any[]; projects?: any[]; certifications?: any[]; education?: any[];
@@ -166,7 +166,7 @@ export const STATUS_LABELS: Record<AppStatus, string> = {
 export const STATUS_ORDER: AppStatus[] = ['submitted', 'review', 'shortlisted', 'rejected', 'hired'];
 
 /* Every status a row can actually hold. Counts and breakdowns must use this
-   one — building them from STATUS_ORDER left 'withdrawn' out entirely, so a
+   one, building them from STATUS_ORDER left 'withdrawn' out entirely, so a
    withdrawn application simply vanished from the recruiter's totals. */
 export const ALL_STATUSES: AppStatus[] = [...STATUS_ORDER, 'withdrawn'];
 
@@ -178,7 +178,7 @@ export const EDU_LABELS: Record<EduLevel, string> = {
   associate: 'Associate degree', bachelor: 'Bachelor’s degree', master: 'Master’s degree',
 };
 
-/** Password rule for anything that SETS a password — mirrored in
+/** Password rule for anything that SETS a password, mirrored in
  *  server/src/lib/password.ts. Never checked at login, so accounts made
  *  under the older 6-character rule keep working until their next change. */
 export const PASSWORD_MIN = 8;
@@ -195,13 +195,13 @@ export const ALLOWED_MIME = [
 ];
 
 /* ------------------------------------------------------------
-   SKILL ALIASES — mirrored 1:1 in server/src/lib/engine.ts.
+   SKILL ALIASES, mirrored 1:1 in server/src/lib/engine.ts.
 
    Without this, matching is literal: a seeker who writes "JS" gets
    zero credit for a posting asking for "JavaScript", and "MS Office"
    never matches "Microsoft Office". That is a false negative created
    purely by vocabulary, which is the exact unfairness this project
-   argues against — so equivalent terms are folded to one canonical
+   argues against. So equivalent terms are folded to one canonical
    form before they are compared.
 
    Keys and values are already normalized (lowercase, alphanumeric).
@@ -224,7 +224,7 @@ export const SKILL_ALIASES: Record<string, string> = {
   //
   // Every entry below is a genuine synonym or abbreviation of the term it maps
   // to. Deliberately absent: product names folded into categories. "Salesforce"
-  // is not a synonym for "CRM Software", it is one particular CRM — equating
+  // is not a synonym for "CRM Software", it is one particular CRM, equating
   // them would credit an applicant with a skill they did not claim, which the
   // Definition of Terms promises this vocabulary never does.
   customersupport: 'customerservice', clientservice: 'customerservice',
@@ -246,7 +246,7 @@ export const SKILL_ALIASES: Record<string, string> = {
 };
 
 /* ------------------------------------------------------------
-   SKILL CATEGORIES — keyed by the canonical normalised form, mirroring the
+   SKILL CATEGORIES, keyed by the canonical normalised form, mirroring the
    `category` column of the seeded skills catalogue. An engine test reads
    db/resumematch_ph.sql and fails if the two disagree, so this stays a copy
    of the database rather than a second opinion about it.
@@ -271,7 +271,7 @@ export const SKILL_CATEGORY: Record<string, SkillCategory> = {
 /** How the applicant is told about a requirement they have not met.
  *
  *  NOT BY NAME, and that is the point. The site used to print the missing
- *  skills as a list — "missing: Troubleshooting, Windows, Networking" — which
+ *  skills as a list, "missing: Troubleshooting, Windows, Networking", which
  *  is a ready-made set of words to paste into a resume. Naming them turned an
  *  explanation into an instruction.
  *
@@ -283,7 +283,7 @@ export const SKILL_CATEGORY: Record<string, SkillCategory> = {
  *  Be clear about the limit: the opening itself still states what it asks for,
  *  because a job advert that hides its requirements is not a job advert. What
  *  this removes is the system doing the comparison and handing over the
- *  difference. The recruiter's own view is unchanged — see hr-applicants,
+ *  difference. The recruiter's own view is unchanged, see hr-applicants,
  *  where missing skills are still named, because the person deciding needs to
  *  know exactly what is absent. */
 export function missingHint(missing: string[]): string {
@@ -295,7 +295,7 @@ export function missingHint(missing: string[]): string {
   if (soft) parts.push(`${soft} workplace`);
   const kinds = parts.join(' and ');
   const n = missing.length;
-  return `${n} ${n === 1 ? 'skill' : 'skills'} this role asks for ${n === 1 ? 'is' : 'are'} not on your resume — ${kinds}`;
+  return `${n} ${n === 1 ? 'skill' : 'skills'} this role asks for ${n === 1 ? 'is' : 'are'} not on your resume, ${kinds}`;
 }
 
 /** Normalize a skill to its canonical comparable form: strip case and
@@ -309,7 +309,7 @@ export function normSkill(s: string): string {
 
 /** Mirrored 1:1 in server/src/lib/engine.ts (rmScore()). Rule-based
  *  only: no ML, no AI. The applicant's uploaded file is never read here. */
-/** The weights ONE posting is scored with — the browser's mirror of
+/** The weights ONE posting is scored with, the browser's mirror of
  *  weightsFor() in server/src/lib/engine.ts, and it must stay identical: the
  *  live score shown while a seeker edits their resume has to equal the score
  *  the server stores when they apply.
@@ -317,7 +317,7 @@ export function normSkill(s: string): string {
  *  A posting that names its own overrides the site defaults; one that does not
  *  inherits them, so retuning match_settings still moves every opening that
  *  never customised. A malformed or partial set is rejected wholesale rather
- *  than repaired — normalising it would score the applicant on a scale the
+ *  than repaired, normalising it would score the applicant on a scale the
  *  recruiter never chose. */
 export function weightsFor(posting: Pick<Posting, 'weights'>): typeof WEIGHTS {
   const w = posting.weights;
@@ -325,7 +325,7 @@ export function weightsFor(posting: Pick<Posting, 'weights'>): typeof WEIGHTS {
   const ok = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
   if (!ok(w.skills) || !ok(w.education) || !ok(w.experience)) return WEIGHTS;
   if (w.skills + w.education + w.experience !== 100) return WEIGHTS;
-  // Percentages in, fractions out — the same single conversion the server does.
+  // Percentages in, fractions out, the same single conversion the server does.
   return { skills: w.skills / 100, education: w.education / 100, experience: w.experience / 100 };
 }
 
@@ -339,7 +339,7 @@ export function scoreLocal(
   const matched = required.filter((s) => have.has(normSkill(s)));
 
   /* Evidence is keyed by the applicant's spelling, `matched` holds the
-     posting's, so the lookup normalises both — the same way the match did.
+     posting's, so the lookup normalises both, the same way the match did.
      An ABSENT map means the question was never asked (an extracted document,
      not a built resume) and everything counts in full; an EMPTY one means it
      was asked and went unanswered. */
@@ -361,7 +361,7 @@ export function scoreLocal(
   const expPart = reqMonths <= 0 ? 1 : Math.min(1, months / reqMonths);
 
   const raw = (skillPart * W.skills + eduPart * W.education + expPart * W.experience) * 100;
-  const total = Math.floor(raw + 0.5); // half-up, explicitly — must match server rmScore()
+  const total = Math.floor(raw + 0.5); // half-up, explicitly, must match server rmScore()
 
   return {
     score: total,

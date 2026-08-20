@@ -118,7 +118,7 @@ export class MyResumes implements OnInit {
       return;
     }
     await this.render();
-    this.showToast('Copied. The uploaded file isn’t carried over — attach it again if you want it.');
+    this.showToast('Copied. The uploaded file isn’t carried over, attach it again if you want it.');
   }
 
   async deleteResume(r: Resume): Promise<void> {

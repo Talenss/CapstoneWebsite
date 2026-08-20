@@ -11,7 +11,7 @@
 }
 .aside::before {
   content: ""; position: absolute; inset: 0;
-  background: radial-gradient(700px 400px at 80% 0%, rgba(198, 166, 100, .12), transparent 60%);
+  background: rgba(198, 166, 100, .05);
 }
 .aside > * { position: relative; }
 .aside h2 { color: #fff; font-size: 36px; margin-bottom: 16px; line-height: 1.1; }

@@ -9,7 +9,7 @@ export interface HasUnsavedChanges {
 /* Leaving the resume builder used to discard unsaved work in silence.
  *
  * The builder already listened for `beforeunload`, which covers closing the
- * tab or reloading — but not a click on "Openings" in the header. That is an
+ * tab or reloading. But not a click on "Openings" in the header. That is an
  * Angular route change: no unload event fires, the component is destroyed,
  * and twenty minutes of typing goes with it. Nothing warned, and nothing in
  * the interface hinted that it would happen.

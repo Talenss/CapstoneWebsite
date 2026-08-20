@@ -105,8 +105,14 @@ export const COOKIE_SECURE = COOKIE_SECURE_RAW;
                so an existing deployment keeps its behaviour and a keyless one
                gains reading it did not have.
 
-   Set RESUME_EXTRACTOR=rules to run the study without any AI at all. */
-export type ExtractorMode = 'rules' | 'gemini' | 'auto';
+   Set RESUME_EXTRACTOR=rules to run the study without any AI at all.
+
+   Set RESUME_EXTRACTOR=escalate to try the rules reader FIRST and call the
+   model only for the documents it could not read. 'auto' spends a request on
+   every upload, including the plain single-column ones the rules reader
+   handles perfectly; 'escalate' spends one only where the free reader came
+   back thin. See thinReading() in lib/extract.ts for what "thin" means. */
+export type ExtractorMode = 'rules' | 'gemini' | 'auto' | 'escalate';
 
 /** Read at the point of use rather than frozen at import. The study compares
  *  the two readers over the same set of files by flipping this setting between
@@ -114,7 +120,7 @@ export type ExtractorMode = 'rules' | 'gemini' | 'auto';
  *  when the process booted. */
 export function resumeExtractorMode(): ExtractorMode {
   const raw = (process.env.RESUME_EXTRACTOR || 'auto').trim().toLowerCase();
-  return raw === 'rules' || raw === 'gemini' ? raw : 'auto';
+  return raw === 'rules' || raw === 'gemini' || raw === 'escalate' ? raw : 'auto';
 }
 
 /** Read at the point of use, for the same reason resumeExtractorMode() is:

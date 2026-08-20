@@ -96,7 +96,7 @@ export class HrApplicants {
     if (!res.ok) { this.showToast(res.error); return; }
     this.inviteOpen.set(false);
     this.showToast(res.simulated
-      ? `Demo mode — in the real system this message is emailed to ${r.seeker.name}, with replies going to your inbox.`
+      ? `Demo mode, in the real system this message is emailed to ${r.seeker.name}, with replies going to your inbox.`
       : `Message emailed to ${r.seeker.name}. Their reply will land in your inbox.`);
   }
 
@@ -220,7 +220,7 @@ export class HrApplicants {
   }
 
   languageLine(r: Resume): string {
-    return (r.languages ?? []).map((l) => this.join([l.name, l.proficiency], ' — ')).join('  ·  ');
+    return (r.languages ?? []).map((l) => this.join([l.name, l.proficiency], ', ')).join('  ·  ');
   }
 
   /** The applicant's file, framed for reading.

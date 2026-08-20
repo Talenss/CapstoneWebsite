@@ -1,16 +1,16 @@
-/* ResumeMatch PH — shared/invalid-fields.ts
+/* ResumeMatch PH, shared/invalid-fields.ts
 
    Every form in the app rejects a field the same way: .invalid goes onto
    the surrounding .field, which turns the control's border red and reveals
    the <span class="err"> already sitting inside it.
 
-   That was the whole story — which meant that for anyone not looking at the
+   That was the whole story, which meant that for anyone not looking at the
    screen there was no story at all:
 
      · no control ever carried aria-invalid, so a screen reader had no way
        to know the field had been rejected at all;
      · the error text was never tied to its control, so landing on the field
-       announced the label and stopped there — the sentence explaining what
+       announced the label and stopped there, the sentence explaining what
        was wrong sat in the DOM, unread;
      · focus never moved. Two of the forms scrolled the window to the top,
        which helps only someone who can see where it landed; the rest did
@@ -27,7 +27,7 @@
 
    The state is passed in rather than read back off the DOM on purpose. The
    flags live in signals that were written a line earlier, and Angular has
-   not rendered them yet — inspecting .invalid here would test the PREVIOUS
+   not rendered them yet, inspecting .invalid here would test the PREVIOUS
    submission's classes. Taking the truth from the caller sidesteps render
    timing entirely, and the array's order is the reading order the author
    declares rather than one inferred from the document. */
@@ -40,7 +40,7 @@ function ensureId(el: HTMLElement): string {
 }
 
 export interface FieldState {
-  /** The id of the control itself — the input, select or textarea. */
+  /** The id of the control itself, the input, select or textarea. */
   id: string;
   invalid: boolean;
 }
@@ -51,11 +51,11 @@ export interface FieldState {
  *
  * Pass `{ focus: false }` to reconcile only. That is what a form calls while
  * the user is still typing: the mark on a field they have just corrected
- * must come off — including its aria-invalid, or a screen reader goes on
- * reporting an error the sighted user can see has gone — but pulling focus
+ * must come off, including its aria-invalid, or a screen reader goes on
+ * reporting an error the sighted user can see has gone, but pulling focus
  * mid-keystroke would be a worse bug than the stale mark.
  *
- * @returns true when every field passed — nothing was focused.
+ * @returns true when every field passed, nothing was focused.
  */
 export function reportInvalidFields(fields: FieldState[], opts: { focus?: boolean } = {}): boolean {
   let first: HTMLElement | null = null;

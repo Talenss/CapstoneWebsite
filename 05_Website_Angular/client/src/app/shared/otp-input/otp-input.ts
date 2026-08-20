@@ -1,21 +1,21 @@
 import { Component, ElementRef, computed, forwardRef, input, signal, viewChildren } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
-/* ResumeMatch PH — shared/otp-input
+/* ResumeMatch PH, shared/otp-input
    ------------------------------------------------------------------
    One box per digit for the six-digit codes the app emails: at sign-up,
    at password reset, and when changing an account's email address.
 
    It was a single text box before, which worked. What a box per digit buys,
    and the reason the QA review raised it, is that the code arrives in an
-   EMAIL on this system — not an SMS — so the realistic action is a paste,
+   EMAIL on this system, not an SMS, so the realistic action is a paste,
    often of something with spaces or a stray character attached. A single
    maxlength=6 field silently truncates "483 920" to "483 92". Here every
    paste is caught and stripped to digits before it lands, so the same
    clipboard content fills the boxes correctly.
 
    Written as a ControlValueAccessor so the three call sites keep their
-   existing [(ngModel)] and (ngModelChange) bindings unchanged — the forms'
+   existing [(ngModel)] and (ngModelChange) bindings unchanged, the forms'
    validation, their error spans and the shared reportInvalidFields() focus
    handling all keep working without knowing the control was replaced.
 
@@ -31,7 +31,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
        screen reader announces "6-digit code" once on entry rather than
        leaving six anonymous inputs;
      · each box is labelled "Digit n of 6", so its position is spoken;
-     · only the first box takes autocomplete="one-time-code" — the browser
+     · only the first box takes autocomplete="one-time-code", the browser
        fills the whole code into it, and onInput spreads it across the rest.
 
    Everything is a real <input>, so browser autofill, password managers and
@@ -69,7 +69,7 @@ export class OtpInput implements ControlValueAccessor {
   registerOnTouched(fn: () => void): void { this.onTouched = fn; }
   setDisabledState(d: boolean): void { this.isDisabled.set(d); }
 
-  /** Called on blur — the form decides what to do with it. */
+  /** Called on blur. The form decides what to do with it. */
   markTouched(): void { this.onTouched(); }
 
   // ---------- editing ----------
@@ -116,7 +116,7 @@ export class OtpInput implements ControlValueAccessor {
    *  replace the digit instead of appending a second one to it.
    *
    *  setSelectionRange, NOT select(). select() focuses the element as a side
-   *  effect, and focusing schedules another select — so once two boxes each
+   *  effect, and focusing schedules another select, so once two boxes each
    *  had one pending, they took focus off each other and rescheduled, over
    *  and over. The first version of this used `setTimeout(() => el.select())`
    *  and produced an unbounded focus loop: hundreds of focus events a second,

@@ -7,7 +7,7 @@
     <p>Job seekers build a structured resume and can attach their own file. Clark Outsourcing's HR posts structured openings. The engine compares them and shows both sides the same honest number.</p>
     <div class="plaque">
       <b>Recruiter accounts are provisioned, not self-served.</b>
-      So that every posting on this platform is a real job, recruiter accounts are created by the research team together with the partner company's HR department. Request access here — job seeker accounts open immediately.
+      So that every posting on this platform is a real job, recruiter accounts are created by the research team together with the partner company's HR department. Request access here. Job seeker accounts open immediately.
     </div>
   </aside>
 
@@ -80,9 +80,9 @@
             @if (fpDevCode(); as code) {
               <div class="dev-code" role="status">
                 @if (fpDevNote() === 'demo') {
-                  <b>Demo mode</b> — no real email is sent. Your code is <code>{{ code }}</code>.
+                  <b>Demo mode</b>. No real email is sent. Your code is <code>{{ code }}</code>.
                 } @else {
-                  <b>Development</b> — SMTP isn't configured, so here's your code: <code>{{ code }}</code>.
+                  <b>Development</b>, SMTP isn't configured, so here's your code: <code>{{ code }}</code>.
                 }
               </div>
             }
@@ -132,7 +132,7 @@
               <button class="btn primary" type="button" (click)="useLoginInstead()">Log in to that account</button>
               <button class="btn ghost" type="button" (click)="dismissExists()">Use a different email</button>
             </div>
-            <p class="hint" style="margin-top:10px">Forgot the password? Use <button type="button" class="linklike" (click)="useLoginInstead(); toggleForgot(true)">reset password</button> — we'll email you a code.</p>
+            <p class="hint" style="margin-top:10px">Forgot the password? Use <button type="button" class="linklike" (click)="useLoginInstead(); toggleForgot(true)">reset password</button>, we'll email you a code.</p>
           </div>
         }
 
@@ -226,9 +226,9 @@
           @if (regDevCode(); as code) {
             <div class="dev-code" role="status">
               @if (regDevNote() === 'demo') {
-                <b>Demo mode</b> — no real email is sent. Your code is <code>{{ code }}</code>.
+                <b>Demo mode</b>. No real email is sent. Your code is <code>{{ code }}</code>.
               } @else {
-                <b>Development</b> — SMTP isn't configured, so here's your code: <code>{{ code }}</code>.
+                <b>Development</b>, SMTP isn't configured, so here's your code: <code>{{ code }}</code>.
               }
             </div>
           }

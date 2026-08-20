@@ -100,14 +100,14 @@ export class Auth implements OnInit, OnDestroy {
   regStep = signal<'form' | 'code'>('form');
   regCode = '';
   regCodeInvalid = signal(false);
-  regExists = signal(false); // "this email already has an account — log in instead?"
+  regExists = signal(false); // "this email already has an account, log in instead?"
   regDevCode = signal<string | null>(null);
   regDevNote = signal<'demo' | 'debug' | null>(null);
   regResendLeft = signal(0);
 
   private timers: ReturnType<typeof setInterval>[] = [];
 
-  regBtnLabel = computed(() => (this.role() === 'recruiter' ? 'Send access request' : 'Continue — verify my email'));
+  regBtnLabel = computed(() => (this.role() === 'recruiter' ? 'Send access request' : 'Continue, verify my email'));
   regHeading = computed(() => {
     if (this.role() === 'recruiter') return 'Request recruiter access';
     return this.regStep() === 'code' ? 'Confirm your email' : 'Create your free account';
@@ -115,8 +115,8 @@ export class Auth implements OnInit, OnDestroy {
   regSub = computed(() => {
     if (this.role() === 'recruiter') return 'We verify every request with the partner company before activating an account.';
     return this.regStep() === 'code'
-      ? 'One last step — prove the email is really yours.'
-      : 'Pick your role — the form follows.';
+      ? 'One last step, prove the email is really yours.'
+      : 'Pick your role, the form follows.';
   });
 
   constructor() {
@@ -462,7 +462,7 @@ export class Auth implements OnInit, OnDestroy {
     this.loginEmail = this.regEmail.trim();
     this.loginPassword = '';
     this.loginError.set('');
-    this.loginNotice.set('This email already has an account — welcome back. Log in below.');
+    this.loginNotice.set('This email already has an account, welcome back. Log in below.');
     this.regExists.set(false);
     this.activeTab.set('login');
   }

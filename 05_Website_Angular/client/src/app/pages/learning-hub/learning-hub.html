@@ -4,14 +4,14 @@
   <div class="page-head">
     <span class="eyebrow">Learning hub &middot; built into the system</span>
     <h1>How to write a resume that actually gets read</h1>
-    <p>Short, plain guides — no jargon, no upsell. Enough to build a professional resume without hunting for a template somewhere else.</p>
+    <p>Short, plain guides. No jargon, no upsell. Enough to build a professional resume without hunting for a template somewhere else.</p>
   </div>
 
   <div class="hub">
     <!-- routerLink + fragment, NOT a bare href="#basics". index.html sets
          <base href="/">, so a browser resolves a bare fragment against the
          BASE rather than the current page: every one of these used to send
-         the reader to /#basics — the home page — instead of scrolling to the
+         the reader to /#basics, the home page, instead of scrolling to the
          guide. Going through the router also makes each guide a real address
          (/learning-hub#ats) that can be linked to and reloaded, which a bare
          fragment never was. Scrolling is handled by anchorScrolling, enabled
@@ -24,6 +24,7 @@
       <a routerLink="/learning-hub" fragment="experience">When you have no experience</a>
       <a routerLink="/learning-hub" fragment="sections">Projects, languages, references</a>
       <a routerLink="/learning-hub" fragment="templates">Templates and designs</a>
+      <a routerLink="/learning-hub" fragment="demand">What employers here ask for</a>
       <a routerLink="/learning-hub" fragment="scores">Reading your score</a>
       <a routerLink="/learning-hub" fragment="applying">After you apply</a>
       <a routerLink="/learning-hub" fragment="mistakes">Common mistakes</a>
@@ -31,7 +32,7 @@
 
     <div>
       <div class="search">
-        <input type="search" id="q" placeholder="Search the guides — try &quot;skills&quot;, &quot;ATS&quot;, or &quot;no experience&quot;" aria-label="Search guides" (input)="onSearch($event)">
+        <input type="search" id="q" placeholder="Search the guides: try &quot;skills&quot;, &quot;ATS&quot;, or &quot;no experience&quot;" aria-label="Search guides" (input)="onSearch($event)">
       </div>
       @if (noMatches()) {
         <div class="card nomatch">Nothing matches that. Try a different word.</div>
@@ -44,7 +45,7 @@
         <ul>
           <li>One page is plenty for a first job. Nobody is impressed by length.</li>
           <li>Start each bullet with a verb: <i>Built, Served, Organised, Assisted, Handled</i>.</li>
-          <li>Put numbers in where you honestly can — "handled 40+ enquiries per shift" says more than "excellent customer service".</li>
+          <li>Put numbers in where you honestly can. "Handled 40+ enquiries per shift" says more than "excellent customer service".</li>
           <li>Most recent thing first, in every section.</li>
           <li>Use a real email address. <i>juan.delacruz&#64;gmail.com</i>, not <i>cutiepie_2003&#64;&hellip;</i></li>
         </ul>
@@ -57,16 +58,16 @@
 
       <article class="card" id="ats">
         <h2>What an ATS actually is</h2>
-        <p class="kicker">Applicant Tracking System — the software that reads your resume before a person does.</p>
-        <p>Most medium and large employers in the Philippines now run applications through screening software first. It pulls text out of your file, looks for the skills and qualifications in the job posting, and ranks you. If it can't read your file properly, you can be filtered out before anyone human sees you — not because you're unqualified, but because of a formatting problem.</p>
+        <p class="kicker">Applicant Tracking System: the software that reads your resume before a person does.</p>
+        <p>Most medium and large employers in the Philippines now run applications through screening software first. It pulls text out of your file, looks for the skills and qualifications in the job posting, and ranks you. If it can't read your file properly, you can be filtered out before anyone human sees you, not because you're unqualified, but because of a formatting problem.</p>
         <h3>Why this platform works differently</h3>
-        <p>What you type into the builder is scored exactly as you typed it — nothing lost in translation, and you can correct any of it. That is the number a recruiter ranks by.</p>
-        <p>If you also attach your own resume file, software reads that too and scores it separately, so you can see what a parser makes of your document. The two numbers are shown side by side. <b>A gap between them is the point:</b> it is what an ordinary screening system would have missed. Your ranking still comes from the resume you typed, so a badly-read scan cannot push you down a list — but it will show you a document worth reformatting before you send it somewhere that has no such safeguard.</p>
-        <p>The one optional exception: if you pick <b>"Upload &amp; analyze"</b>, an AI reads that one file — with your consent — purely to prefill the builder so you don't retype everything. You review and correct every field before saving, and the score still comes only from the structured data you approve, never from the file itself.</p>
+        <p>What you type into the builder is scored exactly as you typed it. Nothing lost in translation, and you can correct any of it. That is the number a recruiter ranks by.</p>
+        <p>If you also attach your own resume file, software reads that too and scores it separately, so you can see what a parser makes of your document. The two numbers are shown side by side. <b>A gap between them is the point:</b> it is what an ordinary screening system would have missed. Your ranking still comes from the resume you typed, so a badly-read scan cannot push you down a list. But it will show you a document worth reformatting before you send it somewhere that has no such safeguard.</p>
+        <p>The one optional exception: if you pick <b>"Upload &amp; analyze"</b>, an AI reads that one file, with your consent, purely to prefill the builder so you don't retype everything. You review and correct every field before saving, and the score still comes only from the structured data you approve, never from the file itself.</p>
         <p>But you'll apply elsewhere too, so it's worth knowing the rules:</p>
         <ul>
-          <li>Use ordinary section headings and nothing clever. The ones screening software is built to recognise are <i>Professional Summary</i>, <i>Work Experience</i>, <i>Education</i>, <i>Skills</i>, <i>Projects</i>, <i>Certifications</i>, <i>Languages</i> and <i>References</i> — which is exactly what this builder prints, whichever design you pick. "My Journey" is not one of them.</li>
-          <li>Avoid tables, text boxes, columns, and headers/footers — parsers scramble them.</li>
+          <li>Use ordinary section headings and nothing clever. The ones screening software is built to recognise are <i>Professional Summary</i>, <i>Work Experience</i>, <i>Education</i>, <i>Skills</i>, <i>Projects</i>, <i>Certifications</i>, <i>Languages</i> and <i>References</i>: which is exactly what this builder prints, whichever design you pick. "My Journey" is not one of them.</li>
+          <li>Avoid tables, text boxes, columns and headers/footers. Parsers scramble them.</li>
           <li>Don't put your contact details inside an image or a graphic.</li>
           <li>Write skills out in full at least once. "Applicant Tracking System (ATS)", not just "ATS".</li>
           <li>Save as PDF unless the posting specifically asks for Word.</li>
@@ -76,20 +77,20 @@
 
       <article class="card" id="skills">
         <h2>Writing the skills section</h2>
-        <p class="kicker">The single biggest part of your compatibility score — half of it by default, and more on openings that weight skills harder.</p>
-        <p>Be specific. The engine — and a real ATS — matches skill against skill. A vague phrase matches nothing.</p>
+        <p class="kicker">The single biggest part of your compatibility score. Half of it by default, and more on openings that weight skills harder.</p>
+        <p>Be specific. The engine, and a real ATS, matches skill against skill. A vague phrase matches nothing.</p>
         <div class="split">
           <div class="yes"><b>Scores</b>JavaScript &middot; HTML/CSS &middot; CRM Software &middot; Data Entry &middot; Bookkeeping &middot; Customer Service</div>
           <div class="no"><b>Scores nothing</b>Computer skills &middot; Good with people &middot; Fast learner &middot; Hard worker &middot; Team player</div>
         </div>
         <ul>
-          <li>List both technical and soft skills — postings ask for both, and both are scored.</li>
+          <li>List both technical and soft skills, postings ask for both, and both are scored.</li>
           <li>Only claim what you could actually demonstrate if asked in an interview.</li>
-          <li>Open any posting and read what it asks for. The site tells you how many requirements you have not matched and what kind, and leaves the comparison to you — so that what you add is something you have actually done, not a word you copied.</li>
+          <li>Open any posting and read what it asks for. The site tells you how many requirements you have not matched and what kind, and leaves the comparison to you. So that what you add is something you have actually done, not a word you copied.</li>
           <li>Say where you used each skill. A skill you can point to an entry on your own resume for counts in full; one you cannot still counts, at half.</li>
           <li>Add a skill the moment you learn it, even from a short course or an OJT.</li>
         </ul>
-        <p>The builder shows you which skills Clark Outsourcing is currently asking for, ranked by how many openings need them. That list is the shortest path to a higher score.</p>
+        <p>The builder lists the skills these openings use, spelled the way the system reads them, so that your wording is not what costs you a match. It is not ordered by what is worth the most, see <a routerLink="/learning-hub" fragment="demand">what employers here are asking for</a> below if you want to know where the demand actually is.</p>
       </article>
 
       <article class="card" id="experience">
@@ -97,7 +98,7 @@
         <p class="kicker">You almost certainly have more than you think.</p>
         <p>"No experience" usually means "no full-time job yet". That's not the same thing. All of these are legitimate experience entries:</p>
         <ul>
-          <li>OJT and internships — including unpaid ones</li>
+          <li>OJT and internships, including unpaid ones</li>
           <li>Your capstone or thesis project, if you built something</li>
           <li>Part-time or seasonal work, even unrelated to the role</li>
           <li>Officer roles in a student organisation</li>
@@ -109,37 +110,69 @@
 
       <article class="card" id="sections">
         <h2>Projects, languages, and references</h2>
-        <p class="kicker">Optional sections. They change nothing about your score — and quite a lot about how you read.</p>
+        <p class="kicker">Optional sections. They change nothing about your score. And quite a lot about how you read.</p>
         <p>Your compatibility score comes from three things only: your skills, your education level, and your months of experience. These sections are none of those, so adding them cannot move the number by a single point. Be clear-eyed about that. What they change is the person on the other end, who reads the page after the software has ranked it.</p>
         <h3>Projects</h3>
-        <p>Often the strongest section a fresh graduate has. A capstone, an OJT output, a system you built for a barangay or a student organisation, freelance work — anything where you can name what you made and what it did. Say what it was for and how big it was: <i>"replaced a paper logbook for about 1,200 residents"</i> tells a recruiter more than <i>"web development project"</i>.</p>
+        <p>Often the strongest section a fresh graduate has. A capstone, an OJT output, a system you built for a barangay or a student organisation, freelance work, anything where you can name what you made and what it did. Say what it was for and how big it was: <i>"replaced a paper logbook for about 1,200 residents"</i> tells a recruiter more than <i>"web development project"</i>.</p>
         <p>If a project taught you a skill, put that skill in the Skills list as well. <b>That</b> is the part that scores.</p>
         <h3>Languages</h3>
-        <p>Written as words — Native, Fluent, Conversational, Basic. Never as stars or a filled bar: a graphic means nothing to screening software and nothing at all in a black-and-white printout. For hospitality and front-office roles around Clark this section is worth more than it looks.</p>
+        <p>Written as words, Native, Fluent, Conversational, Basic. Never as stars or a filled bar: a graphic means nothing to screening software and nothing at all in a black-and-white printout. For hospitality and front-office roles around Clark this section is worth more than it looks.</p>
         <h3>References</h3>
-        <p><b>Ask the person first.</b> You are putting someone else's name, employer and phone number on a document you will send to strangers, and that is their decision to make, not yours. If you would rather not, leave the section empty — nothing is printed, not even the heading, and no recruiter counts its absence against you. "Available upon request" is fine too, and takes less of the page.</p>
+        <p><b>Ask the person first.</b> You are putting someone else's name, employer and phone number on a document you will send to strangers, and that is their decision to make, not yours. If you would rather not, leave the section empty. Nothing is printed, not even the heading, and no recruiter counts its absence against you. "Available upon request" is fine too, and takes less of the page.</p>
         <p>All three live on the <b>More sections</b> step of the builder, and any section you leave empty is left off the printed page entirely.</p>
       </article>
 
       <article class="card" id="templates">
         <h2>Templates and designs</h2>
         <p class="kicker">Two separate choices. The template decides what a recruiter reads first; the design decides what the page looks like.</p>
-        <h3>Template — the order of your sections</h3>
+        <h3>Template, the order of your sections</h3>
         <ul>
-          <li><b>Chronological</b> — history first, most recent at the top. Use it when your education and experience already point at the role you want.</li>
-          <li><b>Functional</b> — skills first, history second. Use it when you're changing direction, or when your skills are stronger than your work history.</li>
-          <li><b>Combination</b> — equal weight to both. A reasonable default if you're unsure.</li>
+          <li><b>Chronological</b>, history first, most recent at the top. Use it when your education and experience already point at the role you want.</li>
+          <li><b>Functional</b>, skills first, history second. Use it when you're changing direction, or when your skills are stronger than your work history.</li>
+          <li><b>Combination</b>, equal weight to both. A reasonable default if you're unsure.</li>
         </ul>
-        <h3>Design — the look of the page</h3>
+        <h3>Design, the look of the page</h3>
         <p>There are fourteen, and the honest answer is that it matters less than it feels like it should. Every one is a single column of real text with standard headings and ordinary fonts, so screening software reads them identically and <b>your score is exactly the same either way</b>. Pick the one you would be comfortable handing to a person.</p>
         <p>A few are worth knowing about:</p>
         <ul>
-          <li><b>Traditional</b> and <b>Classic</b> — the most conservative. Government, banking, legal, education.</li>
-          <li><b>Compact</b> — tighter spacing, for when a long history will not fit on one page.</li>
-          <li><b>Senior</b> — a larger name block with your headline beneath it. For supervisory roles.</li>
-          <li><b>Graduate</b> and <b>Technical</b> — these two also <i>change the order</i>. Graduate puts Education, Projects and Certifications first, for applicants whose schooling is their strongest card. Technical leads with Skills and Projects. Because they set their own order they override the template choice above, and the builder says so on screen when that is happening.</li>
+          <li><b>Traditional</b> and <b>Classic</b>, the most conservative. Government, banking, legal, education.</li>
+          <li><b>Compact</b>, tighter spacing, for when a long history will not fit on one page.</li>
+          <li><b>Senior</b>. A larger name block with your headline beneath it. For supervisory roles.</li>
+          <li><b>Graduate</b> and <b>Technical</b>. These two also <i>change the order</i>. Graduate puts Education, Projects and Certifications first, for applicants whose schooling is their strongest card. Technical leads with Skills and Projects. Because they set their own order they override the template choice above, and the builder says so on screen when that is happening.</li>
         </ul>
         <p>Switching either one never loses anything you typed. Try a few and watch the live preview beside the form.</p>
+      </article>
+
+      <!-- The demand figures used to sit in the resume builder, as a number
+           beside every suggested skill with the pool sorted by it and an add
+           button on each chip. That made it a ranked list of what was worth
+           claiming, right where claiming costs one click. The same information
+           is genuinely useful. It is what a person deciding what to learn
+           needs. So it was moved here, where it is read as advice, carries no
+           add button, and is not marked up against any particular reader's
+           resume. -->
+      <article class="card" id="demand">
+        <h2>What employers here are asking for</h2>
+        <p>Across the openings on this site right now, these are the skills that come up most. This is a count of job adverts, nothing more. No judgement about you, and nothing here is compared against your resume.</p>
+        @if (demandRows().length) {
+          <table class="demand">
+            <thead><tr><th>Skill</th><th>Openings asking for it</th></tr></thead>
+            <tbody>
+              @for (d of demandRows(); track d.name) {
+                <tr><td>{{ d.name }}</td><td>{{ d.n }} of {{ openCount() }}</td></tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="hint">No openings are posted at the moment, so there is nothing to count.</p>
+        }
+        <h3>How to use this honestly</h3>
+        <ul>
+          <li>Read it as a list of what is worth <b>learning</b>, not a list of what is worth <b>typing</b>. A short course, an OJT or a real project is what turns one of these into something you can put your name to.</li>
+          <li>Only claim what you could talk about for two minutes if a recruiter asked. That is a better test than any rule the system can enforce.</li>
+          <li>A skill you can point to. A job, a project, a certification, a course on your own resume, counts in full when a role asks for it. One you cannot point to still counts, at half.</li>
+          <li>The skills near the bottom are not worthless. One opening is still an opening, and the mix changes as companies post new roles.</li>
+        </ul>
       </article>
 
       <article class="card" id="scores">
@@ -150,10 +183,10 @@
         <p>One consequence worth knowing: because two openings can weight things differently, their percentages are not strictly comparable. A 70% on one posting and a 70% on another can mean different things. Read the breakdown, not just the number.</p>
         <div class="ladder">
           <div class="r"><span class="badge green">{{ T.strong }}% and up</span><span>Strong match. You meet most of what they asked for.</span></div>
-          <div class="r"><span class="badge amber">{{ T.related }}&ndash;{{ T.strong - 1 }}%</span><span>Possible match. Worth applying — recruiters read every applicant.</span></div>
+          <div class="r"><span class="badge amber">{{ T.related }}&ndash;{{ T.strong - 1 }}%</span><span>Possible match. Worth applying, recruiters read every applicant.</span></div>
           <div class="r"><span class="badge slate">Below {{ T.related }}%</span><span>Related roles get suggested instead. You are never turned away.</span></div>
         </div>
-        <p>That bottom row is the part that matters most. On this platform a low score is <b>never</b> a rejection. If your resume doesn't fit a posting, the system points you at roles that <i>do</i> fit the skills you already have — and your application still lands on the recruiter's list either way. No one is filtered out by software here.</p>
+        <p>That bottom row is the part that matters most. On this platform a low score is <b>never</b> a rejection. If your resume doesn't fit a posting, the system points you at roles that <i>do</i> fit the skills you already have. And your application still lands on the recruiter's list either way. No one is filtered out by software here.</p>
       </article>
 
       <article class="card" id="applying">
@@ -173,7 +206,7 @@
         <h2>Common mistakes</h2>
         <p class="kicker">Things that quietly cost people interviews.</p>
         <ul>
-          <li><b>Sending the same resume everywhere.</b> Keep a version per role type — the builder lets you save as many as you want.</li>
+          <li><b>Sending the same resume everywhere.</b> Keep a version per role type. The builder lets you save as many as you want.</li>
           <li><b>Leaving a section blank.</b> An empty heading looks like an oversight. Remove it instead.</li>
           <li><b>Listing skills you can't demonstrate.</b> It falls apart in the interview, and it's worse than an honest gap.</li>
           <li><b>Burying the good part.</b> Your best evidence goes at the top of its section, not the bottom.</li>

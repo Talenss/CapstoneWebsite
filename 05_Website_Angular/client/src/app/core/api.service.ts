@@ -5,7 +5,7 @@ import { ApiAdapter } from './adapter';
 import { DemoAdapter } from './demo-adapter';
 import { HttpAdapter } from './http-adapter';
 
-/** ONE surface, TWO adapters — see core/adapter.ts. Every page component
+/** ONE surface, TWO adapters, see core/adapter.ts. Every page component
  *  injects ApiService and calls e.g. api.auth.me(), api.resumes.mine(),
  *  never caring whether CONFIG.mode is 'demo' or 'api'. */
 @Injectable({ providedIn: 'root' })

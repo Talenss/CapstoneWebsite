@@ -4,7 +4,7 @@ import { User } from './models';
 
 /** Holds the signed-in user for the lifetime of the app. Route guards
  *  populate it before a protected page activates, so page components can
- *  read session.user() synchronously — mirroring the original
+ *  read session.user() synchronously, mirroring the original
  *  `const user = await RMPH.guard('seeker')` pattern. */
 @Injectable({ providedIn: 'root' })
 export class SessionService {

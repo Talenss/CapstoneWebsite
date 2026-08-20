@@ -101,18 +101,64 @@ async function docxToText(buffer: Buffer): Promise<string> {
 type Section = 'summary' | 'education' | 'experience' | 'skills' | 'certifications' | 'projects' | 'languages' | 'references';
 
 const HEADINGS: [Section, RegExp][] = [
-  ['summary', /^(professional\s+)?(summary|profile|objective|about\s+me|career\s+objective)$/],
-  ['education', /^(education(al)?( background| qualifications?)?|academic( background)?|schooling)$/],
-  ['experience', /^(work\s+)?(experience|employment( history)?|professional\s+experience|work\s+history|career\s+history|internship(s)?)$/],
-  ['skills', /^(technical\s+|core\s+|key\s+)?(skills|competenc(y|ies)|proficienc(y|ies)|expertise)$/],
-  ['certifications', /^(certification(s)?|certificates?|licen[cs]es?|trainings?|seminars?)$/],
-  ['projects', /^(projects?|portfolio|project\s+experience)$/],
-  ['languages', /^(languages?|language\s+proficiency)$/],
-  ['references', /^(references?|character\s+references?)$/],
+  ['summary', /^(professional\s+|personal\s+|career\s+)?(summary|profile|objective|about\s+me|career\s+objective|overview)$/],
+  ['education', /^(education(al)?(\s+(background|qualifications?|attainment|history))?|academic(\s+(background|qualifications?))?|schooling|tertiary\s+education|education\s+and\s+training)$/],
+  /* OJT, practicum and work immersion are the whole of a Philippine fresh
+     graduate's experience section, and this study's population is fresh
+     graduates. Missing them meant reading a resume as having no experience
+     at all — the one field that feeds a quarter of every score. */
+  ['experience', /^(work\s+|relevant\s+|professional\s+)?(experience|employment(\s+(history|record))?|work\s+history|career\s+history|professional\s+background|internship(s)?|ojt|on[-\s]the[-\s]job\s+training|practicum|apprenticeship|work\s+immersion|job\s+experience)$/],
+  ['skills', /^(technical\s+|core\s+|key\s+|soft\s+|other\s+|special\s+)?(skills(\s+and\s+(abilities|competenc(y|ies)))?|competenc(y|ies)|proficienc(y|ies)|expertise|qualifications|areas?\s+of\s+expertise|technical\s+proficiency)$/],
+  ['certifications', /^(certification(s)?|certificates?|licen[cs]es?|trainings?(\s+attended)?|seminars?(\s+attended)?|awards?(\s+and\s+(recognitions?|honou?rs?))?|achievements?|honou?rs?(\s+and\s+awards?)?|professional\s+development|eligibilit(y|ies))$/],
+  ['projects', /^(projects?|portfolio|project\s+experience|academic\s+projects?|capstone(\s+project)?|thesis)$/],
+  ['languages', /^(languages?|language\s+proficiency|languages?\s+spoken)$/],
+  ['references', /^(references?|character\s+references?|personal\s+references?)$/],
 ];
 
+/** The content that shared a line with its heading — "SKILLS: HTML, CSS"
+ *  gives back "HTML, CSS". Empty when the line was a heading alone.
+ *  Kept beside headingOf so the two can never disagree about where the
+ *  label ends: dropping this text was silently losing the skills of every
+ *  resume compact enough to write them on the heading line. */
+function headingTail(line: string): string {
+  const t = line.trim()
+    .replace(/^[\s•▪●■○‣⁃>*#–—_-]+/, '')
+    .replace(/^\d{1,2}\s*[.)]\s*/, '');
+  const colon = t.indexOf(':');
+  if (colon <= 0 || colon > 40) return '';
+  return t.slice(colon + 1).trim();
+}
+
 function headingOf(line: string): Section | null {
-  const t = line.trim().replace(/[:–—_.*#>-]+$/g, '').trim().toLowerCase();
+  let t = line.trim();
+
+  /* A heading is often numbered or bulleted by the template rather than by
+     the writer — "1. EDUCATION", "> SKILLS", "▪ PROJECTS". Strip that
+     ornament before matching, never after: it is not part of the word. */
+  t = t.replace(/^[\s•▪●■○‣⁃>*#–—_-]+/, '')
+       .replace(/^\d{1,2}\s*[.)]\s*/, '');
+
+  /* "SKILLS: HTML, CSS, JavaScript" is one line doing two jobs. Everything
+     after the colon is content, so match on the label alone — but only when
+     the label is short, so a sentence containing a colon is not mistaken for
+     a heading with a very long body. */
+  const colon = t.indexOf(':');
+  if (colon > 0 && colon <= 40) t = t.slice(0, colon);
+
+  /* Letter-spaced headings ("E D U C A T I O N") are a design flourish that
+     survives into the extracted text. Collapse them only when EVERY token is
+     a single letter, so "R and D" is left alone.
+
+     The word gap is the WIDER gap: "W O R K   E X P E R I E N C E" is two
+     words, and joining the lot into "workexperience" matches nothing. Split
+     on runs of two or more spaces first, and rejoin with one. */
+  const groups = t.trim().split(/\s{2,}/);
+  const tokens = t.trim().split(/\s+/);
+  if (tokens.length >= 4 && tokens.every((w) => /^[A-Za-z]$/.test(w))) {
+    t = groups.map((g) => g.split(/\s+/).join('')).join(' ');
+  }
+
+  t = t.replace(/[:–—_.*#>-]+$/g, '').trim().toLowerCase();
   if (!t || t.length > 40) return null;
   for (const [sec, re] of HEADINGS) if (re.test(t)) return sec;
   return null;
@@ -132,16 +178,52 @@ function tidy(lines: string[]): string[] {
   return out;
 }
 
+/** Undo the blank line some extractors put after EVERY paragraph.
+ *
+ *  mammoth.extractRawText joins .docx paragraphs with a blank line, so a real
+ *  Word document arrives uniformly double-spaced. That is fatal rather than
+ *  untidy: a blank line is the signal groupBlocks uses to tell one job from
+ *  the next, so every entry shattered into one-line fragments — a job title,
+ *  its employer and its dates became three separate jobs, and the dates were
+ *  lost with them.
+ *
+ *  The test for "these blanks are padding" is that NO two non-empty lines are
+ *  adjacent anywhere in the document. A human-written blank line always
+ *  leaves some pair of lines touching; a mechanical one never does.
+ *
+ *  Runs are then treated by length, which preserves the real structure: a run
+ *  of one was only the paragraph joiner and goes, a run of two or more was an
+ *  actual empty paragraph and collapses to a single blank. */
+function undoubleSpace(lines: string[]): string[] {
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim() && lines[i - 1].trim()) return lines; // human spacing — leave it
+  }
+  const out: string[] = [];
+  let run = 0;
+  for (const line of lines) {
+    if (!line.trim()) { run++; continue; }
+    if (run >= 2) out.push('');
+    run = 0;
+    out.push(line);
+  }
+  return out;
+}
+
 /** The document split into its sections, plus everything before the first
  *  heading (which is where the name and contact details live). */
 function splitSections(text: string): { head: string[]; sections: Record<string, string[]> } {
-  const lines = text.split(/\r?\n/).map((l) => l.replace(/\s+$/g, ''));
+  const lines = undoubleSpace(text.split(/\r?\n/).map((l) => l.replace(/\s+$/g, '')));
   const head: string[] = [];
   const raw: Record<string, string[]> = {};
   let current: Section | null = null;
   for (const line of lines) {
     const h = headingOf(line);
-    if (h) { current = h; raw[h] = raw[h] || []; continue; }
+    if (h) {
+      current = h; raw[h] = raw[h] || [];
+      const tail = headingTail(line);
+      if (tail) raw[h].push(tail);
+      continue;
+    }
     if (current) raw[current].push(line);
     else head.push(line);
   }
@@ -162,7 +244,11 @@ const RE_URL = /(?:https?:\/\/)?(?:www\.)?(?:github\.com|gitlab\.com|behance\.ne
  *  none of the words a heading or a contact fragment. Returns '' when nothing
  *  qualifies — an empty name is honest; a wrong one is not. */
 function findName(head: string[]): string {
-  const BAD = /\b(resume|curriculum|vitae|cv|profile|address|email|phone|mobile|contact|objective|summary)\b/i;
+  /* Philippine resumes very often open with a label line — "PERSONAL
+     INFORMATION", "BIODATA", "APPLICATION LETTER" — which is two capitalised
+     words with no digits, and therefore passes every other test below. It was
+     being returned as the applicant's name. */
+  const BAD = /\b(resume|resumé|curriculum|vitae|cv|profile|address|email|phone|mobile|contact|objective|summary|personal|information|data|biodata|bio|particulars|application|applicant|details)\b/i;
   for (const raw of head.slice(0, 8)) {
     const line = raw.trim().replace(/[|•·,]+/g, ' ').replace(/\s+/g, ' ').trim();
     if (!line || line.length > 60 || BAD.test(line)) continue;
@@ -550,6 +636,8 @@ export async function parseResume(buffer: Buffer, mimetype: string, fileName: st
 
 /* Exported for tests — these are the rules the study would have to defend. */
 export const __rules = {
+  undoubleSpace,
+  headingTail,
   headingOf, splitSections, findName, monthsFromRange, monthsFromWords, levelOf, inferTemplate,
   groupBlocks, sweepVocabulary, clean,
 };

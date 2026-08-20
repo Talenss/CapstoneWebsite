@@ -42,7 +42,7 @@ export class ResumePrint implements OnInit, OnDestroy {
   linkLine = computed(() => this.join(
     [this.resume()?.personal.linkedin, this.resume()?.personal.portfolio], '  ·  '));
   languageLine = computed(() => (this.resume()?.languages ?? [])
-    .map((l) => this.join([l.name, l.proficiency], ' — ')).join('  ·  '));
+    .map((l) => this.join([l.name, l.proficiency], ', ')).join('  ·  '));
 
   sectionOrder = computed<SectionKind[]>(() => {
     const r = this.resume();

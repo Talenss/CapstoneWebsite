@@ -44,7 +44,7 @@
             <div class="alert error show" role="alert">{{ ceError() }}</div>
           }
           @if (emailStep() === 'form') {
-            <p class="hint" style="margin-bottom:12px">We'll email a 6-digit code to the new address to prove it's yours — same as when you registered. Nothing changes until the code checks out.</p>
+            <p class="hint" style="margin-bottom:12px">We'll email a 6-digit code to the new address to prove it's yours, same as when you registered. Nothing changes until the code checks out.</p>
             <form novalidate (ngSubmit)="onChangeEmailStart($event)">
               <div class="field">
                 <label for="ceEmail">New email address</label>
@@ -64,7 +64,7 @@
           } @else {
             <p class="hint" style="margin-bottom:12px">We sent a 6-digit code to <b>{{ ceNewEmail }}</b>. Enter it to switch your account over.</p>
             @if (ceDevCode(); as code) {
-              <div class="dev-code" role="status"><b>Demo / development</b> — no real email is sent. Your code is <code>{{ code }}</code>.</div>
+              <div class="dev-code" role="status"><b>Demo / development</b>. No real email is sent. Your code is <code>{{ code }}</code>.</div>
             }
             <form novalidate (ngSubmit)="onChangeEmailConfirm($event)">
               <div class="field">
@@ -115,22 +115,22 @@
       <h2 style="font-size:22px;margin-bottom:4px">Email notifications</h2>
       <p style="font-size:13.5px;color:var(--muted);margin-bottom:16px">
         @if (session.user()?.role === 'seeker') {
-          When a recruiter moves one of your applications — under review, shortlisted, hired, or not selected — we email you so you don't have to keep checking. You'll also hear when a brand-new opening scores well against your active resume.
+          When a recruiter moves one of your applications, under review, shortlisted, hired, or not selected, we email you so you don't have to keep checking. You'll also hear when a brand-new opening scores well against your active resume.
         } @else {
           When someone applies to one of your openings, we email you so applications never sit unseen.
         }
-        Security codes (sign-up, password reset) and personal messages from recruiters about your applications are separate — those always arrive.
+        Security codes (sign-up, password reset) and personal messages from recruiters about your applications are separate, those always arrive.
       </p>
       <label class="notify-toggle">
         <input type="checkbox" [checked]="notifyOn()" [disabled]="notifySaving()" (change)="onToggleNotify($event)">
         <span>
           <b>{{ notifyOn() ? 'On' : 'Off' }}</b>
-          — email me about
+         , email me about
           {{ session.user()?.role === 'seeker' ? 'my applications' : 'new applicants' }}
         </span>
       </label>
       @if (isDemo) {
-        <p class="hint" style="margin-top:12px">Demo mode runs entirely in your browser, so no email is actually sent — the setting itself works and is remembered.</p>
+        <p class="hint" style="margin-top:12px">Demo mode runs entirely in your browser, so no email is actually sent. The setting itself works and is remembered.</p>
       }
     </section>
 

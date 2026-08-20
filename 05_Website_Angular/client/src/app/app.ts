@@ -10,7 +10,7 @@ import { Seo, SeoData } from './core/seo';
  *  so the root component is the router outlet plus the one thing that has
  *  to sit above every page: a sign that a route is loading.
  *
- *  All eighteen routes are loadComponent — fetched lazily — so between the
+ *  All eighteen routes are loadComponent, fetched lazily, so between the
  *  click and the chunk arriving there is nothing rendered at all. That
  *  showed as a blank page for a second or so with no indication the click
  *  had registered, which is the moment people click again, hit refresh, or
@@ -44,7 +44,7 @@ export class App {
       if (e instanceof NavigationStart) {
         /* Held back briefly on purpose. An already-cached chunk arrives in a
            few milliseconds, and a bar that appears and vanishes that fast
-           reads as a glitch — worse than no bar at all. Only a navigation
+           reads as a glitch, worse than no bar at all. Only a navigation
            slow enough to be noticed gets an indicator. */
         if (this.timer) clearTimeout(this.timer);
         this.timer = setTimeout(() => this.navigating.set(true), 150);

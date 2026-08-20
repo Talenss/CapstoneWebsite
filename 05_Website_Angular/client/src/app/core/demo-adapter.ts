@@ -1,5 +1,5 @@
 /* ============================================================
-   DEMO ADAPTER — browser storage, zero setup. Port of the `demo`
+   DEMO ADAPTER, browser storage, zero setup. Port of the `demo`
    object in 04_Website/app/assets/api.js. Seeded with Clark Outsourcing's
    real departments so all three match tiers actually demonstrate.
    ============================================================ */
@@ -15,13 +15,13 @@ const KEY = 'rmph_v3_db';
  * ever after. That is correct for a visitor's own work, and wrong for the
  * SEEDED content: a browser that first opened the site when the partner
  * company was a hotel kept showing hotel openings long after the seed became
- * Clark Outsourcing, and kept scoring them by the old arithmetic — so the site
+ * Clark Outsourcing, and kept scoring them by the old arithmetic, so the site
  * on screen quietly disagreed with the site being described.
  *
  * Bump this whenever the seeded data or the scoring rules change. A mismatch
  * re-seeds, which discards anything created in demo mode; that is the right
  * trade for a demonstration build whose entire purpose is to show the seeded
- * content correctly, and demo data is disposable by construction — nothing
+ * content correctly, and demo data is disposable by construction, nothing
  * here has ever reached a database. Anything a visitor wants to keep is
  * exported from the resume itself.
  */
@@ -54,7 +54,7 @@ interface Db {
   /** Mirrors the server's application_status_history table. Written on
    *  every status change so demo mode can show the same applicant-facing
    *  timeline as api mode rather than a feature that only half exists. */
-  /** The seed this database was built from — see SEED_VERSION. */
+  /** The seed this database was built from, see SEED_VERSION. */
   seedVersion?: string;
   statusHistory: { applicationId: string; from: AppStatus | null; to: AppStatus; at: number; by: 'applicant' | 'employer'; byUserId?: string | null; reason?: RejectionReason | null }[];
 }
@@ -67,7 +67,7 @@ interface Db {
    fields come back absent rather than empty, and a whole section that
    holds nothing is omitted instead of returned as []. Demo mode keeps the
    object it was handed, so without this it would return `field: ''` and
-   `projects: []` where api mode returns neither — a shape difference the
+   `projects: []` where api mode returns neither, a shape difference the
    printed sheet reacts to (an empty array is truthy, and would render a
    heading with nothing under it).
 
@@ -81,7 +81,7 @@ function put(target: any, key: string, value: string): void {
   if (v) target[key] = v;
 }
 
-/** Past-deadline postings stop accepting applications — same lazy
+/** Past-deadline postings stop accepting applications, same lazy
  *  auto-close rule as server mode (deadline day itself still counts). */
 function isExpired(p: Posting): boolean {
   return !!p.deadline && String(p.deadline).slice(0, 10) < new Date().toISOString().slice(0, 10);
@@ -103,12 +103,12 @@ function seed(): Db {
       { id: 'u4', role: 'seeker', name: 'Marco Garcia', email: 'marco@demo.ph', password: 'demo123', activeResumeId: 'r3', createdAt: Date.now() - D * 15 },
       { id: 'u5', role: 'seeker', name: 'Liza Cruz', email: 'liza@demo.ph', password: 'demo123', activeResumeId: 'r4', createdAt: Date.now() - D * 10 },
       { id: 'u6', role: 'admin', name: 'Research Team', email: 'admin@demo.ph', password: 'demo123', createdAt: Date.now() - D * 90 },
-      { id: 'u7', role: 'recruiter', name: 'Grace Lopez', email: 'grace@demo.ph', password: 'demo123', companyId: 'c1', position: 'HR Officer — Customer Support', verified: true, createdAt: Date.now() - D * 55 },
+      { id: 'u7', role: 'recruiter', name: 'Grace Lopez', email: 'grace@demo.ph', password: 'demo123', companyId: 'c1', position: 'HR Officer, Customer Support', verified: true, createdAt: Date.now() - D * 55 },
     ] as DemoUser[],
     resumes: [
       // Juan carries every optional section, so the demo shows a complete
       // sheet. Kept identical to resume 1 in db/resumematch_ph.sql.
-      { id: 'r1', userId: 'u1', title: 'IT — fresh graduate', template: 'chronological', design: 'classic',
+      { id: 'r1', userId: 'u1', title: 'IT, fresh graduate', template: 'chronological', design: 'classic',
         personal: { fullName: 'Juan Dela Cruz', email: 'seeker@demo.ph', phone: '0917 000 0000', address: 'San Fernando, Pampanga',
           summary: 'BS Information Technology graduate with internship experience building and maintaining public-facing web pages. Looking for an entry-level web developer role.',
           headline: 'BS Information Technology graduate', linkedin: 'linkedin.com/in/juandelacruz', portfolio: 'github.com/juandelacruz' },
@@ -122,7 +122,7 @@ function seed(): Db {
            db/resumematch_ph.sql, which this mirrors row for row: the two soft
            skills carry no source, so the demo shows both states in the
            recruiter's evidence panel and both halves of the arithmetic. An
-           unsourced skill still counts — at UNEVIDENCED_CREDIT, not zero. */
+           unsourced skill still counts, at UNEVIDENCED_CREDIT, not zero. */
         skillEvidence: {
           'HTML/CSS':   { kind: 'experience', ref: 'Web Development Intern, LGU San Fernando' },
           'JavaScript': { kind: 'experience', ref: 'Web Development Intern, LGU San Fernando' },
@@ -134,7 +134,7 @@ function seed(): Db {
         languages: [{ name: 'Filipino', proficiency: 'Native' }, { name: 'English', proficiency: 'Fluent' }, { name: 'Kapampangan', proficiency: 'Native' }],
         references: [{ name: 'Engr. Roberto Lim', position: 'IT Supervisor', company: 'LGU San Fernando', email: 'rlim@example.ph', phone: '0917 555 0101' }],
         ownFile: null, updatedAt: Date.now() - D * 2 },
-      { id: 'r2', userId: 'u3', title: 'Computer Science — fresh graduate', template: 'chronological', design: 'modern',
+      { id: 'r2', userId: 'u3', title: 'Computer Science, fresh graduate', template: 'chronological', design: 'modern',
         personal: { fullName: 'Ana Reyes', email: 'ana@demo.ph', phone: '0917 111 1111', address: 'Mabalacat, Pampanga',
           summary: 'BS Computer Science graduate with coursework projects in front-end development. Seeking a junior developer role.',
           headline: 'BS Computer Science graduate' },
@@ -168,7 +168,7 @@ function seed(): Db {
         certifications: [{ name: 'Customer Service Excellence', year: '2025', issuer: 'Clark Outsourcing' }],
         languages: [{ name: 'Filipino', proficiency: 'Native' }, { name: 'English', proficiency: 'Fluent' }, { name: 'Korean', proficiency: 'Basic' }],
         // DUAL-RESUME MODEL: the applicant's OWN file. HR views and downloads it.
-        // It is NEVER parsed and NEVER scored — see the paper's delimitations.
+        // It is NEVER parsed and NEVER scored, see the paper's delimitations.
         // extractStatus is set even on the seed: a file with no status at all
         // is indistinguishable from one that scored nothing, which is the one
         // confusion this feature must never create.
@@ -239,7 +239,7 @@ function seed(): Db {
     /* Seeded so the applicant timeline has something real to show on a
        fresh demo. Each seeded application's history ends at the status the
        application actually carries above, so the timeline and the badge can
-       never disagree — a2 and a5 are still 'submitted', so they have only
+       never disagree, a2 and a5 are still 'submitted', so they have only
        the one event that applying creates. */
     statusHistory: [
       { applicationId: 'a1', from: null, to: 'submitted', at: Date.now() - D * 3, by: 'applicant' },
@@ -274,7 +274,7 @@ function load(): Db {
       if (!db.deptAssignments) db.deptAssignments = []; // databases saved before department routing existed
       if (!db.statusHistory) {
         /* Saved before the applicant timeline existed. Back-fill the one
-           event we can state truthfully — that the application was
+           event we can state truthfully, that the application was
            submitted, on its recorded date. Inventing the intermediate
            steps would put fabricated dates in front of an applicant, which
            is worse than a short history. */
@@ -292,7 +292,7 @@ function load(): Db {
     }
   } catch { /* ignore */ }
   /* Re-seeding replaces every user row, so a session pointing at an account
-     from the discarded database has to go with it — otherwise the browser is
+     from the discarded database has to go with it, otherwise the browser is
      signed in as somebody who no longer exists. resetDemo() clears both for
      the same reason; this is the same hazard reached by a different route.
      Removing the key directly rather than calling setSession(), which is
@@ -313,7 +313,7 @@ function persist(db: Db): void {
 /* The demo session, readable from a second tab.
  *
  * It lived in sessionStorage alone, which is per-tab. Opening the print sheet
- * from "My resumes" — an <a target="_blank" rel="noopener"> — therefore landed
+ * from "My resumes", an <a target="_blank" rel="noopener">, therefore landed
  * on the login page, while the builder's Export PDF button (window.open, which
  * does hand the new tab a copy of sessionStorage) worked. Same destination,
  * two different outcomes, and the broken one is the path taken in a demo.
@@ -324,7 +324,7 @@ function persist(db: Db): void {
  * machine does not leave a session behind.
  *
  * This is demo mode: the "session" is a user id in the same browser storage
- * that already holds the whole demo database. Api mode is unaffected — there
+ * that already holds the whole demo database. Api mode is unaffected, there
  * the session is a signed, httpOnly cookie issued by the server. */
 const sessionId = (): string | null => {
   try {
@@ -393,7 +393,7 @@ export class DemoAdapter implements ApiAdapter {
       if (purpose === 'verify' && exists)
         return Promise.resolve({ ok: false, exists: true, error: 'This email already has an account.' } as any);
       if (purpose === 'reset' && !exists)
-        return apiOk({ sent: true, simulated: true }); // same reply as success — no account enumeration, even in demo
+        return apiOk({ sent: true, simulated: true }); // same reply as success, no account enumeration, even in demo
       const code = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
       db.emailCodes = db.emailCodes.filter((c) => !(c.email === e && c.purpose === purpose));
       db.emailCodes.push({ email: e, purpose, code, attempts: 0, expiresAt: Date.now() + 10 * 60000 });
@@ -440,7 +440,7 @@ export class DemoAdapter implements ApiAdapter {
     },
     logout: () => { setSession(null); return apiOk({}); },
     me: () => apiOk({ user: pubUser(meRow(load())) }),
-    /* Change email — same proof-of-inbox flow as registration, with the
+    /* Change email, same proof-of-inbox flow as registration, with the
        demo's on-screen code standing in for the real email. */
     changeEmailStart: (newEmail: string, password: string) => {
       const db = load(); const u = meRow(db);
@@ -467,7 +467,7 @@ export class DemoAdapter implements ApiAdapter {
       persist(db);
       return apiOk({ user: pubUser(u)! });
     },
-    /* Demo mode stores the preference but sends nothing — there's no mail
+    /* Demo mode stores the preference but sends nothing, there's no mail
        server behind a pure-browser demo, and the account page says so. */
     setEmailNotifications: (enabled: boolean) => {
       const db = load(); const u = meRow(db);
@@ -483,7 +483,7 @@ export class DemoAdapter implements ApiAdapter {
       if (!u) return apiFail('You are not signed in.');
       const clean = String(name).trim().replace(/\s+/g, ' ');
       if (clean.length < 2) return apiFail('Enter your full name.');
-      if (clean.length > 120) return apiFail('That name is too long — 120 characters at most.');
+      if (clean.length > 120) return apiFail('That name is too long, 120 characters at most.');
       u.name = clean; persist(db);
       return apiOk({ user: pubUser(u)! });
     },
@@ -520,8 +520,7 @@ export class DemoAdapter implements ApiAdapter {
           applications: db.applications.filter((a) => a.seekerId === u.id),
           /* Same two additions as the server's /auth/export, and for the same
              reason: the privacy notice offers "the whole lot", and the record
-             of decisions taken about you — which the notice calls permanent —
-             was not in it. `byUserId` is dropped exactly as the history
+             of decisions taken about you, which the notice calls permanent, was not in it. `byUserId` is dropped exactly as the history
              endpoint drops it: an applicant is told an action came from the
              employer, never which member of staff. */
           applicationHistory: db.statusHistory
@@ -628,7 +627,7 @@ export class DemoAdapter implements ApiAdapter {
       });
 
       // The three optional sections. A nameless entry is dropped rather than
-      // stored, and a section that ends up empty is omitted entirely — both
+      // stored, and a section that ends up empty is omitted entirely, both
       // exactly what the round-trip through Postgres does in api mode.
       const projects = list(resume.projects, 20).map((x) => {
         const name = clamp(x.name, 200).trim();
@@ -709,7 +708,7 @@ export class DemoAdapter implements ApiAdapter {
           // The spread carries the STORED record forward, which is what keeps
           // the uploaded ownFile (saved by a different call) attached. It would
           // also carry a section the user just emptied, so those three keys are
-          // taken only from the incoming record — api mode deletes their rows
+          // taken only from the incoming record, api mode deletes their rows
           // and then returns nothing for them.
           for (const k of ['projects', 'languages', 'references'] as const) {
             if ((resume as any)[k]) merged[k] = (resume as any)[k]; else delete merged[k];
@@ -732,7 +731,7 @@ export class DemoAdapter implements ApiAdapter {
       const r = db.resumes.find((x) => x.id === id);
       if (!r || r.userId !== me.id) return apiFail('Resume not found.');
       if (db.applications.some((a) => a.resumeId === id))
-        return apiFail("This resume is attached to an application, so it can't be deleted — the recruiter still needs to see exactly what you sent. Duplicate it and edit the copy instead.");
+        return apiFail("This resume is attached to an application, so it can't be deleted. The recruiter still needs to see exactly what you sent. Duplicate it and edit the copy instead.");
       db.resumes = db.resumes.filter((x) => x.id !== id);
       const u = db.users.find((x) => x.id === me.id)!;
       if (u.activeResumeId === id) u.activeResumeId = (db.resumes.find((x) => x.userId === me.id) || ({} as Resume)).id || null;
@@ -762,7 +761,7 @@ export class DemoAdapter implements ApiAdapter {
       const db = load(); const me = meRow(db);
       const r = db.resumes.find((x) => x.id === resumeId);
       if (!me || !r || r.userId !== me.id) return apiFail('Resume not found.');
-      // Shared constants, not re-declared literals — the duplicates here
+      // Shared constants, not re-declared literals, the duplicates here
       // meant changing the rule in engine.ts silently left demo mode behind.
       if (file.size > MAX_UPLOAD) return apiFail('That file is larger than 2 MB. Save it at a smaller size and try again.');
       if (!ALLOWED_MIME.includes(file.type)) return apiFail('Upload a PDF, Word document, or image (JPG or PNG).');
@@ -772,7 +771,7 @@ export class DemoAdapter implements ApiAdapter {
           try {
             /* Demo mode cannot read the document. There is no server here and
                no API key, and the simulated extraction that fills the builder
-               on the "Upload & analyze" page is invented content — scoring
+               on the "Upload & analyze" page is invented content, scoring
                THAT and showing the number against the applicant's real file
                would be a fabrication, not a demonstration. So demo mode says
                plainly that reading is unavailable, and no file score appears
@@ -803,7 +802,7 @@ export class DemoAdapter implements ApiAdapter {
   };
 
   postings = {
-    // Open AND still accepting — a past deadline hides a posting without
+    // Open AND still accepting, a past deadline hides a posting without
     // anyone closing it by hand.
     open: () => {
       const db = load();
@@ -847,7 +846,7 @@ export class DemoAdapter implements ApiAdapter {
       if (title.length < 2) return apiFail('Give the opening a title.');
       if (dept === '') return apiFail('Which department is this for?');
       if (desc.length < 10) return apiFail('Describe the role in a sentence or two.');
-      if (!skills.length) return apiFail("Add at least one required skill — there is nothing to match an applicant against without one.");
+      if (!skills.length) return apiFail("Add at least one required skill. There is nothing to match an applicant against without one.");
       posting = {
         ...posting, title, department: dept, description: desc, skills,
         educationLevel: (EDU_RANK as any)[posting.educationLevel as string] !== undefined
@@ -860,7 +859,7 @@ export class DemoAdapter implements ApiAdapter {
       /* Per-opening weights. Same three rules as routes/postings.ts, and the
          same messages: whole numbers, each at least 10%, totalling 100. The
          demo is what gets demonstrated, so a set the server would reject must
-         be rejected here too — otherwise the walkthrough shows a posting
+         be rejected here too, otherwise the walkthrough shows a posting
          being saved that the real system refuses.
          Stored as whole percentages, the same units the server's column uses. */
       if (posting.weights != null) {
@@ -873,7 +872,7 @@ export class DemoAdapter implements ApiAdapter {
         if (sk === null || ed === null || ex === null)
           return apiFail('The scoring weights must be whole numbers.');
         if (sk < 10 || ed < 10 || ex < 10)
-          return apiFail('Each part of the score has to be at least 10% — a criterion cannot be switched off entirely.');
+          return apiFail('Each part of the score has to be at least 10%, a criterion cannot be switched off entirely.');
         if (sk + ed + ex !== 100)
           return apiFail(`The three weights have to add up to 100%. They currently add up to ${sk + ed + ex}%.`);
         posting = { ...posting, weights: { skills: sk, education: ed, experience: ex } };
@@ -893,7 +892,7 @@ export class DemoAdapter implements ApiAdapter {
         if (db.postings[i].companyId !== me.companyId) return apiFail("You can only edit your own company's openings.");
         db.postings[i] = { ...db.postings[i], ...posting } as Posting;
       } else {
-        // Always 'open', like the server — a caller must not create a
+        // Always 'open', like the server, a caller must not create a
         // posting that is already closed.
         posting = { ...posting, id: uid(), companyId: me.companyId!, status: 'open', createdAt: Date.now() };
         db.postings.push(posting as Posting);
@@ -923,7 +922,7 @@ export class DemoAdapter implements ApiAdapter {
         return apiFail('You already applied to this position.');
       // Record the score AS IT WAS at the moment of applying, like the
       // server's score_snapshot. Without it, demo metrics recomputed every
-      // historical score from the CURRENT resume — so a seeker editing their
+      // historical score from the CURRENT resume, so a seeker editing their
       // resume silently rewrote the study's own past data. `r` and `p` are
       // the resume and posting already validated above.
       const app: Application = {
@@ -951,7 +950,7 @@ export class DemoAdapter implements ApiAdapter {
         }).sort((a, b) => b.appliedAt - a.appliedAt),
       });
     },
-    // The ranked shortlist. Every applicant is on it — nobody is filtered off.
+    // The ranked shortlist. Every applicant is on it, nobody is filtered off.
     ranked: (postingId: string) => {
       const db = load(); const me = meRow(db);
       if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
@@ -1004,7 +1003,7 @@ export class DemoAdapter implements ApiAdapter {
       persist(db);
       return apiOk({ application: a });
     },
-    /* The applicant's own exit — mirrors server routes/applications.ts.
+    /* The applicant's own exit, mirrors server routes/applications.ts.
        Marked, not deleted, so the recruiter sees an honest "Withdrawn"
        rather than a row that silently disappears mid-process. */
     withdraw: (applicationId: string) => {
@@ -1022,7 +1021,7 @@ export class DemoAdapter implements ApiAdapter {
       persist(db);
       return apiOk({ application: a });
     },
-    /* Demo mode can't send the applicant a real email — the panel shows
+    /* Demo mode can't send the applicant a real email, the panel shows
        what WOULD be sent, clearly labelled. */
     invite: (applicationId: string, message: string) => {
       const db = load(); const me = meRow(db);
@@ -1031,17 +1030,17 @@ export class DemoAdapter implements ApiAdapter {
       if (msg.length < 10) return apiFail('Write the applicant a short message first.');
       // The server caps this too; without the cap a 5000-character message
       // "sent" in demo and failed in api mode.
-      if (msg.length > 2000) return apiFail('That message is too long — keep it under 2000 characters.');
+      if (msg.length > 2000) return apiFail('That message is too long, keep it under 2000 characters.');
       const a = db.applications.find((x) => x.id === applicationId);
       const p = a && db.postings.find((x) => x.id === a.postingId);
       if (!a || !p || p.companyId !== me.companyId) return apiFail('Application not found.');
       return apiOk({ sent: false, simulated: true });
     },
-    /* The applicant's own audit trail — mirrors server routes/applications.ts.
+    /* The applicant's own audit trail, mirrors server routes/applications.ts.
        Visible to the applicant it belongs to and to recruiters at the company
        that owns the posting; one identical message for "no such application"
        and "not yours", so it cannot be used to probe which ids exist. */
-    /* SCREENING NOTES — recruiter-only, mirroring routes/applications.ts.
+    /* SCREENING NOTES, recruiter-only, mirroring routes/applications.ts.
        Held on the demo database like everything else here, and returned by no
        seeker-facing method, so the demo cannot accidentally show an applicant
        something the real system would never show them. */
@@ -1106,7 +1105,7 @@ export class DemoAdapter implements ApiAdapter {
       /* Who made each change is disclosed by audience, exactly as the server
          does it: the employer's own staff get names (that is what changed_by
          is for), the applicant never does. An applicant reading their own
-         history gets no names even if they also work here — the narrower
+         history gets no names even if they also work here, the narrower
          disclosure wins. */
       const maySeeNames = atMyCompany && !mine;
       const events: StatusEvent[] = db.statusHistory
@@ -1118,7 +1117,7 @@ export class DemoAdapter implements ApiAdapter {
             const actor = db.users.find((u) => u.id === h.byUserId);
             if (actor) e.byName = actor.name;
           }
-          /* The reason goes to BOTH audiences, unlike the name above — see
+          /* The reason goes to BOTH audiences, unlike the name above, see
              routes/applications.ts for why the two gates differ. The applicant
              learns what was decided; they do not learn which staff member
              decided it. */
@@ -1168,7 +1167,7 @@ export class DemoAdapter implements ApiAdapter {
       const scored = db.applications.map((a) => {
         // Prefer the snapshot taken when they applied. Older demo databases
         // predate it, so fall back to a live score rather than dropping the
-        // row entirely — the number is then approximate, not wrong.
+        // row entirely: the number is then approximate, not wrong.
         if (typeof a.scoreSnapshot === 'number') return { a, score: a.scoreSnapshot };
         const r = db.resumes.find((x) => x.id === a.resumeId);
         const p = db.postings.find((x) => x.id === a.postingId);
@@ -1279,7 +1278,7 @@ export class DemoAdapter implements ApiAdapter {
   };
 
   /* The research-team panel. Approving a request creates the verified
-     recruiter account with an unguessable placeholder password — the new
+     recruiter account with an unguessable placeholder password, the new
      recruiter sets their own via "Forgot password", exactly like server
      mode (demo shows the code on screen). */
   admin = {
@@ -1390,7 +1389,7 @@ export class DemoAdapter implements ApiAdapter {
       Promise.resolve({ ok: true, reader: 'demo' as const, configured: true }),
 
     /** Demo mode can't call a real AI, so this returns a clearly-labeled
-     *  simulated extraction after a short delay — enough to demonstrate the
+     *  simulated extraction after a short delay, enough to demonstrate the
      *  whole upload → review → score journey offline. */
     resume: (file: File): Promise<ApiResult<{ resume: AnalyzedResume; provider?: string; simulated?: boolean }>> => {
       const db = load();

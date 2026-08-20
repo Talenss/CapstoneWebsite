@@ -5,7 +5,7 @@
     <a routerLink="/hr-dashboard" style="font-size:12.5px;color:var(--muted);text-decoration:none">&larr; All openings</a>
     <span class="eyebrow" style="display:block;margin-top:12px">{{ postingId() ? (postingStatus() === 'open' ? 'Open' : 'Closed') : 'New opening' }}</span>
     <h1>{{ postingId() ? 'Edit opening' : 'Post an opening' }}</h1>
-    <p>Whatever you put in the three fields below <i>is</i> the scoring rule. Ask for what the job genuinely needs — asking for more than that quietly pushes good candidates down the list.</p>
+    <p>Whatever you put in the three fields below <i>is</i> the scoring rule. Ask for what the job genuinely needs, asking for more than that quietly pushes good candidates down the list.</p>
   </div>
 
   @if (msg(); as m) {
@@ -54,13 +54,13 @@
       <p style="font-size:13px;color:var(--muted);margin-bottom:20px">These three fields, and only these three, decide how every applicant is scored.</p>
 
       <div class="field" [class.invalid]="skillsInvalid()">
-        <label for="skillInput">Required skills <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">— {{ wSkills() }}% of the score</span></label>
+        <label for="skillInput">Required skills <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">· {{ wSkills() }}% of the score</span></label>
         <input type="text" id="skillInput" list="skillOpts" [value]="skillInput()" (input)="setSkillInput($event)" (keydown)="onSkillKeydown($event)" placeholder="Type a skill, then press Enter" autocomplete="off">
         <datalist id="skillOpts">
           @for (s of knownSkills(); track s) { <option [value]="s"></option> }
         </datalist>
         <span class="err">Add at least one required skill.</span>
-        <p class="hint" style="margin-bottom:6px">Skills already in use across your openings — click to require one here, click again to drop it:</p>
+        <p class="hint" style="margin-bottom:6px">Skills already in use across your openings, click to require one here, click again to drop it:</p>
         <div class="pool">
           @if (!poolSkills().length) {
             <span style="font-size:12.5px;color:var(--muted)">Nothing else in use yet.</span>
@@ -76,7 +76,7 @@
              and above the chips it pushed them down mid-click. -->
         <div class="tags">
           @if (!skillsVal().length) {
-            <p style="color:var(--muted);font-size:13px">No skills yet — this is {{ wSkills() }}% of the score, so add at least one.</p>
+            <p style="color:var(--muted);font-size:13px">No skills yet. This is {{ wSkills() }}% of the score, so add at least one.</p>
           } @else {
             @for (s of skillsVal(); track s; let i = $index) {
               <span class="tag">{{ s }}<button type="button" (click)="removeSkill(i)" [attr.aria-label]="'Remove ' + s">&times;</button></span>
@@ -87,13 +87,13 @@
 
       <div class="row2">
         <div class="field">
-          <label for="edu">Minimum education <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">— {{ wEdu() }}%</span></label>
+          <label for="edu">Minimum education <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">· {{ wEdu() }}%</span></label>
           <select id="edu" [value]="eduVal()" (change)="setEdu($event)">
             @for (k of eduKeys; track k) { <option [value]="k">{{ eduLabels[k] }}</option> }
           </select>
         </div>
         <div class="field">
-          <label for="months">Minimum experience <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">— {{ wExp() }}%</span></label>
+          <label for="months">Minimum experience <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">· {{ wExp() }}%</span></label>
           <input type="number" id="months" min="0" step="1" [value]="monthsVal()" (input)="setMonths($event)">
           <p class="hint">In months. Enter 0 to open the role to fresh graduates.</p>
         </div>
@@ -102,18 +102,18 @@
       <div class="field" style="max-width:280px">
         <label for="deadline">Application deadline <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(optional)</span></label>
         <input type="date" id="deadline" [min]="todayStr" [value]="deadlineVal()" (input)="setDeadline($event)">
-        <p class="hint">Past this date the opening stops accepting applications by itself — no need to close it by hand. Leave empty for no deadline.</p>
+        <p class="hint">Past this date the opening stops accepting applications by itself. No need to close it by hand. Leave empty for no deadline.</p>
       </div>
 
       <!-- ============ SCORING WEIGHTS ============
            How much each of the three checks is worth FOR THIS OPENING. Off by
            default, in which case the opening inherits the site defaults and
-           saves null rather than a copy of them — so retuning the study's
+           saves null rather than a copy of them, so retuning the study's
            published weights still moves every opening that never customised.
 
            Whatever is set here is shown to the applicant on the opening and
            in their dashboard breakdown. The site tells them "the formula is
-           published, not hidden — you see exactly what the recruiter sees",
+           published, not hidden, you see exactly what the recruiter sees",
            and that promise does not survive a recruiter tuning the score in
            private. -->
       <div class="field">
@@ -125,7 +125,7 @@
           @if (customWeights()) {
             Applicants see this split on the opening, so they know what this role is judged on.
           } @else {
-            Using the site defaults — {{ weights.skills * 100 }}% skills, {{ weights.education * 100 }}% education,
+            Using the site defaults, {{ weights.skills * 100 }}% skills, {{ weights.education * 100 }}% education,
             {{ weights.experience * 100 }}% experience. Tick the box if this role should be weighted differently.
           }
         </p>

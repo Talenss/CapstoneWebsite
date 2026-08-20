@@ -41,7 +41,7 @@
               <h2>Education</h2>
               @for (e of r.education; track $index) {
                 <div class="item">
-                  <h3>{{ e.field ? e.degree + ' — ' + e.field : e.degree }}</h3>
+                  <h3>{{ e.field ? e.degree + ', ' + e.field : e.degree }}</h3>
                   <p class="meta">{{ join([e.school, e.location, e.year]) }}</p>
                   @if (e.honors) { <p>{{ e.honors }}</p> }
                 </div>

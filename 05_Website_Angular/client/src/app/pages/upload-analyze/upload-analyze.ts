@@ -117,6 +117,6 @@ export class UploadAnalyze implements OnInit {
 
   languageLine(): string {
     return (this.result()?.languages ?? [])
-      .map((l) => this.join([l.name, l.proficiency], ' — ')).join('  ·  ');
+      .map((l) => this.join([l.name, l.proficiency], ', ')).join('  ·  ');
   }
 }

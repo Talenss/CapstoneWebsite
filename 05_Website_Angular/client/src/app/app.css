@@ -19,7 +19,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: 40%;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  background: var(--accent);
   animation: route-progress-slide 1.1s ease-in-out infinite;
 }
 

@@ -38,8 +38,8 @@ export class SeekerDashboard implements OnInit {
   readonly statusBadge = statusBadge;
 
   readonly tiersConfig: TierConfig[] = [
-    { key: 'strong', title: 'Strong matches', badgeClass: 'green', note: `At or above ${THRESHOLDS.strong}% — your resume already meets most of what the posting asks for.` },
-    { key: 'possible', title: 'Possible matches', badgeClass: 'amber', note: `Between ${THRESHOLDS.related}% and ${THRESHOLDS.strong - 1}% — worth applying to. Recruiters read every applicant, not just the top of the list.` },
+    { key: 'strong', title: 'Strong matches', badgeClass: 'green', note: `At or above ${THRESHOLDS.strong}%. Your resume already meets most of what the posting asks for.` },
+    { key: 'possible', title: 'Possible matches', badgeClass: 'amber', note: `Between ${THRESHOLDS.related}% and ${THRESHOLDS.strong - 1}%, worth applying to. Recruiters read every applicant, not just the top of the list.` },
     { key: 'related', title: 'Related roles', badgeClass: 'slate', note: `Below ${THRESHOLDS.related}%, but you share real skills with these. This is where you get pointed instead of turned away.` },
   ];
 
@@ -212,10 +212,10 @@ export class SeekerDashboard implements OnInit {
     this.tour.init(
       'seeker-dashboard',
       [
-        { sel: '#picker', title: 'Your active resume', text: 'Every score on this page comes from this one resume. Keep several versions and switch between them — the board re-scores instantly.' },
+        { sel: '#picker', title: 'Your active resume', text: 'Every score on this page comes from this one resume. Keep several versions and switch between them, the board re-scores instantly.' },
         { sel: '#board .tier:first-child', title: 'Matches, in three tiers', text: 'Strong, possible, and related. That third tier is the point: a low score redirects you to roles that fit, rather than shutting a door.' },
-        { sel: '#board .score-ring', title: 'What the number means', text: 'Skills are half of it, education and experience a quarter each. Open any match to see the full breakdown — the same one the recruiter sees.' },
-        { sel: '#appsSection', title: 'Follow your applications', text: 'Submitted, Under review, Shortlisted, Hired, or Not selected. Every one of those is set by a person at Clark Outsourcing — never by the system.' },
+        { sel: '#board .score-ring', title: 'What the number means', text: 'Skills are half of it, education and experience a quarter each. Open any match to see the full breakdown, the same one the recruiter sees.' },
+        { sel: '#appsSection', title: 'Follow your applications', text: 'Submitted, Under review, Shortlisted, Hired, or Not selected. Every one of those is set by a person at Clark Outsourcing, never by the system.' },
         { sel: '[data-tour]', title: 'Lost? Come back here', text: 'This tour is always available from this button, on every page. Nothing you do here is permanent until you say so.' },
       ],
       { user: uid },
@@ -277,7 +277,7 @@ export class SeekerDashboard implements OnInit {
     const id = (e.target as HTMLSelectElement).value;
     await this.api.resumes.setActive(id);
     await this.render();
-    this.showToast('Active resume changed — everything re-scored.');
+    this.showToast('Active resume changed, everything re-scored.');
   }
 
   openApply(item: RecommendationItem): void {

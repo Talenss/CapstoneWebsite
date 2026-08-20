@@ -165,7 +165,7 @@ export class ResumeBuilder implements OnInit {
       { label: 'An education entry with the school filled in',
         done: r.education.some((e) => (e.school || '').trim() !== ''), optional: false },
       { label: 'At least three skills', done: r.skills.length >= 3, optional: false },
-      { label: 'Experience (optional — many openings ask for none)', done: r.experience.length > 0, optional: true },
+      { label: 'Experience (optional, many openings ask for none)', done: r.experience.length > 0, optional: true },
       { label: 'Projects, languages or references (optional)', done: !!(r.projects?.length || r.languages?.length || r.references?.length), optional: true },
       { label: 'Your own resume file (optional)', done: !!r.ownFile, optional: true },
     ];
@@ -197,7 +197,7 @@ export class ResumeBuilder implements OnInit {
   fileStatusLabel = computed(() => {
     switch (this.resume().ownFile?.extractStatus) {
       case 'ok':          return 'read and scored';
-      case 'unavailable': return 'not read — automatic reading is off here';
+      case 'unavailable': return 'not read, automatic reading is off here';
       case 'unreadable':  return "not read — this format can't be opened by software";
       case 'failed':      return 'could not be read automatically';
       default:            return 'read by the recruiter';
@@ -266,8 +266,8 @@ export class ResumeBuilder implements OnInit {
       this.dirty.set(true);
       this.showToast(
         pending.simulated
-          ? 'Prefilled from a simulated analysis (demo mode) — review each step, then save.'
-          : 'We filled this in from your uploaded resume — review each step before saving.',
+          ? 'Prefilled from a simulated analysis (demo mode), review each step, then save.'
+          : 'We filled this in from your uploaded resume, review each step before saving.',
       );
     } else {
       this.resume.update((r) => ({ ...r, title: 'My resume', personal: { ...r.personal, fullName: user.name, email: user.email } }));
@@ -280,7 +280,13 @@ export class ResumeBuilder implements OnInit {
       for (const p of pRes.postings) for (const s of p.skills) demandedMap[s] = (demandedMap[s] || 0) + 1;
     }
     this.demanded.set(demandedMap);
-    this.poolAll.set(Object.keys(demandedMap).sort((a, b) => demandedMap[b] - demandedMap[a] || a.localeCompare(b)));
+    /* ALPHABETICAL, deliberately. This used to sort by demand, and removing
+       the printed count while keeping that order would have changed nothing:
+       the most-asked-for skills would still have been first, merely no longer
+       saying so. The order must carry no signal about what is worth claiming.
+       `demanded` is still computed — the datalist and the "you already list
+       every skill asked for" note read it — but nothing renders the number. */
+    this.poolAll.set(Object.keys(demandedMap).sort((a, b) => a.localeCompare(b)));
 
     this.ready.set(true);
 
@@ -623,7 +629,7 @@ export class ResumeBuilder implements OnInit {
     // already taken by a different look).
     { id: 'traditional', label: 'Traditional', note: 'Georgia, thin rules', suits: 'The most conservative employers' },
     { id: 'clean', label: 'Clean', note: 'No rules, whitespace only', suits: 'Corporate roles, modern HR teams' },
-    { id: 'compact', label: 'Compact', note: 'Tight — fits more on a page', suits: 'Long histories that must stay on one page' },
+    { id: 'compact', label: 'Compact', note: 'Tight, fits more on a page', suits: 'Long histories that must stay on one page' },
     { id: 'senior', label: 'Senior', note: 'Big name block + headline', suits: 'Department heads, senior applicants' },
     { id: 'graduate', label: 'Graduate', note: 'Education first', suits: 'Fresh graduates and OJT applicants' },
     { id: 'technical', label: 'Technical', note: 'Skills and projects first', suits: 'IT, engineering, technical roles' },
@@ -656,7 +662,7 @@ export class ResumeBuilder implements OnInit {
     input.value = '';
     if (!res.ok) { this.showToast(res.error); return; }
     this.resume.update((r) => ({ ...r, ownFile: res.ownFile }));
-    this.showToast('File attached. Recruiters will see it — the engine won’t.');
+    this.showToast('File attached. Recruiters will see it, the engine won’t.');
   }
 
   async removeOwnFile(): Promise<void> {
@@ -679,7 +685,7 @@ export class ResumeBuilder implements OnInit {
       this.resume.set(r);
     }
     if (!r.personal.fullName.trim()) {
-      this.formError.set('Add your name before saving — it’s the first line of the resume.');
+      this.formError.set('Add your name before saving, it’s the first line of the resume.');
       this.goTo(0);
       return false;
     }
@@ -718,7 +724,7 @@ export class ResumeBuilder implements OnInit {
       const up = await this.api.resumes.uploadFile(res.resume.id!, file);
       if (up.ok) {
         this.resume.update((cur) => ({ ...cur, ownFile: up.ownFile }));
-        this.showToast('Saved — and your original file is attached for recruiters to read.');
+        this.showToast('Saved. And your original file is attached for recruiters to read.');
       }
     }
 
@@ -741,7 +747,7 @@ export class ResumeBuilder implements OnInit {
     return months ? `${months} month${months > 1 ? 's' : ''}` : '';
   }
   languageLine(): string {
-    return this.visibleLanguages().map((l) => this.joinMeta([l.name, l.proficiency], ' — ')).join('  ·  ');
+    return this.visibleLanguages().map((l) => this.joinMeta([l.name, l.proficiency], ', ')).join('  ·  ');
   }
 
   /** "Jun 2025 – Present" / "Jun 2024 – Mar 2025". One format everywhere, so
@@ -797,7 +803,7 @@ export class ResumeBuilder implements OnInit {
       L.push('');
     }
     if (r.languages?.length) {
-      L.push('LANGUAGES', r.languages.map((l) => [l.name, l.proficiency].filter(Boolean).join(' — ')).join(', '), '');
+      L.push('LANGUAGES', r.languages.map((l) => [l.name, l.proficiency].filter(Boolean).join(', ')).join(', '), '');
     }
     if (r.references?.length) {
       L.push('REFERENCES');
@@ -832,7 +838,7 @@ export class ResumeBuilder implements OnInit {
     const meta = (parts: (string | undefined)[]) => parts.filter(Boolean).map((x) => esc(x)).join(' · ');
 
     const eduHtml = this.visibleEducation()
-      .map((e) => `<div class="p-item"><b>${esc([e.degree || 'Degree', e.field].filter(Boolean).join(' — '))}</b>`
+      .map((e) => `<div class="p-item"><b>${esc([e.degree || 'Degree', e.field].filter(Boolean).join(', '))}</b>`
         + `<i>${meta([e.school, e.location, e.year])}</i>${e.honors ? `<p>${esc(e.honors)}</p>` : ''}</div>`)
       .join('');
     const expHtml = this.visibleExperience()
@@ -851,7 +857,7 @@ export class ResumeBuilder implements OnInit {
         + `${c.credentialId ? `<p>${esc(c.credentialId)}</p>` : ''}</div>`)
       .join('');
     const langHtml = this.visibleLanguages().length
-      ? `<p>${esc(this.visibleLanguages().map((l) => [l.name, l.proficiency].filter(Boolean).join(' — ')).join(' · '))}</p>` : '';
+      ? `<p>${esc(this.visibleLanguages().map((l) => [l.name, l.proficiency].filter(Boolean).join(', ')).join(' · '))}</p>` : '';
     const refHtml = this.visibleReferences()
       .map((x) => `<div class="p-item"><b>${esc(x.name)}</b><i>${meta([x.position, x.company])}</i>`
         + `${x.email || x.phone ? `<p>${meta([x.email, x.phone])}</p>` : ''}</div>`)
