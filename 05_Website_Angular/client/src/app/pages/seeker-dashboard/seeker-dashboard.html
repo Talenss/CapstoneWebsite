@@ -6,7 +6,7 @@
     <div>
       <span class="eyebrow">Your matches</span>
       <h1>{{ hello() }}</h1>
-      <p>Scored from your <b>active resume</b> against every open position — skills 50%, education 25%, experience 25%. Change the resume and the whole board re-scores.</p>
+      <p>Scored from your <b>active resume</b> against every open position, skills 50%, education 25%, experience 25%. Change the resume and the whole board re-scores.</p>
     </div>
     @if (resumes().length) {
       <div class="picker" id="picker">
@@ -28,12 +28,12 @@
     } @else if (!resumes().length) {
       <div class="card empty crest">
         <h2>Let’s set up your first resume</h2>
-        <p>Everything here runs off it. Once it exists, the system scores it against every open position at Clark Outsourcing and shows you exactly where you fit — and where you nearly fit. Two ways to start:</p>
+        <p>Everything here runs off it. Once it exists, the system scores it against every open position at Clark Outsourcing and shows you exactly where you fit. And where you nearly fit. Two ways to start:</p>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
           <a class="btn primary" routerLink="/upload-resume">Upload my existing resume</a>
           <a class="btn ghost" routerLink="/resume-builder">Build it from scratch</a>
         </div>
-        <p style="font-size:12.5px;color:var(--muted);margin-top:14px">Upload a file and the system reads it into the builder for you — you review everything before it's saved.</p>
+        <p style="font-size:12.5px;color:var(--muted);margin-top:14px">Upload a file and the system reads it into the builder for you, you review everything before it's saved.</p>
       </div>
     } @else if (totalReco() === 0) {
       <div class="card empty">
@@ -61,7 +61,7 @@
                     <span class="score-ring" [style.--p]="item.score" [style.--c]="tierColor(item.score)"><b>{{ item.score }}%</b></span>
                   </div>
                   <!-- Only what the applicant HAS is named; the rest is a
-                       count. Same reasoning as the openings page — see
+                       count. Same reasoning as the openings page, see
                        missingHint() in core/engine.ts. -->
                   <div>
                     @for (s of item.matchedSkills; track s) {
@@ -90,7 +90,7 @@
         }
       }
       @if (reco() && !reco()!.strong.length && !reco()!.possible.length) {
-        <div class="note" style="margin-top:26px">Nothing above {{ THRESHOLDS.related }}% yet — but the related roles above share skills you already have. Open a role to see what it asks for; listing a skill you genuinely have, and saying where you used it, is usually the fastest way to move a score up.</div>
+        <div class="note" style="margin-top:26px">Nothing above {{ THRESHOLDS.related }}% yet. But the related roles above share skills you already have. Open a role to see what it asks for; listing a skill you genuinely have, and saying where you used it, is usually the fastest way to move a score up.</div>
       }
     }
   </div>
@@ -101,7 +101,7 @@
         <h2>Saved openings</h2>
         <span class="badge amber">{{ savedPostings().length }}</span>
       </div>
-      <p>Bookmarked from the openings page — they stay here until you remove them, even if you haven't applied yet.</p>
+      <p>Bookmarked from the openings page. They stay here until you remove them, even if you haven't applied yet.</p>
       <div class="saved-list">
         @for (p of savedPostings(); track p.id) {
           <div class="saved-row card">
@@ -152,7 +152,7 @@
                        aria-controls is bound to null unless THIS row's panel is
                        open. The panel is rendered by @if, so a constant
                        aria-controls pointed at an id that was not in the
-                       document on every closed row — the same defect as a
+                       document on every closed row, the same defect as a
                        fragment link with no target: markup claiming a
                        relationship to something that is not there. Angular
                        removes the attribute entirely when the value is null. -->
@@ -175,8 +175,8 @@
       </div>
 
       <!-- The timeline lives OUTSIDE .wrap-x on purpose. Inside the table it
-           was a colspan row, so on a phone — where the table scrolls
-           horizontally — its content sat at the table's left edge and was
+           was a colspan row, so on a phone, where the table scrolls
+           horizontally. Its content sat at the table's left edge and was
            pushed off-screen: the applicant tapped History and got a blank
            band. Out here it is always the width of the card, on every
            viewport, and the table can scroll independently behind it. -->
@@ -257,7 +257,7 @@
         <div class="breakdown">
           <div class="row">
             <span><b>Skills matched</b><span class="w">{{ item.weights.skills * 100 }}% of the score</span></span>
-            <b>{{ item.matchedSkills.length }} of {{ item.posting.skills.length }}{{ item.matchedSkills.length ? ' — ' + item.matchedSkills.join(', ') : '' }}</b>
+            <b>{{ item.matchedSkills.length }} of {{ item.posting.skills.length }}{{ item.matchedSkills.length ? ', ' + item.matchedSkills.join(', ') : '' }}</b>
           </div>
           <div class="row">
             <span><b>Education</b><span class="w">{{ item.weights.education * 100 }}% of the score</span></span>
@@ -280,14 +280,14 @@
                  who really does hold the skill has enough to go and check the
                  posting; someone who does not is given no word to claim. -->
             <p>
-              You can apply right now — this is guidance, not a requirement. There
+              You can apply right now, this is guidance, not a requirement. There
               {{ item.missingSkills.length === 1 ? 'is' : 'are' }}
               <b>{{ missingHint(item.missingSkills) }}</b>.
               Open the posting to read what it asks for. If you genuinely have
               {{ item.missingSkills.length === 1 ? 'it' : 'them' }} and simply haven't listed
               {{ item.missingSkills.length === 1 ? 'it' : 'them' }} yet, adding
-              {{ item.missingSkills.length === 1 ? 'it' : 'them' }} — and saying where you used
-              {{ item.missingSkills.length === 1 ? 'it' : 'them' }} — would take this from
+              {{ item.missingSkills.length === 1 ? 'it' : 'them' }}, and saying where you used
+              {{ item.missingSkills.length === 1 ? 'it' : 'them' }}, would take this from
               <b>{{ item.score }}%</b> to <b>{{ goal }}%</b>.
             </p>
             <a class="btn ghost sm" routerLink="/resume-builder" [queryParams]="{ id: activeId() }">Edit my resume</a>

@@ -1,4 +1,4 @@
-/* ResumeMatch PH — shared/focus-trap.directive.ts
+/* ResumeMatch PH, shared/focus-trap.directive.ts
 
    Makes a modal usable with a keyboard and announceable by a screen reader.
 
@@ -16,7 +16,7 @@
      · hides the rest of the page from assistive technology
      · restores focus to whatever opened it on close
 
-   Deliberately dependency-free — the Angular CDK would bring a package for
+   Deliberately dependency-free. The Angular CDK would bring a package for
    behaviour that is a few dozen lines here. */
 import {
   Directive, ElementRef, OnDestroy, AfterViewInit, HostListener, inject,
@@ -54,7 +54,7 @@ export class FocusTrapDirective implements AfterViewInit, OnDestroy {
 
     this.previouslyFocused = document.activeElement as HTMLElement | null;
 
-    // The rest of the page is not just visually behind the overlay — it
+    // The rest of the page is not just visually behind the overlay, it
     // should not be reachable by a screen reader either.
     for (const sib of Array.from(document.body.children) as HTMLElement[]) {
       if (sib.contains(el) || sib === el) continue;
@@ -83,7 +83,7 @@ export class FocusTrapDirective implements AfterViewInit, OnDestroy {
   private focusable(): HTMLElement[] {
     const el = this.host.nativeElement as HTMLElement;
     return (Array.from(el.querySelectorAll(FOCUSABLE)) as HTMLElement[])
-      // offsetParent is null for anything display:none — skip what cannot be seen.
+      // offsetParent is null for anything display:none, skip what cannot be seen.
       .filter((n) => n.offsetParent !== null || n === document.activeElement);
   }
 

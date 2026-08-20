@@ -10,7 +10,7 @@ export interface PendingAnalysis {
 }
 
 /** Hands the AI extraction from the Upload & Analyze page to the resume
- *  builder. In-memory only — a page refresh simply drops the pending
+ *  builder. In-memory only, a page refresh simply drops the pending
  *  extraction (nothing was saved yet), which is the safe behavior. */
 @Injectable({ providedIn: 'root' })
 export class AnalysisService {
@@ -20,7 +20,7 @@ export class AnalysisService {
     this.pending = p;
   }
 
-  /** Read and clear — the builder consumes the extraction exactly once. */
+  /** Read and clear. The builder consumes the extraction exactly once. */
   take(): PendingAnalysis | null {
     const p = this.pending;
     this.pending = null;

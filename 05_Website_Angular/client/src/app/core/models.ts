@@ -1,5 +1,5 @@
 /* ============================================================
-   ResumeMatch PH — shared TypeScript models
+   ResumeMatch PH, shared TypeScript models
    ------------------------------------------------------------
    The JSON shapes here are exactly what the Node API (and the
    demo/localStorage adapter) return, mirroring the original
@@ -53,7 +53,7 @@ export type Template = 'chronological' | 'functional' | 'combination';
 /** Visual style of the rendered/printed resume. Every design is single-column
  *  and ATS-safe: real headings, real text, no tables, no graphics.
  *
- *  Section ORDER normally stays with Template — a design only skins the sheet.
+ *  Section ORDER normally stays with Template, a design only skins the sheet.
  *  The two exceptions are 'graduate' and 'technical', which exist *because* of
  *  the order they impose (education first for a fresh graduate; skills and
  *  projects first for a technical applicant). Picking one of those overrides
@@ -98,7 +98,7 @@ export interface Company {
    bearing and deliberately untouched, because the matching engine scores
    on exactly these and nothing else:
 
-     · skills          a FLAT string[] — normalised and set-matched
+     · skills          a FLAT string[], normalised and set-matched
      · education.level feeds EDU_RANK for the education component
      · experience.months summed for the experience component
 
@@ -116,7 +116,7 @@ export interface Personal {
   phone: string;
   address: string;
   summary: string;
-  /** One line under the name — "BS Information Technology graduate". */
+  /** One line under the name, "BS Information Technology graduate". */
   headline?: string;
   /** Printed as the full visible URL, never a bare anchor label: parsers
    *  routinely drop href, so a link that only reads "LinkedIn" is lost. */
@@ -139,7 +139,7 @@ export interface Education {
 export interface Experience {
   position: string;
   company: string;
-  /** SCORED. Keep — the engine sums these. Dates below are for display. */
+  /** SCORED. Keep. The engine sums these. Dates below are for display. */
   months: number;
   description: string;
   location?: string;
@@ -160,7 +160,7 @@ export interface Certification {
 }
 
 /** Optional sections. Absent or empty means the heading is not rendered at
- *  all — no empty heading, no leftover gap. */
+ *  all, no empty heading, no leftover gap. */
 export interface Project {
   name: string;
   role?: string;
@@ -172,7 +172,7 @@ export interface Project {
 
 export interface Language {
   name: string;
-  /** Text only. Never a bar, star rating or percentage — a graphic carries
+  /** Text only. Never a bar, star rating or percentage, a graphic carries
    *  no meaning through a parser and none through greyscale print. */
   proficiency?: string;
 }
@@ -186,13 +186,13 @@ export interface Reference {
 }
 
 /** Why the applicant's own document has no reading attached to it.
- *   · ok          — it was read; `extract` holds the result
- *   · unavailable — automatic reading isn't set up (no API key, or demo mode)
- *   · unreadable  — the format can't be read at all (old .doc, odd type)
- *   · failed      — it was attempted and didn't work: network, quota, or a
+ *   · ok         , it was read; `extract` holds the result
+ *   · unavailable, automatic reading isn't set up (no API key, or demo mode)
+ *   · unreadable . The format can't be read at all (old .doc, odd type)
+ *   · failed     . It was attempted and didn't work: network, quota, or a
  *                   scan whose text isn't legible to software
  *
- *  Anything other than 'ok' means NO SCORE — which is not the same as a score
+ *  Anything other than 'ok' means NO SCORE: which is not the same as a score
  *  of zero, and must never be shown as one. */
 export type ExtractStatus = 'ok' | 'unavailable' | 'unreadable' | 'failed';
 
@@ -201,7 +201,7 @@ export interface OwnFile {
   mime: string;
   size: number;
   uploadedAt: number;
-  dataUrl?: string; // demo mode only — the file itself, base64
+  dataUrl?: string; // demo mode only, the file itself, base64
   /** The document read into the same structured shape the builder edits, so
    *  the engine can score it. Absent unless `extractStatus` is 'ok'. */
   extract?: AnalyzedResume;
@@ -217,7 +217,7 @@ export interface Resume {
   personal: Personal;
   education: Education[];
   experience: Experience[];
-  /** Optional sections. Absent or empty renders nothing at all — no
+  /** Optional sections. Absent or empty renders nothing at all, no
    *  heading, no gap. Optional so every resume saved before they existed
    *  stays valid without a migration on the client side. */
   projects?: Project[];
@@ -225,7 +225,7 @@ export interface Resume {
   references?: Reference[];
   skills: string[];
   /** Where each skill was used, keyed by the skill exactly as it appears in
-   *  `skills`. Optional, and an absent key is not an error — it means the
+   *  `skills`. Optional, and an absent key is not an error: it means the
    *  applicant named no source for that skill, which is allowed and costs
    *  partial credit rather than the whole match. NEVER rendered by the print
    *  sheet or any of the fourteen designs. */
@@ -295,7 +295,7 @@ export type RejectionReason =
   | 'position_filled' | 'stronger_candidate' | 'withdrew_interest' | 'other';
 
 export interface StatusEvent {
-  /** null for the first event — applying has no previous status. */
+  /** null for the first event, applying has no previous status. */
   from: AppStatus | null;
   to: AppStatus;
   at: number;
@@ -308,7 +308,7 @@ export interface StatusEvent {
   byName?: string;
   /** Why the change was made, as one of REJECTION_REASONS.
    *
-   *  Shown to BOTH audiences — unlike `byName` directly above, which stays
+   *  Shown to BOTH audiences, unlike `byName` directly above, which stays
    *  employer-only. The applicant learns what was decided; they do not learn
    *  which member of staff decided it. The wording differs by audience:
    *  REASON_LABELS is what the recruiter files under, APPLICANT_REASON_LABELS
@@ -317,12 +317,11 @@ export interface StatusEvent {
 }
 
 /* ------------------------------------------------------------
-   EVIDENCE-LINKED SKILLS — mirrored from server/src/lib/engine.ts, where the
+   EVIDENCE-LINKED SKILLS, mirrored from server/src/lib/engine.ts, where the
    reasoning is written out in full. In short: the builder asks where each
    skill was used and the answer must point at an entry already on the
    applicant's own resume. A skill with a source counts in full; one without
-   still counts, at partial credit. The link is never printed on the resume —
-   the downloaded document is unchanged — and is shown only in the
+   still counts, at partial credit. The link is never printed on the resume, the downloaded document is unchanged, and is shown only in the
    recruiter's applicant view.
    ------------------------------------------------------------ */
 export type EvidenceKind = 'experience' | 'project' | 'certification' | 'education';
@@ -334,7 +333,7 @@ export interface SkillEvidence {
   ref: string;
 }
 
-/** A recruiter's working note on one application — "called 3pm, no answer".
+/** A recruiter's working note on one application, "called 3pm, no answer".
  *  INTERNAL: no route returns these to the applicant. */
 export interface ScreeningNote {
   id: string;
@@ -350,7 +349,7 @@ export interface MatchResult {
   matchedSkills: string[];
   missingSkills: string[];
   /** Matched skills the applicant named no source for. Each still counts,
-   *  at UNEVIDENCED_CREDIT rather than in full — see engine.ts. Empty when
+   *  at UNEVIDENCED_CREDIT rather than in full, see engine.ts. Empty when
    *  evidence does not apply (the uploaded-document score, which was never
    *  asked the question). */
   unevidencedMatches: string[];
@@ -360,7 +359,7 @@ export interface MatchResult {
   seekerMonths: number;
   tier: Tier;
   /** The weights this score was computed with, as fractions. Carried on the
-   *  result so a breakdown always adds up to the number beside it — see the
+   *  result so a breakdown always adds up to the number beside it, see the
    *  same field in server/src/lib/engine.ts. */
   weights: { skills: number; education: number; experience: number };
 }
@@ -370,7 +369,7 @@ export interface RecommendationItem extends MatchResult {
   company: Company | null;
   applied: boolean;
   /** The same posting scored against the applicant's own uploaded document.
-   *  Absent when there is no readable document — never zero in that case. */
+   *  Absent when there is no readable document, never zero in that case. */
   fileScore?: MatchResult;
 }
 
@@ -396,7 +395,7 @@ export interface RankedRow extends MatchResult {
   scoreDrifted?: boolean;
 
   /** Required skills first claimed on the day this application was made.
-   *  Context for an interview question and nothing else — it does not affect
+   *  Context for an interview question and nothing else, it does not affect
    *  the score, the tier, the ordering, or whether the applicant is shown. */
   skillsClaimedOnApplyDay?: string[];
 }
@@ -426,7 +425,7 @@ export interface AnalyzedResume {
   references?: Reference[];
 }
 
-/** Every API method returns this shape — success carries the payload,
+/** Every API method returns this shape, success carries the payload,
  *  failure carries a human-readable message. Never throws. */
 export type ApiResult<T extends object = object> =
   | ({ ok: true } & T)

@@ -1,5 +1,5 @@
 /* ============================================================
-   HTTP ADAPTER — identical surface to DemoAdapter, backed by the
+   HTTP ADAPTER, identical surface to DemoAdapter, backed by the
    Node/Express API (server/src/routes/*.ts) over MySQL. Port of
    the `php` object in 04_Website/app/assets/api.js, adapted to
    the Node route scheme: POST /api/<router>/<action> instead of
@@ -71,7 +71,7 @@ export class HttpAdapter implements ApiAdapter {
       }
     },
     removeFile: (id: string) => this.call<object>('resumes', 'remove-file', { id }),
-    // served through an auth-checked endpoint — applicant files are never a guessable public URL
+    // served through an auth-checked endpoint, applicant files are never a guessable public URL
     fileUrl: (id: string) => `${this.apiBase}/file?resume_id=${encodeURIComponent(id)}`,
   };
 

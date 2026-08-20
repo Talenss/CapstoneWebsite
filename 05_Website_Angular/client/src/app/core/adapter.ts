@@ -1,5 +1,5 @@
 /* ============================================================
-   The ONE surface, TWO adapters — port of assets/api.js's design.
+   The ONE surface, TWO adapters, port of assets/api.js's design.
    DemoAdapter (localStorage) and HttpAdapter (Node API) both
    implement this interface, so every page component talks to
    ApiService without caring which mode is active.
@@ -13,8 +13,8 @@ export interface ApiAdapter {
     login(email: string, password: string): Promise<ApiResult<{ user: User }>>;
     /** Emails a 6-digit code. 'verify' = sign-up (fails with exists:true when
      *  the email already has an account); 'reset' = forgot password (never
-     *  reveals whether an account exists). In demo mode — and in server dev
-     *  mode without SMTP — the code comes back in devCode so the flow still
+     *  reveals whether an account exists). In demo mode, and in server dev
+     *  mode without SMTP. The code comes back in devCode so the flow still
      *  works, clearly labelled as such in the UI. */
     sendCode(email: string, purpose: 'verify' | 'reset'): Promise<ApiResult<{ sent?: boolean; devCode?: string; simulated?: boolean; note?: string }>>;
     registerSeeker(d: { name: string; email: string; password: string; code: string }): Promise<ApiResult<{ user: User }>>;
@@ -23,7 +23,7 @@ export interface ApiAdapter {
     logout(): Promise<ApiResult<object>>;
     me(): Promise<ApiResult<{ user: User | null }>>;
     changePassword(current: string, next: string): Promise<ApiResult<object>>;
-    /** The name on the account — what a recruiter reads beside an application.
+    /** The name on the account, what a recruiter reads beside an application.
      *  Not a credential, so no code and no password, the same as the
      *  notification toggle. Saved resumes keep their own printed name. */
     changeName(name: string): Promise<ApiResult<{ user: User }>>;
@@ -64,7 +64,7 @@ export interface ApiAdapter {
     mine(): Promise<ApiResult<{ applications: Application[] }>>;
     ranked(postingId: string): Promise<ApiResult<{ posting: Posting; rows: RankedRow[] }>>;
     /** `reason` is optional and only meaningful on a rejection. It is recorded
-     *  on the history row and read by BOTH audiences — the employer's staff in
+     *  on the history row and read by BOTH audiences, the employer's staff in
      *  their own filing wording, the applicant in the second person. What the
      *  applicant does not learn is which staff member chose it. See
      *  routes/applications.ts for why those two gates differ. */
@@ -92,7 +92,7 @@ export interface ApiAdapter {
     toggle(postingId: string): Promise<ApiResult<{ saved: boolean }>>;
   };
   metrics: {
-    /** Researcher aggregates for the study — admin only, anonymous by construction. */
+    /** Researcher aggregates for the study, admin only, anonymous by construction. */
     summary(): Promise<ApiResult<{ metrics: any }>>;
   };
   match: {
@@ -118,13 +118,13 @@ export interface ApiAdapter {
   };
   analyze: {
     /** Opt-in extraction of an uploaded resume file. Returns a structured
-     *  resume for the user to review in the builder — never saves anything.
+     *  resume for the user to review in the builder, never saves anything.
      *  `simulated` is true in demo mode (nothing real behind it). */
     resume(file: File): Promise<ApiResult<{ resume: AnalyzedResume; provider?: string; simulated?: boolean }>>;
     /** Which reader is configured, so the consent text can name it.
-     *  'rules'  — read on this server, the document never leaves it
-     *  'gemini' — sent to Google for reading
-     *  'demo'   — nothing is read at all; the demo build fakes it */
+     *  'rules' , read on this server, the document never leaves it
+     *  'gemini', sent to Google for reading
+     *  'demo'  . Nothing is read at all; the demo build fakes it */
     reader(): Promise<ApiResult<{ reader: 'rules' | 'gemini' | 'demo'; configured: boolean }>>;
   };
   resetDemo(): Promise<ApiResult<object>>;

@@ -4,7 +4,7 @@
   <div class="page-head">
     <span class="eyebrow">Upload &amp; analyze</span>
     <h1>Start from the resume you already have</h1>
-    <p>Upload your existing resume and the system reads it for you — it extracts your skills, education, and experience into the guided builder, where <b>you review and correct everything before anything is saved</b>. The same transparent formula (skills 50% · education 25% · experience 25%) then scores it against every opening. Prefer to type it in yourself? <a routerLink="/resume-builder">Use the builder directly</a>.</p>
+    <p>Upload your existing resume and the system reads it for you. It extracts your skills, education, and experience into the guided builder, where <b>you review and correct everything before anything is saved</b>. The same transparent formula (skills 50% · education 25% · experience 25%) then scores it against every opening. Prefer to type it in yourself? <a routerLink="/resume-builder">Use the builder directly</a>.</p>
   </div>
 
   @if (errorMsg()) {
@@ -52,7 +52,7 @@
           contents of your file are sent to Google, a company outside the Philippines, and processed under
           <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">their API terms</a>. We
           remain responsible for it either way. If you would rather it did not, close this page and type your resume
-          into the builder instead — everything else works without this.
+          into the builder instead, everything else works without this.
         </p>
         <label class="consent">
           <input type="checkbox" [checked]="consented()" (change)="consented.set(!consented())">
@@ -63,7 +63,7 @@
       } @else if (reader() === 'demo') {
         <p class="notice" style="font-size:13.5px">
           <b>This is the demonstration build.</b> There is no server behind it. Your file is not uploaded, not read and
-          not sent anywhere — the result you are about to see is a clearly-labelled simulation, so the page can be
+          not sent anywhere. The result you are about to see is a clearly-labelled simulation, so the page can be
           shown without any real document being processed.
         </p>
         <label class="consent">
@@ -90,10 +90,10 @@
           @if (busy()) { <span class="spinner"></span> Reading your resume&hellip; }
           @else { Analyze my resume }
         </button>
-        <a class="btn ghost" routerLink="/resume-builder">Skip — build it by hand</a>
+        <a class="btn ghost" routerLink="/resume-builder">Skip, build it by hand</a>
       </div>
       @if (busy()) {
-        <p class="hint" style="margin-top:12px">This usually takes a few seconds. The extraction is a starting point — you'll check every field next.</p>
+        <p class="hint" style="margin-top:12px">This usually takes a few seconds. The extraction is a starting point, you'll check every field next.</p>
       }
     </section>
   } @else {
@@ -107,7 +107,7 @@
         }
       </div>
       <p style="font-size:13.5px;color:var(--muted);margin-bottom:20px">
-        Check it over — extraction is never perfect. Next you'll review and edit everything in the builder; <b>nothing has been saved yet</b>.
+        Check it over, extraction is never perfect. Next you'll review and edit everything in the builder; <b>nothing has been saved yet</b>.
       </p>
 
       <div class="found">
@@ -123,31 +123,31 @@
         </div>
 
         <div class="f-sec">
-          <h3>Skills <span class="n">({{ result()!.skills.length }}) — half of every score</span></h3>
+          <h3>Skills <span class="n">({{ result()!.skills.length }}), half of every score</span></h3>
           @if (result()!.skills.length) {
             <div>
               @for (s of result()!.skills; track s) { <span class="chip">{{ s }}</span> }
             </div>
-          } @else { <p class="sub">None found — you can add them in the builder.</p> }
+          } @else { <p class="sub">None found. You can add them in the builder.</p> }
         </div>
 
         <div class="f-sec">
           <h3>Education <span class="n">({{ result()!.education.length }})</span></h3>
           @for (e of result()!.education; track $index) {
-            <p><b>{{ e.degree || 'Degree' }}</b> — {{ e.school }}{{ e.year ? ' · ' + e.year : '' }}</p>
+            <p><b>{{ e.degree || 'Degree' }}</b>, {{ e.school }}{{ e.year ? ' · ' + e.year : '' }}</p>
           } @empty { <p class="sub">None found.</p> }
         </div>
 
         <div class="f-sec">
           <h3>Experience <span class="n">({{ result()!.experience.length }})</span></h3>
           @for (e of result()!.experience; track $index) {
-            <p><b>{{ e.position || 'Position' }}</b> — {{ e.company }}{{ e.months ? ' · ' + monthsLabel(e.months) : '' }}</p>
+            <p><b>{{ e.position || 'Position' }}</b>, {{ e.company }}{{ e.months ? ' · ' + monthsLabel(e.months) : '' }}</p>
             @if (e.bullets?.length) {
               <ul class="bul">
                 @for (b of e.bullets; track $index) { <li>{{ b }}</li> }
               </ul>
             }
-          } @empty { <p class="sub">None found — plenty of openings ask for zero months.</p> }
+          } @empty { <p class="sub">None found, plenty of openings ask for zero months.</p> }
         </div>
 
         <!-- Everything extracted has to be visible here: the consent text
@@ -157,7 +157,7 @@
           <div class="f-sec">
             <h3>Projects <span class="n">({{ result()!.projects!.length }})</span></h3>
             @for (p of result()!.projects; track $index) {
-              <p><b>{{ p.name }}</b>{{ p.role ? ' — ' + p.role : '' }}</p>
+              <p><b>{{ p.name }}</b>{{ p.role ? ', ' + p.role : '' }}</p>
             }
           </div>
         }
@@ -183,7 +183,7 @@
         <button class="btn primary" type="button" (click)="reviewInBuilder()">Review &amp; edit in the builder &rarr;</button>
         <button class="btn ghost" type="button" (click)="clearFile()">Start over</button>
       </div>
-      <p class="hint" style="margin-top:12px">Your original file comes along too — after you save, it's attached for recruiters to read with their own eyes, exactly as you wrote it.</p>
+      <p class="hint" style="margin-top:12px">Your original file comes along too, after you save, it's attached for recruiters to read with their own eyes, exactly as you wrote it.</p>
     </section>
   }
 </main>

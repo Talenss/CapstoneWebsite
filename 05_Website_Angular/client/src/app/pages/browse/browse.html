@@ -13,7 +13,7 @@
     </div>
   } @else if (isSeeker() && !resume()) {
     <div class="alert info show" style="margin-bottom:22px" role="status">
-      You don’t have a resume yet, so these can’t be scored. <a routerLink="/resume-builder">Build one</a> — it takes a few minutes, and browsing stays open below.
+      You don’t have a resume yet, so these can’t be scored. <a routerLink="/resume-builder">Build one</a>. It takes a few minutes, and browsing stays open below.
     </div>
   }
 
@@ -36,7 +36,7 @@
   </div>
 
   <!-- Which resume these scores come from. Without this the page shows a
-       score against every opening with no attribution — and if the active
+       score against every opening with no attribution, and if the active
        resume is unset or stale it silently falls back to the most recently
        edited one, so the numbers would be computed from a resume the seeker
        did not choose, with no way to tell. A system whose argument is that
@@ -100,7 +100,7 @@
                 @if (isSeeker()) {
                   <button class="bookmark" type="button" [class.on]="isSaved(row.posting.id)"
                           [attr.aria-label]="isSaved(row.posting.id) ? 'Remove from saved openings' : 'Save this opening'"
-                          [title]="isSaved(row.posting.id) ? 'Saved — click to remove' : 'Save for later'"
+                          [title]="isSaved(row.posting.id) ? 'Saved, click to remove' : 'Save for later'"
                           (click)="toggleSave(row)">{{ isSaved(row.posting.id) ? '★' : '☆' }}</button>
                 }
                 @if (row.applied) {
@@ -169,7 +169,7 @@
             @if (row.s.unevidencedMatches.length) {
               <div class="row">
                 <span><b>Counting at half</b><span class="w">no source on your resume</span></span>
-                <b>{{ row.s.unevidencedMatches.join(', ') }} — <a routerLink="/resume-builder" [queryParams]="{ id: resume()?.id }">say where you used {{ row.s.unevidencedMatches.length === 1 ? 'it' : 'them' }}</a></b>
+                <b>{{ row.s.unevidencedMatches.join(', ') }}, <a routerLink="/resume-builder" [queryParams]="{ id: resume()?.id }">say where you used {{ row.s.unevidencedMatches.length === 1 ? 'it' : 'them' }}</a></b>
               </div>
             }
             <div class="row">
@@ -186,7 +186,7 @@
           }
           <!-- What the role asks for, stated plainly and WITHOUT marking which
                ones this applicant has. Shown to everyone, because a job advert
-               that will not say what it requires is not usable — a person has
+               that will not say what it requires is not usable, a person has
                to be able to judge whether a role suits them. What is missing
                here is the comparison: the applicant can read the requirements
                and check themselves, and the system does not do the diff for

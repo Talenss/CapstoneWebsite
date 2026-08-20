@@ -5,7 +5,7 @@
     <div>
       <span class="eyebrow">Research team</span>
       <h1>Study metrics</h1>
-      <p>Evaluation data for the paper — aggregates only, never a name. Scores are captured <b>at the moment of applying</b>, so they reflect what the applicant and recruiter actually saw.</p>
+      <p>Evaluation data for the paper, aggregates only, never a name. Scores are captured <b>at the moment of applying</b>, so they reflect what the applicant and recruiter actually saw.</p>
     </div>
     <div style="display:flex;gap:9px;flex-wrap:wrap">
       <button class="btn primary" type="button" [disabled]="!m()" (click)="downloadCsv()">Download as CSV</button>
@@ -46,7 +46,7 @@
 
     <section class="block">
       <h2>Tier when applying</h2>
-      <p class="lede">The third row is the study's no-rejection claim in action: people applying to roles the engine scored <i>below</i> the threshold — because a low score here is a redirection, never a locked door.</p>
+      <p class="lede">The third row is the study's no-rejection claim in action: people applying to roles the engine scored <i>below</i> the threshold, because a low score here is a redirection, never a locked door.</p>
       @for (t of tierRows(); track t.label) {
         <div class="hrow">
           <span class="hlabel">{{ t.label }}</span>
@@ -69,7 +69,7 @@
     </section>
 
     @if (isDemo) {
-      <p class="hint">Demo mode computes these live from this browser's data — in server mode the same numbers come from the real database, where time-to-decision uses the full status history.</p>
+      <p class="hint">Demo mode computes these live from this browser's data, in server mode the same numbers come from the real database, where time-to-decision uses the full status history.</p>
     }
     <p class="hint">Generated {{ mm.generatedAt }}. Thresholds: strong ≥ {{ mm.thresholds.strong }}%, related ≥ {{ mm.thresholds.related }}%.</p>
   }

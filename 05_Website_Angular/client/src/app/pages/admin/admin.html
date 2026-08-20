@@ -4,7 +4,7 @@
   <div class="page-head">
     <span class="eyebrow">Research team</span>
     <h1>Recruiter requests</h1>
-    <p>Every posting on the platform is a real job because every recruiter account passes through this desk. Verify each request with the partner company's HR before approving — <b>approving is what creates the account</b>. The recruiter then sets their own password through "Forgot password"{{ isDemo ? ' (in demo mode the code appears on screen)' : ', guided by the approval email' }}.</p>
+    <p>Every posting on the platform is a real job because every recruiter account passes through this desk. Verify each request with the partner company's HR before approving, <b>approving is what creates the account</b>. The recruiter then sets their own password through "Forgot password"{{ isDemo ? ' (in demo mode the code appears on screen)' : ', guided by the approval email' }}.</p>
   </div>
 
   @if (errorMsg()) {
@@ -40,7 +40,7 @@
               }
               <div class="acts">
                 <button class="btn primary" type="button" [disabled]="busyId() === r.id" (click)="approve(r)">
-                  @if (busyId() === r.id) { <span class="spinner"></span> Working… } @else { Approve — create account }
+                  @if (busyId() === r.id) { <span class="spinner"></span> Working… } @else { Approve, create account }
                 </button>
                 <button class="btn ghost" type="button" [disabled]="busyId() === r.id" (click)="decline(r)">Decline</button>
               </div>
@@ -80,10 +80,10 @@
     <section class="block">
       <h2>Department routing <span class="count">{{ totalAssigned() }}</span></h2>
       <p style="color:var(--muted);font-size:14px;margin:-4px 0 18px;max-width:74ch">
-        Assign the HR person who handles each department. A new application for that department emails <b>only its owner</b> — for example, IT applications go straight to whoever owns IT. Departments left as <b>All recruiters</b> notify everyone, the safe default so nothing is missed. This routes the email only; every recruiter still sees every applicant.
+        Assign the HR person who handles each department. A new application for that department emails <b>only its owner</b>, for example, IT applications go straight to whoever owns IT. Departments left as <b>All recruiters</b> notify everyone, the safe default so nothing is missed. This routes the email only; every recruiter still sees every applicant.
       </p>
       @if (!routing().length) {
-        <div class="card empty"><p>No departments yet — they appear once a company has posted openings.</p></div>
+        <div class="card empty"><p>No departments yet. They appear once a company has posted openings.</p></div>
       } @else {
         @for (co of routing(); track co.id) {
           <div class="card" style="padding:0;margin-bottom:16px">

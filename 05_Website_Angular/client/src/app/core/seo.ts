@@ -1,5 +1,5 @@
 /* ============================================================
-   ResumeMatch PH — core/seo.ts
+   ResumeMatch PH, core/seo.ts
    ------------------------------------------------------------
    Everything a search engine reads that is not visible on the
    page: the description, the canonical URL, the social cards, the
@@ -24,7 +24,7 @@
    CSP NOTE
    The site ships `script-src 'self'`. A <script type="application/
    ld+json"> block is a DATA block, not executable script, and is
-   not blocked by that policy — verified in Chromium against the
+   not blocked by that policy, verified in Chromium against the
    exact CSP the deployed site sends, with no console violation.
    ============================================================ */
 import { DOCUMENT } from '@angular/common';
@@ -72,7 +72,7 @@ const EMPLOYMENT: Record<string, string> = {
 };
 
 /** A company's one free-text address line, split into the parts schema.org
- *  wants — and no further.
+ *  wants, and no further.
  *
  *  This replaced a hardcoded `addressLocality: 'Angeles City'`, which was
  *  wrong the moment it was written: the pilot partner's address ends
@@ -82,8 +82,8 @@ const EMPLOYMENT: Record<string, string> = {
  *  in is not something a comma-splitter can do.
  *
  *  So the rule is: read the last two parts when the address is written the
- *  way Philippine addresses conventionally are — "…, Municipality, 1234
- *  Province" — and when it is not, claim nothing beyond the country and the
+ *  way Philippine addresses conventionally are, "…, Municipality, 1234
+ *  Province". And when it is not, claim nothing beyond the country and the
  *  line itself. A missing addressLocality costs a little local relevance. A
  *  wrong one tells a job seeker the office is in a city it is not in. */
 function addressOf(location: string | null | undefined) {
@@ -119,7 +119,7 @@ export class Seo {
 
   /** The site's own origin. Taken from the browser so it is correct on
    *  localhost, on a Netlify preview and on the final domain without anyone
-   *  having to remember to change a constant — and overridable for the case
+   *  having to remember to change a constant, and overridable for the case
    *  where the same build is served from more than one host and only one of
    *  them should be the canonical one. */
   private origin(): string {
@@ -140,7 +140,7 @@ export class Seo {
 
     /* A page that must not be indexed says so explicitly rather than relying
        on robots.txt. robots.txt stops the crawl, which also stops the crawler
-       from ever seeing a noindex — so a page already in the index can be
+       from ever seeing a noindex. So a page already in the index can be
        stuck there. The directive on the page is the one that removes it. */
     if (seo.index === false)
       this.meta.updateTag({ name: 'robots', content: 'noindex, nofollow' });
@@ -180,7 +180,7 @@ export class Seo {
   /* ---------------- structured data ---------------- */
 
   /** Adds or replaces one JSON-LD block, keyed by id so a navigation cannot
-   *  leave the previous page's structured data behind — describing the
+   *  leave the previous page's structured data behind, describing the
    *  privacy notice as a job posting is worse than describing it as nothing. */
   jsonLd(id: string, data: unknown | null): void {
     const existing = this.doc.getElementById(id);
@@ -193,7 +193,7 @@ export class Seo {
     this.doc.head.appendChild(el);
   }
 
-  /** schema.org JobPosting for a list of openings — the block that makes a
+  /** schema.org JobPosting for a list of openings, the block that makes a
    *  listing eligible for the Google Jobs box, which is the single highest-
    *  leverage piece of structured data a job site can publish.
    *
@@ -237,7 +237,7 @@ export class Seo {
   }
 
   /** FAQPage for the learning hub. Every question below is answered in full
-   *  on the page itself — an FAQ block whose answers are not on the page is
+   *  on the page itself. An FAQ block whose answers are not on the page is
    *  the most common way a site earns a structured-data manual action, and
    *  it would also mean promising a searcher an answer they then cannot
    *  find. The answers here are shortened from the article text, not
@@ -290,7 +290,7 @@ export class Seo {
         {
           /* Not a company. This is a student research project, and saying so
              in the structured data keeps it consistent with what the site
-             says on every page — an organisation claim we cannot support is
+             says on every page, an organisation claim we cannot support is
              exactly the kind of thing that gets structured data distrusted. */
           '@type': 'EducationalOrganization',
           '@id': origin + '/#org',

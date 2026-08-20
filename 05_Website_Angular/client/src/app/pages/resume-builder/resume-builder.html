@@ -5,7 +5,7 @@
     <div>
       <span class="eyebrow">Guided builder</span>
       <h1>{{ pageTitle() }}</h1>
-      <p>Nothing here is scored until you save. Take your time — every step has guidance, and you can go back.
+      <p>Nothing here is scored until you save. Take your time. Every step has guidance, and you can go back.
         @if (!resume().id) {
           Already have a resume file? <a routerLink="/upload-resume">Upload it and let the system fill this in for you</a>.
         }
@@ -41,14 +41,14 @@
         @if (step() === 0) {
           <section class="step" id="s0">
             <h2>Who you are</h2>
-            <!-- Every other step says in this line what it needs — "If you have
-                 none, skip this", "Optional — but they're free evidence", "All
+            <!-- Every other step says in this line what it needs: "If you have
+                 none, skip this", "Optional, but they're free evidence", "All
                  optional". This step said nothing, which is why the tagged and
                  untagged fields below could not be told apart at a glance. -->
-            <p class="sub">This is the header of your resume. Your name, a short summary and one way to reach you are what the resume needs before it can be scored — anything marked <b>optional</b> can be left blank. Keep the summary to two or three plain sentences: what you studied, what you've done, what you're looking for.</p>
+            <p class="sub">This is the header of your resume. Your name, a short summary and one way to reach you are what the resume needs before it can be scored, anything marked <b>optional</b> can be left blank. Keep the summary to two or three plain sentences: what you studied, what you've done, what you're looking for.</p>
             <div class="field">
               <label for="rtitle">Name this resume <span class="opt">optional &middot; only you see this</span></label>
-              <input type="text" id="rtitle" placeholder="e.g. IT — fresh graduate" [value]="resume().title" (input)="setTitle(inputValue($event))">
+              <input type="text" id="rtitle" placeholder="e.g. IT, fresh graduate" [value]="resume().title" (input)="setTitle(inputValue($event))">
             </div>
             <div class="row2">
               <div class="field">
@@ -75,7 +75,7 @@
                 <input type="text" id="pAddr" placeholder="Angeles City, Pampanga" [value]="resume().personal.address" (input)="setPersonal('address', inputValue($event))">
               </div>
             </div>
-            <p class="hint" style="margin:-6px 0 18px">A recruiter needs at least one of the two — it is how they reply to you. City helps only if an opening is near you.</p>
+            <p class="hint" style="margin:-6px 0 18px">A recruiter needs at least one of the two. It is how they reply to you. City helps only if an opening is near you.</p>
             <div class="field">
               <label for="pHeadline">Headline <span class="opt">optional</span></label>
               <input type="text" id="pHeadline" placeholder="BS Information Technology graduate" [value]="resume().personal.headline || ''" (input)="setPersonal('headline', inputValue($event))">
@@ -91,11 +91,11 @@
                 <input type="text" id="pPortfolio" placeholder="github.com/juandelacruz" [value]="resume().personal.portfolio || ''" (input)="setPersonal('portfolio', inputValue($event))">
               </div>
             </div>
-            <p class="hint" style="margin:-6px 0 18px">Type the address itself, not a word like "LinkedIn" — screening software often drops the link and keeps only the text.</p>
+            <p class="hint" style="margin:-6px 0 18px">Type the address itself, not a word like "LinkedIn", screening software often drops the link and keeps only the text.</p>
             <div class="field">
               <label for="pSummary">Short summary</label>
               <textarea id="pSummary" rows="3" placeholder="BS Information Technology graduate with internship experience in web development. Looking for an entry-level developer role." [value]="resume().personal.summary" (input)="setPersonal('summary', inputValue($event))"></textarea>
-              <p class="hint">Write it in plain sentences. Skip words like "hardworking" — say what you actually did instead.</p>
+              <p class="hint">Write it in plain sentences. Skip words like "hardworking", say what you actually did instead.</p>
             </div>
           </section>
         }
@@ -108,7 +108,7 @@
                  "optional" tag and four did not, while only the school is
                  actually needed. Stating the rule is what makes the tags
                  below mean anything. -->
-            <p class="sub">The level you pick here is a quarter of every compatibility score, so choose the one that matches the diploma you actually hold. A new entry starts at <b>Not stated yet</b>, which counts as nothing — the system never assumes a qualification for you. An entry needs the <b>school</b> filled in before your resume can be scored; anything marked <b>optional</b> can be left blank, though a recruiter reads all of it.</p>
+            <p class="sub">The level you pick here is a quarter of every compatibility score, so choose the one that matches the diploma you actually hold. A new entry starts at <b>Not stated yet</b>, which counts as nothing. The system never assumes a qualification for you. An entry needs the <b>school</b> filled in before your resume can be scored; anything marked <b>optional</b> can be left blank, though a recruiter reads all of it.</p>
             <div>
               @for (e of resume().education; track $index) {
                 <div class="item">
@@ -176,7 +176,7 @@
         @if (step() === 2) {
           <section class="step" id="s2">
             <h2>Experience</h2>
-            <p class="sub">Internships, OJT, part-time work, and student-organisation roles all count. If you have none, skip this — plenty of openings ask for zero months.</p>
+            <p class="sub">Internships, OJT, part-time work, and student-organisation roles all count. If you have none, skip this, plenty of openings ask for zero months.</p>
             <div>
               @for (e of resume().experience; track $index) {
                 <div class="item">
@@ -223,7 +223,7 @@
                       <label [for]="'exp-cur-' + $index">Still working here</label>
                       <label class="check">
                         <input type="checkbox" [id]="'exp-cur-' + $index" [checked]="!!e.current" (change)="toggleCurrent($index, !e.current)">
-                        <span>Yes — print "Present" as the end date</span>
+                        <span>Yes, print "Present" as the end date</span>
                       </label>
                     </div>
                   </div>
@@ -249,7 +249,7 @@
         @if (step() === 3) {
           <section class="step" id="s3">
             <h2>Skills</h2>
-            <p class="sub">Half of every score comes from this one list. Be specific — "MySQL" scores; "computer skills" doesn't match anything.</p>
+            <p class="sub">Half of every score comes from this one list. Be specific. "MySQL" scores; "computer skills" doesn't match anything.</p>
             <div class="field" style="margin-bottom:8px">
               <label for="skillInput">Add a skill</label>
               <input type="text" id="skillInput" list="skillOpts" placeholder="Type any skill, then press Enter" autocomplete="off" (keydown)="onSkillKeydown($event)" (change)="onSkillChange($event)">
@@ -258,34 +258,34 @@
                   <option [value]="s"></option>
                 }
               </datalist>
-              <p class="hint">Type anything — the list below is only a shortcut. A skill no opening asks for scores nothing today, but it still goes on your resume, and openings change.</p>
+              <p class="hint">Type anything. The list below is only a shortcut. A skill no opening asks for scores nothing today, but it still goes on your resume, and openings change.</p>
             </div>
             <div class="sugg">
               <b>Skills these openings use, spelled as the system reads them</b>
               <!-- VOCABULARY HELP, NOT A RANKING.
                    This pool exists so an applicant writes "Git" rather than
                    "GitHub" and is not silently denied credit for a skill they
-                   actually hold — the false negative created by wording alone,
+                   actually hold, the false negative created by wording alone,
                    which is the unfairness this project argues against.
 
                    It used to carry a demand count per skill and sort by it,
                    which turned it into something else: every chip is ticked or
                    not according to what this applicant already lists, so a
                    demand-ordered pool of unticked chips was a ranked list of
-                   the most valuable things they do not claim — the same
+                   the most valuable things they do not claim, the same
                    personalised gap that was removed from the openings page,
                    with an add button beside it. The counts are gone, the order
                    is alphabetical, and what employers here are asking for now
                    lives in the learning hub as advice rather than as a
                    one-click shortcut. -->
-              <p class="hint" style="margin:-4px 0 9px">Click to add, click again to take it back off — chosen skills stay where they are. These are spelled the way the system recognises them, so use these rather than your own wording. Add only what you have actually done: below, each skill asks where you used it, and one you cannot point to counts half.</p>
+              <p class="hint" style="margin:-4px 0 9px">Click to add, click again to take it back off, chosen skills stay where they are. These are spelled the way the system recognises them, so use these rather than your own wording. Add only what you have actually done: below, each skill asks where you used it, and one you cannot point to counts half.</p>
               <div class="pool">
                 @for (s of poolAll(); track s) {
                   <button type="button" [class.on]="skillListed(s)" [attr.aria-pressed]="skillListed(s)"
                           [attr.title]="skillListed(s) ? 'Remove ' + s + ' from your skills' : 'Add ' + s + ' to your skills'"
                           (click)="toggleSkill(s)"><span class="mark" aria-hidden="true">{{ skillListed(s) ? '&check;' : '+' }}</span>{{ s }}</button>
                 } @empty {
-                  <p style="color:var(--muted);font-size:13px">No positions are open right now, so there is nothing to match against today. Add the skills you have — the openings change.</p>
+                  <p style="color:var(--muted);font-size:13px">No positions are open right now, so there is nothing to match against today. Add the skills you have, the openings change.</p>
                 }
               </div>
               @if (allDemandedListed()) {
@@ -294,20 +294,20 @@
             </div>
             <div class="sugg">
               <b>Other skills worth listing</b>
-              <p class="hint" style="margin:-4px 0 9px">No open position asks for these right now, so they add nothing to today's score — but they belong on a resume a person reads, and the openings change.</p>
+              <p class="hint" style="margin:-4px 0 9px">No open position asks for these right now, so they add nothing to today's score. But they belong on a resume a person reads, and the openings change.</p>
               <div class="pool">
                 @for (s of otherSuggestions(); track s) {
                   <button type="button" [class.on]="skillListed(s)" [attr.aria-pressed]="skillListed(s)"
                           [attr.title]="skillListed(s) ? 'Remove ' + s + ' from your skills' : 'Add ' + s + ' to your skills'"
                           (click)="toggleSkill(s)"><span class="mark" aria-hidden="true">{{ skillListed(s) ? '&check;' : '+' }}</span>{{ s }}</button>
                 } @empty {
-                  <p style="color:var(--muted);font-size:13px">Nothing left to suggest — type your own above.</p>
+                  <p style="color:var(--muted);font-size:13px">Nothing left to suggest, type your own above.</p>
                 }
               </div>
             </div>
             <!-- Below the pools, not above them. This list grows as skills are
                  added, and anything that grows above the chips pushes them down
-                 mid-click — the same mis-click the chips themselves used to
+                 mid-click. The same mis-click the chips themselves used to
                  cause. Nothing above the pools changes size, so they cannot
                  move. The chips carry a tick, so what is on the list is still
                  visible while choosing without looking down here. -->
@@ -362,7 +362,7 @@
         @if (step() === 4) {
           <section class="step" id="s4">
             <h2>Certifications</h2>
-            <p class="sub">TESDA certificates, short courses, seminars, training. Optional — but they're free evidence, so add them if you have them.</p>
+            <p class="sub">TESDA certificates, short courses, seminars, training. Optional. But they're free evidence, so add them if you have them.</p>
             <div>
               @for (c of resume().certifications; track $index) {
                 <div class="item">
@@ -402,11 +402,11 @@
           </section>
         }
 
-        <!-- 6 · More sections — projects, languages, references -->
+        <!-- 6 · More sections, projects, languages, references -->
         @if (step() === 5) {
           <section class="step" id="s5">
             <h2>More sections</h2>
-            <p class="sub">All optional, and none of them change your score. They change what a recruiter reads. A section you leave empty is not printed at all — no stray heading, no gap.</p>
+            <p class="sub">All optional, and none of them change your score. They change what a recruiter reads. A section you leave empty is not printed at all, no stray heading, no gap.</p>
 
             <h3 class="grp">Projects</h3>
             <p class="hint" style="margin-bottom:12px">Capstone, OJT output, freelance work, a system you built for an organisation. This is often the strongest section a fresh graduate has.</p>
@@ -458,7 +458,7 @@
             <button class="add" type="button" (click)="addProject()">+ Add project</button>
 
             <h3 class="grp">Languages</h3>
-            <p class="hint" style="margin-bottom:12px">Written as words, never as bars or stars — a graphic means nothing to screening software and nothing in a black-and-white printout.</p>
+            <p class="hint" style="margin-bottom:12px">Written as words, never as bars or stars. A graphic means nothing to screening software and nothing in a black-and-white printout.</p>
             <div>
               @for (l of resume().languages || []; track $index) {
                 <div class="item">
@@ -495,7 +495,7 @@
             <button class="add" type="button" (click)="addLanguage()">+ Add language</button>
 
             <h3 class="grp">References</h3>
-            <p class="hint" style="margin-bottom:12px">Ask the person first — you are putting their contact details on a document you send to strangers. If you would rather not, leave this empty; nothing is printed.</p>
+            <p class="hint" style="margin-bottom:12px">Ask the person first. You are putting their contact details on a document you send to strangers. If you would rather not, leave this empty; nothing is printed.</p>
             <div>
               @for (x of resume().references || []; track $index) {
                 <div class="item">
@@ -664,7 +664,7 @@
                 <h4>Education</h4>
                 @for (e of visibleEducation(); track $index) {
                   <div class="p-item">
-                    <b>{{ e.field ? (e.degree || 'Degree') + ' — ' + e.field : (e.degree || 'Degree') }}</b>
+                    <b>{{ e.field ? (e.degree || 'Degree') + ', ' + e.field : (e.degree || 'Degree') }}</b>
                     <i>{{ joinMeta([e.school, e.location, e.year]) }}</i>
                     @if (e.honors) { <p>{{ e.honors }}</p> }
                   </div>
@@ -736,7 +736,7 @@
           </ng-template>
 
           <!-- Section order: normally the template's, but 'graduate' and
-               'technical' impose their own — see sectionOrder(). -->
+               'technical' impose their own, see sectionOrder(). -->
           @for (kind of sectionOrder(); track kind) {
             @switch (kind) {
               @case ('education') { <ng-container [ngTemplateOutlet]="eduSection" /> }
@@ -798,7 +798,7 @@
           <button class="btn ghost sm" type="button" (click)="exportWord()">Export Word</button>
           <button class="btn ghost sm" type="button" (click)="exportTxt()">Export text</button>
         </div>
-        <p class="hint" style="margin-top:10px">Exports use the structured resume above — not your uploaded file.</p>
+        <p class="hint" style="margin-top:10px">Exports use the structured resume above, not your uploaded file.</p>
       </aside>
     </div>
   }

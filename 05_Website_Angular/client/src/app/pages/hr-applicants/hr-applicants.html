@@ -14,12 +14,12 @@
   </div>
 
   <div class="note" style="margin-bottom:22px">
-    Ranked by compatibility, not filtered by it. <b>Everyone who applied is on this list</b> — including low scores. The number is a reading aid; the decision is yours.
+    Ranked by compatibility, not filtered by it. <b>Everyone who applied is on this list</b>, including low scores. The number is a reading aid; the decision is yours.
   </div>
 
   <!-- Print only. On paper the page chrome is gone, so the sheet has to say
-       what it is, which rows it contains, and — because it will be read in a
-       shortlisting meeting away from the system — that the ranking does not
+       what it is, which rows it contains, and, because it will be read in a
+       shortlisting meeting away from the system, that the ranking does not
        decide anything. -->
   <p class="printed-note">
     {{ filteredRows().length }} of {{ rows().length }} applicants
@@ -48,7 +48,7 @@
     </select>
     <span class="n">{{ filteredRows().length }} of {{ rows().length }} shown</span>
     <!-- Both act on the FILTERED rows, so what leaves the screen is exactly
-         what is on it — a recruiter who filtered to "strong only" gets the
+         what is on it. A recruiter who filtered to "strong only" gets the
          shortlist they are looking at, not the whole pile. -->
     <span class="bar-actions">
       <button class="btn ghost sm" type="button" (click)="exportCsv()"
@@ -70,13 +70,13 @@
     } @else if (!rows().length) {
       <div class="empty">
         <h2>No applicants yet</h2>
-        <p>When someone applies, they’ll appear here ranked by compatibility — with the score broken down and both of their resumes attached.</p>
+        <p>When someone applies, they’ll appear here ranked by compatibility, with the score broken down and both of their resumes attached.</p>
         <a class="btn ghost" routerLink="/hr-dashboard">Back to dashboard</a>
       </div>
     } @else if (!filteredRows().length) {
       <div class="empty">
         <h2>Nothing matches those filters</h2>
-        <p>Clear a filter to see the rest of the pool. Applicants are only ever hidden by <i>your</i> filters — never by the system.</p>
+        <p>Clear a filter to see the rest of the pool. Applicants are only ever hidden by <i>your</i> filters, never by the system.</p>
       </div>
     } @else if (posting(); as p) {
       @for (r of filteredRows(); track r.application.id) {
@@ -107,8 +107,8 @@
 <!-- applicant detail: both resumes, side by side -->
 <!-- appFocusTrap sits INSIDE the @if, matching the browse and dashboard
      modals. It used to wrap the @if, which meant the directive was created
-     once when the PAGE loaded — with no applicant selected and nothing in the
-     panel — and never again. Three consequences, all measured:
+     once when the PAGE loaded, with no applicant selected and nothing in the
+     panel, and never again. Three consequences, all measured:
        · role="dialog" aria-modal="true" was in the document permanently,
          announcing a modal that was not open;
        · the directive labels the dialog from its own heading, and at page
@@ -150,7 +150,7 @@
 
             <!-- Reported, never acted on. The score, the tier and the position
                  on this list are all identical whether this line appears or
-                 not — it is a prompt for a question, not a verdict, and the
+                 not. It is a prompt for a question, not a verdict, and the
                  wording says so because a recruiter reading it in a hurry
                  should not mistake it for a judgement the system has made. -->
             @if (r.skillsClaimedOnApplyDay?.length) {
@@ -160,7 +160,7 @@
                 first listed on the day they applied:</b>
                 {{ r.skillsClaimedOnApplyDay!.join(', ') }}.
                 People often update a resume when they see a job they want, so this is
-                not a mark against them — it is a good thing to ask about.
+                not a mark against them. It is a good thing to ask about.
                 It has not changed their score or their position on this list.
               </p>
             }
@@ -210,7 +210,7 @@
               <span style="display:flex;gap:8px;align-items:center">
                 <!-- The pane below is a window onto a document that is often
                      taller than it. A recruiter reading properly wants the
-                     whole sheet, laid out as it prints — which this page can
+                     whole sheet, laid out as it prints, which this page can
                      already render, and until now had no link to. -->
                 <a class="btn ghost sm" [routerLink]="['/resume-print']" [queryParams]="{ id: r.resume.id }"
                    target="_blank" rel="noopener" title="Open the full resume, laid out as it prints">Open full resume</a>
@@ -234,7 +234,7 @@
                   <h4>Education</h4>
                   @for (e of r.resume.education; track $index) {
                     <div class="p-item">
-                      <b>{{ e.field ? e.degree + ' — ' + e.field : e.degree }}</b>
+                      <b>{{ e.field ? e.degree + ', ' + e.field : e.degree }}</b>
                       <i>{{ join([e.school, e.location, e.year]) }}</i>
                       @if (e.honors) { <p>{{ e.honors }}</p> }
                     </div>
@@ -268,7 +268,7 @@
                   </div>
                 </div>
 
-                <!-- WHERE EACH SKILL WAS USED — this panel and nowhere else.
+                <!-- WHERE EACH SKILL WAS USED, this panel and nowhere else.
                      The applicant answered this in the builder, and the answer
                      is deliberately absent from the document they download and
                      from the Skills list directly above: a resume with a
@@ -298,7 +298,7 @@
               }
               <!-- The optional sections. They score nothing, but the applicant
                    put them on the document and the recruiter is reading the
-                   document — leaving them out here would hide real work. -->
+                   document, leaving them out here would hide real work. -->
               @if (r.resume.projects?.length) {
                 <div class="p-sec">
                   <h4>Projects</h4>
@@ -350,7 +350,7 @@
                   <img [src]="imgUrl(r.resume.id)" [alt]="'Resume uploaded by ' + r.seeker.name">
                 } @else {
                   <div style="padding:44px 20px;text-align:center;color:var(--muted);font-size:13px;background:var(--ivory)">
-                    Word documents can't be previewed in the browser — download it to read it.
+                    Word documents can't be previewed in the browser, download it to read it.
                   </div>
                 }
                 <div style="padding:12px 14px;background:var(--ivory);border-top:1px solid var(--rule-2);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
@@ -361,7 +361,7 @@
             } @else {
               <div class="none">
                 <b style="font-family:var(--display);font-size:19px;color:var(--ink)">No file attached</b>
-                <span>This applicant didn't upload their own resume document — only the structured one on the left.</span>
+                <span>This applicant didn't upload their own resume document, only the structured one on the left.</span>
               </div>
             }
           </section>
@@ -370,7 +370,7 @@
       @if (inviteOpen()) {
         <div class="invite">
           <h4>Message {{ r.seeker.name }}</h4>
-          <p class="hint" style="margin-bottom:8px">Sent to their email with <b>your address as the reply-to</b>, so their answer lands straight in your inbox. Edit freely — this is a person writing to a person.</p>
+          <p class="hint" style="margin-bottom:8px">Sent to their email with <b>your address as the reply-to</b>, so their answer lands straight in your inbox. Edit freely. This is a person writing to a person.</p>
           <textarea rows="7" [value]="inviteText()" (input)="setInviteText($event)"></textarea>
           <div style="display:flex;gap:9px;justify-content:flex-end;margin-top:10px">
             <button class="btn ghost sm" type="button" (click)="inviteOpen.set(false)">Cancel</button>
@@ -384,7 +384,7 @@
            people work the same pool once departments are routed, so the
            current status alone does not say whether someone moved this person
            an hour ago or three weeks ago, or who to ask. Names are shown here
-           and never to the applicant — internal accountability is exactly
+           and never to the applicant, internal accountability is exactly
            what the stored actor is for. -->
       <!-- SCREENING NOTES. Without somewhere to write "called 3pm, no answer"
            or "wants 35k, budget is 28", a recruiter keeps a spreadsheet beside
@@ -392,7 +392,7 @@
            the whole justification: it screens nobody and scores nothing.
 
            The line about the applicant not seeing them is not reassurance for
-           the recruiter, it is the reason the feature works — a note its
+           the recruiter, it is the reason the feature works, a note its
            subject may read is a note nobody writes honestly. -->
       <div class="handled" style="margin-bottom:16px">
         <div class="handled-head">
@@ -420,7 +420,7 @@
             @for (n of notes(); track n.id) {
               <li>
                 <span>{{ n.body }}</span>
-                <span class="actor"> — {{ n.authorName }}</span>
+                <span class="actor">, {{ n.authorName }}</span>
                 <span class="at"> · {{ day(n.at) }}</span>
                 <!-- Author-only, matching the server. A colleague quietly
                      removing someone else's observation would make the notes
@@ -470,7 +470,7 @@
         </select>
 
         <!-- Asked for on a rejection only, and answerable with "prefer not to
-             say" — a recruiter made to choose in order to proceed picks the
+             say". A recruiter made to choose in order to proceed picks the
              first item, and the column fills with confident nonsense. Left
              blank it records that nobody gave a reason, which is at least
              true.
@@ -482,10 +482,10 @@
              person who chose it. -->
         @if (modalStatus() === 'rejected') {
           <label style="font-size:12.5px;color:var(--muted);margin-bottom:-6px">
-            Reason — optional. <b>The applicant is shown this</b>, in plainer wording. Your name is not.
+            Reason, optional. <b>The applicant is shown this</b>, in plainer wording. Your name is not.
           </label>
           <select [value]="modalReason()" (change)="setModalReason($event)"
-                  aria-label="Reason for not proceeding — optional, and shown to the applicant"
+                  aria-label="Reason for not proceeding, optional, and shown to the applicant"
                   style="padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px">
             <option value="">No reason given</option>
             @for (k of REASONS; track k) { <option [value]="k">{{ REASON_LABELS[k] }}</option> }

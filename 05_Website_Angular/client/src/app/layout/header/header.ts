@@ -37,12 +37,12 @@ export class Header {
    *
    *  It cannot be a plain href="#main": index.html sets <base href="/">, and
    *  a bare fragment resolves against the BASE rather than the current page,
-   *  so on /privacy the browser went to /#main — the home page. Verified on
+   *  so on /privacy the browser went to /#main, the home page. Verified on
    *  /learning-hub, /privacy and /browse; every one navigated away.
    *
    *  Scrolling alone would not be enough either. The point of a skip link is
    *  to move the KEYBOARD CARET past the navigation, so the next Tab lands
-   *  inside the content. Angular's anchorScrolling only scrolls — focus would
+   *  inside the content. Angular's anchorScrolling only scrolls, focus would
    *  stay in the header and the next Tab would walk back through the nav,
    *  which is exactly what the link exists to avoid. So this moves focus and
    *  lets that scroll the element into view.
@@ -75,7 +75,7 @@ export class Header {
 
   /** The variant actually used for the nav. `auto` lets a shared/public page
    *  (home, learning hub, privacy, 404) inherit the signed-in user's own nav
-   *  instead of collapsing to the two guest links — so a seeker who opens the
+   *  instead of collapsing to the two guest links, so a seeker who opens the
    *  learning hub keeps their Dashboard / My resumes / Builder links. Any
    *  explicit variant (including 'guest' and 'auth') passes straight through. */
   effectiveVariant = computed(() => {

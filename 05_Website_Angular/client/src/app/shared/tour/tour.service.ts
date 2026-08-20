@@ -11,7 +11,7 @@ export interface TourOpts {
 }
 
 /* ============================================================
-   ResumeMatch PH — Onboarding tour. Runs automatically the first
+   ResumeMatch PH, Onboarding tour. Runs automatically the first
    time a person lands on a page, and is replayable forever from the
    "Show me around" button. Steps whose target isn't on screen are
    skipped silently.
@@ -19,7 +19,7 @@ export interface TourOpts {
    Movement is deliberately consistent: on every step the spotlight
    and the card are positioned together from the same measurement,
    and while the page smooth-scrolls to the target they are tracked
-   in lockstep via requestAnimationFrame — so the speed never depends
+   in lockstep via requestAnimationFrame, so the speed never depends
    on how far apart two steps happen to be.
    ============================================================ */
 @Injectable({ providedIn: 'root' })
@@ -77,8 +77,8 @@ export class TourService {
     this.follow(el);                                           // then track the scroll
   }
 
-  /** Build the card's contents. Runs once per step change — never on
-   *  scroll — so focus and button handlers stay stable. */
+  /** Build the card's contents. Runs once per step change, never on
+   *  scroll. So focus and button handlers stay stable. */
   private render(step: TourStep, total: number): void {
     const { card } = this.els!;
     const last = this.i === total - 1;
@@ -104,7 +104,7 @@ export class TourService {
   }
 
   /** Position the spotlight over `el` and the card beside it. Cheap and
-   *  synchronous — safe to call every animation frame or scroll event. */
+   *  synchronous, safe to call every animation frame or scroll event. */
   private reposition(el: HTMLElement): void {
     if (!this.els) return;
     const { spot, card } = this.els;
@@ -136,7 +136,7 @@ export class TourService {
       this.reposition(el);
       const top = el.getBoundingClientRect().top;
       if (Math.abs(top - lastTop) < 0.5) {
-        if (++stable >= 4) { this.raf = 0; return; }   // settled — hand off to scroll/resize
+        if (++stable >= 4) { this.raf = 0; return; }   // settled, hand off to scroll/resize
       } else {
         stable = 0;
       }
@@ -152,7 +152,7 @@ export class TourService {
     if (!this.open || !this.currentSel) return;
     const el = document.querySelector(this.currentSel) as HTMLElement | null;
     if (el) this.reposition(el);
-    else this.show(); // target left the DOM — recompute visible steps
+    else this.show(); // target left the DOM, recompute visible steps
   }
 
   private onKey(e: KeyboardEvent): void {

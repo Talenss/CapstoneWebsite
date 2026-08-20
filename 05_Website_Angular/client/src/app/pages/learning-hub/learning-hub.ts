@@ -82,7 +82,7 @@ export class LearningHub implements OnInit, AfterViewInit, OnDestroy {
           + 'organisation.',
       },
       {
-        q: 'What resume template should I use — chronological, functional or combination?',
+        q: 'What resume template should I use, chronological, functional or combination?',
         a: 'Chronological puts your history first and suits you when your education and experience already '
           + 'point at the role you want. Functional puts skills first and suits a change of direction or a '
           + 'gap. Combination leads with a short skills summary and then the history.',
@@ -90,7 +90,7 @@ export class LearningHub implements OnInit, AfterViewInit, OnDestroy {
       {
         q: 'How is my compatibility score calculated?',
         a: 'From three checks against what the posting actually asks for: the skills you list, your education '
-          + 'level, and your months of experience. How much each is worth is set per opening — most use the '
+          + 'level, and your months of experience. How much each is worth is set per opening, most use the '
           + 'site default of 50 percent skills, 25 percent education and 25 percent experience, and a recruiter '
           + 'can weight a particular role differently. Whatever an opening uses is shown on the opening itself, '
           + 'and no criterion can be worth less than 10 percent.',

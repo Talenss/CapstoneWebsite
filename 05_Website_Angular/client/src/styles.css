@@ -266,7 +266,7 @@ main{flex:1}
    Its point: every applicant is on it. Nobody is filtered off.      */
 .arrivals{background:var(--ink);border:1px solid var(--ink-line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow-lg)}
 .arrivals .board-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 20px;
-  border-bottom:1px solid var(--ink-line);background:linear-gradient(180deg,var(--ink-2),var(--ink))}
+  border-bottom:1px solid var(--ink-line);background:var(--ink-2)}
 .arrivals .board-head span{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
 .arrivals .board-head span.dim{color:#767D8C}
 .arrivals .line{display:flex;align-items:center;gap:16px;padding:16px 20px;border-bottom:1px solid var(--ink-2)}

@@ -76,7 +76,7 @@ export class HrPosting {
     || (this.weightTotal() === 100 && !this.weightsBelowFloor()));
   weightError = computed(() => {
     if (!this.customWeights()) return null;
-    if (this.weightsBelowFloor()) return `Each part has to be at least ${this.WEIGHT_FLOOR}% — a criterion cannot be switched off entirely.`;
+    if (this.weightsBelowFloor()) return `Each part has to be at least ${this.WEIGHT_FLOOR}%, a criterion cannot be switched off entirely.`;
     if (this.weightTotal() !== 100) return `The three have to add up to 100%. They add up to ${this.weightTotal()}%.`;
     return null;
   });

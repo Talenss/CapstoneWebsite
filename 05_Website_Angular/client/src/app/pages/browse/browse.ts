@@ -75,7 +75,7 @@ export class Browse implements OnInit, OnDestroy {
     }
     this.savedIds.update((ids) =>
       res.saved ? [...ids, row.posting.id] : ids.filter((id) => id !== row.posting.id));
-    this.showToast(res.saved ? 'Saved — find it on your dashboard.' : 'Removed from saved openings.');
+    this.showToast(res.saved ? 'Saved, find it on your dashboard.' : 'Removed from saved openings.');
   }
 
   deadlineLabel(p: Posting): string | null {
