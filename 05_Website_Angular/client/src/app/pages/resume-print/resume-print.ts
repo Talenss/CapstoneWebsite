@@ -79,7 +79,12 @@ export class ResumePrint implements OnInit, OnDestroy {
       return;
     }
     this.resume.set(res.resume);
-    document.title = `${res.resume.personal.fullName || 'Resume'} — ResumeMatch PH`;
+    /* This becomes the suggested PDF FILENAME when the applicant saves, and
+       the recruiter sees that filename on the attachment. It used to carry
+       this site's name, so people were sending "Juan Dela Cruz — ResumeMatch
+       PH.pdf" to employers. The applicant's own name is what belongs there. */
+    const who = res.resume.personal.fullName?.trim();
+    document.title = who ? `${who} Resume` : 'Resume';
   }
 
   monthsLabel(months: number): string {
@@ -118,9 +123,13 @@ export class ResumePrint implements OnInit, OnDestroy {
       el.id = id;
       document.head.appendChild(el);
     }
+    /* margin:0 for the same reason as the stylesheet: the page margin is
+       where the browser prints its own header and footer, which an applicant
+       tracking system then reads as the resume's first line. The white space
+       is supplied by .sheet's padding instead. */
     el.textContent = size === 'letter'
-      ? '@media print{@page{size:Letter;margin:0.75in}}'
-      : '@media print{@page{size:A4;margin:18mm}}';
+      ? '@media print{@page{size:Letter;margin:0}.sheet{padding:0.75in}}'
+      : '@media print{@page{size:A4;margin:0}.sheet{padding:18mm}}';
   }
 
   ngOnDestroy(): void {

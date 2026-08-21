@@ -127,7 +127,14 @@
 @media print{
   .toolbar{display:none!important}
   body{background:#fff}
-  .sheet{margin:0;padding:0;border:none;box-shadow:none;max-width:none}
+  /* The page margin is ZERO on purpose, and the white space is put back as
+     padding on the sheet instead. A non-zero @page margin is the band the
+     BROWSER draws its own header and footer into — the date, the document
+     title and the URL — and that text lands at the top of the exported PDF,
+     above the applicant's name. It is not decoration: an applicant tracking
+     system reads it as the first line of the resume. With no margin there is
+     nowhere for the browser to put it. */
+  .sheet{margin:0;padding:18mm;border:none;box-shadow:none;max-width:none}
   /* Keep an entry and its heading together across a page break. */
   .sheet h1,.sheet h2,.sheet h3{break-after:avoid;page-break-after:avoid}
   .sheet .item{break-inside:avoid;page-break-inside:avoid}
@@ -143,5 +150,5 @@
      to the document tree — so the Letter variant is written into a <style>
      element by the component instead (see applyPageSize). This stays as the
      fallback that applies before anything is toggled. */
-  @page{size:A4;margin:18mm}
+  @page{size:A4;margin:0}
 }
