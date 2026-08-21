@@ -404,7 +404,14 @@ table.tbl tbody tr:hover{background:var(--ivory)}
   .site-header,.footer,.no-print,.toast,.tour-card,.tour-spot{display:none!important}
   body{background:#fff;font-size:11pt;display:block}
   .card{border:none;box-shadow:none;padding:0}
-  @page{margin:16mm}
+  /* Zero, not 16mm. A page margin is the band the browser prints its own
+     header and footer into — the date, the page title and the URL — and on a
+     resume export that text lands above the applicant's name, where an
+     applicant tracking system reads it as the first line of the resume. The
+     white space is supplied by body padding instead, which the browser has
+     no way to write into. */
+  @page{margin:0}
+  body{padding:16mm}
 }
 
 /* ---------- very narrow phones ----------
