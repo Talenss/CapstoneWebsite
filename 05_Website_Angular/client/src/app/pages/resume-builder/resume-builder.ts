@@ -891,7 +891,7 @@ export class ResumeBuilder implements OnInit {
     const links = [p.linkedin, p.portfolio].filter(Boolean).map((x) => esc(x)).join(' · ');
     const summary = p.summary ? `<div class="p-sec"><h2>Professional Summary</h2><p style="font-size:11.5px">${esc(p.summary)}</p></div>` : '';
     const ownFileNote = r.ownFile
-      ? `<div class="p-sec"><h2>Attached by the applicant</h2><p style="font-size:11px;color:#5A5F6B">${esc(r.ownFile.name)} — sent to the recruiter alongside this resume. Not part of the score.</p></div>`
+      ? `<div class="p-sec"><h2>Attached by the applicant</h2><p style="font-size:11px;color:#5A5F6B">${esc(r.ownFile.name)}, sent to the recruiter alongside this resume. Not part of the score.</p></div>`
       : '';
 
     const html =

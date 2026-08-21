@@ -95,7 +95,7 @@
               }
             </div>
             <div class="foot">
-              <span>{{ row.s ? row.s.matchedSkills.length + ' of ' + row.posting.skills.length + ' skills' : row.posting.skills.length + ' skills asked for' }}</span>
+              <span>{{ row.s ? row.s.matchedSkills.length + ' of ' + row.posting.skills.length + ' skills' : '' }}</span>
               <span style="display:flex;gap:7px;align-items:center">
                 @if (isSeeker()) {
                   <button class="bookmark" type="button" [class.on]="isSaved(row.posting.id)"
