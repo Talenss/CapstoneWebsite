@@ -198,7 +198,7 @@ export class ResumeBuilder implements OnInit {
     switch (this.resume().ownFile?.extractStatus) {
       case 'ok':          return 'read and scored';
       case 'unavailable': return 'not read, automatic reading is off here';
-      case 'unreadable':  return "not read — this format can't be opened by software";
+      case 'unreadable':  return "not read: this format can't be opened by software";
       case 'failed':      return 'could not be read automatically';
       default:            return 'read by the recruiter';
     }
@@ -295,7 +295,7 @@ export class ResumeBuilder implements OnInit {
       [
         { sel: '#rail', title: 'Seven steps, in order', text: 'Move with Next, or jump straight to any step. Steps 1–5 are the resume itself; “More sections” is optional extras. Nothing is scored until you save, and you can come back and edit forever.' },
         { sel: '#paper', title: 'It builds as you type', text: 'This is the actual document a recruiter reads. Change a field on the left and watch it appear here.' },
-        { sel: '#s0 .field', title: 'Start with the basics', text: 'Name, contact, and two or three plain sentences about yourself. Skip adjectives like "hardworking" — say what you did instead.' },
+        { sel: '#s0 .field', title: 'Start with the basics', text: 'Name, contact, and two or three plain sentences about yourself. Skip adjectives like "hardworking". Say what you did instead.' },
         { sel: '[data-tour]', title: 'This tour is always here', text: 'Stuck on a step? Reopen this from any page. There’s also a Learning hub with full guides on ATS formatting.' },
       ],
       { user: user.id },
