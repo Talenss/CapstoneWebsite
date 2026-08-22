@@ -51,15 +51,19 @@
 /* ---- sections ---- */
 .p-section{padding:74px 40px}
 .p-section.paper{background:var(--paper)}
-.shead{text-align:center;max-width:640px;margin:0 auto 40px}
+/* Section heads read left, not centred. Every section centred under its own
+   eyebrow is the most recognisable shape of a generated landing page, and it
+   also reads worse: a centred paragraph gives the eye a new left edge on
+   every line. The hero stays centred, because that is where a hero belongs. */
+.shead{text-align:left;max-width:640px;margin:0 0 40px}
 .shead h2{font-size:clamp(26px,3.4vw,34px);font-weight:560;color:var(--text)}
-.shead .lede{margin:10px auto 0;text-align:center}
+.shead .lede{margin:10px 0 0;text-align:left}
 
 /* ---- icon tiles ---- */
 .tiles4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
 .tile{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r);padding:26px 22px}
-.tile .ic{width:42px;height:42px;border-radius:11px;background:var(--accent);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
-.tile .ic svg{width:20px;height:20px}
+.tile .ic{width:34px;height:34px;border-radius:var(--r);background:var(--accent);display:flex;align-items:center;justify-content:center;
+  margin-bottom:16px;font-family:var(--display);font-size:17px;font-weight:600;color:#fff;line-height:1}
 .tile h3{font-size:16px;font-weight:560;color:var(--text)}
 .tile p{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.6}
 

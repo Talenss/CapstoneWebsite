@@ -92,7 +92,7 @@ export class HrDashboard implements OnInit {
     this.tour.init(
       'hr-dashboard',
       [
-        { sel: '#tally', title: 'Where things stand', text: `"Waiting for you" is the number that matters — those are applications nobody has opened yet.` },
+        { sel: '#tally', title: 'Where things stand', text: `"Waiting for you" is the number that matters. Those are applications nobody has opened yet.` },
         { sel: '#pipe', title: 'Nobody drops off silently', text: `Every applicant sits in one of these five stages. The system never moves anyone between them. You do, and it’s recorded.` },
         { sel: '#postSection', title: 'Your openings', text: `Each row shows how many people applied. Closing an opening stops new applications but keeps everyone you already have.` },
         { sel: '.p-row .btn.primary', title: 'The ranked list', text: `This is the core of it: applicants sorted by compatibility, with the score broken down. And both their structured resume and their own uploaded file.` },
