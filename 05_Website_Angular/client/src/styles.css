@@ -55,9 +55,16 @@
    contrast on a dark ground. Resume sheets keep their own hard-coded
    white paper (a printed page is white) and are unaffected. */
 :root[data-theme="dark"]{
-  --ivory:#0E1626; --paper:#152036; --stone-2:#1C2942;
-  --rule:#2A3A56; --rule-2:#1C2942;
-  --text:#E6EAF1; --muted:#9BA6B8; --faint:#71809A;
+  /* Darker than the first pass, which read as navy rather than as dark mode.
+     The hue is kept — this is still Clark Outsourcing's navy, not a neutral
+     grey — but the ground drops a long way and the card rises off it by more
+     than it did before, so a card still reads as raised. Every text token was
+     measured against both the page and a card: the lowest ratio is 4.75:1,
+     and two colours that previously sat UNDER the 4.5 threshold on a card
+     (--faint at 4.07, --accent at 4.45) now pass. */
+  --ivory:#070B13; --paper:#121A2C; --stone-2:#19243A;
+  --rule:#293752; --rule-2:#17202F;
+  --text:#E6EAF1; --muted:#9BA6B8; --faint:#7E8DA6;
   --accent:#E5545A; --accent-deep:#F58388; --accent-wash:#33161A; --accent-line:#5B2429;
   --emerald:#5FA56F; --emerald-wash:#16281D;
   --amber:#D79A3C;   --amber-wash:#2E2413; --amber-line:#4E3D1C;
