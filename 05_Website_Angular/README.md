@@ -9,6 +9,9 @@ database. `../04_Website` is the old PHP version, kept only as a reference;
 
 > This README is the "start here". For the full server / Supabase / email / AI
 > setup and the going-live checklist, see **[SETUP.md](./SETUP.md)**.
+>
+> To put the site online, see **[DEPLOY.md](./DEPLOY.md)** — Vercel hosts the
+> browser-only demo build; the full API system needs a Node host.
 
 ---
 
