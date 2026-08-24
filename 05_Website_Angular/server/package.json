@@ -15,6 +15,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "test": "node -r ts-node/register/transpile-only --test tests/engine.test.ts",
     "check:config": "node -r ts-node/register/transpile-only scripts/check-config.ts",
+    "go-live": "node -r ts-node/register/transpile-only scripts/go-live.ts",
     "create-admin": "node -r ts-node/register/transpile-only scripts/create-admin.ts",
     "test:api": "node -r ts-node/register/transpile-only --test tests/api.test.ts",
     "test:email": "node -r ts-node/register/transpile-only --test tests/email.test.ts",

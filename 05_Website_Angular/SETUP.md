@@ -353,6 +353,36 @@ backend is in use.
 …and put a real HTTPS reverse proxy (nginx, Caddy, or your cloud host's)
 in front of the Node process. No code edits needed — it's all `.env`.
 
+### Before real people use it: remove the demonstration data
+
+`db/resumematch_ph.sql` seeds seven demonstration accounts that all share
+the password `demo123`, and one of them — `admin@demo.ph` — approves
+recruiter access. That hash is committed to a public repository, so those
+are not credentials, they are published facts. Import the schema and
+expose the site without clearing them and anyone can sign in as the
+administrator.
+
+```bash
+cd 05_Website_Angular/server
+npm run go-live            # reports what it would delete; changes nothing
+npm run go-live -- --yes   # performs the deletions
+```
+
+It removes the `@demo.ph` accounts and everything they own — resumes,
+uploaded files, applications — along with the seeded job postings, which
+are illustrative openings rather than real vacancies. It keeps the schema,
+the 25-skill matching vocabulary, `match_settings`, and the partner
+company row so a real recruiter can be attached to it.
+
+Afterwards there is no administrator, deliberately. Create your own:
+
+```bash
+npm run create-admin -- you@example.com "a strong password"
+```
+
+Then confirm the demonstration login is gone by trying `admin@demo.ph` /
+`demo123` on the live site. It must fail.
+
 ### Deploying to Render
 
 `render.yaml` at the repository root is a blueprint: it carries the build
