@@ -5,8 +5,12 @@
   "description": "ResumeMatch PH \u2014 Node/Express API (port of api/*.php)",
   "type": "commonjs",
   "main": "dist/server.js",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "build:deploy": "npm ci --prefix ../client && npm run build --prefix ../client && npm run build",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "test": "node -r ts-node/register/transpile-only --test tests/engine.test.ts",
