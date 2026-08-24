@@ -319,6 +319,37 @@ fifteen minutes. Re-importing `db/resumematch_ph.sql` drops that table along
 with everything else, because the reset renumbers `user_id` from 1 and an old
 cookie must not resolve to whoever now holds that number.
 
+### Uploaded files must go to Supabase Storage
+
+By default an uploaded resume is written to `server/uploads/` on the
+machine running Node. That is fine on your laptop and **wrong on a real
+host**: Render, Railway and Fly hand the process an ephemeral filesystem,
+so every redeploy, restart or sleep gives it a blank disk. The database
+rows survive, so the resume stays listed, stays scored and still reaches
+the recruiter — while the file behind it has gone.
+
+Set these three and uploads go to Supabase Storage instead, which is
+durable and independent of the process:
+
+```
+SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+SUPABASE_SERVICE_KEY=your service_role key
+SUPABASE_BUCKET=resumes
+```
+
+1. Supabase dashboard → **Storage → New bucket**, name it `resumes`.
+2. Leave **Public bucket OFF.** Reads are authorised by `routes/file.ts`,
+   which checks the caller is the applicant or a recruiter the resume was
+   actually sent to. A public bucket would make every resume reachable by
+   guessing a URL.
+3. **Project Settings → API**, copy the `service_role` key. It bypasses
+   row-level security, so it belongs on the server only and must never be
+   built into the client bundle.
+
+Leave the three empty and nothing changes — it stays on local disk. No
+code path differs; `lib/storage.ts` is the only file that knows which
+backend is in use.
+
 …and put a real HTTPS reverse proxy (nginx, Caddy, or your cloud host's)
 in front of the Node process. No code edits needed — it's all `.env`.
 

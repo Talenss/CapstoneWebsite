@@ -10,11 +10,9 @@
    resume file must never be reachable by guessing a URL.
    ============================================================ */
 import { asyncRouter } from '../lib/async-router';
-import fs from 'fs';
-import path from 'path';
 import { currentUser } from '../lib/auth';
 import { fetchResume, recruiterMayReadResume } from '../lib/serializers';
-import { UPLOAD_DIR } from '../config';
+import { getFile } from '../lib/storage';
 
 const router = asyncRouter();
 
@@ -31,20 +29,29 @@ router.get('/', async (req, res) => {
   const allowed = u.role === 'recruiter' ? await recruiterMayReadResume(u, id) : r.user_id === u.user_id;
   if (!allowed) return res.status(403).send("You don't have access to that file.");
 
-  // basename() so a crafted DB value can never walk out of the folder
-  const filePath = path.join(UPLOAD_DIR, path.basename(r.own_file_path));
-  if (!fs.existsSync(filePath)) return res.status(404).send('File missing from storage.');
+  /* Read the whole object rather than streaming it. Uploads are capped at
+     2 MB and the alternative — handing the browser a signed Supabase URL —
+     would put the file on an origin this route cannot police, which is the
+     one thing the access checks above exist to prevent. */
+  let body: Buffer | null;
+  try {
+    body = await getFile(r.own_file_path); // storage basenames the key
+  } catch (e: any) {
+    console.error('File read failed:', e?.message || e);
+    return res.status(502).send('That file could not be read right now.');
+  }
+  if (!body) return res.status(404).send('File missing from storage.');
 
   const name = r.own_file_name || 'resume';
   const disp = req.query.download !== undefined ? 'attachment' : 'inline';
   const safeName = name.replace(/[^\w.\- ]/g, '');
 
   res.setHeader('Content-Type', r.own_file_mime || 'application/octet-stream');
-  res.setHeader('Content-Length', fs.statSync(filePath).size);
+  res.setHeader('Content-Length', body.length);
   res.setHeader('Content-Disposition', `${disp}; filename="${safeName}"`);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Cache-Control', 'private, no-store');
-  fs.createReadStream(filePath).pipe(res);
+  res.end(body);
 });
 
 export default router;

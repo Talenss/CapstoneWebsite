@@ -2,8 +2,6 @@
    list · get · save · delete · duplicate · set-active · upload · remove-file */
 import { asyncRouter } from '../lib/async-router';
 import multer from 'multer';
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
 import { query, queryOne, exec, withTransaction } from '../db';
 import { ResumeRow } from '../types';
@@ -12,11 +10,15 @@ import { requireUser, requireRole } from '../lib/auth';
 import { fetchResume, serializeResume, recruiterMayReadResume } from '../lib/serializers';
 import { EDU_RANK, EVIDENCE_KINDS, EvidenceKind, evidenceLabels, skillId, skillNorm } from '../lib/engine';
 import { extractResume } from '../lib/extract';
-import { UPLOAD_DIR, MAX_UPLOAD, ALLOWED_MIME } from '../config';
-import { sniffFileType, typeMatches } from '../lib/file-type';
+import { MAX_UPLOAD, ALLOWED_MIME } from '../config';
+import { putFile, deleteFile } from '../lib/storage';
+import { sniffBytes, typeMatches } from '../lib/file-type';
 
 const router = asyncRouter();
-const upload = multer({ dest: UPLOAD_DIR, limits: { fileSize: MAX_UPLOAD } });
+/* memoryStorage, not dest: the bytes go straight to lib/storage, which may
+   be Supabase rather than this machine's disk. A 2 MB cap makes holding the
+   upload in memory for the length of one request unremarkable. */
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_UPLOAD } });
 
 router.post('/list', async (req, res) => {
   const u = await requireUser(req, res);
@@ -262,10 +264,7 @@ router.post('/delete', async (req, res) => {
   if (inUse)
     return fail(res, "This resume is attached to an application, so it can't be deleted — the recruiter still needs to see exactly what you sent. Duplicate it and edit the copy instead.");
 
-  if (r.own_file_path) {
-    const p = path.join(UPLOAD_DIR, path.basename(r.own_file_path));
-    if (fs.existsSync(p)) fs.unlinkSync(p);
-  }
+  if (r.own_file_path) await deleteFile(r.own_file_path);
 
   await exec('UPDATE users SET active_resume_id = NULL WHERE active_resume_id = ?', [id]);
   await exec('DELETE FROM resumes WHERE resume_id = ?', [id]);
@@ -352,43 +351,38 @@ const requireSeekerBeforeUpload: import('express').RequestHandler = async (req, 
 
 router.post('/upload', requireSeekerBeforeUpload, upload.single('file'), async (req, res) => {
   const u = await requireRole(req, res, 'seeker');
-  if (!u) {
-    if (req.file) fs.unlink(req.file.path, () => {});
-    return;
-  }
+  if (!u) return;
   const id = idOf(req.body?.resume_id);
   const r = await fetchResume(id);
-  if (!r || r.user_id !== u.user_id) {
-    if (req.file) fs.unlink(req.file.path, () => {});
-    return fail(res, 'Resume not found.');
-  }
+  if (!r || r.user_id !== u.user_id) return fail(res, 'Resume not found.');
 
   if (!req.file) return fail(res, "That file didn't upload. Try again.");
   const f = req.file;
   const mime = f.mimetype;
   const ext = ALLOWED_MIME[mime];
-  if (!ext) {
-    fs.unlink(f.path, () => {});
-    return fail(res, 'Upload a PDF, Word document, or image (JPG or PNG).');
-  }
+  if (!ext) return fail(res, 'Upload a PDF, Word document, or image (JPG or PNG).');
 
   // The declared Content-Type is the CLIENT's claim. Confirm it against the
   // file's actual leading bytes, so an arbitrary blob cannot be stored as a
   // .pdf and served back later under a PDF content type.
-  const actual = sniffFileType(f.path);
+  const actual = sniffBytes(f.buffer);
   if (!actual || !typeMatches(actual, ext)) {
-    fs.unlink(f.path, () => {});
     return fail(res, "That file isn't a readable PDF, Word document, or image. Try saving it again and re-uploading.");
   }
 
   // random name: the original filename never touches the filesystem
   const stored = crypto.randomBytes(16).toString('hex') + '.' + ext;
-  fs.renameSync(f.path, path.join(UPLOAD_DIR, stored));
-
-  if (r.own_file_path) { // replace: bin the old one
-    const old = path.join(UPLOAD_DIR, path.basename(r.own_file_path));
-    if (fs.existsSync(old)) fs.unlinkSync(old);
+  /* Store BEFORE the row is updated. If storage fails the resume still points
+     at the previous file, which is a worse resume but an honest one — the
+     alternative is a row naming an object that was never written. */
+  try {
+    await putFile(stored, f.buffer, mime);
+  } catch (e: any) {
+    console.error('Upload storage failed:', e?.message || e);
+    return fail(res, "That file couldn't be saved right now. Try again in a moment.");
   }
+
+  const previous = r.own_file_path; // binned after the row no longer refers to it
 
   await exec(
     `UPDATE resumes SET own_file_name=?, own_file_mime=?, own_file_size=?, own_file_path=?,
@@ -406,11 +400,13 @@ router.post('/upload', requireSeekerBeforeUpload, upload.single('file'), async (
      cannot fail the upload, though — extractResume never throws, and every
      failure is recorded as a status, so the file is still stored and still
      sent to the recruiter even when nothing could be read out of it. */
-  const extract = await extractResume(fs.readFileSync(path.join(UPLOAD_DIR, stored)), mime, f.originalname || 'resume');
+  const extract = await extractResume(f.buffer, mime, f.originalname || 'resume');
   await exec(
     'UPDATE resumes SET own_file_extract=?, own_file_extract_status=?, own_file_extract_at=NOW() WHERE resume_id=?',
     [extract.resume ? JSON.stringify(extract.resume) : null, extract.status, id],
   );
+
+  if (previous) await deleteFile(previous);
 
   const updated = await serializeResume((await fetchResume(id))!);
   ok(res, { ownFile: updated.ownFile, extractStatus: extract.status, extractMessage: extract.message ?? null });
@@ -423,10 +419,7 @@ router.post('/remove-file', async (req, res) => {
   const r = await fetchResume(id);
   if (!r || r.user_id !== u.user_id) return fail(res, 'Resume not found.');
 
-  if (r.own_file_path) {
-    const p = path.join(UPLOAD_DIR, path.basename(r.own_file_path));
-    if (fs.existsSync(p)) fs.unlinkSync(p);
-  }
+  if (r.own_file_path) await deleteFile(r.own_file_path);
   await exec(
     'UPDATE resumes SET own_file_name=NULL, own_file_mime=NULL, own_file_size=NULL, own_file_path=NULL, own_file_uploaded_at=NULL WHERE resume_id=?',
     [id],

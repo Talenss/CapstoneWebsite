@@ -3,14 +3,13 @@
    · change-password · delete-account · export (RA 10173 right of access) */
 import { asyncRouter } from '../lib/async-router';
 import bcrypt from 'bcryptjs';
-import fs from 'fs';
-import path from 'path';
 import { query, queryOne, exec } from '../db';
 import { UserRow, ResumeRow, ApplicationRow } from '../types';
 import { ok, fail } from '../lib/http';
 import { currentUser, requireUser } from '../lib/auth';
 import { serializeUser, serializeResume, serializeApplication } from '../lib/serializers';
-import { UPLOAD_DIR, DEBUG } from '../config';
+import { DEBUG } from '../config';
+import { deleteFile } from '../lib/storage';
 import { mailConfigured, sendCodeEmail, sendMail, CodePurpose } from '../lib/mailer';
 import { issueCode, checkCode } from '../lib/email-codes';
 import { passwordProblem } from '../lib/password';
@@ -335,10 +334,7 @@ router.post('/delete-account', async (req, res) => {
   const files = await query<{ own_file_path: string }>(
     'SELECT own_file_path FROM resumes WHERE user_id = ? AND own_file_path IS NOT NULL', [u.user_id],
   );
-  for (const row of files) {
-    const p = path.join(UPLOAD_DIR, path.basename(row.own_file_path));
-    if (fs.existsSync(p)) fs.unlinkSync(p);
-  }
+  for (const row of files) await deleteFile(row.own_file_path);
 
   await exec('UPDATE users SET active_resume_id = NULL WHERE user_id = ?', [u.user_id]);
   await exec('DELETE FROM users WHERE user_id = ?', [u.user_id]);

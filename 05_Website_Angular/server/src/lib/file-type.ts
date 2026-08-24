@@ -19,15 +19,12 @@ function startsWith(buf: Buffer, bytes: number[]): boolean {
   return bytes.every((b, i) => buf[i] === b);
 }
 
-/** Reads the leading bytes of `filePath` and returns the format it really
- *  is, or null when it matches none of the five we accept. */
-export function sniffFileType(filePath: string): SniffedType | null {
-  let fd: number | null = null;
+/** Reports what the leading bytes ACTUALLY are, or null when they match none
+ *  of the five formats we accept. Takes the bytes rather than a path so an
+ *  upload can be checked in memory, before it is written anywhere. */
+export function sniffBytes(buf: Buffer): SniffedType | null {
   try {
-    fd = fs.openSync(filePath, 'r');
-    const buf = Buffer.alloc(HEAD_BYTES);
-    const read = fs.readSync(fd, buf, 0, HEAD_BYTES, 0);
-    if (read < 4) return null;
+    if (buf.length < 4) return null;
 
     // %PDF
     if (startsWith(buf, [0x25, 0x50, 0x44, 0x46])) return 'pdf';
@@ -45,6 +42,20 @@ export function sniffFileType(filePath: string): SniffedType | null {
         || (buf[2] === 0x07 && buf[3] === 0x08))) return 'docx';
 
     return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Path-based convenience wrapper, kept for callers that already hold a file
+ *  on disk rather than a buffer. */
+export function sniffFileType(filePath: string): SniffedType | null {
+  let fd: number | null = null;
+  try {
+    fd = fs.openSync(filePath, 'r');
+    const buf = Buffer.alloc(HEAD_BYTES);
+    const read = fs.readSync(fd, buf, 0, HEAD_BYTES, 0);
+    return sniffBytes(buf.subarray(0, read));
   } catch {
     return null;
   } finally {

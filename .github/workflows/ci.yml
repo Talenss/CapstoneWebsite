@@ -136,3 +136,12 @@ jobs:
           DB_USER: postgres
           DB_PASS: postgres
         run: npm run test:parity
+
+      # Uploaded resume files live on local disk in development and in
+      # Supabase Storage in a real deployment, and every caller above
+      # lib/storage.ts must not be able to tell which. These pin both
+      # backends — the disk one through a real round trip, the Supabase one
+      # against a stubbed fetch, since the real API needs an account.
+      - name: Upload storage tests
+        working-directory: 05_Website_Angular/server
+        run: npm run test:storage

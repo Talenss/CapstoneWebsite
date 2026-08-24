@@ -39,6 +39,22 @@ export const ALLOWED_MIME: Record<string, string> = {
   'image/png': 'png',
 };
 
+/* ---------- where uploaded resume files live ----------
+   Set SUPABASE_URL and SUPABASE_SERVICE_KEY and uploads go to Supabase
+   Storage; leave either empty and they stay in UPLOAD_DIR on local disk.
+
+   This matters in production: most Node hosts give the process an ephemeral
+   filesystem, so a redeploy or a restart silently empties UPLOAD_DIR while
+   the database rows that point at those files survive. See lib/storage.ts.
+
+   SUPABASE_SERVICE_KEY is the SERVICE ROLE key, which bypasses row-level
+   security — it belongs on the server only and must never reach the browser.
+   The bucket must be PRIVATE: reads are authorised by routes/file.ts, and a
+   public bucket would make every resume reachable by guessing a URL. */
+export const SUPABASE_URL = process.env.SUPABASE_URL || '';
+export const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
+export const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'resumes';
+
 // The Angular dev server origin, so cookie-based sessions work cross-origin in dev.
 export const ALLOW_ORIGIN = process.env.ALLOW_ORIGIN || 'http://localhost:4200';
 
