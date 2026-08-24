@@ -5,7 +5,7 @@ import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { Resume, ResumeDesign, Template } from '../../core/models';
 
-/** Port of 04_Website/app/my-resumes.html — the seeker's resume library.
+/** Port of the PHP my-resumes.html — the seeker's resume library.
  *  Grid of resume cards with make-active / edit / PDF / duplicate / delete
  *  actions, plus a "+ New resume" tile. */
 @Component({

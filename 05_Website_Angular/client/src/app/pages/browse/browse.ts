@@ -17,7 +17,7 @@ interface BrowseRow {
 }
 type SortKey = 'score' | 'new' | 'az';
 
-/** Port of 04_Website/app/browse.html — the only fully public page in the
+/** Port of the PHP browse.html — the only fully public page in the
  *  seeker cluster. Works differently for guests (no scoring, CTA to sign
  *  up), seekers (scored locally against their active resume, can apply),
  *  and recruiters (can browse but not apply). Role is read once from

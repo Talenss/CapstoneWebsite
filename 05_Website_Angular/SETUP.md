@@ -1,11 +1,11 @@
 # ResumeMatch PH — Angular + Node edition — Setup guide
 
-This is the Angular/Node rebuild of the original PHP + vanilla-JS site.
-`../04_Website` is the original PHP version, kept only as a historical
-reference for the paper — **this folder needs nothing from it**; everything
-`05_Website_Angular` uses lives here. What changed:
+This is the Angular/Node rebuild of an earlier PHP + vanilla-JS prototype.
+That prototype was removed from the repository once the rebuild was
+complete — it survives in the git history only, and **nothing here depends
+on it**; everything `05_Website_Angular` uses lives here. What changed:
 
-| | Before (`04_Website`) | Now (`05_Website_Angular`) |
+| | Before (PHP prototype) | Now (`05_Website_Angular`) |
 |---|---|---|
 | Frontend | Plain HTML/CSS/JS, one file per page | Angular 21 (standalone components), one app |
 | Backend | PHP 8 + PDO | Node.js + Express + TypeScript (`pg`) |

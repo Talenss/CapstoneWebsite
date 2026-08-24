@@ -1,6 +1,6 @@
 /* ============================================================
    Matching engine + shared constants, ported 1:1 from
-   04_Website/app/assets/api.js (score(), WEIGHTS, THRESHOLDS, …)
+   the PHP api.js (score(), WEIGHTS, THRESHOLDS, …)
    Used by demo mode directly, and by the builder/browse/hr-posting
    pages for instant client-side "how would this score" previews
    in BOTH modes (the API mode still calls the server for anything

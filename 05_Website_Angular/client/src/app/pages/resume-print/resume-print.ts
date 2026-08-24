@@ -10,7 +10,7 @@ type SectionKind = 'education' | 'experience' | 'skills' | 'projects' | 'certifi
 type PaperSize = 'a4' | 'letter';
 const PAPER_KEY = 'rmph_paper_size';
 
-/** Port of 04_Website/app/resume-print.html — an ATS-friendly, one-column
+/** Port of the PHP resume-print.html — an ATS-friendly, one-column
  *  print sheet. No site header/footer here, just a bespoke toolbar with
  *  Back / Print buttons; the printable "sheet" pulls a single resume by
  *  the ?id= query param and lays out its sections in the order implied

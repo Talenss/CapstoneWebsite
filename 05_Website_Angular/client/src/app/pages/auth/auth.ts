@@ -18,7 +18,7 @@ type RegMessage = { type: 'error' | 'ok'; text: string; companyName?: string };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESEND_SECONDS = 60;
 
-/** Port of 04_Website/app/auth.html — the log in / create account page.
+/** Port of the PHP auth.html — the log in / create account page.
  *  Combines a login form and a role-aware register form (seeker vs.
  *  recruiter/HR access request) in one tabbed panel, mirroring the
  *  original's tab + hash + role-toggle script 1:1.

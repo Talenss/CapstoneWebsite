@@ -8,7 +8,7 @@ import { TourService } from '../../shared/tour/tour.service';
 import { HrStats, Posting } from '../../core/models';
 import { STATUS_LABELS, STATUS_ORDER } from '../../core/engine';
 
-/** Port of 04_Website/app/hr-dashboard.html — the recruiter's home: a stat
+/** Port of the PHP hr-dashboard.html — the recruiter's home: a stat
  *  tally, the five-stage pipeline funnel, and the list of their own
  *  openings with review/edit/close-reopen actions. */
 @Component({

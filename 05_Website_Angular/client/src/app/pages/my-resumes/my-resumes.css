@@ -1,4 +1,4 @@
-/* Port of the inline <style> block from 04_Website/app/my-resumes.html. */
+/* Port of the inline <style> block from the PHP my-resumes.html. */
 .r-card{display:flex;flex-direction:column;gap:0;padding:0;overflow:hidden}
 .r-card .top{padding:20px 22px;border-bottom:1px solid var(--rule-2)}
 .r-card h3{font-size:20px;line-height:1.25}

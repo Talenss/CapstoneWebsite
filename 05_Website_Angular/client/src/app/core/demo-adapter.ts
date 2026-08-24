@@ -1,6 +1,6 @@
 /* ============================================================
    DEMO ADAPTER, browser storage, zero setup. Port of the `demo`
-   object in 04_Website/app/assets/api.js. Seeded with Clark Outsourcing's
+   object in the PHP api.js. Seeded with Clark Outsourcing's
    real departments so all three match tiers actually demonstrate.
    ============================================================ */
 import { ApiAdapter } from './adapter';

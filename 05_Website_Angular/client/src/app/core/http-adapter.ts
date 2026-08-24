@@ -1,7 +1,7 @@
 /* ============================================================
    HTTP ADAPTER, identical surface to DemoAdapter, backed by the
    Node/Express API (server/src/routes/*.ts) over MySQL. Port of
-   the `php` object in 04_Website/app/assets/api.js, adapted to
+   the `php` object in the PHP api.js, adapted to
    the Node route scheme: POST /api/<router>/<action> instead of
    PHP's ?action= query string.
    ============================================================ */
