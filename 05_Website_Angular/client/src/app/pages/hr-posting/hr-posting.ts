@@ -9,7 +9,7 @@ import { EduLevel, EmploymentType, Posting, Resume } from '../../core/models';
 import { EDU_LABELS, THRESHOLDS, WEIGHTS, scoreLocal, tierColor } from '../../core/engine';
 import { reportInvalidFields } from '../../shared/invalid-fields';
 
-/** Port of 04_Website/app/hr-posting.html — create/edit an opening. The
+/** Port of the PHP hr-posting.html — create/edit an opening. The
  *  required-skills / education / experience fields ARE the scoring rule,
  *  so the sidebar runs a live client-side simulation (scoreLocal) against
  *  every resume already in this recruiter's applicant pipeline as the

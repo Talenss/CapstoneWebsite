@@ -1,4 +1,4 @@
-/* Port of the inline <style> block from 04_Website/app/browse.html. */
+/* Port of the inline <style> block from the PHP browse.html. */
 .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px;align-items:center}
 .filters input,.filters select{padding:10px 13px;border:1px solid var(--rule);border-radius:var(--r);
   font-family:var(--body);font-size:13.5px;background:var(--paper)}

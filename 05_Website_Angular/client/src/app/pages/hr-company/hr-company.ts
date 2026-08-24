@@ -6,7 +6,7 @@ import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 
-/** Port of 04_Website/app/hr-company.html — edit the recruiter's own
+/** Port of the PHP hr-company.html — edit the recruiter's own
  *  company profile, with a live preview of what applicants will see. */
 @Component({
   selector: 'app-hr-company',

@@ -12,7 +12,7 @@ export interface NavItem {
 }
 
 /** Shared site header ("the front desk"). Port of the <header> markup
- *  repeated across every page in 04_Website/app/*.html, plus the mobile
+ *  repeated across every page of the PHP version, plus the mobile
  *  menu / identity / logout wiring from assets/api.js's DOMContentLoaded
  *  handler. `variant` picks the nav-link set; `active` highlights one. */
 @Component({

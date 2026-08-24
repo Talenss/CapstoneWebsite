@@ -10,7 +10,7 @@ import { environment } from '../../../environments/environment';
 import { passwordOk, PASSWORD_HINT } from '../../core/engine';
 import { reportInvalidFields } from '../../shared/invalid-fields';
 
-/** Port of 04_Website/app/account.html — shared by both seeker and
+/** Port of the PHP account.html — shared by both seeker and
  *  recruiter accounts (the route is guarded with no specific role).
  *  Details, password change, RA 10173 data export, and account deletion. */
 @Component({

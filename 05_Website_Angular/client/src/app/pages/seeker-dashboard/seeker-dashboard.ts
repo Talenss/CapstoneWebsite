@@ -13,7 +13,7 @@ type TierKey = 'strong' | 'possible' | 'related';
 interface Reco { strong: RecommendationItem[]; possible: RecommendationItem[]; related: RecommendationItem[] }
 interface TierConfig { key: TierKey; title: string; badgeClass: string; note: string }
 
-/** Port of 04_Website/app/seeker-dashboard.html — the seeker's home base.
+/** Port of the PHP seeker-dashboard.html — the seeker's home base.
  *  Scores their active resume against every open posting (via
  *  api.match.recommendations()) into three tiers, and lists their
  *  applications. Carries the site's only onboarding tour. */

@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 
-/** Port of 04_Website/app/privacy.html — pure static content, no API calls. */
+/** Port of the PHP privacy.html — pure static content, no API calls. */
 @Component({
   selector: 'app-privacy',
   standalone: true,

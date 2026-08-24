@@ -7,7 +7,7 @@ import { ApiService } from '../../core/api.service';
 import { WEIGHTS, THRESHOLDS } from '../../core/engine';
 import { Seo } from '../../core/seo';
 
-/** Port of 04_Website/app/learning-hub.html. The weights/thresholds copy in
+/** Port of the PHP learning-hub.html. The weights/thresholds copy in
  *  the "Reading your score" article is generated from the same WEIGHTS /
  *  THRESHOLDS constants the scoring engine uses, so this page can never
  *  drift from it — mirroring the original inline <script>'s intent.

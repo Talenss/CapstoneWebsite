@@ -46,7 +46,7 @@ function blankResume(id: string | null = null): Resume {
 const ESC_MAP: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (s: unknown): string => String(s ?? '').replace(/[&<>"']/g, (c) => ESC_MAP[c]);
 
-/** Port of 04_Website/app/resume-builder.html — the 6-step guided
+/** Port of the PHP resume-builder.html — the 6-step guided
  *  resume wizard with a live document preview. The original leaned on
  *  a generic repeat() DOM-builder and manual paint()/innerHTML calls
  *  on every keystroke; here the whole `resume` signal drives real

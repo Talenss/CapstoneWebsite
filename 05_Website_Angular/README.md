@@ -4,8 +4,9 @@ A free résumé builder + transparent, rule-based job-matching platform for
 Filipino job seekers, piloted with **Clark Outsourcing** (Clark Freeport
 Zone). This folder (`05_Website_Angular`) is the current app — an **Angular 21**
 front end + **Node/Express (TypeScript)** back end on a **Supabase / PostgreSQL**
-database. `../04_Website` is the old PHP version, kept only as a reference;
-**this folder needs nothing from it.**
+database. It replaces an earlier PHP + MySQL prototype, which was removed
+from the repository once the rebuild was complete; it survives in the git
+history only, and **nothing here depends on it.**
 
 > This README is the "start here". For the full server / Supabase / email / AI
 > setup and the going-live checklist, see **[SETUP.md](./SETUP.md)**.

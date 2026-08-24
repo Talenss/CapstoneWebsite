@@ -1,6 +1,6 @@
 /* ============================================================
    Port of the <style> block embedded in
-   04_Website/app/resume-builder.html (the wizard + live-preview
+   the PHP resume-builder.html (the wizard + live-preview
    pane). Global tokens (--rule, --accent, --paper, etc.) come from
    src/styles.css — only the page-specific rules live here.
    ============================================================ */

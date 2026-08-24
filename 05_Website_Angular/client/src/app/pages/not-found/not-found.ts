@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 
-/** Port of 04_Website/app/404.html */
+/** Port of the PHP 404.html */
 @Component({
   selector: 'app-not-found',
   standalone: true,

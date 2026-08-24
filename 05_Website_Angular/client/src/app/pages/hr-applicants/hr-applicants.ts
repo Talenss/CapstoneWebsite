@@ -9,7 +9,7 @@ import { AppStatus, Personal, Posting, RankedRow, RejectionReason, Resume, Scree
 import { APPLICANT_REASON_LABELS, EDU_LABELS, EVIDENCE_KIND_LABELS, REASON_LABELS, REJECTION_REASONS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 
-/** Port of 04_Website/app/hr-applicants.html — the ranked-applicant list
+/** Port of the PHP hr-applicants.html — the ranked-applicant list
  *  for a single posting (?id=), with a search/filter bar and a dual-resume
  *  detail modal: the structured (scored) resume next to the applicant's
  *  own uploaded file, which is read by software and scored separately. */
