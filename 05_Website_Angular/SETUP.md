@@ -353,6 +353,62 @@ backend is in use.
 …and put a real HTTPS reverse proxy (nginx, Caddy, or your cloud host's)
 in front of the Node process. No code edits needed — it's all `.env`.
 
+### Deploying to Render
+
+`render.yaml` at the repository root is a blueprint: it carries the build
+and start commands, the health check, and every setting that is not a
+secret. Render reads it, so most of this is not typed by hand.
+
+1. <https://render.com> → sign in with GitHub → **New → Blueprint**.
+2. Pick this repository. Render finds `render.yaml` and shows one web
+   service, `resumematch-ph`.
+3. It prompts for the seven secrets the file deliberately does not carry:
+
+   | Prompt | Where it comes from |
+   |---|---|
+   | `DATABASE_URL` | Supabase → Project Settings → Database → **Session pooler** (port 5432) |
+   | `SUPABASE_URL` | Supabase → Project Settings → API |
+   | `SUPABASE_SERVICE_KEY` | same page, the **service_role** key |
+   | `SMTP_USER` | the Gmail address |
+   | `SMTP_PASS` | the 16-character app password, **spaces removed** |
+   | `MAIL_FROM` | e.g. `ResumeMatch PH <you@gmail.com>` |
+   | `GEMINI_API_KEY` | <https://aistudio.google.com/apikey> |
+
+4. **Apply**. The first build takes a few minutes: it installs and builds
+   the client in api mode, then compiles the server.
+
+`SESSION_SECRET` is not in that list on purpose — the blueprint has
+`generateValue: true`, so Render generates a random 256-bit value on the
+first deploy. Nobody chooses it and no repository has ever seen it.
+
+`APP_URL` is not in that list either. `config.ts` falls back to
+`RENDER_EXTERNAL_URL`, which Render sets to the service's own https URL,
+so the links inside verification and notification emails are correct
+without anyone remembering to set them. Set `APP_URL` by hand only when
+a custom domain replaces the `onrender.com` one.
+
+**Then make yourself an admin** — recruiter approvals need one, and admin
+accounts are deliberately command-line only. In the Render dashboard open
+**Shell**:
+
+```bash
+cd 05_Website_Angular/server
+npm run create-admin -- you@example.com "a strong password"
+```
+
+**About the free plan.** A free web service sleeps after 15 minutes of
+inactivity and takes roughly 30–60 seconds to wake, and the plan allows
+750 instance-hours a month. That cold start lands in front of the panel
+if the site has been idle, so either open it a few minutes beforehand or
+move to the cheapest paid instance for the duration of data gathering.
+Supabase pauses a free project after about a week idle, and wakes the
+same way.
+
+**The demo build is unaffected.** It stays on Vercel, needs no server,
+and is the fallback if anything about the live system misbehaves on the
+day — see `DEPLOY.md`.
+
+
 **Set `NODE_ENV=production` too.** With it set, the server checks the three
 settings that are dangerous to forget and **refuses to start** if any is
 wrong — rather than running with a signing key that is published in this

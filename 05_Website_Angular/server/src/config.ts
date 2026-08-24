@@ -172,5 +172,16 @@ export const SMTP_SECURE = (process.env.SMTP_SECURE || (SMTP_PORT === 465 ? 'tru
 export const SMTP_USER = process.env.SMTP_USER || '';
 export const SMTP_PASS = process.env.SMTP_PASS || '';
 export const MAIL_FROM = process.env.MAIL_FROM || (SMTP_USER ? `ResumeMatch PH <${SMTP_USER}>` : '');
-// Public base URL of the site, used for links inside notification emails.
-export const APP_URL = (process.env.APP_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
+/* Public base URL of the site, used for the links inside notification and
+   verification emails.
+
+   RENDER_EXTERNAL_URL is set by Render itself to the service's full https
+   URL. Falling back to it means a deployment that forgets APP_URL still
+   sends working links, rather than emailing every participant a localhost
+   address — a failure nobody sees until someone clicks one. An explicit
+   APP_URL still wins, which is what a custom domain needs. */
+export const APP_URL = (
+  process.env.APP_URL
+  || process.env.RENDER_EXTERNAL_URL
+  || `http://localhost:${PORT}`
+).replace(/\/$/, '');

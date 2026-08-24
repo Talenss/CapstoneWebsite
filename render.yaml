@@ -1,0 +1,89 @@
+# ============================================================
+# ResumeMatch PH — Render blueprint
+# ------------------------------------------------------------
+# This deploys the FULL system: the Express API and the Angular
+# app in api mode, served together from one origin.
+#
+# One origin is not a preference. The session cookie is
+# sameSite: 'lax', so splitting the front end onto a second
+# domain would stop the browser sending it on API calls and
+# login would fail with no visible error. server.ts serves the
+# client's build itself, which is why there is one service here
+# and not two.
+#
+# The browser-only demo build is a separate thing and stays on
+# Vercel (see 05_Website_Angular/DEPLOY.md). It needs no server.
+#
+# Values marked `sync: false` are NOT stored in this file —
+# Render prompts for them once, in the dashboard, when the
+# blueprint is first created. Secrets do not belong in a repo.
+# ============================================================
+services:
+  - type: web
+    name: resumematch-ph
+    runtime: node
+    plan: free
+    region: singapore # closest region to Angeles City
+    healthCheckPath: /api/health
+    buildCommand: cd 05_Website_Angular/server && npm ci && npm run build:deploy
+    startCommand: cd 05_Website_Angular/server && npm start
+    envVars:
+      # ---- pinned, because there is no package.json at the repo root
+      # for Render to read engines.node from ----
+      - key: NODE_VERSION
+        value: "22"
+
+      # ---- the three the server refuses to start without ----
+      # NODE_ENV=production turns on that check. See config.ts.
+      - key: NODE_ENV
+        value: production
+      - key: DEBUG
+        value: "false" # on, this returns email verification codes in API responses
+      - key: COOKIE_SECURE
+        value: "true" # Render terminates TLS, so the cookie is HTTPS-only
+      # Render generates a random 256-bit value on first deploy, so the
+      # signing key is never one a human chose or a repository has seen.
+      - key: SESSION_SECRET
+        generateValue: true
+
+      # Render is a proxy: without this, every request looks like it came
+      # from the proxy and the rate limiters would throttle all users as one.
+      - key: TRUST_PROXY
+        value: "true"
+
+      # ---- database (Supabase session pooler, port 5432) ----
+      - key: DATABASE_URL
+        sync: false
+
+      # ---- uploaded resume files ----
+      # Render's disk is ephemeral: without these, every redeploy silently
+      # empties the uploads folder while the rows pointing at it survive.
+      # The bucket must be PRIVATE — routes/file.ts authorises every read.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        value: resumes
+
+      # ---- email (Gmail app password) ----
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false # the 16-character app password, spaces removed
+      - key: MAIL_FROM
+        sync: false
+
+      # APP_URL is deliberately absent: config.ts falls back to
+      # RENDER_EXTERNAL_URL, which Render sets to this service's own https
+      # URL. Add it by hand only when a custom domain replaces onrender.com.
+
+      # ---- resume reading ----
+      - key: RESUME_EXTRACTOR
+        value: escalate # rules first; the model only when the reading is thin
+      - key: GEMINI_API_KEY
+        sync: false
