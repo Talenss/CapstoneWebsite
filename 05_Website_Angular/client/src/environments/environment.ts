@@ -22,5 +22,5 @@ export const environment = {
      capstone study, and publishing those as job postings would put jobs that
      do not exist in front of people in Angeles City who are actually looking
      for work. Turn this on only when the postings are real. */
-  publishJobPostings: true,
+  publishJobPostings: false,
 };
