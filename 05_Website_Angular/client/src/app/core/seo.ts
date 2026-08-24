@@ -118,7 +118,7 @@ export class Seo {
   private titleSvc = inject(Title);
 
   /** The site's own origin. Taken from the browser so it is correct on
-   *  localhost, on a Netlify preview and on the final domain without anyone
+   *  localhost, on a Vercel preview and on the final domain without anyone
    *  having to remember to change a constant, and overridable for the case
    *  where the same build is served from more than one host and only one of
    *  them should be the canonical one. */

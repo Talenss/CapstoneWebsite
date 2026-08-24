@@ -7,7 +7,7 @@ export const environment = {
   apiBase: '/api',
   /* The site's canonical origin, e.g. 'https://resumematch.ph'. Leave EMPTY
      and every canonical/Open Graph URL is taken from the browser's own
-     location, which is correct on localhost, on a Netlify preview and on the
+     location, which is correct on localhost, on a Vercel preview and on the
      final domain without anyone remembering to change it. Set it only to
      force one host to be canonical when the same build is served from
      several — and note that setting it wrong points every canonical tag at a

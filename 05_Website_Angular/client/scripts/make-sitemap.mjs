@@ -8,7 +8,7 @@
    Both files need the site's ABSOLUTE origin — the sitemap protocol
    requires fully-qualified URLs, and so does the Sitemap: directive in
    robots.txt. A canonical origin is a deployment fact, not a source
-   fact: the same build runs on localhost, on Netlify preview URLs and
+   fact: the same build runs on localhost, on Vercel preview URLs and
    on whatever domain the study finally uses.
 
    So the origin comes from SITE_URL at build time:
