@@ -420,7 +420,7 @@ one.
 
 Canonical tags and Open Graph URLs do *not* need this: they are taken
 from the browser's own origin at runtime, so they are correct on
-localhost, on a Netlify preview and on the final domain. Set
+localhost, on a Vercel preview and on the final domain. Set
 `siteUrl` in `environment.ts` only if you need to force one host to be
 canonical when the same build is served from several.
 
