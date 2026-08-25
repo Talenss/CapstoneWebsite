@@ -6,7 +6,27 @@
    name (put them in .env).
    ============================================================ */
 import path from 'path';
+import dns from 'dns';
 import dotenv from 'dotenv';
+
+/* ---------- prefer IPv4 for every outbound connection ----------
+   Several hosts, Render among them, have no outbound IPv6. Node still
+   resolves a name to whatever the DNS returns, and for hosts that publish
+   both records that is frequently the IPv6 one — so the connection is
+   attempted over a network the machine cannot reach and fails with
+   ENETUNREACH, or simply hangs until it times out.
+
+   That is exactly how sign-up broke in production: smtp.gmail.com resolved
+   to 2404:6800:4003:c00::6d and every verification email failed, while the
+   same host was perfectly reachable on IPv4. Supabase's direct database
+   host produced the same class of failure earlier, and was worked around by
+   changing the connection string.
+
+   Preferring IPv4 costs nothing on a dual-stack machine, because IPv4 works
+   there too, and removes a failure that is invisible from the error message
+   itself. Set before any module opens a socket. */
+dns.setDefaultResultOrder('ipv4first');
+
 
 dotenv.config();
 

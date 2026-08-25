@@ -37,6 +37,14 @@ services:
       - key: NODE_VERSION
         value: "22"
 
+      # Belt and braces with the dns.setDefaultResultOrder call in config.ts.
+      # Render has no outbound IPv6, and Node will happily try an AAAA record
+      # it can never reach — which is how every verification email failed with
+      # ENETUNREACH on an IPv6 address for smtp.gmail.com. This applies from
+      # process start, before any module is loaded.
+      - key: NODE_OPTIONS
+        value: --dns-result-order=ipv4first
+
       # ---- the three the server refuses to start without ----
       # NODE_ENV=production turns on that check. See config.ts.
       - key: NODE_ENV
