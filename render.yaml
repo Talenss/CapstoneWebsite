@@ -25,7 +25,11 @@ services:
     plan: free
     region: singapore # closest region to Angeles City
     healthCheckPath: /api/health
-    buildCommand: cd 05_Website_Angular/server && npm ci && npm run build:deploy
+    # --include=dev is load-bearing. NODE_ENV below is production, which
+    # makes npm ci omit devDependencies — and the compilers live there:
+    # @angular/cli provides 'ng', and typescript provides 'tsc'. Without
+    # it the build fails at "ng: not found".
+    buildCommand: cd 05_Website_Angular/server && npm ci --include=dev && npm run build:deploy
     startCommand: cd 05_Website_Angular/server && npm start
     envVars:
       # ---- pinned, because there is no package.json at the repo root
