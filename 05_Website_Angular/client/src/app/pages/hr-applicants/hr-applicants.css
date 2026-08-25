@@ -9,7 +9,11 @@
 
 .app{display:flex;align-items:center;gap:18px;padding:20px;border-bottom:1px solid var(--rule-2);flex-wrap:wrap}
 .app:last-child{border-bottom:none}
+.app{cursor:pointer}
 .app:hover{background:var(--ivory)}
+/* Say it is clickable rather than relying on the hover tint alone, which a
+   touch screen never shows. */
+.app:hover .who h3{text-decoration:underline;text-underline-offset:3px}
 .app .rank{font-family:var(--display);font-size:20px;color:var(--faint);width:26px;flex:none;text-align:center}
 .app .who{flex:1;min-width:210px}
 .app .who h3{font-size:18px;line-height:1.25}
@@ -140,3 +144,18 @@
 .trail .at{color:var(--faint);margin-left:8px}
 @media(max-width:560px){ .trail .at{display:block;margin-left:0} }
 @media print{ .handled{display:none} }
+
+/* Reading of an uploaded Word file, shown because the browser cannot render
+   the document itself. Deliberately plain: this is the machine's reading,
+   not a facsimile of the applicant's layout, and dressing it up as one would
+   misrepresent what the recruiter is looking at. */
+.docx-read{padding:18px 20px;background:var(--ivory);max-height:420px;overflow-y:auto}
+.docx-note{font-size:12px;color:var(--muted);margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--rule-2)}
+.docx-block{margin-bottom:14px;display:flex;flex-direction:column;gap:3px}
+.docx-block b{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.docx-block span,.docx-block i{font-size:13.5px;line-height:1.5;color:var(--text)}
+/* The name is a name, not a section label — the uppercase treatment above
+   is for headings like EXPERIENCE and would otherwise shout an applicant's
+   name back at the recruiter. */
+.docx-block.docx-who b{font-family:var(--display);font-size:16px;letter-spacing:0;
+  text-transform:none;color:var(--ink)}

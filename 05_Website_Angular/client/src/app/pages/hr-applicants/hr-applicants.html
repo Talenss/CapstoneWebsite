@@ -80,7 +80,13 @@
       </div>
     } @else if (posting(); as p) {
       @for (r of filteredRows(); track r.application.id) {
-        <div class="app">
+        <!-- The whole row opens the applicant, not just the button. The
+             resume, the score breakdown and the status control all live in
+             that panel, and a summary row that looks inert is how a
+             recruiter concludes the resume is not there at all. The button
+             stays because it is the keyboard and screen-reader path; this
+             is a pointer affordance on top of it, not a replacement. -->
+        <div class="app" (click)="openModal(r)">
           <span class="rank">{{ rank(r) }}</span>
           <span class="score-ring" [style.--p]="r.score" [style.--c]="tierColor(r.score)"><b>{{ r.score }}%</b></span>
           <div class="who">
@@ -94,7 +100,8 @@
           </div>
           <div class="side">
             <span class="badge {{ statusBadge(r.application.status) }}">{{ statusLabels[r.application.status] }}</span>
-            <button class="btn primary sm" type="button" (click)="openModal(r)">Open both resumes</button>
+            <button class="btn primary sm" type="button"
+                    (click)="openModal(r); $event.stopPropagation()">Open both resumes</button>
           </div>
         </div>
       }
@@ -348,6 +355,40 @@
                   <iframe [src]="iframeUrl(r.resume.id)" [title]="f.name"></iframe>
                 } @else if (f.mime.startsWith('image/')) {
                   <img [src]="imgUrl(r.resume.id)" [alt]="'Resume uploaded by ' + r.seeker.name">
+                } @else if (f.extract; as x) {
+                  <!-- A browser cannot render a .docx, but the system already
+                       read this file when it was uploaded. Showing that reading
+                       beats a dead end: the recruiter can judge the applicant
+                       without downloading anything, and it is also the only
+                       place they can see what the software made of the
+                       document — which is the point of scoring it at all. -->
+                  <div class="docx-read">
+                    <p class="docx-note">Word files can't be shown in a browser. This is what the system read out of it — download for the original layout.</p>
+                    @if (x.personal?.fullName || x.personal?.email || x.personal?.phone) {
+                      <div class="docx-block docx-who">
+                        <b>{{ x.personal?.fullName }}</b>
+                        <span>{{ contactLine(x.personal) }}</span>
+                      </div>
+                    }
+                    @if (x.personal?.summary) { <div class="docx-block"><i>{{ x.personal.summary }}</i></div> }
+                    @if (x.experience?.length) {
+                      <div class="docx-block"><b>Experience</b>
+                        @for (e of x.experience; track $index) {
+                          <span>{{ e.position }}@if (e.company) { · {{ e.company }}}@if (e.months) { · {{ e.months }} mo}</span>
+                        }
+                      </div>
+                    }
+                    @if (x.education?.length) {
+                      <div class="docx-block"><b>Education</b>
+                        @for (e of x.education; track $index) {
+                          <span>{{ e.degree || eduLabels[e.level] }}@if (e.school) { · {{ e.school }}}</span>
+                        }
+                      </div>
+                    }
+                    @if (x.skills?.length) {
+                      <div class="docx-block"><b>Skills</b><span>{{ x.skills.join(', ') }}</span></div>
+                    }
+                  </div>
                 } @else {
                   <div style="padding:44px 20px;text-align:center;color:var(--muted);font-size:13px;background:var(--ivory)">
                     Word documents can't be previewed in the browser, download it to read it.
