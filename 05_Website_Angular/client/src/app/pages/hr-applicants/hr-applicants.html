@@ -364,29 +364,42 @@
                        document — which is the point of scoring it at all. -->
                   <div class="docx-read">
                     <p class="docx-note">Word files can't be shown in a browser. This is what the system read out of it — download for the original layout.</p>
-                    @if (x.personal?.fullName || x.personal?.email || x.personal?.phone) {
-                      <div class="docx-block docx-who">
-                        <b>{{ x.personal?.fullName }}</b>
-                        <span>{{ contactLine(x.personal) }}</span>
-                      </div>
+                    <!-- Each section binds its field with `as` before reading it.
+                         `extract` is unvalidated JSON out of a database column, so a
+                         field can genuinely be absent; binding narrows the type and
+                         means a row missing one section renders the others instead of
+                         taking the whole panel down. -->
+                    @if (x.personal; as p) {
+                      @if (p.fullName || p.email || p.phone) {
+                        <div class="docx-block docx-who">
+                          <b>{{ p.fullName }}</b>
+                          <span>{{ contactLine(p) }}</span>
+                        </div>
+                      }
+                      @if (p.summary) { <div class="docx-block"><i>{{ p.summary }}</i></div> }
                     }
-                    @if (x.personal?.summary) { <div class="docx-block"><i>{{ x.personal.summary }}</i></div> }
-                    @if (x.experience?.length) {
-                      <div class="docx-block"><b>Experience</b>
-                        @for (e of x.experience; track $index) {
-                          <span>{{ e.position }}@if (e.company) { · {{ e.company }}}@if (e.months) { · {{ e.months }} mo}</span>
-                        }
-                      </div>
+                    @if (x.experience; as experience) {
+                      @if (experience.length) {
+                        <div class="docx-block"><b>Experience</b>
+                          @for (e of experience; track $index) {
+                            <span>{{ e.position }}@if (e.company) { · {{ e.company }}}@if (e.months) { · {{ e.months }} mo}</span>
+                          }
+                        </div>
+                      }
                     }
-                    @if (x.education?.length) {
-                      <div class="docx-block"><b>Education</b>
-                        @for (e of x.education; track $index) {
-                          <span>{{ e.degree || eduLabels[e.level] }}@if (e.school) { · {{ e.school }}}</span>
-                        }
-                      </div>
+                    @if (x.education; as education) {
+                      @if (education.length) {
+                        <div class="docx-block"><b>Education</b>
+                          @for (e of education; track $index) {
+                            <span>{{ e.degree || eduLabels[e.level] }}@if (e.school) { · {{ e.school }}}</span>
+                          }
+                        </div>
+                      }
                     }
-                    @if (x.skills?.length) {
-                      <div class="docx-block"><b>Skills</b><span>{{ x.skills.join(', ') }}</span></div>
+                    @if (x.skills; as skills) {
+                      @if (skills.length) {
+                        <div class="docx-block"><b>Skills</b><span>{{ skills.join(', ') }}</span></div>
+                      }
                     }
                   </div>
                 } @else {
