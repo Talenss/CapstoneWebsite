@@ -79,8 +79,15 @@ services:
         value: resumes
 
       # ---- email (Gmail app password) ----
+      # Render's FREE instances block outbound SMTP on 25, 465 and 587, so
+      # no SMTP provider works there — the send times out, which reads like a
+      # bad password and is not one. BREVO_API_KEY makes the mailer post over
+      # HTTPS instead, which is not blocked. Leave it empty and set SMTP_* if
+      # this ever runs on a paid instance or another host.
+      - key: BREVO_API_KEY
+        sync: false
       - key: SMTP_HOST
-        value: smtp.gmail.com
+        value: ""
       - key: SMTP_PORT
         value: "587"
       - key: SMTP_USER

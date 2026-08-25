@@ -186,6 +186,17 @@ export const geminiBaseUrl = (): string =>
 // Outlook, etc. — see SETUP.md. Without SMTP settings the email features
 // tell the user email isn't configured; with DEBUG=true the code is also
 // printed to this server's console so development works without SMTP.
+/* ---------- sending mail over HTTPS instead of SMTP ----------
+   Render's free instances block outbound traffic to SMTP ports 25, 465 and
+   587, so no SMTP provider can work there — the connection simply times
+   out, which reads like a credential problem and is not one. HTTPS is not
+   blocked, so with BREVO_API_KEY set the mailer posts to Brevo's REST API
+   and never opens an SMTP socket.
+
+   SMTP remains the path when this is empty: it is what local development
+   uses, and what a paid instance or any other host can use directly. */
+export const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
+
 export const SMTP_HOST = process.env.SMTP_HOST || '';
 export const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 export const SMTP_SECURE = (process.env.SMTP_SECURE || (SMTP_PORT === 465 ? 'true' : 'false')) === 'true';

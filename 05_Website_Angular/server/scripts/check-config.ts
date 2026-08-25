@@ -71,8 +71,23 @@ async function checkDatabase(): Promise<void> {
 }
 
 async function checkEmail(): Promise<void> {
+  /* Brevo over HTTPS takes precedence, because a host may not be able to
+     reach an SMTP port at all — Render's free instances block 25, 465 and
+     587 outright, which presents as a connection timeout rather than as
+     anything naming a blocked port. */
+  const brevo = process.env.BREVO_API_KEY;
+  if (brevo) {
+    try {
+      const res = await fetch('https://api.brevo.com/v3/account', { headers: { 'api-key': brevo } });
+      if (!res.ok) return fail('email', `Brevo rejected the key (HTTP ${res.status}) — ${(await res.text()).slice(0, 120)}`);
+      const acct = await res.json() as { email?: string };
+      return pass('email', `Brevo API key valid${acct.email ? ` (${acct.email})` : ''} — sending over HTTPS`);
+    } catch (e: any) {
+      return fail('email', `Brevo unreachable — ${e?.message || e}`);
+    }
+  }
   const host = process.env.SMTP_HOST;
-  if (!host) return skip('email', 'SMTP_HOST is empty — verification codes cannot be sent');
+  if (!host) return skip('email', 'no BREVO_API_KEY and no SMTP_HOST — verification codes cannot be sent');
   const port = Number(process.env.SMTP_PORT || 587);
   const transport = nodemailer.createTransport({
     host, port,

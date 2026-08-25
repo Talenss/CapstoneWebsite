@@ -383,6 +383,36 @@ npm run create-admin -- you@example.com "a strong password"
 Then confirm the demonstration login is gone by trying `admin@demo.ph` /
 `demo123` on the live site. It must fail.
 
+### Email on a free Render instance
+
+Render's **free** web services block outbound traffic to SMTP ports 25,
+465 and 587. No SMTP provider works there — Gmail, Brevo or anything else
+— and the failure presents as `Connection timeout`, which looks like a
+wrong password and is not one.
+
+Two ways round it:
+
+**Send over HTTPS (free).** Sign up at <https://www.brevo.com>, verify
+your sender address, and create an API key under *SMTP & API → API Keys*.
+Set it in Render:
+
+```
+BREVO_API_KEY=xkeysib-…
+MAIL_FROM=ResumeMatch PH <your-verified@address>
+```
+
+The mailer posts to Brevo's REST API instead of opening an SMTP socket.
+Free tier is 300 emails a day, which comfortably covers a study of fifty
+respondents. `SMTP_*` can stay empty; if both are set, HTTPS wins,
+because the SMTP route may not be reachable at all.
+
+**Or upgrade the instance.** Any paid Render plan allows 465 and 587, and
+the existing `SMTP_*` settings then work unchanged. Port 25 stays blocked
+on every plan.
+
+`npm run check:config` reports which transport is in use and verifies the
+key against Brevo's account endpoint.
+
 ### Deploying to Render
 
 `render.yaml` at the repository root is a blueprint: it carries the build

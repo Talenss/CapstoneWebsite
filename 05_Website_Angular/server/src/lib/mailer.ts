@@ -4,12 +4,50 @@
    SETUP.md. When SMTP isn't configured, callers can still let development
    proceed by surfacing the code another way (see routes/auth.ts). */
 import nodemailer from 'nodemailer';
-import { SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, MAIL_FROM } from '../config';
+import { SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, MAIL_FROM, BREVO_API_KEY } from '../config';
 
 export type CodePurpose = 'verify' | 'reset';
 
 export function mailConfigured(): boolean {
-  return !!(SMTP_HOST && MAIL_FROM);
+  return !!(MAIL_FROM && (BREVO_API_KEY || SMTP_HOST));
+}
+
+/** Which way mail leaves this process. */
+export function mailTransport(): 'https' | 'smtp' | 'none' {
+  if (!MAIL_FROM) return 'none';
+  if (BREVO_API_KEY) return 'https';
+  return SMTP_HOST ? 'smtp' : 'none';
+}
+
+/** Split "ResumeMatch PH <team@example.com>" into its parts. Brevo wants the
+ *  name and the address as separate fields; SMTP takes the whole string. */
+function parseAddress(v: string): { name?: string; email: string } {
+  const m = /^\s*(.*?)\s*<([^>]+)>\s*$/.exec(v);
+  return m ? { name: m[1] || undefined, email: m[2].trim() } : { email: v.trim() };
+}
+
+/** Post one message to Brevo's REST API.
+ *
+ *  Same message, same branded HTML, different pipe — chosen because Render's
+ *  free instances cannot reach an SMTP port at all, while HTTPS is open. */
+async function sendViaHttps(
+  to: string, subject: string, text: string, html: string, replyTo?: string,
+): Promise<void> {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: { 'api-key': BREVO_API_KEY, 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({
+      sender: parseAddress(MAIL_FROM),
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+      textContent: text,
+      ...(replyTo ? { replyTo: { email: replyTo } } : {}),
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Brevo send failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
+  }
 }
 
 let transport: nodemailer.Transporter | null = null;
@@ -71,13 +109,15 @@ function shell(bodyHtml: string): string {
 /** Generic branded email. `bodyHtml` goes inside the shell; `text` is the
  *  plain-text alternative. */
 export async function sendMail(to: string, subject: string, text: string, bodyHtml: string, opts?: { replyTo?: string }): Promise<void> {
+  const body = `${text}\n\n— ResumeMatch PH · an academic capstone project, Holy Angel University`;
+  const html = shell(bodyHtml);
+
+  if (mailTransport() === 'https') {
+    await sendViaHttps(to, subject, body, html, opts?.replyTo);
+    return;
+  }
   await getTransport().sendMail({
-    from: MAIL_FROM,
-    to,
-    replyTo: opts?.replyTo,
-    subject,
-    text: `${text}\n\n— ResumeMatch PH · an academic capstone project, Holy Angel University`,
-    html: shell(bodyHtml),
+    from: MAIL_FROM, to, replyTo: opts?.replyTo, subject, text: body, html,
   });
 }
 
