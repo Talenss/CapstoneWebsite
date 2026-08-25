@@ -59,6 +59,32 @@ export async function issueCode(email: string, purpose: CodePurpose): Promise<Is
   return { ok: true, code };
 }
 
+/** Withdraw a code that was stored but never actually delivered.
+ *
+ *  issueCode writes the row BEFORE the mail is attempted, because the code
+ *  has to exist for the message to quote. When the send then fails, that row
+ *  is left behind and does two unfair things: the sixty-second cooldown
+ *  refuses a retry with "a code was just sent", which is untrue, and the
+ *  attempt still counts against the five-per-hour cap. A person who did
+ *  nothing wrong is told to check an inbox nothing was sent to, and is then
+ *  locked out for an hour by failures that were never theirs.
+ *
+ *  Removing the row on a failed send restores the state to before the
+ *  request, so the next attempt is treated as the first. */
+export async function withdrawCode(email: string, purpose: CodePurpose): Promise<void> {
+  try {
+    await exec(
+      `DELETE FROM email_codes WHERE code_id = (
+         SELECT code_id FROM email_codes WHERE email = ? AND purpose = ?
+          ORDER BY code_id DESC LIMIT 1)`,
+      [email, purpose],
+    );
+  } catch {
+    /* Best effort. A surviving row costs the sender one cooldown, which is
+       better than turning a mail failure into a request failure. */
+  }
+}
+
 export type CheckResult = { ok: true } | { ok: false; error: string };
 
 /** Validate a submitted code. Consumes it on success; counts attempts and

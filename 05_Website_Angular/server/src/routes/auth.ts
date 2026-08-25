@@ -11,7 +11,7 @@ import { serializeUser, serializeResume, serializeApplication } from '../lib/ser
 import { DEBUG } from '../config';
 import { deleteFile } from '../lib/storage';
 import { mailConfigured, sendCodeEmail, sendMail, CodePurpose } from '../lib/mailer';
-import { issueCode, checkCode } from '../lib/email-codes';
+import { issueCode, checkCode, withdrawCode } from '../lib/email-codes';
 import { passwordProblem } from '../lib/password';
 import { loginLimiter, sendCodeLimiter, authWriteLimiter } from '../lib/rate-limit';
 
@@ -64,6 +64,9 @@ router.post('/send-code', sendCodeLimiter, async (req, res) => {
       await sendCodeEmail(email, issued.code, purpose);
     } catch (e: any) {
       console.error('SMTP send failed:', e?.message || e);
+      /* The code row exists but nobody received it. Withdraw it, or the
+         cooldown tells the next attempt that a code "was just sent". */
+      await withdrawCode(email, purpose);
       return fail(res, 'The email could not be sent right now. Try again in a moment.');
     }
     console.log(`[send-code] ${purpose} email delivered to SMTP in ${Date.now() - started}ms`);
@@ -271,6 +274,7 @@ router.post('/change-email-start', sendCodeLimiter, async (req, res) => {
       await sendCodeEmail(newEmail, issued.code, 'verify');
     } catch (e: any) {
       console.error('SMTP send failed:', e?.message || e);
+      await withdrawCode(newEmail, 'verify'); // same reason as in /send-code
       return fail(res, 'The email could not be sent right now. Try again in a moment.');
     }
     return ok(res, { sent: true });
