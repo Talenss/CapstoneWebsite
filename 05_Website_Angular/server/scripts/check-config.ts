@@ -27,10 +27,12 @@ const OK = '  ok    ';
 const BAD = '  FAIL  ';
 const SKIP = '  skip  ';
 let failures = 0;
+let verified = 0;
+let skipped = 0;
 
-function pass(label: string, detail: string) { console.log(OK + label.padEnd(12) + detail); }
+function pass(label: string, detail: string) { verified++; console.log(OK + label.padEnd(12) + detail); }
 function fail(label: string, detail: string) { failures++; console.log(BAD + label.padEnd(12) + detail); }
-function skip(label: string, detail: string) { console.log(SKIP + label.padEnd(12) + detail); }
+function skip(label: string, detail: string) { skipped++; console.log(SKIP + label.padEnd(12) + detail); }
 
 async function checkDatabase(): Promise<void> {
   const url = process.env.DATABASE_URL || '';
@@ -113,6 +115,21 @@ async function checkGemini(): Promise<void> {
   await checkDatabase();
   await checkEmail();
   await checkGemini();
-  console.log(failures ? `\n${failures} check(s) failed — see above.\n` : '\nAll checks passed.\n');
-  process.exit(failures ? 1 : 0);
+  /* A skip is not a pass. Everything skipping means no configuration was
+     found at all — almost always a missing .env — and reporting that as
+     success would send someone to deploy on the strength of a check that
+     verified nothing. */
+  if (failures) {
+    console.log(`\n${failures} check(s) failed — see above.\n`);
+    process.exit(1);
+  }
+  if (verified === 0) {
+    console.log('\nNOTHING WAS CHECKED. All three were skipped, which means no');
+    console.log('configuration was found — usually a missing .env file in this folder.');
+    console.log('Copy .env.example to .env and fill it in, or set the variables in');
+    console.log('the environment before running this.\n');
+    process.exit(1);
+  }
+  console.log(`\n${verified} check(s) passed${skipped ? `, ${skipped} skipped` : ''}.\n`);
+  process.exit(0);
 })();
