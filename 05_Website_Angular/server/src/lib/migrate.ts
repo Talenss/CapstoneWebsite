@@ -6,8 +6,41 @@
 import { exec } from '../db';
 import { ensureEmailCodesTable } from './email-codes';
 
+
+/* Every Supabase project publishes a REST API, and the publishable key that
+   reaches it is public by design. Row level security is what stops a stranger
+   reading a table through it; without it the dashboard marks the table
+   "Unrestricted", which is precisely what it means.
+
+   This application never uses that API — the browser talks to this server,
+   and only this server touches the database, as the owning role, which
+   bypasses RLS. So enabling it costs nothing here and closes the door there.
+
+   No policies: RLS with none denies everything, which is the right answer
+   for tables only this server should ever read.
+
+   Two tables are handled here rather than in db/resumematch_ph.sql because
+   they are created at runtime — user_sessions by connect-pg-simple on first
+   boot, email_codes by ensureEmailCodesTable above — so the schema file
+   never sees them. The rest are covered there. This is also the path by
+   which a database imported before RLS was added catches up. */
+async function ensureRowLevelSecurity(): Promise<void> {
+  const runtimeTables = ['user_sessions', 'email_codes'];
+  for (const t of runtimeTables) {
+    try {
+      await exec(`ALTER TABLE IF EXISTS ${t} ENABLE ROW LEVEL SECURITY`);
+    } catch (e: any) {
+      /* Not fatal. A local Postgres has no REST API in front of it, so the
+         protection is irrelevant there, and refusing to boot over it would
+         turn a hardening step into an outage. */
+      console.warn(`Could not enable RLS on ${t}:`, e?.message || e);
+    }
+  }
+}
+
 export async function runMigrations(): Promise<void> {
   await ensureEmailCodesTable();
+  await ensureRowLevelSecurity();
 
   // users.email_notifications — the per-user opt-out for application emails
   await exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_notifications SMALLINT NOT NULL DEFAULT 1');
