@@ -15,11 +15,25 @@ export function mailConfigured(): boolean {
 let transport: nodemailer.Transporter | null = null;
 function getTransport(): nodemailer.Transporter {
   if (!transport) {
+    /* POOLED, and that is a latency decision rather than a tidiness one.
+       Without a pool nodemailer opens a fresh connection for every message:
+       TCP, STARTTLS, a TLS handshake and an AUTH round trip before a single
+       byte of the mail moves. Against Gmail from a server in another region
+       that is seconds, and the caller waits for all of it, because the
+       verification code cannot honestly be reported as sent until it is.
+       A pooled transport keeps the authenticated connection open, so only
+       the first message after an idle period pays that cost. */
     transport = nodemailer.createTransport({
       host: SMTP_HOST,
       port: SMTP_PORT,
       secure: SMTP_SECURE,
       auth: SMTP_USER ? { user: SMTP_USER, pass: SMTP_PASS } : undefined,
+      pool: true,
+      maxConnections: 3,
+      maxMessages: 100,
+      connectionTimeout: 15000,
+      greetingTimeout: 10000,
+      socketTimeout: 20000,
     });
   }
   return transport;

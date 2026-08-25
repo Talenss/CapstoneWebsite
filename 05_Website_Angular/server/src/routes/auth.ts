@@ -55,12 +55,18 @@ router.post('/send-code', sendCodeLimiter, async (req, res) => {
   if (!issued.ok) return fail(res, issued.error);
 
   if (mailConfigured()) {
+    /* Timed, because this is the slowest thing in the request and the only
+       part whose cost is invisible from the outside. When someone reports
+       that sign-up "feels slow", the log says whether the wait was the mail
+       server or something else, without needing to reproduce it. */
+    const started = Date.now();
     try {
       await sendCodeEmail(email, issued.code, purpose);
     } catch (e: any) {
       console.error('SMTP send failed:', e?.message || e);
       return fail(res, 'The email could not be sent right now. Try again in a moment.');
     }
+    console.log(`[send-code] ${purpose} email delivered to SMTP in ${Date.now() - started}ms`);
     return ok(res, { sent: true });
   }
 
