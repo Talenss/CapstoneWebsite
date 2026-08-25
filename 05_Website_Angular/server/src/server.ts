@@ -15,7 +15,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
 import fs from 'fs';
-import { PORT, ALLOW_ORIGIN, SESSION_SECRET, UPLOAD_DIR, DEBUG, TRUST_PROXY, COOKIE_SECURE, IS_PROD } from './config';
+import { PORT, ALLOW_ORIGIN, SESSION_SECRET, UPLOAD_DIR, DEBUG, TRUST_PROXY, COOKIE_SECURE, IS_PROD , DATABASE_URL, DB_HOST, DB_PORT, DB_NAME, DB_USER } from './config';
 
 import authRoutes from './routes/auth';
 import companiesRoutes from './routes/companies';
@@ -164,6 +164,15 @@ process.on('uncaughtException', (err) => {
    deployment that fails loudly at boot is far cheaper to diagnose than one
    that half-works for a week. In development we warn and continue, so the
    demo bundle still serves on a laptop with no database configured. */
+/* Say where we are about to connect, before trying. A failed connection
+   reports what the DATABASE tells us ("tenant not found", "password
+   authentication failed"), never what we ASKED FOR — so when a deployment
+   has a stale or mistyped value, the logs describe a database nobody meant
+   to reach and the search goes looking in the wrong place. Printing the
+   target first turns "why is it saying that" into a one-line comparison.
+   The password is never printed. */
+logDatabaseTarget();
+
 runMigrations().then(
   () => listen(),
   (e) => {
@@ -178,6 +187,25 @@ runMigrations().then(
     listen();
   },
 );
+
+/** Log the database we are about to use, with the password masked. */
+function logDatabaseTarget(): void {
+  if (DATABASE_URL) {
+    const m = /^postgres(?:ql)?:\/\/([^:]+):[^@]*@([^/?]+)\/?([^?]*)/.exec(DATABASE_URL);
+    if (m) {
+      console.log(`Database target: ${m[1]}@${m[2]}/${m[3] || 'postgres'}  (from DATABASE_URL)`);
+      if (/^db\.[a-z0-9]+\.supabase\.co/.test(m[2])) {
+        console.log('  NOTE: that is Supabase\'s DIRECT host, which is IPv6-only.');
+        console.log('  Hosts without outbound IPv6 (Render among them) cannot reach it.');
+        console.log('  Use the SESSION POOLER string: Supabase -> Project Settings -> Database.');
+      }
+    } else {
+      console.log('Database target: DATABASE_URL is set but could not be parsed.');
+    }
+    return;
+  }
+  console.log(`Database target: ${DB_USER}@${DB_HOST}:${DB_PORT}/${DB_NAME}  (from DB_* settings)`);
+}
 
 function listen(): void {
   app.listen(PORT, () => {
