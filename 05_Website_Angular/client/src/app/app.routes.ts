@@ -21,6 +21,7 @@
    ============================================================ */
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth.guard';
+import { homeGuard } from './core/home.guard';
 import { unsavedChangesGuard } from './core/unsaved-changes.guard';
 import { SeoData } from './core/seo';
 
@@ -36,6 +37,7 @@ const PRIVATE = seo({
 export const routes: Routes = [
   {
     path: '',
+    canActivate: [homeGuard],
     loadComponent: () => import('./pages/home/home').then((m) => m.Home),
     title: 'Free Resume Builder & Job Match, Angeles City, Pampanga',
     data: seo({
