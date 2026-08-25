@@ -1239,7 +1239,8 @@ export class DemoAdapter implements ApiAdapter {
       const db = load(); const me = meRow(db);
       if (!me || me.role !== 'seeker') return apiFail('You are not signed in.');
       const resume = db.resumes.find((r) => r.id === me.activeResumeId) || db.resumes.find((r) => r.userId === me.id);
-      if (!resume) return apiOk({ resume: null, strong: [], possible: [], related: [] });
+      const openNow = db.postings.filter((p) => p.status === 'open' && !isExpired(p)).length;
+      if (!resume) return apiOk({ resume: null, strong: [], possible: [], related: [], openCount: openNow });
       const applied = db.applications.filter((a) => a.seekerId === me.id).map((a) => a.postingId);
       const scored = db.postings.filter((p) => p.status === 'open' && !isExpired(p)).map((p) => ({
         posting: p,
@@ -1253,6 +1254,8 @@ export class DemoAdapter implements ApiAdapter {
         possible: scored.filter((s) => s.tier === 'possible') as unknown as RecommendationItem[],
         // a related role must share at least one real skill, or it's noise rather than a suggestion
         related: scored.filter((s) => s.tier === 'related' && s.matchedSkills.length > 0) as unknown as RecommendationItem[],
+        // every open posting, including the ones the tiers dropped — see adapter.ts
+        openCount: openNow,
       });
     },
   };

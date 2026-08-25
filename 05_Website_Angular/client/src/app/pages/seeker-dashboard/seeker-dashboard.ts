@@ -47,6 +47,11 @@ export class SeekerDashboard implements OnInit {
   resumes = signal<Resume[]>([]);
   activeId = signal<string | null>(null);
   reco = signal<Reco | null>(null);
+  /* Every open posting, including any the tiers dropped. A sub-threshold
+     posting that shares no skill is deliberately left out of the related
+     tier, so all three can be empty while openings exist — this is how the
+     empty state tells "nothing posted" from "nothing matched you". */
+  openCount = signal(0);
   applications = signal<Application[]>([]);
   current = signal<RecommendationItem | null>(null);
   applying = signal(false);
@@ -250,6 +255,7 @@ export class SeekerDashboard implements OnInit {
         ? { strong: recoRes.strong, possible: recoRes.possible, related: recoRes.related }
         : { strong: [], possible: [], related: [] },
     );
+    this.openCount.set(recoRes.ok ? (recoRes.openCount ?? 0) : 0);
 
     await this.renderApps();
     this.loading.set(false);

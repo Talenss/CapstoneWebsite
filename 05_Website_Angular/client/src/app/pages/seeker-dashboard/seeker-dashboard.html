@@ -35,6 +35,17 @@
         </div>
         <p style="font-size:12.5px;color:var(--muted);margin-top:14px">Upload a file and the system reads it into the builder for you, you review everything before it's saved.</p>
       </div>
+    } @else if (totalReco() === 0 && openCount() > 0) {
+      <!-- Openings exist, but none share a skill with this resume, so the
+           related tier dropped them. Saying "nothing posted" here was untrue
+           and left the applicant with nothing to act on. -->
+      <div class="card empty">
+        <h2>{{ openCount() }} open position{{ openCount() === 1 ? '' : 's' }}, none matching yet</h2>
+        <p>Your active resume doesn’t share any of the skills these ask for, so nothing is ranked for you yet.
+           Add the skills you already have to your resume, or read the openings to see what they’re asking for.</p>
+        <a class="btn" routerLink="/browse">See the openings</a>
+        <a class="btn ghost" routerLink="/resume-builder" [queryParams]="{ id: activeId() }">Edit my resume</a>
+      </div>
     } @else if (totalReco() === 0) {
       <div class="card empty">
         <h2>No open positions right now</h2>

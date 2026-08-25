@@ -108,7 +108,14 @@ router.post('/recommendations', async (req, res) => {
   const bySc = (a: any, b: any) => b.score - a.score;
   strong.sort(bySc); possible.sort(bySc); related.sort(bySc);
 
-  ok(res, { resume, strong, possible, related });
+  /* openCount is what separates "nothing has been posted" from "things are
+     posted, but none of them share a skill with your resume". The related
+     tier deliberately drops a sub-threshold posting with no matched skill,
+     because that is noise rather than a suggestion — but the dashboard was
+     then telling the applicant nothing had been posted at all, which is
+     false and unactionable. With the count it can say which case it is, and
+     point at the openings list. */
+  ok(res, { resume, strong, possible, related, openCount: rows.length });
 });
 
 export default router;

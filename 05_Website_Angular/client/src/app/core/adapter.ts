@@ -97,7 +97,12 @@ export interface ApiAdapter {
   };
   match: {
     score(resumeId: string, postingId: string): Promise<ApiResult<MatchResult>>;
-    recommendations(): Promise<ApiResult<{ resume: Resume | null; strong: RecommendationItem[]; possible: RecommendationItem[]; related: RecommendationItem[] }>>;
+    /** openCount is every open, in-deadline posting — INCLUDING any the
+     *  tiers dropped. A sub-threshold posting sharing no skill is left out
+     *  of `related` on purpose, so the three arrays can all be empty while
+     *  openings exist; the count is how the dashboard tells that apart from
+     *  nothing having been posted. */
+    recommendations(): Promise<ApiResult<{ resume: Resume | null; strong: RecommendationItem[]; possible: RecommendationItem[]; related: RecommendationItem[]; openCount?: number }>>;
   };
   stats: {
     hr(): Promise<ApiResult<{ stats: HrStats }>>;
