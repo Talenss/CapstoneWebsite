@@ -1,0 +1,26 @@
+PERSONAL INFORMATION
+
+Juan Dela Cruz
+San Fernando, Pampanga
+juan.delacruz@example.ph
+0917 555 0134
+
+EDUCATIONAL ATTAINMENT
+
+Holy Angel University
+Bachelor of Science in Information Technology
+2021 - 2025
+
+OJT
+
+Web Development Intern
+Clark Outsourcing
+January 2025 - April 2025
+Built internal dashboards with HTML/CSS and JavaScript.
+Used Git for version control.
+
+SKILLS: HTML/CSS, JavaScript, Git, Teamwork, Communication
+
+SEMINARS ATTENDED
+
+Introduction to Cloud Computing, 2024

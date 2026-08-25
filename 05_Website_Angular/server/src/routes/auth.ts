@@ -139,13 +139,30 @@ router.post('/login', loginLimiter, async (req, res) => {
   ok(res, { user: serializeUser(u) });
 });
 
+/** First and last name off a request body, validated together.
+ *
+ *  Registration asks for the two parts separately because that is how the
+ *  database stores them and how anything that needs to address someone by
+ *  their given name can do so without guessing where one name ends. Only the
+ *  first name is required: a mononym is a real way for a person to be named,
+ *  and refusing it would be this form deciding who counts as having a proper
+ *  name. Returns an error string, or null when the pair is usable. */
+function readName(body: any): { first: string; last: string; error: string | null } {
+  const first = String(body?.firstName ?? '').trim().replace(/\s+/g, ' ');
+  const last = String(body?.lastName ?? '').trim().replace(/\s+/g, ' ');
+  if (first.length < 2) return { first, last, error: 'Enter your first name.' };
+  if (first.length > 60) return { first, last, error: 'That first name is too long — 60 characters at most.' };
+  if (last.length > 60) return { first, last, error: 'That last name is too long — 60 characters at most.' };
+  return { first, last, error: null };
+}
+
 router.post('/register', authWriteLimiter, async (req, res) => {
-  const name = String(req.body?.name ?? '').trim();
+  const { first, last, error: nameErr } = readName(req.body);
   const email = String(req.body?.email ?? '').trim().toLowerCase();
   const pass = String(req.body?.password ?? '');
   const code = String(req.body?.code ?? '').trim();
 
-  if (name.length < 2) return fail(res, 'Enter your full name.');
+  if (nameErr) return fail(res, nameErr);
   if (!EMAIL_RE.test(email)) return fail(res, 'Enter a valid email address.');
   const pwErr = passwordProblem(pass);
   if (pwErr) return fail(res, pwErr);
@@ -160,8 +177,8 @@ router.post('/register', authWriteLimiter, async (req, res) => {
 
   const hash = await bcrypt.hash(pass, 10);
   const { insertId } = await exec(
-    'INSERT INTO users (role, full_name, email, password_hash) VALUES (?,?,?,?) RETURNING user_id',
-    ['seeker', name, email, hash],
+    'INSERT INTO users (role, first_name, last_name, email, password_hash) VALUES (?,?,?,?,?) RETURNING user_id',
+    ['seeker', first, last, email, hash],
   );
 
   await regenerateSession(req);
@@ -173,7 +190,7 @@ router.post('/register', authWriteLimiter, async (req, res) => {
 // Recruiters do NOT self-register. A request lands here and a human
 // approves it with the partner company's HR before it becomes an account.
 router.post('/request-access', authWriteLimiter, async (req, res) => {
-  const name = String(req.body?.name ?? '').trim();
+  const { first, last, error: nameErr } = readName(req.body);
   // Lowercased for the same reason as /login. An approved recruiter is told
   // to set their password via "Forgot password", and /send-code looks the
   // address up lowercased — a mixed-case row there could never be found, so
@@ -186,7 +203,7 @@ router.post('/request-access', authWriteLimiter, async (req, res) => {
   // carry the whole 2 MB JSON body limit.
   const note = String(req.body?.note ?? '').trim().slice(0, 1000);
 
-  if (name.length < 2 || name.length > 120) return fail(res, 'Enter your full name.');
+  if (nameErr) return fail(res, nameErr);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail(res, 'Enter a valid email address.');
   if (pos === '' || pos.length > 120) return fail(res, 'Enter your position.');
   if (!co) return fail(res, 'Choose your partner company.');
@@ -200,8 +217,8 @@ router.post('/request-access', authWriteLimiter, async (req, res) => {
   if (pending) return fail(res, 'A request from this email is already waiting for review.');
 
   await exec(
-    'INSERT INTO recruiter_requests (full_name, email, position_title, company_id, note) VALUES (?,?,?,?,?)',
-    [name, email, pos, Number(co), note],
+    'INSERT INTO recruiter_requests (first_name, last_name, email, position_title, company_id, note) VALUES (?,?,?,?,?,?)',
+    [first, last, email, pos, Number(co), note],
   );
   ok(res);
 });
@@ -240,11 +257,10 @@ router.post('/set-notifications', async (req, res) => {
 router.post('/change-name', async (req, res) => {
   const u = await requireUser(req, res);
   if (!u) return;
-  const name = String(req.body?.name ?? '').trim().replace(/\s+/g, ' ');
-  if (name.length < 2) return fail(res, 'Enter your full name.');
-  if (name.length > 120) return fail(res, 'That name is too long — 120 characters at most.');
+  const { first, last, error: nameErr } = readName(req.body);
+  if (nameErr) return fail(res, nameErr);
 
-  await exec('UPDATE users SET full_name = ? WHERE user_id = ?', [name, u.user_id]);
+  await exec('UPDATE users SET first_name = ?, last_name = ? WHERE user_id = ?', [first, last, u.user_id]);
   const updated = await queryOne<UserRow>('SELECT * FROM users WHERE user_id = ?', [u.user_id]);
   ok(res, { user: serializeUser(updated) });
 });

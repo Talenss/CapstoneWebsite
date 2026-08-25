@@ -8,7 +8,7 @@
 
 <header class="site-header">
   <div class="container">
-    <a class="brand" routerLink="/">
+    <a class="brand" [routerLink]="brandHome()">
       <span class="mark"><svg viewBox="0 0 100 100" aria-hidden="true"><rect x="20" y="11" width="49" height="69" rx="6" fill="#16305C"/><rect x="30" y="27" width="29" height="4.5" rx="2.2" fill="#FFFFFF"/><rect x="30" y="39" width="29" height="4.5" rx="2.2" fill="#FFFFFF"/><rect x="30" y="51" width="17" height="4.5" rx="2.2" fill="#FFFFFF"/><path d="M54 67 L64 77 L84 52" fill="none" stroke="#C1272D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       <span class="word">Resume<em>Match</em><small>{{ brandSuffix() }}</small></span>
     </a>

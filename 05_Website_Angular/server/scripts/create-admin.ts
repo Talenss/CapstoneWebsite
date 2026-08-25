@@ -37,7 +37,7 @@ async function main(): Promise<void> {
     console.log(`Password updated for existing admin ${email}.`);
   } else {
     await exec(
-      "INSERT INTO users (role, full_name, email, password_hash, verified) VALUES ('admin', 'Research Team', ?, ?, 1)",
+      "INSERT INTO users (role, first_name, last_name, email, password_hash, verified) VALUES ('admin', 'Research', 'Team', ?, ?, 1)",
     [email, hash],
     );
     console.log(`Admin account created: ${email}`);

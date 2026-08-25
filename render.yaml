@@ -101,6 +101,20 @@ services:
       # RENDER_EXTERNAL_URL, which Render sets to this service's own https
       # URL. Add it by hand only when a custom domain replaces onrender.com.
 
+      # ---- sitemap ----
+      # SITE_URL is read at BUILD time by scripts/make-sitemap.mjs, which is
+      # why it cannot use the same RENDER_EXTERNAL_URL fallback the server
+      # gets at run time: the build has not been assigned a URL yet.
+      # Without it the build logs "SITE_URL not set" and ships no sitemap,
+      # and strips the Sitemap: line out of robots.txt. That is the safe
+      # default rather than a bug — a sitemap full of URLs on the wrong
+      # domain is worse than none, because every entry 404s.
+      # Set explicitly here so the deployed site actually publishes one.
+      # CHANGE THIS when a custom domain replaces onrender.com, or the
+      # sitemap will advertise the old host.
+      - key: SITE_URL
+        value: https://resumematch-ph.onrender.com
+
       # ---- resume reading ----
       - key: RESUME_EXTRACTOR
         value: escalate # rules first; the model only when the reading is thin

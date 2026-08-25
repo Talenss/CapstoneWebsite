@@ -163,10 +163,17 @@
               </label>
             </div>
 
-            <div class="field" [class.invalid]="regNameInvalid()">
-              <label for="rn">Full name</label>
-              <input type="text" id="rn" autocomplete="name" required [(ngModel)]="regName" name="rn" (ngModelChange)="recheck()">
-              <span class="err">Enter your full name.</span>
+            <div class="two-up">
+              <div class="field" [class.invalid]="regFirstNameInvalid()">
+                <label for="rfn">First name</label>
+                <input type="text" id="rfn" autocomplete="given-name" required [(ngModel)]="regFirstName" name="rfn" (ngModelChange)="recheck()">
+                <span class="err">Enter your first name.</span>
+              </div>
+              <div class="field" [class.invalid]="regLastNameInvalid()">
+                <label for="rln">Last name</label>
+                <input type="text" id="rln" autocomplete="family-name" [(ngModel)]="regLastName" name="rln" (ngModelChange)="recheck()">
+                <span class="err">That last name is too long.</span>
+              </div>
             </div>
             <div class="field" [class.invalid]="regEmailInvalid()">
               <label for="re">Email address</label>

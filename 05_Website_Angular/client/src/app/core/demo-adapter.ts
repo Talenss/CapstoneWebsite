@@ -24,14 +24,23 @@ const KEY = 'rmph_v3_db';
  * content correctly, and demo data is disposable by construction, nothing
  * here has ever reached a database. Anything a visitor wants to keep is
  * exported from the resume itself.
+ *
+ * The 2026-08-25 bump is a case where NOT re-seeding would be visibly wrong:
+ * users now store firstName and lastName instead of a single name, and a
+ * database written by an earlier build carries the old shape. Those rows
+ * would render with no name at all rather than with a stale one.
  */
-const SEED_VERSION = '2026-08-14-clark-evidence';
+const SEED_VERSION = '2026-08-25-name-split';
 const SESSION = 'rmph_v3_session';
 const D = 86400000;
 
 const uid = () => 'x' + Math.random().toString(36).slice(2, 9);
 
-interface DemoUser extends User {
+/** A stored demo user. `name` is deliberately absent: it is derived from
+ *  firstName + lastName on the way out (pubUser), mirroring the generated
+ *  column in the real database, so the demo build cannot hold a display name
+ *  that disagrees with the two parts it is supposed to be made of. */
+interface DemoUser extends Omit<User, 'name'> {
   password: string;
 }
 interface EmailCode {
@@ -97,13 +106,13 @@ function seed(): Db {
       website: 'https://clarkoutsourcing.com',
     }],
     users: [
-      { id: 'u1', role: 'seeker', name: 'Juan Dela Cruz', email: 'seeker@demo.ph', password: 'demo123', activeResumeId: 'r1', createdAt: Date.now() - D * 30 },
-      { id: 'u2', role: 'recruiter', name: 'Maria Santos', email: 'hr@demo.ph', password: 'demo123', companyId: 'c1', position: 'HR Officer', verified: true, createdAt: Date.now() - D * 60 },
-      { id: 'u3', role: 'seeker', name: 'Ana Reyes', email: 'ana@demo.ph', password: 'demo123', activeResumeId: 'r2', createdAt: Date.now() - D * 20 },
-      { id: 'u4', role: 'seeker', name: 'Marco Garcia', email: 'marco@demo.ph', password: 'demo123', activeResumeId: 'r3', createdAt: Date.now() - D * 15 },
-      { id: 'u5', role: 'seeker', name: 'Liza Cruz', email: 'liza@demo.ph', password: 'demo123', activeResumeId: 'r4', createdAt: Date.now() - D * 10 },
-      { id: 'u6', role: 'admin', name: 'Research Team', email: 'admin@demo.ph', password: 'demo123', createdAt: Date.now() - D * 90 },
-      { id: 'u7', role: 'recruiter', name: 'Grace Lopez', email: 'grace@demo.ph', password: 'demo123', companyId: 'c1', position: 'HR Officer, Customer Support', verified: true, createdAt: Date.now() - D * 55 },
+      { id: 'u1', role: 'seeker', firstName: 'Juan', lastName: 'Dela Cruz', email: 'seeker@demo.ph', password: 'demo123', activeResumeId: 'r1', createdAt: Date.now() - D * 30 },
+      { id: 'u2', role: 'recruiter', firstName: 'Maria', lastName: 'Santos', email: 'hr@demo.ph', password: 'demo123', companyId: 'c1', position: 'HR Officer', verified: true, createdAt: Date.now() - D * 60 },
+      { id: 'u3', role: 'seeker', firstName: 'Ana', lastName: 'Reyes', email: 'ana@demo.ph', password: 'demo123', activeResumeId: 'r2', createdAt: Date.now() - D * 20 },
+      { id: 'u4', role: 'seeker', firstName: 'Marco', lastName: 'Garcia', email: 'marco@demo.ph', password: 'demo123', activeResumeId: 'r3', createdAt: Date.now() - D * 15 },
+      { id: 'u5', role: 'seeker', firstName: 'Liza', lastName: 'Cruz', email: 'liza@demo.ph', password: 'demo123', activeResumeId: 'r4', createdAt: Date.now() - D * 10 },
+      { id: 'u6', role: 'admin', firstName: 'Research', lastName: 'Team', email: 'admin@demo.ph', password: 'demo123', createdAt: Date.now() - D * 90 },
+      { id: 'u7', role: 'recruiter', firstName: 'Grace', lastName: 'Lopez', email: 'grace@demo.ph', password: 'demo123', companyId: 'c1', position: 'HR Officer, Customer Support', verified: true, createdAt: Date.now() - D * 55 },
     ] as DemoUser[],
     resumes: [
       // Juan carries every optional section, so the demo shows a complete
@@ -285,7 +294,7 @@ function load(): Db {
       }
       if (!db.users.some((u) => u.role === 'admin')) {
         // databases saved before the admin panel existed get the admin account
-        db.users.push({ id: 'u6', role: 'admin', name: 'Research Team', email: 'admin@demo.ph', password: 'demo123', createdAt: Date.now() } as DemoUser);
+        db.users.push({ id: 'u6', role: 'admin', firstName: 'Research', lastName: 'Team', email: 'admin@demo.ph', password: 'demo123', createdAt: Date.now() } as DemoUser);
         persist(db);
       }
       return db;
@@ -352,8 +361,31 @@ const pubUser = (u: DemoUser | null): User | null => {
   if (!u) return null;
   const c: any = { ...u };
   delete c.password;
+  /* `name` is DERIVED here, exactly as the API derives it from the database's
+     generated column. Storing it as well would give the demo build a second
+     copy that could drift out of step with the two parts, and mode-parity
+     would then be testing two different ideas of what someone is called. */
+  c.name = userDisplayName(u);
   return c;
 };
+
+/** A stored user's display name, derived from the two parts exactly as the
+ *  database's generated column derives it. Every read goes through this, so
+ *  there is no second copy of the name to fall out of step — and no row that
+ *  can be missing it, which is what broke the "who acted" line when the seed
+ *  users stopped carrying a name field of their own. */
+export const userDisplayName = (u: { firstName?: string; lastName?: string } | null | undefined): string =>
+  `${u?.firstName || ''} ${u?.lastName || ''}`.trim();
+
+/** The same last-token rule the server migration uses, for the one place the
+ *  demo build has a single stored name to divide: a recruiter request that
+ *  predates the split. */
+export function splitDemoName(full: string): { firstName: string; lastName: string } {
+  const parts = String(full || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return { firstName: 'Unnamed', lastName: '' };
+  if (parts.length === 1) return { firstName: parts[0], lastName: '' };
+  return { firstName: parts.slice(0, -1).join(' '), lastName: parts[parts.length - 1] };
+}
 
 /** Validate a submitted email code against the demo DB. Returns an error
  *  message, or null on success (in which case the code is consumed). */
@@ -400,7 +432,8 @@ export class DemoAdapter implements ApiAdapter {
       persist(db);
       return apiOk({ sent: false, simulated: true, devCode: code });
     },
-    registerSeeker: ({ name, email, password, code }: { name: string; email: string; password: string; code: string }) => {
+    registerSeeker: ({ firstName, lastName, email, password, code }:
+      { firstName: string; lastName: string; email: string; password: string; code: string }) => {
       const db = load();
       const e = String(email).trim().toLowerCase();
       if (!passwordOk(password)) return apiFail(PASSWORD_HINT);
@@ -408,11 +441,15 @@ export class DemoAdapter implements ApiAdapter {
         return Promise.resolve({ ok: false, exists: true, error: 'An account already uses this email. Log in instead.' } as any);
       const err = consumeCode(db, e, 'verify', code);
       if (err) return apiFail(err);
-      const nm = String(name).trim();
+      const fn = String(firstName ?? '').trim().replace(/\s+/g, ' ');
+      const ln = String(lastName ?? '').trim().replace(/\s+/g, ' ');
       const em = String(email).trim().toLowerCase();
-      if (nm.length < 2) return apiFail('Enter your full name.');
+      if (fn.length < 2) return apiFail('Enter your first name.');
+      if (fn.length > 60) return apiFail('That first name is too long — 60 characters at most.');
+      if (ln.length > 60) return apiFail('That last name is too long — 60 characters at most.');
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return apiFail('Enter a valid email address.');
-      const user: DemoUser = { id: uid(), role: 'seeker', name: nm, email: em, password, activeResumeId: null, createdAt: Date.now() };
+      const user: DemoUser = { id: uid(), role: 'seeker', firstName: fn, lastName: ln,
+        email: em, password, activeResumeId: null, createdAt: Date.now() };
       db.users.push(user); persist(db); setSession(user.id);
       return apiOk({ user: pubUser(user)! });
     },
@@ -428,13 +465,15 @@ export class DemoAdapter implements ApiAdapter {
       persist(db);
       return apiOk({});
     },
-    requestRecruiterAccess: ({ name, email, position, companyId, note }: { name: string; email: string; position: string; companyId: string; note?: string }) => {
+    requestRecruiterAccess: ({ firstName, lastName, email, position, companyId, note }:
+      { firstName: string; lastName: string; email: string; position: string; companyId: string; note?: string }) => {
       const db = load();
       const e = String(email).trim().toLowerCase();
       if (db.users.some((u) => u.email.toLowerCase() === e)) return apiFail('An account already uses this email.');
       if (db.recruiterRequests.some((r) => r.email.toLowerCase() === e && r.status === 'pending'))
         return apiFail('A request from this email is already waiting for review.');
-      db.recruiterRequests.push({ id: uid(), name, email, position, companyId, note: note || '', status: 'pending', requestedAt: Date.now() });
+      db.recruiterRequests.push({ id: uid(), name: `${String(firstName ?? '').trim()} ${String(lastName ?? '').trim()}`.trim(),
+        email, position, companyId, note: note || '', status: 'pending', requestedAt: Date.now() });
       persist(db);
       return apiOk({});
     },
@@ -478,13 +517,15 @@ export class DemoAdapter implements ApiAdapter {
     },
     /* Same rules as the server: trimmed, collapsed whitespace, 2–120
        characters, and saved resumes are left alone. */
-    changeName: (name: string) => {
+    changeName: (firstName: string, lastName: string) => {
       const db = load(); const u = meRow(db);
       if (!u) return apiFail('You are not signed in.');
-      const clean = String(name).trim().replace(/\s+/g, ' ');
-      if (clean.length < 2) return apiFail('Enter your full name.');
-      if (clean.length > 120) return apiFail('That name is too long, 120 characters at most.');
-      u.name = clean; persist(db);
+      const fn = String(firstName ?? '').trim().replace(/\s+/g, ' ');
+      const ln = String(lastName ?? '').trim().replace(/\s+/g, ' ');
+      if (fn.length < 2) return apiFail('Enter your first name.');
+      if (fn.length > 60) return apiFail('That first name is too long — 60 characters at most.');
+      if (ln.length > 60) return apiFail('That last name is too long — 60 characters at most.');
+      u.firstName = fn; u.lastName = ln; persist(db);
       return apiOk({ user: pubUser(u)! });
     },
     changePassword: (current: string, next: string) => {
@@ -1060,7 +1101,7 @@ export class DemoAdapter implements ApiAdapter {
             id: n.id,
             body: n.body,
             at: n.at,
-            authorName: db.users.find((u) => u.id === n.authorId)?.name ?? 'A former colleague',
+            authorName: userDisplayName(db.users.find((u) => u.id === n.authorId)) || 'A former colleague',
             mine: n.authorId === me.id,
           })),
       });
@@ -1115,7 +1156,7 @@ export class DemoAdapter implements ApiAdapter {
           const e: StatusEvent = { from: h.from, to: h.to, at: h.at, by: h.by };
           if (maySeeNames && h.by === 'employer' && h.byUserId) {
             const actor = db.users.find((u) => u.id === h.byUserId);
-            if (actor) e.byName = actor.name;
+            if (actor) e.byName = userDisplayName(actor);
           }
           /* The reason goes to BOTH audiences, unlike the name above, see
              routes/applications.ts for why the two gates differ. The applicant
@@ -1299,7 +1340,7 @@ export class DemoAdapter implements ApiAdapter {
       if (db.users.some((u) => u.email.toLowerCase() === r.email.toLowerCase()))
         return apiFail('An account already uses this email. Decline the request instead.');
       db.users.push({
-        id: uid(), role: 'recruiter', name: r.name, email: r.email,
+        id: uid(), role: 'recruiter', ...splitDemoName(r.name), email: r.email,
         password: uid() + uid() + uid(), // placeholder; they set their own via Forgot password
         companyId: r.companyId, position: r.position || 'Recruiter', verified: true, createdAt: Date.now(),
       } as DemoUser);
@@ -1322,7 +1363,7 @@ export class DemoAdapter implements ApiAdapter {
       if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
       return apiOk({
         recruiters: db.users.filter((u) => u.role === 'recruiter').map((u) => ({
-          id: u.id, name: u.name, email: u.email, position: u.position || '',
+          id: u.id, name: userDisplayName(u), email: u.email, position: u.position || '',
           companyName: db.companies.find((c) => c.id === u.companyId)?.name || '—',
           verified: !!u.verified, createdAt: u.createdAt, lastLoginAt: null,
         })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
@@ -1367,11 +1408,11 @@ export class DemoAdapter implements ApiAdapter {
       ])).sort(),
       recruiters: db.users
         .filter((u) => u.role === 'recruiter' && u.companyId === cid && u.verified)
-        .map((u) => ({ id: u.id, name: u.name }))
+        .map((u) => ({ id: u.id, name: userDisplayName(u) }))
         .sort((a, b) => a.name.localeCompare(b.name)),
       assignments: db.deptAssignments
         .filter((a) => a.companyId === cid)
-        .map((a) => ({ department: a.department, userId: a.userId, userName: db.users.find((u) => u.id === a.userId)?.name || '—' })),
+        .map((a) => ({ department: a.department, userId: a.userId, userName: userDisplayName(db.users.find((u) => u.id === a.userId)) || '—' })),
     })).sort((a, b) => a.name.localeCompare(b.name));
   }
 
@@ -1411,7 +1452,7 @@ export class DemoAdapter implements ApiAdapter {
         title: baseName || 'Uploaded resume',
         template: 'chronological',
         personal: {
-          fullName: me.name,
+          fullName: userDisplayName(me),
           email: me.email,
           phone: '',
           address: '',

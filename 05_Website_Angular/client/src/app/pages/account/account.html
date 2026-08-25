@@ -24,9 +24,15 @@
           }
           <p class="hint" style="margin-bottom:12px">This is the name a recruiter sees beside your application. The name printed on a resume is set in the builder, and changing it here leaves your saved resumes exactly as they are.</p>
           <form novalidate (ngSubmit)="onChangeName($event)">
-            <div class="field">
-              <label for="cnName">Full name</label>
-              <input type="text" id="cnName" autocomplete="name" maxlength="120" required [(ngModel)]="cnName" name="cnName">
+            <div class="two-up">
+              <div class="field">
+                <label for="cnFirst">First name</label>
+                <input type="text" id="cnFirst" autocomplete="given-name" maxlength="60" required [(ngModel)]="cnFirst" name="cnFirst">
+              </div>
+              <div class="field">
+                <label for="cnLast">Last name</label>
+                <input type="text" id="cnLast" autocomplete="family-name" maxlength="60" [(ngModel)]="cnLast" name="cnLast">
+              </div>
             </div>
             <div style="display:flex;gap:9px;flex-wrap:wrap">
               <button class="btn primary" type="submit" [disabled]="cnBusy()">

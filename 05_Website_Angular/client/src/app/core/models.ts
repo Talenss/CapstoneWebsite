@@ -69,6 +69,12 @@ export type Tier = 'strong' | 'possible' | 'related';
 export interface User {
   id: string;
   role: Role;
+  /** The two parts registration asks for, and the only ones stored. */
+  firstName: string;
+  lastName: string;
+  /** first + last, derived by the database. Read-only: the two fields above
+   *  are what a change writes to. Kept because most of the site wants a
+   *  person's name as one string and should not have to assemble it. */
   name: string;
   email: string;
   createdAt: number;
@@ -203,8 +209,18 @@ export interface OwnFile {
   uploadedAt: number;
   dataUrl?: string; // demo mode only, the file itself, base64
   /** The document read into the same structured shape the builder edits, so
-   *  the engine can score it. Absent unless `extractStatus` is 'ok'. */
-  extract?: AnalyzedResume;
+   *  the engine can score it. Absent unless `extractStatus` is 'ok'.
+   *
+   *  PARTIAL, and deliberately so. This arrives as JSON out of a database
+   *  column and is handed straight to the client without being re-validated
+   *  at the boundary (serializers.ts parses it and passes it through), so
+   *  the full shape is a claim about the row rather than something the type
+   *  system has checked. A row written by an earlier version of the reader,
+   *  or by hand, need not carry every field. Declaring it complete made the
+   *  compiler call the template's null-guards redundant and suggest removing
+   *  them, which would have turned one malformed row into a crash on the
+   *  recruiter's applicant panel. */
+  extract?: Partial<AnalyzedResume>;
   extractStatus?: ExtractStatus;
 }
 

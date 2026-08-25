@@ -87,3 +87,8 @@
 .exists .hint { margin-bottom: 0; }
 
 .code-links { display: flex; gap: 10px; justify-content: center; align-items: center; margin-top: 14px; font-size: 12.5px; color: var(--muted); }
+
+/* First and last name side by side, stacking on a narrow screen. Matches
+   .roles above rather than introducing a second way to do two columns. */
+.two-up { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+@media (max-width: 560px) { .two-up { grid-template-columns: 1fr; } }

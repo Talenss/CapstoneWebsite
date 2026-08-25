@@ -19,6 +19,9 @@ const router = asyncRouter();
 
 interface RequestRow {
   request_id: number;
+  first_name: string;
+  last_name: string;
+  /** Derived in the database from the two parts above; read-only. */
   full_name: string;
   email: string;
   position_title: string | null;
@@ -79,9 +82,9 @@ router.post('/approve', async (req, res) => {
 
   const placeholder = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
   await exec(
-    `INSERT INTO users (role, full_name, email, password_hash, company_id, position_title, verified)
-     VALUES ('recruiter', ?, ?, ?, ?, ?, 1)`,
-    [r.full_name, r.email, placeholder, r.company_id, r.position_title || 'Recruiter'],
+    `INSERT INTO users (role, first_name, last_name, email, password_hash, company_id, position_title, verified)
+     VALUES ('recruiter', ?, ?, ?, ?, ?, ?, 1)`,
+    [r.first_name, r.last_name, r.email, placeholder, r.company_id, r.position_title || 'Recruiter'],
   );
   await exec("UPDATE recruiter_requests SET status = 'approved' WHERE request_id = ?", [id]);
 

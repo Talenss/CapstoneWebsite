@@ -93,6 +93,23 @@ export class Header {
       .subscribe(() => (this.menuOpen = false));
   }
 
+  /** Where the logo goes.
+   *
+   *  Signed out it is the marketing home page, which is what a logo is for.
+   *  Signed in it is that account's own dashboard, because for someone with
+   *  an account the home page is a page about signing up — it has nothing on
+   *  it they have not already done, and it hides the work they came back for
+   *  behind another click. The signed-in header carries no other route back
+   *  to the dashboard on a phone, where the nav collapses into the menu, so
+   *  the logo is the only always-visible way home.
+   *
+   *  This is the convention every application with a signed-in state uses:
+   *  the logo means "take me to the top of MY view of this site", and which
+   *  page that is depends on who is looking. Each role gets its own, via the
+   *  same homeFor() the log-in redirect uses, so the logo and the log-in can
+   *  never disagree about where an account belongs. */
+  brandHome = computed(() => this.session.homeFor(this.session.user()));
+
   brandSuffix = computed(() =>
     this.effectiveVariant() === 'recruiter' ? 'Recruiter' : this.effectiveVariant() === 'admin' ? 'Research Team' : 'Philippines');
 

@@ -133,21 +133,39 @@ test('a user can change the name on their account, within limits', async () => {
   const api = client();
   await api('auth/login', { email: 'liza@demo.ph', password: 'demo123' });
 
-  const blank = await api('auth/change-name', { name: ' ' });
-  assert.equal(blank.body.ok, false, 'an empty name is refused');
-  const tooLong = await api('auth/change-name', { name: 'x'.repeat(121) });
-  assert.equal(tooLong.body.ok, false, 'a 121-character name is refused');
+  const blank = await api('auth/change-name', { firstName: ' ', lastName: 'Cruz' });
+  assert.equal(blank.body.ok, false, 'an empty first name is refused');
+  const tooLong = await api('auth/change-name', { firstName: 'x'.repeat(61), lastName: 'Cruz' });
+  assert.equal(tooLong.body.ok, false, 'a 61-character first name is refused');
+  const lastTooLong = await api('auth/change-name', { firstName: 'Liza', lastName: 'y'.repeat(61) });
+  assert.equal(lastTooLong.body.ok, false, 'a 61-character last name is refused');
 
-  // still the old name after the two refusals — a rejected write changes nothing
+  // still the old name after the refusals — a rejected write changes nothing
   const before = await api('auth/me');
   assert.equal(before.body.user.name, 'Liza Cruz');
+  assert.equal(before.body.user.firstName, 'Liza');
+  assert.equal(before.body.user.lastName, 'Cruz');
 
-  const good = await api('auth/change-name', { name: '  Liza   Cruz-Reyes  ' });
+  const good = await api('auth/change-name', { firstName: '  Liza  ', lastName: '  Cruz-Reyes  ' });
   assert.equal(good.body.ok, true);
-  // trimmed, and the run of spaces collapsed to one
+  // trimmed, and `name` is derived from the two parts rather than stored
+  assert.equal(good.body.user.firstName, 'Liza');
+  assert.equal(good.body.user.lastName, 'Cruz-Reyes');
   assert.equal(good.body.user.name, 'Liza Cruz-Reyes');
   const after = await api('auth/me');
   assert.equal(after.body.user.name, 'Liza Cruz-Reyes', 'the new name survives the round trip');
+});
+
+test('a first name on its own is a complete name', async () => {
+  // A mononym is a real way for a person to be named, and a sign-up form is
+  // the wrong place to rule on it. The derived full name carries no trailing
+  // space, because the database trims the join.
+  const api = client();
+  await api('auth/login', { email: 'ana@demo.ph', password: 'demo123' });
+  const { body } = await api('auth/change-name', { firstName: 'Ana', lastName: '' });
+  assert.equal(body.ok, true);
+  assert.equal(body.user.lastName, '');
+  assert.equal(body.user.name, 'Ana');
 });
 
 test('changing the account name leaves the name printed on a resume alone', async () => {
@@ -157,7 +175,7 @@ test('changing the account name leaves the name printed on a resume alone', asyn
   const resumeId = mine.body.resumes[0].id;
   const printedBefore = mine.body.resumes[0].personal.fullName;
 
-  const changed = await api('auth/change-name', { name: 'Marco A. Garcia' });
+  const changed = await api('auth/change-name', { firstName: 'Marco A.', lastName: 'Garcia' });
   assert.equal(changed.body.ok, true);
 
   const again = await api('resumes/get', { id: resumeId });
@@ -167,7 +185,7 @@ test('changing the account name leaves the name printed on a resume alone', asyn
 
 test('an anonymous caller cannot change anybody’s name', async () => {
   const api = client(); // never logs in
-  const { body } = await api('auth/change-name', { name: 'Somebody Else' });
+  const { body } = await api('auth/change-name', { firstName: 'Somebody', lastName: 'Else' });
   assert.equal(body.ok, false);
 });
 

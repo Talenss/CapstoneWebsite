@@ -3,7 +3,7 @@
    Everything here is idempotent (IF NOT EXISTS / DROP-then-ADD), so a
    database created from db/resumematch_ph.sql boots with nothing to do,
    and one carried over from an earlier feature set catches up on boot. */
-import { exec } from '../db';
+import { exec, query, withTransaction, Tx } from '../db';
 import { ensureEmailCodesTable } from './email-codes';
 
 
@@ -38,9 +38,117 @@ async function ensureRowLevelSecurity(): Promise<void> {
   }
 }
 
+/** Split one stored name into its two parts, for the backfill below.
+ *
+ *  The last whitespace-separated token is the surname and everything before
+ *  it is the given name, which is the Philippine convention and the one the
+ *  registration form now asks for directly. "Juan Dela Cruz" therefore keeps
+ *  "Dela Cruz" together as the surname only if it was written that way; from
+ *  a single stored string there is no way to know, so it becomes "Juan Dela"
+ *  and "Cruz". That is why this runs ONCE over rows that predate the split
+ *  and never again: every account created after it supplies the two parts
+ *  itself, and anyone whose old name divided badly can correct it from their
+ *  account page. Guessing is acceptable here only because the alternative is
+ *  discarding the name entirely, and because it is correctable. */
+function splitName(full: string): [string, string] {
+  const parts = String(full || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return ['Unnamed', ''];
+  if (parts.length === 1) return [parts[0].slice(0, 60), ''];
+  return [parts.slice(0, -1).join(' ').slice(0, 60), parts[parts.length - 1].slice(0, 60)];
+}
+
+/** What state is this table's name column in?
+ *
+ *    'done'      full_name exists and is GENERATED — the split has run.
+ *    'todo'      full_name is a writable column — the split has not run.
+ *    'half'      full_name is gone but first_name is there — a previous
+ *                attempt died partway. Recoverable, and it MUST be
+ *                recovered: a dozen queries select full_name, so the
+ *                application is broken until the generated column is back. */
+type NameState = 'done' | 'todo' | 'half';
+
+async function nameState(tx: Tx, table: string): Promise<NameState> {
+  const cols = await tx.query<{ column_name: string; is_generated: string }>(
+    `SELECT column_name, is_generated FROM information_schema.columns
+      WHERE table_schema = current_schema() AND table_name = ?
+        AND column_name IN ('full_name', 'first_name')`,
+    [table],
+  );
+  const full = cols.find((c) => c.column_name === 'full_name');
+  if (full) return full.is_generated === 'ALWAYS' ? 'done' : 'todo';
+  return cols.some((c) => c.column_name === 'first_name') ? 'half' : 'todo';
+}
+
+/** users.full_name and recruiter_requests.full_name become first_name +
+ *  last_name, with full_name kept as a GENERATED column.
+ *
+ *  Registration asks for the two parts separately, so the two parts are what
+ *  the database stores. full_name stays because a dozen queries select it to
+ *  print a person's name, and because deriving it in the database rather
+ *  than in each of them means the display name cannot drift from the parts
+ *  it is made of — it is not a second copy, it is the same data spelled out.
+ *  Writing to it is now an error, which is the point: there is exactly one
+ *  way to change someone's name.
+ *
+ *  Ordering matters and is not tidiness. The old column has to be read for
+ *  the backfill before it can be dropped, and it has to be dropped before
+ *  the generated one can take its name. Each step is guarded, so a database
+ *  that has already been through this does nothing. */
+async function splitUserNames(): Promise<void> {
+  for (const table of ['users', 'recruiter_requests']) {
+    /* ONE TRANSACTION for the whole table, and this is load-bearing rather
+       than tidy. Postgres has transactional DDL, so either every statement
+       below lands or none of them do.
+
+       Run as eight separate statements, the window between DROP COLUMN
+       full_name and ADD COLUMN full_name is a window in which the deployed
+       application is broken: a dozen queries select that column. A process
+       that died there — an out-of-memory kill, a restart, a dropped
+       connection to the database — would leave the site down AND unable to
+       repair itself on the next boot, because the check that decides whether
+       to migrate would see no full_name column and skip the table.
+
+       Wrapped, a failure rolls back to the state before the deploy and the
+       running application is untouched. */
+    await withTransaction(async (tx) => {
+      const state = await nameState(tx, table);
+      if (state === 'done') return;
+
+      const idCol = table === 'users' ? 'user_id' : 'request_id';
+      let split = 0;
+
+      if (state === 'todo') {
+        await tx.exec(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS first_name VARCHAR(60)`);
+        await tx.exec(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS last_name VARCHAR(60) NOT NULL DEFAULT ''`);
+
+        const rows = await tx.query<{ id: number; full_name: string }>(
+          `SELECT ${idCol} AS id, full_name FROM ${table} WHERE first_name IS NULL`,
+        );
+        for (const r of rows) {
+          const [first, last] = splitName(r.full_name);
+          await tx.exec(`UPDATE ${table} SET first_name = ?, last_name = ? WHERE ${idCol} = ?`,
+            [first, last, r.id]);
+        }
+        split = rows.length;
+
+        await tx.exec(`ALTER TABLE ${table} ALTER COLUMN first_name SET NOT NULL`);
+        await tx.exec(`ALTER TABLE ${table} DROP COLUMN full_name`);
+      }
+
+      await tx.exec(`ALTER TABLE ${table} ADD COLUMN full_name VARCHAR(121)
+        GENERATED ALWAYS AS (btrim(first_name || ' ' || last_name)) STORED`);
+
+      console.log(state === 'half'
+        ? `Recovered ${table}.full_name (a previous migration had not finished).`
+        : `Migrated ${table}.full_name into first_name + last_name (${split} row(s) split).`);
+    });
+  }
+}
+
 export async function runMigrations(): Promise<void> {
   await ensureEmailCodesTable();
   await ensureRowLevelSecurity();
+  await splitUserNames();
 
   // users.email_notifications — the per-user opt-out for application emails
   await exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_notifications SMALLINT NOT NULL DEFAULT 1');
