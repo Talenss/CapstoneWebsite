@@ -3,7 +3,7 @@
    Everything here is idempotent (IF NOT EXISTS / DROP-then-ADD), so a
    database created from db/resumematch_ph.sql boots with nothing to do,
    and one carried over from an earlier feature set catches up on boot. */
-import { exec, query } from '../db';
+import { exec, query, withTransaction, Tx } from '../db';
 import { ensureEmailCodesTable } from './email-codes';
 
 
@@ -57,16 +57,26 @@ function splitName(full: string): [string, string] {
   return [parts.slice(0, -1).join(' ').slice(0, 60), parts[parts.length - 1].slice(0, 60)];
 }
 
-/** Does this table still carry a writable full_name column? True only before
- *  the split has run — afterwards full_name exists but is GENERATED, which
- *  is_generated reports as 'ALWAYS'. */
-async function hasWritableFullName(table: string): Promise<boolean> {
-  const rows = await query<{ is_generated: string }>(
-    `SELECT is_generated FROM information_schema.columns
-      WHERE table_schema = current_schema() AND table_name = ? AND column_name = 'full_name'`,
+/** What state is this table's name column in?
+ *
+ *    'done'      full_name exists and is GENERATED — the split has run.
+ *    'todo'      full_name is a writable column — the split has not run.
+ *    'half'      full_name is gone but first_name is there — a previous
+ *                attempt died partway. Recoverable, and it MUST be
+ *                recovered: a dozen queries select full_name, so the
+ *                application is broken until the generated column is back. */
+type NameState = 'done' | 'todo' | 'half';
+
+async function nameState(tx: Tx, table: string): Promise<NameState> {
+  const cols = await tx.query<{ column_name: string; is_generated: string }>(
+    `SELECT column_name, is_generated FROM information_schema.columns
+      WHERE table_schema = current_schema() AND table_name = ?
+        AND column_name IN ('full_name', 'first_name')`,
     [table],
   );
-  return rows.length > 0 && rows[0].is_generated !== 'ALWAYS';
+  const full = cols.find((c) => c.column_name === 'full_name');
+  if (full) return full.is_generated === 'ALWAYS' ? 'done' : 'todo';
+  return cols.some((c) => c.column_name === 'first_name') ? 'half' : 'todo';
 }
 
 /** users.full_name and recruiter_requests.full_name become first_name +
@@ -86,25 +96,52 @@ async function hasWritableFullName(table: string): Promise<boolean> {
  *  that has already been through this does nothing. */
 async function splitUserNames(): Promise<void> {
   for (const table of ['users', 'recruiter_requests']) {
-    if (!(await hasWritableFullName(table))) continue;
+    /* ONE TRANSACTION for the whole table, and this is load-bearing rather
+       than tidy. Postgres has transactional DDL, so either every statement
+       below lands or none of them do.
 
-    await exec(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS first_name VARCHAR(60)`);
-    await exec(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS last_name VARCHAR(60) NOT NULL DEFAULT ''`);
+       Run as eight separate statements, the window between DROP COLUMN
+       full_name and ADD COLUMN full_name is a window in which the deployed
+       application is broken: a dozen queries select that column. A process
+       that died there — an out-of-memory kill, a restart, a dropped
+       connection to the database — would leave the site down AND unable to
+       repair itself on the next boot, because the check that decides whether
+       to migrate would see no full_name column and skip the table.
 
-    const idCol = table === 'users' ? 'user_id' : 'request_id';
-    const rows = await query<{ id: number; full_name: string }>(
-      `SELECT ${idCol} AS id, full_name FROM ${table} WHERE first_name IS NULL`,
-    );
-    for (const r of rows) {
-      const [first, last] = splitName(r.full_name);
-      await exec(`UPDATE ${table} SET first_name = ?, last_name = ? WHERE ${idCol} = ?`, [first, last, r.id]);
-    }
+       Wrapped, a failure rolls back to the state before the deploy and the
+       running application is untouched. */
+    await withTransaction(async (tx) => {
+      const state = await nameState(tx, table);
+      if (state === 'done') return;
 
-    await exec(`ALTER TABLE ${table} ALTER COLUMN first_name SET NOT NULL`);
-    await exec(`ALTER TABLE ${table} DROP COLUMN full_name`);
-    await exec(`ALTER TABLE ${table} ADD COLUMN full_name VARCHAR(121)
-      GENERATED ALWAYS AS (btrim(first_name || ' ' || last_name)) STORED`);
-    console.log(`Migrated ${table}.full_name into first_name + last_name (${rows.length} row(s) split).`);
+      const idCol = table === 'users' ? 'user_id' : 'request_id';
+      let split = 0;
+
+      if (state === 'todo') {
+        await tx.exec(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS first_name VARCHAR(60)`);
+        await tx.exec(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS last_name VARCHAR(60) NOT NULL DEFAULT ''`);
+
+        const rows = await tx.query<{ id: number; full_name: string }>(
+          `SELECT ${idCol} AS id, full_name FROM ${table} WHERE first_name IS NULL`,
+        );
+        for (const r of rows) {
+          const [first, last] = splitName(r.full_name);
+          await tx.exec(`UPDATE ${table} SET first_name = ?, last_name = ? WHERE ${idCol} = ?`,
+            [first, last, r.id]);
+        }
+        split = rows.length;
+
+        await tx.exec(`ALTER TABLE ${table} ALTER COLUMN first_name SET NOT NULL`);
+        await tx.exec(`ALTER TABLE ${table} DROP COLUMN full_name`);
+      }
+
+      await tx.exec(`ALTER TABLE ${table} ADD COLUMN full_name VARCHAR(121)
+        GENERATED ALWAYS AS (btrim(first_name || ' ' || last_name)) STORED`);
+
+      console.log(state === 'half'
+        ? `Recovered ${table}.full_name (a previous migration had not finished).`
+        : `Migrated ${table}.full_name into first_name + last_name (${split} row(s) split).`);
+    });
   }
 }
 
