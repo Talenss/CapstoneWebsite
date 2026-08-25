@@ -9,6 +9,7 @@ import { SessionService } from '../../core/session.service';
 import { environment } from '../../../environments/environment';
 import { passwordOk, PASSWORD_HINT } from '../../core/engine';
 import { reportInvalidFields } from '../../shared/invalid-fields';
+import { PasswordRevealDirective } from '../../shared/password-reveal.directive';
 
 /** Port of the PHP account.html — shared by both seeker and
  *  recruiter accounts (the route is guarded with no specific role).
@@ -16,7 +17,7 @@ import { reportInvalidFields } from '../../shared/invalid-fields';
 @Component({
   selector: 'app-account',
   standalone: true,
-  imports: [FormsModule, OtpInput, RouterLink, Header, Footer],
+  imports: [FormsModule, OtpInput, RouterLink, Header, Footer, PasswordRevealDirective],
   templateUrl: './account.html',
   styleUrl: './account.css',
 })

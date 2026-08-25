@@ -33,7 +33,7 @@
             </div>
             <div class="field" [class.invalid]="loginPasswordInvalid()">
               <label for="lp">Password</label>
-              <input type="password" id="lp" autocomplete="current-password" required [(ngModel)]="loginPassword" name="lp" (ngModelChange)="recheck()">
+              <input type="password" appPasswordReveal id="lp" autocomplete="current-password" required [(ngModel)]="loginPassword" name="lp" (ngModelChange)="recheck()">
               <span class="err">Enter your password.</span>
             </div>
             <p class="forgot-row"><button type="button" class="linklike" (click)="toggleForgot(true)">Forgot your password?</button></p>
@@ -96,7 +96,7 @@
               </div>
               <div class="field" [class.invalid]="fpPasswordInvalid()">
                 <label for="fpp">New password</label>
-                <input type="password" id="fpp" autocomplete="new-password" required [(ngModel)]="fpPassword" name="fpp" (ngModelChange)="recheck()">
+                <input type="password" appPasswordReveal id="fpp" autocomplete="new-password" required [(ngModel)]="fpPassword" name="fpp" (ngModelChange)="recheck()">
                 <span class="err">{{ passwordHint }}</span>
                 <p class="hint">{{ passwordHint }}</p>
               </div>
@@ -180,7 +180,7 @@
             @if (role() === 'seeker') {
               <div class="field" [class.invalid]="regPasswordInvalid()">
                 <label for="rp">Password</label>
-                <input type="password" id="rp" autocomplete="new-password" [(ngModel)]="regPassword" name="rp" (ngModelChange)="recheck()">
+                <input type="password" appPasswordReveal id="rp" autocomplete="new-password" [(ngModel)]="regPassword" name="rp" (ngModelChange)="recheck()">
                 <span class="err">{{ passwordHint }}</span>
                 <p class="hint">{{ passwordHint }}</p>
               </div>

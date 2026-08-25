@@ -52,7 +52,7 @@
               </div>
               <div class="field">
                 <label for="cePw">Your password</label>
-                <input type="password" id="cePw" autocomplete="current-password" required [(ngModel)]="cePassword" name="cePw">
+                <input type="password" appPasswordReveal id="cePw" autocomplete="current-password" required [(ngModel)]="cePassword" name="cePw">
               </div>
               <div style="display:flex;gap:9px;flex-wrap:wrap">
                 <button class="btn primary" type="submit" [disabled]="ceBusy()">
@@ -92,17 +92,17 @@
       <form #pwFormRef (submit)="onPwSubmit($event, curInput, newInput, repInput, pwFormRef)" novalidate>
         <div class="field" [class.invalid]="curInvalid()">
           <label for="cur">Current password</label>
-          <input type="password" id="cur" #curInput autocomplete="current-password">
+          <input type="password" appPasswordReveal id="cur" #curInput autocomplete="current-password">
           <span class="err">Enter your current password.</span>
         </div>
         <div class="field" [class.invalid]="newInvalid()">
           <label for="new">New password</label>
-          <input type="password" id="new" #newInput autocomplete="new-password">
+          <input type="password" appPasswordReveal id="new" #newInput autocomplete="new-password">
           <span class="err">{{ passwordHint }}</span>
         </div>
         <div class="field" [class.invalid]="repInvalid()">
           <label for="rep">Repeat new password</label>
-          <input type="password" id="rep" #repInput autocomplete="new-password">
+          <input type="password" appPasswordReveal id="rep" #repInput autocomplete="new-password">
           <span class="err">The two passwords don't match.</span>
         </div>
         <button class="btn primary" type="submit" [disabled]="pwSaving()">
@@ -154,7 +154,7 @@
       <form #delFormRef (submit)="onDeleteSubmit($event, delPwInput)" novalidate>
         <div class="field" [class.invalid]="delInvalid()" style="max-width:320px">
           <label for="delPw">Confirm with your password</label>
-          <input type="password" id="delPw" #delPwInput autocomplete="current-password">
+          <input type="password" appPasswordReveal id="delPw" #delPwInput autocomplete="current-password">
           <span class="err">Password is required.</span>
         </div>
         <button class="btn warn" type="submit" [disabled]="delSaving()">

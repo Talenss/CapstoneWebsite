@@ -9,6 +9,7 @@ import { SessionService } from '../../core/session.service';
 import { Company } from '../../core/models';
 import { passwordOk, PASSWORD_HINT } from '../../core/engine';
 import { reportInvalidFields } from '../../shared/invalid-fields';
+import { PasswordRevealDirective } from '../../shared/password-reveal.directive';
 import { environment } from '../../../environments/environment';
 
 type Tab = 'login' | 'reg';
@@ -30,7 +31,7 @@ const RESEND_SECONDS = 60;
 @Component({
   selector: 'app-auth',
   standalone: true,
-  imports: [FormsModule, OtpInput, RouterLink, Header],
+  imports: [FormsModule, OtpInput, RouterLink, Header, PasswordRevealDirective],
   templateUrl: './auth.html',
   styleUrl: './auth.css',
 })

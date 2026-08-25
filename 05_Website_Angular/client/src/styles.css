@@ -302,6 +302,21 @@ main{flex:1}
 .field .err{display:none;font-size:12.5px;color:var(--wine);margin-top:6px;font-weight:500}
 .field.invalid input,.field.invalid select,.field.invalid textarea{border-color:var(--wine);background:var(--wine-wash)}
 .field.invalid .err{display:block}
+/* Show / Hide inside a password field. The button sits over the right
+   edge of the input, so the input reserves room for it rather than letting
+   a long password run underneath. Added by shared/password-reveal.directive. */
+.pw-wrap{position:relative}
+.pw-input{padding-right:64px !important}
+.pw-toggle{position:absolute;right:1px;bottom:1px;height:calc(100% - 2px);
+  padding:0 12px;border:0;background:none;cursor:pointer;
+  font-family:var(--body);font-size:12px;font-weight:600;letter-spacing:.04em;
+  color:var(--muted);border-radius:0 var(--r) var(--r) 0}
+.pw-toggle:hover{color:var(--text)}
+.pw-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;color:var(--text)}
+/* The label sits above the input, so the button must clear it, not the field. */
+.field.pw-wrap .pw-toggle{bottom:auto;top:26px;height:42px}
+.field.pw-wrap.invalid .pw-toggle{color:var(--wine)}
+
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
 @media(max-width:600px){.row2{grid-template-columns:1fr}}
 .alert{display:none;border-radius:var(--r);padding:12px 15px;font-size:13.5px;margin-bottom:18px;border-left:3px solid}
