@@ -46,12 +46,14 @@ export class Account {
      recruiter reads beside an application. No password and no code: it
      proves nothing, and demanding one would be theatre. */
   nameOpen = signal(false);
-  cnName = '';
+  cnFirst = '';
+  cnLast = '';
   cnError = signal('');
   cnBusy = signal(false);
 
   openChangeName(): void {
-    this.cnName = this.session.user()?.name ?? '';
+    this.cnFirst = this.session.user()?.firstName ?? '';
+    this.cnLast = this.session.user()?.lastName ?? '';
     this.cnError.set('');
     this.nameOpen.set(true);
   }
@@ -63,17 +65,23 @@ export class Account {
   async onChangeName(e: Event): Promise<void> {
     e.preventDefault();
     this.cnError.set('');
-    const clean = this.cnName.trim().replace(/\s+/g, ' ');
-    if (clean.length < 2) {
-      this.cnError.set('Enter your full name.');
+    const first = this.cnFirst.trim().replace(/\s+/g, ' ');
+    const last = this.cnLast.trim().replace(/\s+/g, ' ');
+    if (first.length < 2) {
+      this.cnError.set('Enter your first name.');
       return;
     }
-    if (clean === this.session.user()?.name) {
+    if (first.length > 60 || last.length > 60) {
+      this.cnError.set('Each name can be at most 60 characters.');
+      return;
+    }
+    const u = this.session.user();
+    if (first === (u?.firstName ?? '') && last === (u?.lastName ?? '')) {
       this.nameOpen.set(false);
       return;
     }
     this.cnBusy.set(true);
-    const res = await this.api.auth.changeName(clean);
+    const res = await this.api.auth.changeName(first, last);
     this.cnBusy.set(false);
     if (!res.ok) {
       this.cnError.set(res.error);

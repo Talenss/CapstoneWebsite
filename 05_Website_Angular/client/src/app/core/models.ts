@@ -69,6 +69,12 @@ export type Tier = 'strong' | 'possible' | 'related';
 export interface User {
   id: string;
   role: Role;
+  /** The two parts registration asks for, and the only ones stored. */
+  firstName: string;
+  lastName: string;
+  /** first + last, derived by the database. Read-only: the two fields above
+   *  are what a change writes to. Kept because most of the site wants a
+   *  person's name as one string and should not have to assemble it. */
   name: string;
   email: string;
   createdAt: number;

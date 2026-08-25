@@ -21,6 +21,8 @@ export function serializeUser(u: UserRow | null): any {
     id: String(u.user_id),
     role: u.role,
     name: u.full_name,
+    firstName: u.first_name,
+    lastName: u.last_name,
     email: u.email,
     createdAt: ts(u.created_at),
     // undefined can happen on rows loaded before the migration ran; the

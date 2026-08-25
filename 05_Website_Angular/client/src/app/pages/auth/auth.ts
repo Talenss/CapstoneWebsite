@@ -83,13 +83,15 @@ export class Auth implements OnInit, OnDestroy {
   fpResendLeft = signal(0);
 
   // ---- register form state ----
-  regName = '';
+  regFirstName = '';
+  regLastName = '';
   regEmail = '';
   regPassword = '';
   regCompanyId = '';
   regPosition = '';
   regNote = '';
-  regNameInvalid = signal(false);
+  regFirstNameInvalid = signal(false);
+  regLastNameInvalid = signal(false);
   regEmailInvalid = signal(false);
   regPasswordInvalid = signal(false);
   regCompanyInvalid = signal(false);
@@ -184,7 +186,8 @@ export class Auth implements OnInit, OnDestroy {
     const states = [
       { id: 'le', invalid: this.loginEmailInvalid() && !this.emailValid(this.loginEmail) },
       { id: 'lp', invalid: this.loginPasswordInvalid() && this.loginPassword.length === 0 },
-      { id: 'rn', invalid: this.regNameInvalid() && this.regName.trim().length < 2 },
+      { id: 'rfn', invalid: this.regFirstNameInvalid() && this.regFirstName.trim().length < 2 },
+      { id: 'rln', invalid: this.regLastNameInvalid() && this.regLastName.trim().length > 60 },
       { id: 're', invalid: this.regEmailInvalid() && !this.emailValid(this.regEmail) },
       { id: 'rp', invalid: this.regPasswordInvalid() && !hr && !passwordOk(this.regPassword) },
       { id: 'rc', invalid: this.regCompanyInvalid() && hr && !this.regCompanyId },
@@ -196,15 +199,16 @@ export class Auth implements OnInit, OnDestroy {
     ];
     this.loginEmailInvalid.set(states[0].invalid);
     this.loginPasswordInvalid.set(states[1].invalid);
-    this.regNameInvalid.set(states[2].invalid);
-    this.regEmailInvalid.set(states[3].invalid);
-    this.regPasswordInvalid.set(states[4].invalid);
-    this.regCompanyInvalid.set(states[5].invalid);
-    this.regPositionInvalid.set(states[6].invalid);
-    this.regCodeInvalid.set(states[7].invalid);
-    this.fpEmailInvalid.set(states[8].invalid);
-    this.fpCodeInvalid.set(states[9].invalid);
-    this.fpPasswordInvalid.set(states[10].invalid);
+    this.regFirstNameInvalid.set(states[2].invalid);
+    this.regLastNameInvalid.set(states[3].invalid);
+    this.regEmailInvalid.set(states[4].invalid);
+    this.regPasswordInvalid.set(states[5].invalid);
+    this.regCompanyInvalid.set(states[6].invalid);
+    this.regPositionInvalid.set(states[7].invalid);
+    this.regCodeInvalid.set(states[8].invalid);
+    this.fpEmailInvalid.set(states[9].invalid);
+    this.fpCodeInvalid.set(states[10].invalid);
+    this.fpPasswordInvalid.set(states[11].invalid);
     reportInvalidFields(states, { focus: false });
   }
 
@@ -333,8 +337,12 @@ export class Auth implements OnInit, OnDestroy {
     this.regExists.set(false);
     const hr = this.role() === 'recruiter';
 
-    const nameOk = this.regName.trim().length >= 2;
-    this.regNameInvalid.set(!nameOk);
+    /* Only the first name is required. A person with one name is not an
+        invalid person, and a sign-up form is the wrong place to rule on it. */
+    const nameOk = this.regFirstName.trim().length >= 2 && this.regFirstName.trim().length <= 60;
+    this.regFirstNameInvalid.set(!nameOk);
+    const lastOk = this.regLastName.trim().length <= 60;
+    this.regLastNameInvalid.set(!lastOk);
     const emailOk = this.emailValid(this.regEmail);
     this.regEmailInvalid.set(!emailOk);
 
@@ -363,7 +371,8 @@ export class Auth implements OnInit, OnDestroy {
     // opposite sides of an @if, and focusing a field that is not on screen
     // would be worse than not moving at all.
     if (!reportInvalidFields([
-      { id: 'rn', invalid: !nameOk },
+      { id: 'rfn', invalid: !nameOk },
+      { id: 'rln', invalid: !lastOk },
       { id: 're', invalid: !emailOk },
       ...(hr
         ? [{ id: 'rc', invalid: !companyOk }, { id: 'rpos', invalid: !posOk }]
@@ -393,7 +402,8 @@ export class Auth implements OnInit, OnDestroy {
     } else {
       const companyName = this.companies().find((c) => c.id === this.regCompanyId)?.name ?? '';
       const res = await this.api.auth.requestRecruiterAccess({
-        name: this.regName.trim(),
+        firstName: this.regFirstName.trim(),
+        lastName: this.regLastName.trim(),
         email: this.regEmail.trim(),
         position: this.regPosition.trim(),
         companyId: this.regCompanyId,
@@ -418,7 +428,8 @@ export class Auth implements OnInit, OnDestroy {
 
     this.regBusy.set(true);
     const res = await this.api.auth.registerSeeker({
-      name: this.regName.trim(),
+      firstName: this.regFirstName.trim(),
+      lastName: this.regLastName.trim(),
       email: this.regEmail.trim(),
       password: this.regPassword,
       code: this.regCode.trim(),
@@ -474,13 +485,15 @@ export class Auth implements OnInit, OnDestroy {
   }
 
   private resetRegisterForm(): void {
-    this.regName = '';
+    this.regFirstName = '';
+    this.regLastName = '';
     this.regEmail = '';
     this.regPassword = '';
     this.regCompanyId = '';
     this.regPosition = '';
     this.regNote = '';
-    this.regNameInvalid.set(false);
+    this.regFirstNameInvalid.set(false);
+    this.regLastNameInvalid.set(false);
     this.regEmailInvalid.set(false);
     this.regPasswordInvalid.set(false);
     this.regCompanyInvalid.set(false);

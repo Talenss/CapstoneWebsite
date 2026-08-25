@@ -50,6 +50,38 @@ export interface ParsedResume {
 
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
+interface TextItem { x: number; s: string; w: number }
+
+/** One row of positioned items joined back into a line of text.
+ *
+ *  A space is inserted only where the PDF actually left a gap. This is not a
+ *  refinement — joining every item with a space corrupts words, because
+ *  pdf.js splits a run wherever the encoding changes and a word that spans
+ *  two items arrives as two items with no gap between them. A real five-page
+ *  CV came through as "P ROFILE", "SKILLS MATRIX" beside "T echnical",
+ *  "Holy Angel Unive rsity", and "20 12 - 2017", and the damage was not
+ *  cosmetic: "P ROFILE" stopped matching the profile heading, so the
+ *  document had no summary, and "20 12" stopped being a year.
+ *
+ *  The gap is measured against the end of the previous item (its x plus its
+ *  advance width), so the threshold is in the same text-space units the
+ *  coordinates use. It is deliberately small: anything at or below it is a
+ *  split word, anything above it is at least one real space. Where pdf.js
+ *  reports no width the end falls back to the start, the gap comes out as
+ *  the full advance, and the item is spaced — the previous behaviour, so a
+ *  font that reports nothing is no worse off than before. */
+function joinRow(items: TextItem[]): string {
+  const sorted = [...items].sort((a, b) => a.x - b.x);
+  let line = '';
+  let end: number | null = null;
+  for (const it of sorted) {
+    if (end !== null && it.x - end > 0.9) line += ' ';
+    line += it.s;
+    end = it.x + it.w;
+  }
+  return line.replace(/\s+/g, ' ').trim();
+}
+
 /** Plain text out of a PDF, page by page, with line breaks reconstructed.
  *  pdf.js gives positioned text items rather than lines, so items are grouped
  *  by their y coordinate — without that everything collapses into one line and
@@ -66,7 +98,7 @@ async function pdfToText(buffer: Buffer): Promise<string> {
   for (let n = 1; n <= doc.numPages; n++) {
     const page = await doc.getPage(n);
     const content = await page.getTextContent();
-    const rows = new Map<number, { x: number; s: string }[]>();
+    const rows = new Map<number, TextItem[]>();
     for (const item of content.items as any[]) {
       const s = String(item.str ?? '');
       if (!s.trim()) continue;
@@ -75,11 +107,11 @@ async function pdfToText(buffer: Buffer): Promise<string> {
       const y = Math.round((item.transform?.[5] ?? 0) / 2) * 2;
       const x = item.transform?.[4] ?? 0;
       if (!rows.has(y)) rows.set(y, []);
-      rows.get(y)!.push({ x, s });
+      rows.get(y)!.push({ x, s, w: Number(item.width) || 0 });
     }
     const ordered = [...rows.entries()]
       .sort((a, b) => b[0] - a[0])                       // PDF y grows upward
-      .map(([, items]) => items.sort((a, b) => a.x - b.x).map((i) => i.s).join(' ').replace(/\s+/g, ' ').trim());
+      .map(([, items]) => joinRow(items));
     pages.push(ordered.filter(Boolean).join('\n'));
   }
   await doc.destroy();
@@ -98,21 +130,42 @@ async function docxToText(buffer: Buffer): Promise<string> {
  *  heading. Matching is deliberately strict: a line only counts as a heading
  *  when it is short and contains nothing but the heading words, so a sentence
  *  that happens to mention "experience" does not start a section. */
-type Section = 'summary' | 'education' | 'experience' | 'skills' | 'certifications' | 'projects' | 'languages' | 'references';
+type Section = 'summary' | 'education' | 'experience' | 'skills' | 'certifications' | 'projects' | 'languages' | 'references' | 'other';
 
 const HEADINGS: [Section, RegExp][] = [
   ['summary', /^(professional\s+|personal\s+|career\s+)?(summary|profile|objective|about\s+me|career\s+objective|overview)$/],
-  ['education', /^(education(al)?(\s+(background|qualifications?|attainment|history))?|academic(\s+(background|qualifications?))?|schooling|tertiary\s+education|education\s+and\s+training)$/],
+  /* "Education and Qualifications" is a curriculum vitae heading rather than
+     a resume one, and it was not matched: the connector was missing from the
+     pattern. A real CV therefore reported no education at all, and since the
+     engine scores education as the applicant's highest level over the level
+     the posting asks for, a doctorate read as nothing scored zero on a
+     quarter of the total. */
+  ['education', /^(education(al)?|academic)(\s+(and|&)\s+)?(\s*(background|qualifications?|attainment|history|record|training))?$|^(schooling|tertiary\s+education)$/],
   /* OJT, practicum and work immersion are the whole of a Philippine fresh
      graduate's experience section, and this study's population is fresh
      graduates. Missing them meant reading a resume as having no experience
      at all — the one field that feeds a quarter of every score. */
-  ['experience', /^(work\s+|relevant\s+|professional\s+)?(experience|employment(\s+(history|record))?|work\s+history|career\s+history|professional\s+background|internship(s)?|ojt|on[-\s]the[-\s]job\s+training|practicum|apprenticeship|work\s+immersion|job\s+experience)$/],
-  ['skills', /^(technical\s+|core\s+|key\s+|soft\s+|other\s+|special\s+)?(skills(\s+and\s+(abilities|competenc(y|ies)))?|competenc(y|ies)|proficienc(y|ies)|expertise|qualifications|areas?\s+of\s+expertise|technical\s+proficiency)$/],
+  ['experience', /^(work\s+|relevant\s+|professional\s+)?(experience|employment(\s+(history|record))?|work\s+history|career\s+(history|details|record|summary)|professional\s+background|internship(s)?|ojt|on[-\s]the[-\s]job\s+training|practicum|apprenticeship|work\s+immersion|job\s+experience)$/],
+  ['skills', /^(technical\s+|core\s+|key\s+|soft\s+|other\s+|special\s+)?(skills?(\s+(matrix|set|summary))?(\s+and\s+(abilities|competenc(y|ies)))?|competenc(y|ies)|proficienc(y|ies)|expertise|qualifications|areas?\s+of\s+expertise|technical\s+proficiency)$/],
   ['certifications', /^(certification(s)?|certificates?|licen[cs]es?|trainings?(\s+attended)?|seminars?(\s+attended)?|awards?(\s+and\s+(recognitions?|honou?rs?))?|achievements?|honou?rs?(\s+and\s+awards?)?|professional\s+development|eligibilit(y|ies))$/],
   ['projects', /^(projects?|portfolio|project\s+experience|academic\s+projects?|capstone(\s+project)?|thesis)$/],
   ['languages', /^(languages?|language\s+proficiency|languages?\s+spoken)$/],
   ['references', /^(references?|character\s+references?|personal\s+references?)$/],
+  /* Sections a CV carries and a resume usually does not. Nothing reads them,
+     and that is the point: before they were listed, a heading no rule
+     recognised did not end the section above it, so the memberships under
+     "PROFESSIONAL ORGANIZATION" were read as jobs — "Member, 2016 to
+     present" became ten years of employment. Naming a section is how the
+     parser is told where the previous one stopped.
+
+     "PERSONAL INFORMATION" is deliberately NOT here, though it looks like it
+     belongs. Plenty of Philippine resumes use it as the banner over the name
+     and contact details, and those lines are found precisely because no
+     heading claims them — they stay in `head`, which is where findName and
+     the email and phone patterns look. Listing it would start a section
+     there, empty `head`, and cost every such resume its name, email and
+     phone number. */
+  ['other', /^(professional\s+(organi[sz]ations?|affiliations?|membership(s)?)|organi[sz]ations?(\s+(and|&)\s+affiliations?)?|affiliations?|membership(s)?|hobbies(\s+(and|&)\s+interests)?|interests|personal\s+attributes?|character\s+(traits?|attributes?)|extra[-\s]?curricular(\s+activities)?|community\s+involvement|volunteer(\s+work|\s+experience)?)$/],
 ];
 
 /** The content that shared a line with its heading — "SKILLS: HTML, CSS"
@@ -122,7 +175,7 @@ const HEADINGS: [Section, RegExp][] = [
  *  resume compact enough to write them on the heading line. */
 function headingTail(line: string): string {
   const t = line.trim()
-    .replace(/^[\s•▪●■○‣⁃>*#–—_-]+/, '')
+    .replace(/^[\s•▪●■○‣⁃➢➣➤►▸>*#–—_-]+/, '')
     .replace(/^\d{1,2}\s*[.)]\s*/, '');
   const colon = t.indexOf(':');
   if (colon <= 0 || colon > 40) return '';
@@ -135,7 +188,7 @@ function headingOf(line: string): Section | null {
   /* A heading is often numbered or bulleted by the template rather than by
      the writer — "1. EDUCATION", "> SKILLS", "▪ PROJECTS". Strip that
      ornament before matching, never after: it is not part of the word. */
-  t = t.replace(/^[\s•▪●■○‣⁃>*#–—_-]+/, '')
+  t = t.replace(/^[\s•▪●■○‣⁃➢➣➤►▸>*#–—_-]+/, '')
        .replace(/^\d{1,2}\s*[.)]\s*/, '');
 
   /* "SKILLS: HTML, CSS, JavaScript" is one line doing two jobs. Everything
@@ -158,7 +211,22 @@ function headingOf(line: string): Section | null {
     t = groups.map((g) => g.split(/\s+/).join('')).join(' ');
   }
 
-  t = t.replace(/[:–—_.*#>-]+$/g, '').trim().toLowerCase();
+  /* A trailing full stop is trimmed only when the line is not plain lowercase
+     prose. "EDUCATION." and "Education." are headings somebody punctuated;
+     "employment." is the last word of a wrapped sentence, and it must not
+     become one.
+
+     This is the bug that broke the five-page CV. Its faculty duties ended
+     "...policies of the system governing / employment." — the wrap put
+     "employment." alone on a line, the full stop was trimmed, and the
+     experience section began there, in the middle of a bullet. Everything
+     below it was read as employment history: two coordinator roles and three
+     professional-society memberships became 193 months of work, while the
+     thirteen years of real career history ABOVE the false heading were never
+     read at all. One stray word silently replaced the applicant's history
+     with somebody else's arithmetic. */
+  const prose = /[a-z]\.$/.test(t) && t === t.toLowerCase();
+  t = t.replace(prose ? /[:–—_*#>-]+$/g : /[:–—_.*#>-]+$/g, '').trim().toLowerCase();
   if (!t || t.length > 40) return null;
   for (const [sec, re] of HEADINGS) if (re.test(t)) return sec;
   return null;
@@ -250,7 +318,15 @@ function findName(head: string[]): string {
      being returned as the applicant's name. */
   const BAD = /\b(resume|resumé|curriculum|vitae|cv|profile|address|email|phone|mobile|contact|objective|summary|personal|information|data|biodata|bio|particulars|application|applicant|details)\b/i;
   for (const raw of head.slice(0, 8)) {
-    const line = raw.trim().replace(/[|•·,]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const line = raw.trim().replace(/[|•·,]+/g, ' ').replace(/\s+/g, ' ')
+      /* Close up a hyphen that has drifted apart. A PDF routinely renders a
+         double-barrelled surname as "SALENGA - MENDEZ", which tokenises into
+         a bare "-" that is not a word, so the whole line failed the name test
+         and the reader fell through to the line below it — returning the job
+         title "College Faculty" as the applicant's name. The same drift
+         affects apostrophes in names like "D' Souza". */
+      .replace(/([A-Za-zÀ-ÿ])\s*([-'])\s*([A-Za-zÀ-ÿ])/g, '$1$2$3')
+      .trim();
     if (!line || line.length > 60 || BAD.test(line)) continue;
     if (RE_EMAIL.test(line) || /\d/.test(line)) continue;
     const words = line.split(' ').filter(Boolean);
@@ -258,8 +334,14 @@ function findName(head: string[]): string {
     // Accept Title Case and ALL CAPS, both common on Philippine resumes.
     const ok = words.every((w) => /^[A-Z][A-Za-zÀ-ÿ'.-]*$/.test(w) || /^[A-ZÀ-Ý'.-]{2,}$/.test(w));
     if (!ok) continue;
-    return words.map((w) => (w === w.toUpperCase() && w.length > 1
-      ? w.charAt(0) + w.slice(1).toLowerCase() : w)).join(' ');
+    /* Title-case each part of a compound surname separately, so an all-caps
+       "SALENGA-MENDEZ" comes back as "Salenga-Mendez" rather than
+       "Salenga-mendez". */
+    const titleCase = (w: string) => (w === w.toUpperCase() && w.length > 1
+      ? w.split(/([-'])/).map((part) => (/^[-']$/.test(part) || !part ? part
+        : part.charAt(0) + part.slice(1).toLowerCase())).join('')
+      : w);
+    return words.map(titleCase).join(' ');
   }
   return '';
 }
@@ -327,7 +409,11 @@ const findYear = (s: string): string => (s.match(/\b(19|20)\d{2}\b/) || [''])[0]
 /* Longest first: "associate" must not win inside "associate of science in
    bachelor…", and "high school" must be tried before "school". */
 const LEVEL_PATTERNS: [string, RegExp][] = [
-  ['master', /\b(master'?s?|mba|ms\.?c|m\.?a\.?\b|m\.?s\.?\b|post-?graduate|graduate\s+studies)\b/i],
+  /* A doctorate maps to 'master' because that is the highest rank EDU_RANK
+     defines (engine.ts). It is the top of the scale either way, so nothing is
+     lost — but with no pattern at all a doctorate read as 'none', and a
+     posting asking for a bachelor's scored its holder zero on education. */
+  ['master', /\b(doctor(ate|al)?|ph\.?\s?d|d\.?i\.?t\.?|ed\.?d|d\.?b\.?a|master'?s?|mba|ms\.?c|m\.?a\.?\b|m\.?s\.?\b|post-?graduate|graduate\s+studies)\b/i],
   ['bachelor', /\b(bachelor'?s?|b\.?s\.?\b|b\.?a\.?\b|bsc|undergraduate|college\s+graduate|ab\b)\b/i],
   ['associate', /\b(associate'?s?|2-?year\s+course|diploma\s+in)\b/i],
   ['vocational', /\b(vocational|tesda|nc\s?(i{1,3}|iv)\b|technical\s+course|certificate\s+course)\b/i],
@@ -386,7 +472,7 @@ function groupBlocks(lines: string[]): string[][] {
 
   for (const line of lines) {
     if (line.trim() === '') { flush(); continue; }
-    const isBullet = /^\s*[•·*\-–▪○]/.test(line);
+    const isBullet = RE_BULLET.test(line);
     const hasRange = !isBullet && RE_RANGE.test(line);
     if (!isBullet && dated && cur.length) { flush(); }
     cur.push(line);
@@ -396,14 +482,23 @@ function groupBlocks(lines: string[]): string[][] {
   return blocks.filter((b) => b.some((l) => l.trim()));
 }
 
+/* Every glyph a resume uses to start a bullet, in one place.
+   The arrows matter: Word's default bullet in several built-in list styles is
+   ➢, and a five-page CV written that way had EVERY bullet read as an ordinary
+   line. That is not cosmetic — groupBlocks uses "is this a bullet?" to decide
+   where one job ends and the next begins, so each duty line was treated as a
+   new employer. */
+const BULLET_CHARS = '•·*\\-–—▪▫●■□○◦‣⁃➢➣➤►▸◆❖✓✔»';
+const RE_BULLET = new RegExp('^\\s*[' + BULLET_CHARS + ']');
+
 const clean = (s: string, max: number): string =>
-  s.replace(/^[\s•·*\-–▪○|]+/, '').replace(/\s+/g, ' ').trim().slice(0, max);
+  s.replace(new RegExp('^[\\s' + BULLET_CHARS + '|]+'), '').replace(/\s+/g, ' ').trim().slice(0, max);
 
 function parseExperience(lines: string[]): ParsedResume['experience'] {
   const out: ParsedResume['experience'] = [];
   for (const block of groupBlocks(lines)) {
-    const bullets = block.filter((l) => /^\s*[•·*\-–▪○]/.test(l)).map((l) => clean(l, 300)).filter(Boolean).slice(0, 8);
-    const plain = block.filter((l) => !/^\s*[•·*\-–▪○]/.test(l));
+    const bullets = block.filter((l) => RE_BULLET.test(l)).map((l) => clean(l, 300)).filter(Boolean).slice(0, 8);
+    const plain = block.filter((l) => !RE_BULLET.test(l));
     const joined = block.join(' ');
     const months = monthsFromRange(joined) || monthsFromWords(joined);
 
@@ -411,16 +506,21 @@ function parseExperience(lines: string[]): ParsedResume['experience'] {
        resumes, the job title and the employer — in one order or the other.
        Strip the date range out of them so it does not end up in the title. */
     const stripDate = (s: string) => clean(s.replace(RE_RANGE, '').replace(/[|,;]\s*$/, ''), 160);
-    const first = stripDate(plain[0] ?? '');
-    const second = stripDate(plain[1] ?? '');
+    /* "Main Duties:" is a label introducing the bullets under a job, not the
+       job. Dropping lines that end in a colon before choosing the title and
+       employer stops the label being reported as the applicant's position —
+       which is what a real CV produced for every one of its six roles. */
+    const named = plain.filter((l) => !/:\s*$/.test(l.trim()));
+    const first = stripDate(named[0] ?? '');
+    const second = stripDate(named[1] ?? '');
     let position = first;
     let company = second;
     // "Position at Company" / "Position — Company" on a single line.
-    const inline = (plain[0] ?? '').match(/^(.{2,80}?)\s+(?:at|@|\||—|–|,)\s+(.{2,80}?)\s*$/);
+    const inline = (named[0] ?? '').match(/^(.{2,80}?)\s+(?:at|@|\||—|–|,)\s+(.{2,80}?)\s*$/);
     if (inline && !second) { position = stripDate(inline[1]); company = stripDate(inline[2]); }
     if (!position && !company) continue;
 
-    const description = clean(plain.slice(2).join(' '), 1000);
+    const description = clean(named.slice(2).join(' '), 1000);
     out.push({ position, company, months, description, ...(bullets.length ? { bullets } : {}) });
     if (out.length >= 15) break;
   }
@@ -485,19 +585,54 @@ async function parseSkills(sectionLines: string[], wholeText: string): Promise<s
   const found = new Map<string, string>();   // normalised -> display
 
   for (const line of sectionLines) {
-    for (const piece of line.split(/[,;|•·•\t]|\s{3,}/)) {
+    /* An unrecognised heading does not end the section above it, so the lines
+       under it arrive here. A five-page CV misspelled its own heading as
+       "PESRONAL ATTRIBUTES -" and the misspelling plus the sentences beneath
+       it were read as skills. A line that carries no separator, ends in a
+       dash or colon and sits alone is a heading this parser failed to name;
+       skip it rather than claim it. */
+    if (/^[^,;|\t]{2,40}\s*[-–—:]\s*$/.test(line.trim())) continue;
+    for (const piece of line.split(new RegExp('[,;|\\t' + BULLET_CHARS.replace('\\-', '') + ']|\\s{3,}'))) {
       const term = clean(piece, 120).replace(/[.:]$/, '');
       if (!term || term.length < 2 || term.length > 60) continue;
       if (/^(and|or|etc|others?)$/i.test(term)) continue;
+      /* A skill is a name, not a sentence. Unrecognised terms are kept
+         deliberately — the catalogue does not cover every trade — but a
+         section heading the parser failed to recognise spills prose into
+         here, and without this the applicant's skill list filled up with
+         fragments like "and is self confident". Five words or a lowercase
+         opening conjunction means prose; either way it is not a skill.
+         Nothing here changes a score, since only catalogued skills can
+         match a posting; it changes what the applicant is shown they
+         claimed. */
+      if (term.split(/\s+/).length > 4) continue;
+      if (/^(and|or|but|with|that|which|to|for|of|in|is|are|the|a|an)\s/i.test(term)) continue;
       const n = skillNorm(term);
       if (!n) continue;
+      /* A term the catalogue knows is a skill whatever its case. A term it
+         does not know is only kept when it is written like a name — a skills
+         list is Title Case or an acronym, whereas the middle of a sentence
+         is not. Without this, "poised" out of "poised, and personally in
+         control of situations" was listed as one of the applicant's
+         skills. */
+      if (!vocab.has(n) && !/^[A-Z0-9]/.test(term)) continue;
       found.set(n, vocab.get(n) ?? term);
     }
   }
 
   for (const [n, display] of sweepVocabulary(wholeText, vocab)) if (!found.has(n)) found.set(n, display);
 
-  return [...found.values()].slice(0, 30);
+  /* Catalogued skills first, then the rest, before the cap is applied.
+     Only a catalogued skill can ever match a posting's requirement, so when
+     the cap bites it must not be the scoring ones that fall off the end. A
+     five-page CV listed twenty-seven course titles in its skills matrix and
+     pushed all but three of its actual matchable skills past the limit —
+     the applicant was scored as though they had almost none. Order within
+     each group is preserved, so a resume under the cap is unaffected. */
+  const catalogued: string[] = [];
+  const rest: string[] = [];
+  for (const [n, display] of found) (vocab.has(n) ? catalogued : rest).push(display);
+  return [...catalogued, ...rest].slice(0, 30);
 }
 
 /* ---------------- the rest ---------------- */

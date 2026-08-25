@@ -17,16 +17,16 @@ export interface ApiAdapter {
      *  mode without SMTP. The code comes back in devCode so the flow still
      *  works, clearly labelled as such in the UI. */
     sendCode(email: string, purpose: 'verify' | 'reset'): Promise<ApiResult<{ sent?: boolean; devCode?: string; simulated?: boolean; note?: string }>>;
-    registerSeeker(d: { name: string; email: string; password: string; code: string }): Promise<ApiResult<{ user: User }>>;
+    registerSeeker(d: { firstName: string; lastName: string; email: string; password: string; code: string }): Promise<ApiResult<{ user: User }>>;
     resetPassword(d: { email: string; code: string; password: string }): Promise<ApiResult<object>>;
-    requestRecruiterAccess(d: { name: string; email: string; position: string; companyId: string; note?: string }): Promise<ApiResult<object>>;
+    requestRecruiterAccess(d: { firstName: string; lastName: string; email: string; position: string; companyId: string; note?: string }): Promise<ApiResult<object>>;
     logout(): Promise<ApiResult<object>>;
     me(): Promise<ApiResult<{ user: User | null }>>;
     changePassword(current: string, next: string): Promise<ApiResult<object>>;
     /** The name on the account, what a recruiter reads beside an application.
      *  Not a credential, so no code and no password, the same as the
      *  notification toggle. Saved resumes keep their own printed name. */
-    changeName(name: string): Promise<ApiResult<{ user: User }>>;
+    changeName(firstName: string, lastName: string): Promise<ApiResult<{ user: User }>>;
     /** Change email, proven the same way as registration: a code goes to
      *  the NEW address; the switch happens only when it checks out. */
     changeEmailStart(newEmail: string, password: string): Promise<ApiResult<{ sent?: boolean; devCode?: string; simulated?: boolean; note?: string }>>;

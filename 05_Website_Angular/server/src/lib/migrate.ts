@@ -3,7 +3,7 @@
    Everything here is idempotent (IF NOT EXISTS / DROP-then-ADD), so a
    database created from db/resumematch_ph.sql boots with nothing to do,
    and one carried over from an earlier feature set catches up on boot. */
-import { exec } from '../db';
+import { exec, query } from '../db';
 import { ensureEmailCodesTable } from './email-codes';
 
 
@@ -38,9 +38,80 @@ async function ensureRowLevelSecurity(): Promise<void> {
   }
 }
 
+/** Split one stored name into its two parts, for the backfill below.
+ *
+ *  The last whitespace-separated token is the surname and everything before
+ *  it is the given name, which is the Philippine convention and the one the
+ *  registration form now asks for directly. "Juan Dela Cruz" therefore keeps
+ *  "Dela Cruz" together as the surname only if it was written that way; from
+ *  a single stored string there is no way to know, so it becomes "Juan Dela"
+ *  and "Cruz". That is why this runs ONCE over rows that predate the split
+ *  and never again: every account created after it supplies the two parts
+ *  itself, and anyone whose old name divided badly can correct it from their
+ *  account page. Guessing is acceptable here only because the alternative is
+ *  discarding the name entirely, and because it is correctable. */
+function splitName(full: string): [string, string] {
+  const parts = String(full || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return ['Unnamed', ''];
+  if (parts.length === 1) return [parts[0].slice(0, 60), ''];
+  return [parts.slice(0, -1).join(' ').slice(0, 60), parts[parts.length - 1].slice(0, 60)];
+}
+
+/** Does this table still carry a writable full_name column? True only before
+ *  the split has run — afterwards full_name exists but is GENERATED, which
+ *  is_generated reports as 'ALWAYS'. */
+async function hasWritableFullName(table: string): Promise<boolean> {
+  const rows = await query<{ is_generated: string }>(
+    `SELECT is_generated FROM information_schema.columns
+      WHERE table_schema = current_schema() AND table_name = ? AND column_name = 'full_name'`,
+    [table],
+  );
+  return rows.length > 0 && rows[0].is_generated !== 'ALWAYS';
+}
+
+/** users.full_name and recruiter_requests.full_name become first_name +
+ *  last_name, with full_name kept as a GENERATED column.
+ *
+ *  Registration asks for the two parts separately, so the two parts are what
+ *  the database stores. full_name stays because a dozen queries select it to
+ *  print a person's name, and because deriving it in the database rather
+ *  than in each of them means the display name cannot drift from the parts
+ *  it is made of — it is not a second copy, it is the same data spelled out.
+ *  Writing to it is now an error, which is the point: there is exactly one
+ *  way to change someone's name.
+ *
+ *  Ordering matters and is not tidiness. The old column has to be read for
+ *  the backfill before it can be dropped, and it has to be dropped before
+ *  the generated one can take its name. Each step is guarded, so a database
+ *  that has already been through this does nothing. */
+async function splitUserNames(): Promise<void> {
+  for (const table of ['users', 'recruiter_requests']) {
+    if (!(await hasWritableFullName(table))) continue;
+
+    await exec(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS first_name VARCHAR(60)`);
+    await exec(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS last_name VARCHAR(60) NOT NULL DEFAULT ''`);
+
+    const idCol = table === 'users' ? 'user_id' : 'request_id';
+    const rows = await query<{ id: number; full_name: string }>(
+      `SELECT ${idCol} AS id, full_name FROM ${table} WHERE first_name IS NULL`,
+    );
+    for (const r of rows) {
+      const [first, last] = splitName(r.full_name);
+      await exec(`UPDATE ${table} SET first_name = ?, last_name = ? WHERE ${idCol} = ?`, [first, last, r.id]);
+    }
+
+    await exec(`ALTER TABLE ${table} ALTER COLUMN first_name SET NOT NULL`);
+    await exec(`ALTER TABLE ${table} DROP COLUMN full_name`);
+    await exec(`ALTER TABLE ${table} ADD COLUMN full_name VARCHAR(121)
+      GENERATED ALWAYS AS (btrim(first_name || ' ' || last_name)) STORED`);
+    console.log(`Migrated ${table}.full_name into first_name + last_name (${rows.length} row(s) split).`);
+  }
+}
+
 export async function runMigrations(): Promise<void> {
   await ensureEmailCodesTable();
   await ensureRowLevelSecurity();
+  await splitUserNames();
 
   // users.email_notifications — the per-user opt-out for application emails
   await exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_notifications SMALLINT NOT NULL DEFAULT 1');

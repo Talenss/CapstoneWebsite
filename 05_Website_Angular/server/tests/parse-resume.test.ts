@@ -511,3 +511,105 @@ test('experience counts MONTHS, not entries', () => {
   assert.deepEqual(thinReading(zeroMonths).empty, ['skills', 'education', 'experience']);
   assert.equal(thinReading(zeroMonths).thin, true);
 });
+
+/* ============================================================
+   Reading a CURRICULUM VITAE, not a resume.
+
+   A five-page academic CV was uploaded to the live site and scored 25 out
+   of 100 — the whole of it the experience component, which happened to be
+   full of the wrong thing. The applicant holds a doctorate and thirteen
+   years of university teaching. Every failure below is one this parser
+   actually committed on that document, and each test names the specific
+   damage rather than the pattern that fixes it.
+   ============================================================ */
+
+test('a wrapped sentence ending in a heading word does not start a section', () => {
+  // The line that did the damage. A faculty duty wrapped so that
+  // "employment." sat alone; the full stop was trimmed and it matched the
+  // experience heading, so everything below a mid-bullet line was read as
+  // employment history and everything above it was discarded.
+  assert.equal(headingOf('employment.'), null);
+  assert.equal(headingOf('experience.'), null);
+  assert.equal(headingOf('qualifications.'), null);
+
+  // A heading someone chose to punctuate is still a heading, and a heading
+  // with no full stop is unaffected.
+  assert.equal(headingOf('EDUCATION.'), 'education');
+  assert.equal(headingOf('Education.'), 'education');
+  assert.equal(headingOf('employment'), 'experience');
+});
+
+test('curriculum vitae section names are recognised', () => {
+  assert.equal(headingOf('CAREER DETAILS'), 'experience');
+  assert.equal(headingOf('Career Details -'), 'experience');
+  assert.equal(headingOf('SKILLS MATRIX'), 'skills');
+  assert.equal(headingOf('Education and Qualifications'), 'education');
+  assert.equal(headingOf('Educational Attainment'), 'education');
+  assert.equal(headingOf('Academic Background'), 'education');
+});
+
+test('sections that are not experience end the section above them', () => {
+  // "PROFESSIONAL ORGANIZATION" matched no rule, so it did not close the
+  // section before it and three society memberships were read as jobs:
+  // "Member, 2016 to present" alone contributed ten years of employment.
+  assert.equal(headingOf('PROFESSIONAL ORGANIZATION'), 'other');
+  assert.equal(headingOf('Hobbies and Interests'), 'other');
+  assert.equal(headingOf('PERSONAL ATTRIBUTES'), 'other');
+
+  const { sections } = splitSections([
+    'CAREER DETAILS',
+    'Field Officer, LGU San Fernando  Jan 2020 - Dec 2022',
+    'PROFESSIONAL ORGANIZATION',
+    'PHILIPPINE SOCIETY OF IT EDUCATORS',
+    'Member, 2016 to present',
+  ].join('\n'));
+  assert.equal(sections.experience.length, 1);
+  assert.ok(!sections.experience.join(' ').includes('Member'));
+});
+
+test('a doctorate is read as the top of the education scale', () => {
+  // EDU_RANK stops at master, so a doctorate belongs there. With no pattern
+  // at all it read as 'none', and a posting asking for a bachelor's degree
+  // scored the holder of a doctorate zero on a quarter of the total.
+  assert.equal(levelOf('Doctor of Information Technology (DIT)'), 'master');
+  assert.equal(levelOf('PhD in Computer Science'), 'master');
+  assert.equal(levelOf('Doctorate in Education'), 'master');
+  // Still distinguishes the levels below it.
+  assert.equal(levelOf('Bachelor of Science in Computer Science'), 'bachelor');
+});
+
+test('a surname split by a stray hyphen is still a name', () => {
+  // A PDF renders "SALENGA-MENDEZ" as "SALENGA - MENDEZ". The bare "-" is
+  // not a word, the line failed the name test, and the reader fell through
+  // to the line below — returning the job title "College Faculty" as the
+  // applicant's name.
+  assert.equal(findName(['JEANKY SALENGA - MENDEZ', 'College Faculty']), 'Jeanky Salenga-Mendez');
+  // Each part of the compound is capitalised, not just the first.
+  assert.equal(findName(['MARIA SANTOS-REYES']), 'Maria Santos-Reyes');
+  assert.equal(findName(['Juan Dela Cruz']), 'Juan Dela Cruz');
+});
+
+test('"PERSONAL INFORMATION" stays out of the way of the contact block', () => {
+  // A banner over the name and contact details, which is how many Philippine
+  // resumes open. It must NOT be treated as a section: the name, email and
+  // phone are found in the text BEFORE the first heading, so claiming this
+  // line would empty that region and cost every such resume its contact
+  // details. This is the trap the 'other' bucket could easily have set.
+  assert.equal(headingOf('PERSONAL INFORMATION'), null);
+  assert.equal(headingOf('Personal Details'), null);
+
+  const { head, sections } = splitSections([
+    'PERSONAL INFORMATION',
+    'Juan Dela Cruz',
+    'juan.delacruz@example.ph',
+    '0917 123 4567',
+    'SKILLS',
+    'JavaScript, HTML/CSS',
+  ].join('\n'));
+  assert.equal(findName(head), 'Juan Dela Cruz');
+  assert.ok(head.join(' ').includes('juan.delacruz@example.ph'));
+  assert.ok(sections.skills.join(' ').includes('JavaScript'));
+
+  // A genuinely prose section is still discarded, which is what 'other' is for.
+  assert.equal(headingOf('PERSONAL ATTRIBUTES'), 'other');
+});

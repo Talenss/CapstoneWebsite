@@ -131,7 +131,7 @@ test('a verification code is actually emailed, and it works', async () => {
 
   // the emailed code is the one that completes registration
   const reg = await api('auth/register', {
-    name: 'New Seeker', email, password: 'abcd1234', code: codeFrom(mail.body),
+    firstName: 'New', lastName: 'Seeker', email, password: 'abcd1234', code: codeFrom(mail.body),
   });
   assert.equal(reg.body.ok, true, 'the emailed code must complete registration');
   assert.equal(reg.body.user.email, email);
@@ -144,7 +144,7 @@ test('a wrong code does not register an account', async () => {
   await api('auth/send-code', { email, purpose: 'verify' });
   await sink.waitFor((m) => m.to.includes(email));
 
-  const reg = await api('auth/register', { name: 'Nope', email, password: 'abcd1234', code: '000000' });
+  const reg = await api('auth/register', { firstName: 'Nope', lastName: 'Here', email, password: 'abcd1234', code: '000000' });
   assert.equal(reg.body.ok, false, 'a guessed code must be refused');
 });
 
@@ -161,7 +161,7 @@ test('the password reset code is emailed and resets the password', async () => {
   await api('auth/send-code', { email, purpose: 'verify' });
   const verify = await sink.waitFor((m) => m.to.includes(email));
   const reg = await api('auth/register', {
-    name: 'Reset Me', email, password: 'original123', code: codeFrom(verify.body),
+    firstName: 'Reset', lastName: 'Me', email, password: 'original123', code: codeFrom(verify.body),
   });
   assert.equal(reg.body.ok, true);
 
@@ -205,7 +205,7 @@ test('a recruiter can be approved and then actually set a password by email', as
 
   const companies = (await anon('companies/list')).body.companies;
   const req = await anon('auth/request-access', {
-    name: 'HR Santos', email: typed, position: 'HR Officer',
+    firstName: 'HR', lastName: 'Santos', email: typed, position: 'HR Officer',
     companyId: companies[0].id, note: 'Please add me.',
   });
   assert.equal(req.body.ok, true, 'the access request must be accepted');

@@ -9,6 +9,10 @@ declare module 'express-session' {
 export interface UserRow {
   user_id: number;
   role: 'seeker' | 'recruiter' | 'admin';
+  first_name: string;
+  last_name: string;
+  /** Derived in the database from first_name + last_name. Read-only:
+   *  an INSERT or UPDATE naming this column is rejected by Postgres. */
   full_name: string;
   email: string;
   password_hash: string;
