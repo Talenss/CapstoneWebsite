@@ -1,0 +1,17 @@
+Marco Antonio Garcia
+marco.garcia@example.ph
+0920 111 2233
+
+education
+Holy Angel University
+Bachelor of Science in Computer Science
+2020 - 2024
+
+experience
+Junior Developer
+Freelance
+June 2024 - Present
+Built small business websites.
+
+skills
+JavaScript, HTML/CSS, Git

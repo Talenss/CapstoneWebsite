@@ -13,6 +13,8 @@ import assert from 'node:assert/strict';
 import { parseResume, __rules } from '../src/lib/parse-resume';
 import { thinReading } from '../src/lib/extract';
 import { EDU_RANK } from '../src/lib/engine';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const { headingOf, headingTail, undoubleSpace, splitSections, findName, monthsFromRange, monthsFromWords, levelOf, groupBlocks, sweepVocabulary } = __rules;
 
@@ -612,4 +614,85 @@ test('"PERSONAL INFORMATION" stays out of the way of the contact block', () => {
 
   // A genuinely prose section is still discarded, which is what 'other' is for.
   assert.equal(headingOf('PERSONAL ATTRIBUTES'), 'other');
+});
+
+/* ============================================================
+   THE ORDINARY-RESUME CORPUS.
+
+   The curriculum vitae repairs above were made against ONE document, which
+   is exactly the way a reader gets tuned to one document and quietly made
+   worse for every other. These ten fixtures are the shapes the study's
+   actual population writes — fresh graduates, OJT and practicum, Philippine
+   layouts — and they exist so that a change made for a CV has to prove it
+   left them alone.
+
+   Each expectation below is what the reader produced BEFORE the CV work,
+   recorded from the previous commit and asserted here unchanged. They are
+   not aspirations; they are the status quo, and a diff in this table is a
+   regression until somebody says otherwise.
+
+   The skill COUNT is asserted rather than the skill names. The count is the
+   same whether or not the catalogue can be read from the database; the names
+   are not, because a term the catalogue knows is reported under the
+   catalogue's spelling ("MS Office") and the same term is otherwise reported
+   as the resume wrote it ("Microsoft Office"). Asserting names would make
+   this suite pass or fail on whether a database happened to be reachable,
+   which is not what it is here to check. The count still catches the failure
+   it was written for: a section that ends early loses whole skills, not
+   spellings.
+   ============================================================ */
+const CORPUS: Record<string, { name: string; skills: number; education: number; level: string; months: number }> = {
+  '01-fresh-grad-ojt.txt':          { name: 'Juan Dela Cruz',       skills: 5, education: 1, level: 'bachelor',   months: 4 },
+  '02-spaced-headings.txt':         { name: 'Maria Santos',         skills: 3, education: 1, level: 'bachelor',   months: 39 },
+  '03-numbered-practicum.txt':      { name: 'Ana Reyes',            skills: 4, education: 1, level: 'bachelor',   months: 5 },
+  // The banner that must NOT become a section, or the contact block is lost.
+  '04-personal-info-banner.txt':    { name: 'Juan Miguel Dela Cruz', skills: 5, education: 1, level: 'bachelor',  months: 4 },
+  '05-employment-history.txt':      { name: 'Ana Marie Reyes',      skills: 4, education: 1, level: 'bachelor',   months: 47 },
+  // Carries the word "employment." alone on a wrapped line, mid-bullet.
+  '06-prose-trap.txt':              { name: 'Roberto Lim',          skills: 4, education: 1, level: 'bachelor',   months: 104 },
+  '07-arrow-bullets.txt':           { name: 'Grace Ann Lopez',      skills: 4, education: 1, level: 'bachelor',   months: 66 },
+  '08-lowercase-headings.txt':      { name: 'Marco Antonio Garcia', skills: 3, education: 1, level: 'bachelor',   months: 27 },
+  '09-inline-skills.txt':           { name: 'Liza Mae Cruz',        skills: 4, education: 1, level: 'vocational', months: 3 },
+  '10-no-experience-fresh-grad.txt':{ name: 'Patricia Anne Bautista', skills: 5, education: 1, level: 'bachelor', months: 4 },
+};
+
+test('ordinary resumes read exactly as they did before the CV repairs', async () => {
+  const dir = path.join(__dirname, 'fixtures');
+  for (const [file, want] of Object.entries(CORPUS)) {
+    const buf = fs.readFileSync(path.join(dir, file));
+    const r = await parseResume(buf, 'text/plain', file);
+    assert.equal(r.status, 'ok', `${file} must still be readable`);
+    const got = r.resume!;
+    let level = 'none';
+    for (const e of got.education) if ((EDU_RANK[e.level] ?? 0) > (EDU_RANK[level] ?? 0)) level = e.level;
+    const months = got.experience.reduce((t, e) => t + (Number(e.months) || 0), 0);
+
+    assert.equal(got.personal.fullName, want.name, `${file}: name`);
+    assert.equal(got.skills.length, want.skills, `${file}: skill count`);
+    assert.equal(got.education.length, want.education, `${file}: education entries`);
+    assert.equal(level, want.level, `${file}: highest education level`);
+    assert.equal(months, want.months, `${file}: total months`);
+  }
+});
+
+test('no catalogued skill name is treated as a section heading', () => {
+  /* A section name that is also a skill name is a silent data-loss bug: the
+     line is read as a heading, the section it was in ends there, and every
+     skill listed below it is discarded. This happened — "Organization" was
+     added to the list of curriculum-vitae sections to ignore, and it is one
+     of the twenty-five skills in the catalogue, so a resume listing it in a
+     skills column lost everything after it.
+
+     The catalogue is read from the schema file rather than restated here, so
+     a skill added to the seed is checked automatically and this test cannot
+     quietly fall out of date with the thing it is protecting. */
+  const schema = fs.readFileSync(path.join(__dirname, '..', '..', 'db', 'resumematch_ph.sql'), 'utf8');
+  const block = schema.slice(schema.indexOf('INSERT INTO skills'));
+  const names = [...block.slice(0, block.indexOf(';')).matchAll(/\('([^']+)','[^']+','[^']+'\)/g)].map((m) => m[1]);
+
+  assert.ok(names.length >= 20, `expected the skill catalogue, found ${names.length} names`);
+  for (const skill of names) {
+    assert.equal(headingOf(skill), null, `"${skill}" is a catalogued skill and must not read as a heading`);
+    assert.equal(headingOf(skill.toUpperCase()), null, `"${skill.toUpperCase()}" must not read as a heading`);
+  }
 });

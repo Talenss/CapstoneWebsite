@@ -164,8 +164,16 @@ const HEADINGS: [Section, RegExp][] = [
      heading claims them — they stay in `head`, which is where findName and
      the email and phone patterns look. Listing it would start a section
      there, empty `head`, and cost every such resume its name, email and
-     phone number. */
-  ['other', /^(professional\s+(organi[sz]ations?|affiliations?|membership(s)?)|organi[sz]ations?(\s+(and|&)\s+affiliations?)?|affiliations?|membership(s)?|hobbies(\s+(and|&)\s+interests)?|interests|personal\s+attributes?|character\s+(traits?|attributes?)|extra[-\s]?curricular(\s+activities)?|community\s+involvement|volunteer(\s+work|\s+experience)?)$/],
+     phone number.
+
+     Bare "Organization" is absent for a harder reason: it is one of the
+     twenty-five skills in the catalogue, and a resume that lists it on its
+     own line in a skills list would have had that line read as a heading,
+     ending the skills section and discarding every skill below it. A
+     section name must never be a skill name; the test suite checks that
+     against the catalogue rather than leaving it to whoever edits this
+     pattern next. Only the qualified forms are matched. */
+  ['other', /^(professional\s+(organi[sz]ations?|affiliations?|membership(s)?)|(civic|community|school|student)\s+organi[sz]ations?|organi[sz]ations?\s+(and|&)\s+affiliations?|affiliations?|hobbies(\s+(and|&)\s+interests)?|interests|personal\s+attributes?|character\s+(traits?|attributes?)|extra[-\s]?curricular(\s+activities)?|community\s+involvement|volunteer(\s+work|\s+experience)?)$/],
 ];
 
 /** The content that shared a line with its heading — "SKILLS: HTML, CSS"
