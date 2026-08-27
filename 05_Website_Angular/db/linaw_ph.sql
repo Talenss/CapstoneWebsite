@@ -389,7 +389,7 @@ CREATE TABLE department_assignments (
 CREATE INDEX idx_deptassign_company ON department_assignments (company_id);
 
 -- ------------------------------------------------------------
--- Applications.  Five statuses. One application per person per
+-- Applications.  Six statuses. One application per person per
 -- posting, enforced by the unique key rather than by the app.
 -- ------------------------------------------------------------
 CREATE TABLE applications (

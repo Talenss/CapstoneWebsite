@@ -35,7 +35,7 @@ history only, and **nothing here depends on it.**
 - Honest match scores against every real opening (**skills 50 / education 25 /
   experience 25**, weights published), in three tiers — strong, possible,
   related. No one is auto-rejected.
-- Save openings, track applications through all five statuses, job alerts.
+- Save openings, track applications through all six statuses, job alerts.
 - **Application history** — every application keeps a dated record of each
   status it has held, and the applicant can read it: when they applied, when a
   recruiter moved it, and how long each step took. Attributed to the employer,
