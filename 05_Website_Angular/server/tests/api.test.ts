@@ -25,10 +25,10 @@ import assert from 'node:assert/strict';
 import { spawn, execFileSync, ChildProcess } from 'node:child_process';
 import path from 'node:path';
 
-const DB = process.env.TEST_DB_NAME || 'resumematch_apitest';
+const DB = process.env.TEST_DB_NAME || 'linaw_apitest';
 const PORT = Number(process.env.TEST_PORT || 4399);
 const BASE = `http://127.0.0.1:${PORT}/api`;
-const SCHEMA = path.join(__dirname, '..', '..', 'db', 'resumematch_ph.sql');
+const SCHEMA = path.join(__dirname, '..', '..', 'db', 'linaw_ph.sql');
 
 const PG = {
   host: process.env.DB_HOST || '127.0.0.1',

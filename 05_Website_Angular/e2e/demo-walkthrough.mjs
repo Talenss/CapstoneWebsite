@@ -1,4 +1,4 @@
-/* ResumeMatch PH — demo walkthrough
+/* Linaw PH — demo walkthrough
    ------------------------------------------------------------------
    Drives the whole demo in a real browser, the way the panel will see
    it: all three roles, every page, the score display, the validation
@@ -108,7 +108,7 @@ await step('SEEKER · my resumes + account load', async () => {
 await step('SEEKER · applying records the score at that moment', async () => {
   await go('/seeker-dashboard');
   const before = await page.evaluate(() =>
-    (JSON.parse(localStorage.getItem('rmph_v3_db') || '{}').applications || []).length);
+    (JSON.parse(localStorage.getItem('linaw_v3_db') || '{}').applications || []).length);
 
   // "View & apply" only opens the modal — the real apply is inside it.
   const open = page.locator('button:has-text("View & apply"):visible').first();
@@ -121,7 +121,7 @@ await step('SEEKER · applying records the score at that moment', async () => {
   await page.waitForTimeout(1600);
 
   const apps = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem('rmph_v3_db') || '{}').applications || []);
+    JSON.parse(localStorage.getItem('linaw_v3_db') || '{}').applications || []);
   if (apps.length !== before + 1) throw new Error(`no application was created (${before} -> ${apps.length})`);
   const created = apps[apps.length - 1];
   if (typeof created.scoreSnapshot !== 'number')

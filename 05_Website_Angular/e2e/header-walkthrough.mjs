@@ -1,4 +1,4 @@
-/* ResumeMatch PH — header layout
+/* Linaw PH — header layout
    ------------------------------------------------------------------
    The header carries six nav links, the visitor's name, and — on the
    seeker dashboard only, because that page passes showTour — an extra
@@ -33,8 +33,8 @@ const login = async (email) => {
      signed-in user away, and this file died on a 30s timeout waiting for
      an email field — taking the recruiter and admin header cases with it. */
   await page.evaluate(() => {
-    try { sessionStorage.removeItem('rmph_v3_session'); } catch {}
-    try { localStorage.removeItem('rmph_v3_session'); } catch {}
+    try { sessionStorage.removeItem('linaw_v3_session'); } catch {}
+    try { localStorage.removeItem('linaw_v3_session'); } catch {}
   }).catch(()=>{});
   await page.goto(B + '/auth', { waitUntil: 'networkidle' });
   await page.waitForTimeout(900);
@@ -83,10 +83,10 @@ for (const r of ['/seeker-dashboard', '/browse', '/my-resumes', '/account', '/re
 await page.goto(B + '/seeker-dashboard', { waitUntil: 'networkidle' });
 await page.waitForTimeout(1200);
 await page.evaluate(() => {
-  const db = JSON.parse(localStorage.getItem('rmph_v3_db'));
+  const db = JSON.parse(localStorage.getItem('linaw_v3_db'));
   const u = db.users.find(x => x.email === 'marco@demo.ph');
   u.name = 'Maria Cristina Dela Cruz-Santos';
-  localStorage.setItem('rmph_v3_db', JSON.stringify(db));
+  localStorage.setItem('linaw_v3_db', JSON.stringify(db));
 });
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(1600);

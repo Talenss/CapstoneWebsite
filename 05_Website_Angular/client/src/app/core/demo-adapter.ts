@@ -7,7 +7,7 @@ import { ApiAdapter } from './adapter';
 import { AnalyzedResume, ApiResult, AppStatus, Application, Company, EvidenceKind, RejectionReason, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User } from './models';
 import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels } from './engine';
 
-const KEY = 'rmph_v3_db';
+const KEY = 'linaw_v3_db';
 
 /* WHICH SEED THIS BROWSER HOLDS.
  *
@@ -31,7 +31,7 @@ const KEY = 'rmph_v3_db';
  * would render with no name at all rather than with a stale one.
  */
 const SEED_VERSION = '2026-08-25-name-split';
-const SESSION = 'rmph_v3_session';
+const SESSION = 'linaw_v3_session';
 const D = 86400000;
 
 const uid = () => 'x' + Math.random().toString(36).slice(2, 9);
@@ -116,7 +116,7 @@ function seed(): Db {
     ] as DemoUser[],
     resumes: [
       // Juan carries every optional section, so the demo shows a complete
-      // sheet. Kept identical to resume 1 in db/resumematch_ph.sql.
+      // sheet. Kept identical to resume 1 in db/linaw_ph.sql.
       { id: 'r1', userId: 'u1', title: 'IT, fresh graduate', template: 'chronological', design: 'classic',
         personal: { fullName: 'Juan Dela Cruz', email: 'seeker@demo.ph', phone: '0917 000 0000', address: 'San Fernando, Pampanga',
           summary: 'BS Information Technology graduate with internship experience building and maintaining public-facing web pages. Looking for an entry-level web developer role.',
@@ -128,7 +128,7 @@ function seed(): Db {
           bullets: ['Rebuilt the job posting pages so they open correctly on a phone', 'Cleared a backlog of 40+ layout issues reported by staff'] }],
         skills: ['HTML/CSS', 'JavaScript', 'Git', 'Teamwork', 'Communication'],
         /* Where each skill was used. Deliberately incomplete here and in
-           db/resumematch_ph.sql, which this mirrors row for row: the two soft
+           db/linaw_ph.sql, which this mirrors row for row: the two soft
            skills carry no source, so the demo shows both states in the
            recruiter's evidence panel and both halves of the arithmetic. An
            unsourced skill still counts, at UNEVIDENCED_CREDIT, not zero. */

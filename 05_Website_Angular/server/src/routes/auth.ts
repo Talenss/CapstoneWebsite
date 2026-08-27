@@ -1,4 +1,4 @@
-/* ResumeMatch PH — routes/auth.ts
+/* Linaw PH — routes/auth.ts
    Port of api/auth.php: login · register · request-access · logout · me
    · change-password · delete-account · export (RA 10173 right of access) */
 import { asyncRouter } from '../lib/async-router';
@@ -30,7 +30,7 @@ function regenerateSession(req: import('express').Request): Promise<void> {
 
 // Compared against when the email has no account, so "user not found" and
 // "wrong password" take the same time — no timing-based email discovery.
-const DUMMY_HASH = bcrypt.hashSync('rmph-timing-equalizer', 10);
+const DUMMY_HASH = bcrypt.hashSync('linaw-timing-equalizer', 10);
 
 /* ---- Email codes: one endpoint issues them for both purposes. ----
    'verify'  — sign-up: the email must NOT have an account yet. If it does,
@@ -225,7 +225,7 @@ router.post('/request-access', authWriteLimiter, async (req, res) => {
 
 router.post('/logout', (req, res) => {
   req.session.destroy(() => {
-    res.clearCookie('rmph.sid');
+    res.clearCookie('linaw.sid');
     ok(res);
   });
 });
@@ -321,11 +321,11 @@ router.post('/change-email-confirm', authWriteLimiter, async (req, res) => {
   if (mailConfigured()) {
     sendMail(
       oldEmail,
-      'Your ResumeMatch PH email address was changed',
+      'Your Linaw PH email address was changed',
       `Security notice\n\nThe email on your account was changed to ${newEmail}. If this was you, no action is needed. If it wasn't, contact the research team through the School of Computing immediately.`,
       `
         <h1 style="margin:0 0 10px;font-size:22px">Security notice</h1>
-        <p style="margin:0;font-size:14.5px;line-height:1.65;color:#4C5566">The email address on your ResumeMatch PH account was changed to <b>${newEmail}</b>. If this was you, no action is needed. If it wasn’t, contact the research team through the School of Computing immediately — your password still protects the account.</p>`,
+        <p style="margin:0;font-size:14.5px;line-height:1.65;color:#4C5566">The email address on your Linaw PH account was changed to <b>${newEmail}</b>. If this was you, no action is needed. If it wasn’t, contact the research team through the School of Computing immediately — your password still protects the account.</p>`,
     ).catch((e) => console.error('change-email notice failed:', e?.message || e));
   } else if (DEBUG) {
     console.log(`[auth] email changed: ${oldEmail} -> ${newEmail}`);
@@ -366,7 +366,7 @@ router.post('/delete-account', async (req, res) => {
   await exec('DELETE FROM users WHERE user_id = ?', [u.user_id]);
 
   req.session.destroy(() => {
-    res.clearCookie('rmph.sid');
+    res.clearCookie('linaw.sid');
     ok(res);
   });
 });

@@ -1,4 +1,4 @@
-/* ResumeMatch PH — accessibility walkthrough
+/* Linaw PH — accessibility walkthrough
    ------------------------------------------------------------------
    Proves the three modals are usable without a mouse. Before the focus
    trap existed, a measured run found focus never entered the dialog,

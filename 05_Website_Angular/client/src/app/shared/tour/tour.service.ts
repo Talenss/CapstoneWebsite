@@ -11,7 +11,7 @@ export interface TourOpts {
 }
 
 /* ============================================================
-   ResumeMatch PH, Onboarding tour. Runs automatically the first
+   Linaw PH, Onboarding tour. Runs automatically the first
    time a person lands on a page, and is replayable forever from the
    "Show me around" button. Steps whose target isn't on screen are
    skipped silently.
@@ -37,7 +37,7 @@ export class TourService {
   private onMoveBound = () => this.syncToCurrent();
 
   private seenKey(): string {
-    return 'rmph_tour_' + this.key + (this.opts.user ? '_' + this.opts.user : '');
+    return 'linaw_tour_' + this.key + (this.opts.user ? '_' + this.opts.user : '');
   }
   private visible(): TourStep[] {
     return this.steps.filter((s) => {

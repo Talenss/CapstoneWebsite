@@ -1,5 +1,5 @@
 /* ============================================================
-   ResumeMatch PH — lib/extract.ts
+   Linaw PH — lib/extract.ts
    ------------------------------------------------------------
    Turning a resume DOCUMENT into structured fields, with Gemini.
 

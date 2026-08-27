@@ -1,4 +1,4 @@
-/* ResumeMatch PH — routes/postings.ts : list · mine · get · save · toggle */
+/* Linaw PH — routes/postings.ts : list · mine · get · save · toggle */
 import { asyncRouter } from '../lib/async-router';
 import { query, queryOne, exec, withTransaction } from '../db';
 import { PostingRow, UserRow, ResumeRow } from '../types';

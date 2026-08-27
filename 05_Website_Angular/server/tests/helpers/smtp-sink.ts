@@ -1,4 +1,4 @@
-/* ResumeMatch PH — tests/helpers/smtp-sink.ts
+/* Linaw PH — tests/helpers/smtp-sink.ts
 
    A minimal SMTP server that accepts a message and keeps it in memory, so
    the mail path can be tested for real: nodemailer -> TCP -> SMTP dialogue
@@ -58,7 +58,7 @@ export class SmtpSink {
       let to: string[] = [];
 
       const send = (line: string) => socket.write(line + '\r\n');
-      send('220 rmph-test-sink ESMTP');
+      send('220 linaw-test-sink ESMTP');
 
       socket.on('data', (chunk) => {
         buffer += chunk.toString('utf8');
@@ -90,7 +90,7 @@ export class SmtpSink {
           if (upper.startsWith('EHLO') || upper.startsWith('HELO')) {
             // No STARTTLS and no AUTH advertised — keeps the dialogue plain,
             // which is what the test transport is configured for.
-            send('250-rmph-test-sink');
+            send('250-linaw-test-sink');
             send('250 8BITMIME');
           } else if (upper.startsWith('MAIL FROM')) {
             from = (/<([^>]*)>/.exec(line) || [, ''])[1];

@@ -1,4 +1,4 @@
-/* ResumeMatch PH — scripts/compare-readers.ts
+/* Linaw PH — scripts/compare-readers.ts
    ------------------------------------------------------------
    Runs BOTH document readers over the same folder of resumes and
    reports where they agree and where they differ.

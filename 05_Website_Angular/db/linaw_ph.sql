@@ -1,5 +1,5 @@
 -- ============================================================
--- ResumeMatch PH — the COMPLETE database in one file
+-- Linaw PH — the COMPLETE database in one file
 -- (Angular + Node edition · 05_Website_Angular · PostgreSQL / Supabase)
 --
 -- Schema + demo data together, self-contained. Everything the Node
@@ -12,9 +12,9 @@
 --      string into server/.env as DATABASE_URL.
 --
 -- ── Local PostgreSQL (development) ──────────────────────────
---   psql -U postgres -f db/resumematch_ph.sql
+--   psql -U postgres -f db/linaw_ph.sql
 --   (this file creates the tables in the current database; make one
---    first with:  createdb resumematch_ph)
+--    first with:  createdb linaw_ph)
 --
 -- The server's startup migrations are idempotent, so booting against
 -- this schema changes nothing.

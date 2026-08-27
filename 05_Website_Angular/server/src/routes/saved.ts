@@ -1,4 +1,4 @@
-/* ResumeMatch PH — routes/saved.ts : a seeker's bookmarked openings. */
+/* Linaw PH — routes/saved.ts : a seeker's bookmarked openings. */
 import { asyncRouter } from '../lib/async-router';
 import { query, queryOne, exec } from '../db';
 import { PostingRow } from '../types';

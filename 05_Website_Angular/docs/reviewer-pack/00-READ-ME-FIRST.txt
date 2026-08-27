@@ -1,4 +1,4 @@
-ResumeMatch PH — the reviewer pack
+Linaw PH — the reviewer pack
 For group members who did not build the system
 Holy Angel University · School of Computing · Garcia, Santos, Talens
 
@@ -64,27 +64,27 @@ UPDATED 27 AUGUST 2026 — THE THIRD RESPONDENT GROUP
 THE FIVE FILES
 ──────────────
 
-  1. ResumeMatch-PH-Core-Facts.docx            ~15 min   READ THIS FIRST
+  1. Linaw-PH-Core-Facts.docx            ~15 min   READ THIS FIRST
      Every number in the project, once. The score, the tiers, the AI
      answer, the two resumes, the sample, what is built, how it is
      verified, and the honest weak points. Nine short sections. If you
      read only one file, read this one — the other four assume it.
 
-  2. ResumeMatch-PH-The-Paper-In-Brief.docx    ~25 min
+  2. Linaw-PH-The-Paper-In-Brief.docx    ~25 min
      EVERY SECTION OF THE MANUSCRIPT in a few lines each, in the order the
      paper puts them. Read this if you have not read the paper, or the night
      before when there is no time to read it again. Each section ends with
      the one line to have ready if a panelist opens the paper at that page.
 
-  3. ResumeMatch-PH-The-Study.docx             ~2 hours
+  3. Linaw-PH-The-Study.docx             ~2 hours
      The paper section by section, the statistics worked by hand, and 123
      research questions with answers.
 
-  4. ResumeMatch-PH-The-System.docx            ~1.5 hours
+  4. Linaw-PH-The-System.docx            ~1.5 hours
      What each part of the site does, how the program is put together, and
      102 technical questions with answers.
 
-  5. ResumeMatch-PH-Defence-Day.docx           ~45 min
+  5. Linaw-PH-Defence-Day.docx           ~45 min
      One hundred questions to drill, each with a short answer under it, the
      weaknesses to own before the panel finds them, and the night-before
      checklist. Cover the answers and say yours out loud first.

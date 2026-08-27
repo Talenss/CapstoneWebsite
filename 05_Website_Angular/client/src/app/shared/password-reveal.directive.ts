@@ -1,4 +1,4 @@
-/* ResumeMatch PH, shared/password-reveal.directive.ts
+/* Linaw PH, shared/password-reveal.directive.ts
 
    Lets someone check what they have typed into a password box.
 

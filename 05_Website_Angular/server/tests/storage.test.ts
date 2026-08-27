@@ -1,4 +1,4 @@
-/* ResumeMatch PH — tests/storage.test.ts
+/* Linaw PH — tests/storage.test.ts
 
    lib/storage.ts decides where an applicant's uploaded resume actually
    lives, and it has two backends that must behave identically to every
@@ -19,7 +19,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'rmph-storage-'));
+const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'linaw-storage-'));
 
 /** Load config + storage fresh, so each test picks its own backend. */
 function loadStorage(env: Record<string, string>) {

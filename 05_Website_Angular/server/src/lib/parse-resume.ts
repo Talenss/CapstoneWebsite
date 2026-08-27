@@ -1,5 +1,5 @@
 /* ============================================================
-   ResumeMatch PH — lib/parse-resume.ts
+   Linaw PH — lib/parse-resume.ts
    ------------------------------------------------------------
    Reading a resume DOCUMENT into structured fields WITHOUT a
    language model. Rules only: section headings, regular

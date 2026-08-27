@@ -1,5 +1,5 @@
 /* ============================================================
-   ResumeMatch PH — routes/analyze.ts
+   Linaw PH — routes/analyze.ts
    ------------------------------------------------------------
    The "Upload & analyze" feature (opt-in): reads a resume file the
    seeker explicitly submitted FOR ANALYSIS and returns a structured

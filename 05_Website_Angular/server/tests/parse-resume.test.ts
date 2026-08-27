@@ -686,7 +686,7 @@ test('no catalogued skill name is treated as a section heading', () => {
      The catalogue is read from the schema file rather than restated here, so
      a skill added to the seed is checked automatically and this test cannot
      quietly fall out of date with the thing it is protecting. */
-  const schema = fs.readFileSync(path.join(__dirname, '..', '..', 'db', 'resumematch_ph.sql'), 'utf8');
+  const schema = fs.readFileSync(path.join(__dirname, '..', '..', 'db', 'linaw_ph.sql'), 'utf8');
   const block = schema.slice(schema.indexOf('INSERT INTO skills'));
   const names = [...block.slice(0, block.indexOf(';')).matchAll(/\('([^']+)','[^']+','[^']+'\)/g)].map((m) => m[1]);
 

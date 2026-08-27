@@ -8,7 +8,7 @@ import { Resume } from '../../core/models';
 
 type SectionKind = 'education' | 'experience' | 'skills' | 'projects' | 'certifications';
 type PaperSize = 'a4' | 'letter';
-const PAPER_KEY = 'rmph_paper_size';
+const PAPER_KEY = 'linaw_paper_size';
 
 /** Port of the PHP resume-print.html — an ATS-friendly, one-column
  *  print sheet. No site header/footer here, just a bespoke toolbar with
@@ -81,7 +81,7 @@ export class ResumePrint implements OnInit, OnDestroy {
     this.resume.set(res.resume);
     /* This becomes the suggested PDF FILENAME when the applicant saves, and
        the recruiter sees that filename on the attachment. It used to carry
-       this site's name, so people were sending "Juan Dela Cruz — ResumeMatch
+       this site's name, so people were sending "Juan Dela Cruz — Linaw
        PH.pdf" to employers. The applicant's own name is what belongs there. */
     const who = res.resume.personal.fullName?.trim();
     document.title = who ? `${who} Resume` : 'Resume';
@@ -116,7 +116,7 @@ export class ResumePrint implements OnInit, OnDestroy {
    *  element of its own. Appended to <head>, it wins over the component's
    *  A4 default by document order. */
   private applyPageSize(size: PaperSize): void {
-    const id = 'rmph-page-size';
+    const id = 'linaw-page-size';
     let el = document.getElementById(id) as HTMLStyleElement | null;
     if (!el) {
       el = document.createElement('style');
@@ -134,7 +134,7 @@ export class ResumePrint implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     // Leaving the tag behind would resize every other page's printout.
-    document.getElementById('rmph-page-size')?.remove();
+    document.getElementById('linaw-page-size')?.remove();
   }
 
   /** The sheet is usually opened in a NEW TAB — "PDF" on My resumes, "Export

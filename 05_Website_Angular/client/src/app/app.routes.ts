@@ -30,7 +30,7 @@ const seo = (data: SeoData) => ({ seo: data });
 
 /** Every private page says the same thing to a crawler, so it is said once. */
 const PRIVATE = seo({
-  description: 'A signed-in page on ResumeMatch PH.',
+  description: 'A signed-in page on Linaw PH.',
   index: false,
 });
 
@@ -43,15 +43,15 @@ export const routes: Routes = [
     data: seo({
       description: 'Build an ATS-friendly resume free, then see your honest match score against real openings '
         + 'in the Clark Freeport Zone, Pampanga. Nobody is auto-rejected.',
-      socialTitle: 'ResumeMatch PH, every applicant gets a seat',
+      socialTitle: 'Linaw PH, every applicant gets a seat',
     }),
   },
   {
     path: 'auth',
     loadComponent: () => import('./pages/auth/auth').then((m) => m.Auth),
-    title: 'Log in or create a free account, ResumeMatch PH',
+    title: 'Log in or create a free account, Linaw PH',
     data: seo({
-      description: 'Create a free ResumeMatch PH account to build a resume and apply to openings in '
+      description: 'Create a free Linaw PH account to build a resume and apply to openings in '
         + 'Angeles City and the Clark Freeport Zone, or log in to your dashboard.',
     }),
   },
@@ -89,72 +89,72 @@ export const routes: Routes = [
   {
     path: 'privacy',
     loadComponent: () => import('./pages/privacy/privacy').then((m) => m.Privacy),
-    title: 'Privacy notice, ResumeMatch PH',
+    title: 'Privacy notice, Linaw PH',
     data: seo({
-      description: 'What ResumeMatch PH collects, why, how long it is kept, and your rights under the '
+      description: 'What Linaw PH collects, why, how long it is kept, and your rights under the '
         + 'Philippine Data Privacy Act (Republic Act 10173).',
     }),
   },
 
   {
-    path: 'seeker-dashboard', canActivate: [authGuard('seeker')], title: 'My dashboard, ResumeMatch PH',
+    path: 'seeker-dashboard', canActivate: [authGuard('seeker')], title: 'My dashboard, Linaw PH',
     loadComponent: () => import('./pages/seeker-dashboard/seeker-dashboard').then((m) => m.SeekerDashboard),
     data: PRIVATE,
   },
   {
     path: 'resume-builder', canActivate: [authGuard('seeker')], canDeactivate: [unsavedChangesGuard],
-    title: 'Resume builder, ResumeMatch PH',
+    title: 'Resume builder, Linaw PH',
     loadComponent: () => import('./pages/resume-builder/resume-builder').then((m) => m.ResumeBuilder),
     data: PRIVATE,
   },
   {
-    path: 'upload-resume', canActivate: [authGuard('seeker')], title: 'Upload & analyze your resume, ResumeMatch PH',
+    path: 'upload-resume', canActivate: [authGuard('seeker')], title: 'Upload & analyze your resume, Linaw PH',
     loadComponent: () => import('./pages/upload-analyze/upload-analyze').then((m) => m.UploadAnalyze),
     data: PRIVATE,
   },
   {
-    path: 'my-resumes', canActivate: [authGuard('seeker')], title: 'My resumes, ResumeMatch PH',
+    path: 'my-resumes', canActivate: [authGuard('seeker')], title: 'My resumes, Linaw PH',
     loadComponent: () => import('./pages/my-resumes/my-resumes').then((m) => m.MyResumes),
     data: PRIVATE,
   },
   {
-    path: 'resume-print', canActivate: [authGuard()], title: 'Resume, ResumeMatch PH',
+    path: 'resume-print', canActivate: [authGuard()], title: 'Resume, Linaw PH',
     loadComponent: () => import('./pages/resume-print/resume-print').then((m) => m.ResumePrint),
     data: PRIVATE,
   },
   {
-    path: 'admin', canActivate: [authGuard('admin')], title: 'Recruiter requests, ResumeMatch PH',
+    path: 'admin', canActivate: [authGuard('admin')], title: 'Recruiter requests, Linaw PH',
     loadComponent: () => import('./pages/admin/admin').then((m) => m.Admin),
     data: PRIVATE,
   },
   {
-    path: 'admin/metrics', canActivate: [authGuard('admin')], title: 'Study metrics, ResumeMatch PH',
+    path: 'admin/metrics', canActivate: [authGuard('admin')], title: 'Study metrics, Linaw PH',
     loadComponent: () => import('./pages/admin-metrics/admin-metrics').then((m) => m.AdminMetrics),
     data: PRIVATE,
   },
   {
-    path: 'account', canActivate: [authGuard()], title: 'My account, ResumeMatch PH',
+    path: 'account', canActivate: [authGuard()], title: 'My account, Linaw PH',
     loadComponent: () => import('./pages/account/account').then((m) => m.Account),
     data: PRIVATE,
   },
 
   {
-    path: 'hr-dashboard', canActivate: [authGuard('recruiter')], title: 'Recruiter dashboard, ResumeMatch PH',
+    path: 'hr-dashboard', canActivate: [authGuard('recruiter')], title: 'Recruiter dashboard, Linaw PH',
     loadComponent: () => import('./pages/hr-dashboard/hr-dashboard').then((m) => m.HrDashboard),
     data: PRIVATE,
   },
   {
-    path: 'hr-applicants', canActivate: [authGuard('recruiter')], title: 'Applicants, ResumeMatch PH',
+    path: 'hr-applicants', canActivate: [authGuard('recruiter')], title: 'Applicants, Linaw PH',
     loadComponent: () => import('./pages/hr-applicants/hr-applicants').then((m) => m.HrApplicants),
     data: PRIVATE,
   },
   {
-    path: 'hr-posting', canActivate: [authGuard('recruiter')], title: 'Post an opening, ResumeMatch PH',
+    path: 'hr-posting', canActivate: [authGuard('recruiter')], title: 'Post an opening, Linaw PH',
     loadComponent: () => import('./pages/hr-posting/hr-posting').then((m) => m.HrPosting),
     data: PRIVATE,
   },
   {
-    path: 'hr-company', canActivate: [authGuard('recruiter')], title: 'Company profile, ResumeMatch PH',
+    path: 'hr-company', canActivate: [authGuard('recruiter')], title: 'Company profile, Linaw PH',
     loadComponent: () => import('./pages/hr-company/hr-company').then((m) => m.HrCompany),
     data: PRIVATE,
   },
@@ -166,7 +166,7 @@ export const routes: Routes = [
   {
     path: '**',
     loadComponent: () => import('./pages/not-found/not-found').then((m) => m.NotFound),
-    title: 'Page not found, ResumeMatch PH',
-    data: seo({ description: 'That page does not exist on ResumeMatch PH.', index: false }),
+    title: 'Page not found, Linaw PH',
+    data: seo({ description: 'That page does not exist on Linaw PH.', index: false }),
   },
 ];

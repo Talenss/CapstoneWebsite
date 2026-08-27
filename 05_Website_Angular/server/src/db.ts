@@ -1,5 +1,5 @@
 /* ============================================================
-   ResumeMatch PH — database layer (Supabase / PostgreSQL)
+   Linaw PH — database layer (Supabase / PostgreSQL)
    ------------------------------------------------------------
    Thin wrapper over node-postgres. Query call sites keep using
    MySQL-style `?` placeholders; toPg() rewrites them to Postgres

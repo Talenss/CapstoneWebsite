@@ -1,4 +1,4 @@
-/* ResumeMatch PH — lib/rate-limit.ts
+/* Linaw PH — lib/rate-limit.ts
    Brute-force protection for the auth surface. The email-code table
    already rate-limits per address; these limiters add the per-client
    layer underneath (fixed windows, in-memory — right-sized for a

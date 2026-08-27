@@ -1,4 +1,4 @@
-/* ResumeMatch PH — routes/stats.ts : hr (dashboard counters) */
+/* Linaw PH — routes/stats.ts : hr (dashboard counters) */
 import { asyncRouter } from '../lib/async-router';
 import { queryOne, query } from '../db';
 import { ok } from '../lib/http';

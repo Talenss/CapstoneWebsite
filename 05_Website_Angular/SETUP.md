@@ -1,4 +1,4 @@
-# ResumeMatch PH — Angular + Node edition — Setup guide
+# Linaw PH — Angular + Node edition — Setup guide
 
 This is the Angular/Node rebuild of an earlier PHP + vanilla-JS prototype.
 That prototype was removed from the repository once the rebuild was
@@ -9,7 +9,7 @@ on it**; everything `05_Website_Angular` uses lives here. What changed:
 |---|---|---|
 | Frontend | Plain HTML/CSS/JS, one file per page | Angular 21 (standalone components), one app |
 | Backend | PHP 8 + PDO | Node.js + Express + TypeScript (`pg`) |
-| Database | MySQL | **Supabase / PostgreSQL** — one file: `db/resumematch_ph.sql` |
+| Database | MySQL | **Supabase / PostgreSQL** — one file: `db/linaw_ph.sql` |
 
 There are two modes:
 
@@ -48,11 +48,11 @@ console and run `localStorage.clear(); sessionStorage.clear();`, then refresh.
 
 ### Step 1 — Create the database in Supabase
 
-The whole schema and demo data live in **one file**: `db/resumematch_ph.sql`.
+The whole schema and demo data live in **one file**: `db/linaw_ph.sql`.
 
 1. Create a free project at <https://supabase.com> (or use your existing one).
 2. In the dashboard, open **SQL Editor → New query**.
-3. Open `db/resumematch_ph.sql`, copy its entire contents into the editor,
+3. Open `db/linaw_ph.sql`, copy its entire contents into the editor,
    and press **Run**.
 
 That creates every table the Node server uses — including the newer ones
@@ -94,14 +94,14 @@ npm run dev                # ts-node-dev, restarts on change — or `npm run bui
 
 It listens on **http://localhost:4300** (`PORT` in `.env`) and, on first
 boot, runs a few idempotent migrations (a no-op against a fresh
-`resumematch_ph.sql`). Applicant-uploaded files are stored in
+`linaw_ph.sql`). Applicant-uploaded files are stored in
 `server/uploads/`, served only through the access-checked `/api/file`
 route — never a public URL.
 
 > **Local PostgreSQL instead of Supabase?** Leave `DATABASE_URL` empty and
 > set `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASS` (and
 > `DB_SSL=false`) in `.env`. Create the database and import the same file:
-> `createdb resumematch_ph && psql -d resumematch_ph -f db/resumematch_ph.sql`.
+> `createdb linaw_ph && psql -d linaw_ph -f db/linaw_ph.sql`.
 
 > **Free-tier note:** Supabase pauses a project after about a week of
 > inactivity; it wakes on the next request, so just open the app (or the
@@ -175,7 +175,7 @@ All of it needs an SMTP service. Two free options:
    SMTP_PORT=587
    SMTP_USER=yourgmail@gmail.com
    SMTP_PASS=the 16-character app password
-   MAIL_FROM=ResumeMatch PH <yourgmail@gmail.com>
+   MAIL_FROM=Linaw PH <yourgmail@gmail.com>
    ```
 
 **Brevo (free tier, ~300 emails/day, no Gmail needed):** sign up at
@@ -315,7 +315,7 @@ Before exposing the site publicly, set these in `server/.env`:
 Sessions are stored in Postgres, in a `user_sessions` table the server creates
 on first boot — nothing to configure, and no extra service. A restart or a
 redeploy therefore does not sign anyone out, and expired rows are swept every
-fifteen minutes. Re-importing `db/resumematch_ph.sql` drops that table along
+fifteen minutes. Re-importing `db/linaw_ph.sql` drops that table along
 with everything else, because the reset renumbers `user_id` from 1 and an old
 cookie must not resolve to whoever now holds that number.
 
@@ -355,7 +355,7 @@ in front of the Node process. No code edits needed — it's all `.env`.
 
 ### Before real people use it: remove the demonstration data
 
-`db/resumematch_ph.sql` seeds seven demonstration accounts that all share
+`db/linaw_ph.sql` seeds seven demonstration accounts that all share
 the password `demo123`, and one of them — `admin@demo.ph` — approves
 recruiter access. That hash is committed to a public repository, so those
 are not credentials, they are published facts. Import the schema and
@@ -398,7 +398,7 @@ Set it in Render:
 
 ```
 BREVO_API_KEY=xkeysib-…
-MAIL_FROM=ResumeMatch PH <your-verified@address>
+MAIL_FROM=Linaw PH <your-verified@address>
 ```
 
 The mailer posts to Brevo's REST API instead of opening an SMTP socket.
@@ -421,7 +421,7 @@ secret. Render reads it, so most of this is not typed by hand.
 
 1. <https://render.com> → sign in with GitHub → **New → Blueprint**.
 2. Pick this repository. Render finds `render.yaml` and shows one web
-   service, `resumematch-ph`.
+   service, `linaw-ph`.
 3. It prompts for the seven secrets the file deliberately does not carry:
 
    | Prompt | Where it comes from |
@@ -431,7 +431,7 @@ secret. Render reads it, so most of this is not typed by hand.
    | `SUPABASE_SERVICE_KEY` | same page, the **service_role** key |
    | `SMTP_USER` | the Gmail address |
    | `SMTP_PASS` | the 16-character app password, **spaces removed** |
-   | `MAIL_FROM` | e.g. `ResumeMatch PH <you@gmail.com>` |
+   | `MAIL_FROM` | e.g. `Linaw PH <you@gmail.com>` |
    | `GEMINI_API_KEY` | <https://aistudio.google.com/apikey> |
 
 4. **Apply**. The first build takes a few minutes: it installs and builds

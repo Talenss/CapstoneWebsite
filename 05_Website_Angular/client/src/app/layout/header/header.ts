@@ -70,7 +70,7 @@ export class Header {
     const next = this.theme() === 'dark' ? 'light' : 'dark';
     this.theme.set(next);
     document.documentElement.setAttribute('data-theme', next);
-    try { localStorage.setItem('rmph-theme', next); } catch { /* private mode */ }
+    try { localStorage.setItem('linaw-theme', next); } catch { /* private mode */ }
   }
 
   /** The variant actually used for the nav. `auto` lets a shared/public page

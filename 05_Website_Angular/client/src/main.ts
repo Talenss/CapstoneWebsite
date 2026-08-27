@@ -8,7 +8,7 @@ import { App } from './app/app';
 // be blocked). The header's toggle keeps localStorage + the attribute in sync.
 (() => {
   try {
-    let t = localStorage.getItem('rmph-theme');
+    let t = localStorage.getItem('linaw-theme');
     if (t !== 'dark' && t !== 'light') {
       t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }

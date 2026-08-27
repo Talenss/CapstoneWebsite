@@ -1,5 +1,5 @@
 /* ============================================================
-   ResumeMatch PH — Node/Express API server
+   Linaw PH — Node/Express API server
    ------------------------------------------------------------
    Port of the api/*.php endpoints (PDO+MySQL) to Express+TypeScript
    on PostgreSQL. The schema and the JSON contract carried over
@@ -76,7 +76,7 @@ app.use(express.json({ limit: '2mb' }));
  * it exists before the first request, on a fresh database and an upgraded one
  * alike. */
 app.use(session({
-  name: 'rmph.sid',
+  name: 'linaw.sid',
   store: new (pgSession(session))({
     pool: db(),
     tableName: 'user_sessions',
@@ -146,7 +146,7 @@ process.on('uncaughtException', (err) => {
 });
 
 /* Idempotent, additive schema upgrades so a database created before a given
-   feature catches up on first boot (a fresh db/resumematch_ph.sql has nothing
+   feature catches up on first boot (a fresh db/linaw_ph.sql has nothing
    to do).
 
    This is deliberately AWAITED before the port opens. Previously it was
@@ -209,6 +209,6 @@ function logDatabaseTarget(): void {
 
 function listen(): void {
   app.listen(PORT, () => {
-    console.log(`ResumeMatch PH API listening on http://localhost:${PORT}`);
+    console.log(`Linaw PH API listening on http://localhost:${PORT}`);
   });
 }

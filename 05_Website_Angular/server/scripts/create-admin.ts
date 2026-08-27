@@ -1,4 +1,4 @@
-/* ResumeMatch PH — scripts/create-admin.ts
+/* Linaw PH — scripts/create-admin.ts
    Creates (or resets) the research-team admin account that reviews
    recruiter requests at /admin. Deliberately a command-line step — there
    is no self-serve path to the admin role.

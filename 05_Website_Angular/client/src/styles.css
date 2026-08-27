@@ -1,5 +1,5 @@
 /* ============================================================
-   ResumeMatch PH — Design System v4 "Front Desk"
+   Linaw PH — Design System v4 "Front Desk"
    ------------------------------------------------------------
    Aligned to Clark Outsourcing's brand language — navy chrome,
    a red action accent, cool light working surfaces — not copied.
@@ -133,7 +133,6 @@ main{flex:1}
 .brand .mark{width:30px;height:30px;flex:none;display:grid;place-items:center}
 .brand .mark svg{width:28px;height:28px;display:block}
 .brand .word{font-family:var(--display);font-size:20px;font-weight:560;color:var(--text);line-height:1}
-.brand .word em{font-style:normal;color:var(--accent)}
 .brand .word small{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin-top:3px;font-weight:600}
 /* The nav row has to survive the widest case: six links, the visitor's name,
    and — on the seeker dashboard only, because that page passes showTour —

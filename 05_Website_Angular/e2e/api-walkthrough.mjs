@@ -1,4 +1,4 @@
-/* ResumeMatch PH — API-mode walkthrough
+/* Linaw PH — API-mode walkthrough
    ------------------------------------------------------------------
    Drives the PRODUCTION bundle against the REAL Express server and a
    REAL PostgreSQL database.
@@ -18,7 +18,7 @@
      node ../e2e/api-walkthrough.mjs
 
    Needs Playwright. Set PW_CHROMIUM if your Chromium lives elsewhere.
-   Assumes the seeded demo accounts from db/resumematch_ph.sql.
+   Assumes the seeded demo accounts from db/linaw_ph.sql.
    ------------------------------------------------------------------ */
 import pkg from 'playwright';
 const { chromium } = pkg;
@@ -86,7 +86,7 @@ await t('the bundle actually talks to the API, not localStorage', async () => {
   await page.goto(B + '/browse', { waitUntil: 'networkidle' });
   await page.waitForTimeout(1200);
   if (!apiCalls.length) throw new Error('ZERO /api calls — this bundle is in demo mode');
-  const demoDb = await page.evaluate(() => !!localStorage.getItem('rmph_v3_db'));
+  const demoDb = await page.evaluate(() => !!localStorage.getItem('linaw_v3_db'));
   if (demoDb) throw new Error('demo localStorage db present — bundle is in demo mode');
 });
 
@@ -122,7 +122,7 @@ await t('SEEKER · logs in and receives a real session cookie', async () => {
   await login('seeker@demo.ph', 'demo123');
   if (/\/auth/.test(page.url())) throw new Error('still on /auth — login failed');
   const cookies = await page.context().cookies();
-  if (!cookies.some(c => /rmph\.sid/.test(c.name))) throw new Error('no rmph.sid session cookie');
+  if (!cookies.some(c => /linaw\.sid/.test(c.name))) throw new Error('no linaw.sid session cookie');
 });
 
 await t('SEEKER · dashboard loads scored recommendations from the server', async () => {

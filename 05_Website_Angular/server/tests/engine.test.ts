@@ -307,7 +307,7 @@ test('a file is identified by its bytes, not its declared type', () => {
   const path = require('node:path');
   const { sniffFileType, typeMatches } = require('../src/lib/file-type');
 
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rmph-sniff-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'linaw-sniff-'));
   const write = (name: string, bytes: number[] | string) => {
     const p = path.join(dir, name);
     fs.writeFileSync(p, Buffer.from(typeof bytes === 'string' ? bytes : bytes));
@@ -451,7 +451,7 @@ test('every seeded skill stores the norm the engine would compute for it', () =>
      not a comment. It reads the shipped seed file, so a hand-written
      skill_norm that disagrees with the engine fails here rather than in
      somebody's database months later. */
-  const sql = readFileSync(join(__dirname, '..', '..', 'db', 'resumematch_ph.sql'), 'utf8');
+  const sql = readFileSync(join(__dirname, '..', '..', 'db', 'linaw_ph.sql'), 'utf8');
   const block = /INSERT INTO skills \(skill_name, skill_norm, category\) VALUES([\s\S]*?);/.exec(sql);
   assert.ok(block, 'the seed file must contain the skills catalogue');
 
@@ -476,7 +476,7 @@ test('every skill a seeded posting or resume requires exists in the catalogue', 
      the SELECT simply matches nothing, and the posting silently comes up
      short a required skill. Renaming a catalogue norm without updating these
      lists is the obvious way to cause it, so the two are checked together. */
-  const sql = readFileSync(join(__dirname, '..', '..', 'db', 'resumematch_ph.sql'), 'utf8');
+  const sql = readFileSync(join(__dirname, '..', '..', 'db', 'linaw_ph.sql'), 'utf8');
   const block = /INSERT INTO skills \(skill_name, skill_norm, category\) VALUES([\s\S]*?);/.exec(sql);
   const catalogue = new Set([...block![1].matchAll(/\('[^']+','([a-z0-9]+)','[a-z]+'\)/g)].map((m) => m[1]));
 
@@ -640,7 +640,7 @@ test('both engines agree on which matches were unsourced', () => {
 });
 
 test('the schema will accept exactly the four source kinds the engine names', () => {
-  const sql = readFileSync(join(__dirname, '..', '..', 'db', 'resumematch_ph.sql'), 'utf8');
+  const sql = readFileSync(join(__dirname, '..', '..', 'db', 'linaw_ph.sql'), 'utf8');
   const check = /evidence_kind TEXT CHECK \(evidence_kind IN \(([^)]*)\)\)/.exec(sql);
   assert.ok(check, 'resume_skills.evidence_kind must carry a CHECK constraint');
   const allowed = [...check![1].matchAll(/'([a-z]+)'/g)].map((m) => m[1]);
@@ -656,7 +656,7 @@ test('the skill categories the applicant hint uses match the seeded catalogue', 
      technical skills when they are short two soft ones, which is worse than
      saying nothing: it would send them to look at the wrong part of their own
      resume. So the copy is checked against the seed rather than trusted. */
-  const sql = readFileSync(join(__dirname, '..', '..', 'db', 'resumematch_ph.sql'), 'utf8');
+  const sql = readFileSync(join(__dirname, '..', '..', 'db', 'linaw_ph.sql'), 'utf8');
   const block = /INSERT INTO skills \(skill_name, skill_norm, category\) VALUES([\s\S]*?);/.exec(sql);
   const rows = [...block![1].matchAll(/\('[^']+','([a-z0-9]+)','([a-z]+)'\)/g)];
   assert.ok(rows.length >= 20, `expected a seeded catalogue, found ${rows.length}`);

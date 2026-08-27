@@ -1,5 +1,5 @@
 /* ============================================================
-   ResumeMatch PH — configuration
+   Linaw PH — configuration
    ------------------------------------------------------------
    The ONLY file you edit when moving between machines or hosts.
    Values may be overridden by environment variables of the same
@@ -37,7 +37,7 @@ dotenv.config();
 // local Postgres during development.
 export const DATABASE_URL = process.env.DATABASE_URL || '';
 export const DB_HOST = process.env.DB_HOST || '127.0.0.1';
-export const DB_NAME = process.env.DB_NAME || 'resumematch_ph';
+export const DB_NAME = process.env.DB_NAME || 'linaw_ph';
 export const DB_USER = process.env.DB_USER || 'postgres';
 export const DB_PASS = process.env.DB_PASS || '';
 export const DB_PORT = Number(process.env.DB_PORT || 5432);
@@ -89,7 +89,7 @@ export const IS_PROD = process.env.NODE_ENV === 'production';
    default to on in production. */
 export const DEBUG = (process.env.DEBUG || (IS_PROD ? 'false' : 'true')) === 'true';
 
-const DEV_SESSION_SECRET = 'rmph-dev-secret-change-in-production';
+const DEV_SESSION_SECRET = 'linaw-dev-secret-change-in-production';
 export const SESSION_SECRET = process.env.SESSION_SECRET || DEV_SESSION_SECRET;
 
 const COOKIE_SECURE_RAW = process.env.COOKIE_SECURE === 'true';
@@ -202,7 +202,7 @@ export const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 export const SMTP_SECURE = (process.env.SMTP_SECURE || (SMTP_PORT === 465 ? 'true' : 'false')) === 'true';
 export const SMTP_USER = process.env.SMTP_USER || '';
 export const SMTP_PASS = process.env.SMTP_PASS || '';
-export const MAIL_FROM = process.env.MAIL_FROM || (SMTP_USER ? `ResumeMatch PH <${SMTP_USER}>` : '');
+export const MAIL_FROM = process.env.MAIL_FROM || (SMTP_USER ? `Linaw PH <${SMTP_USER}>` : '');
 /* Public base URL of the site, used for the links inside notification and
    verification emails.
 

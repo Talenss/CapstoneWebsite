@@ -1,7 +1,7 @@
 import { Component, ElementRef, computed, forwardRef, input, signal, viewChildren } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
-/* ResumeMatch PH, shared/otp-input
+/* Linaw PH, shared/otp-input
    ------------------------------------------------------------------
    One box per digit for the six-digit codes the app emails: at sign-up,
    at password reset, and when changing an account's email address.

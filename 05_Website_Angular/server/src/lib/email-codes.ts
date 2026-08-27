@@ -1,4 +1,4 @@
-/* ResumeMatch PH — lib/email-codes.ts
+/* Linaw PH — lib/email-codes.ts
    Storage and rules for the 6-digit email codes (account verification and
    password reset). The table is created automatically at server start, so
    databases imported from the original PHP schema need no manual

@@ -1,4 +1,4 @@
-/* ResumeMatch PH — reference integrity
+/* Linaw PH — reference integrity
    ------------------------------------------------------------------
    One defect class, swept across the whole site: MARKUP THAT REFERS TO
    SOMETHING THAT IS NOT THERE.
@@ -113,7 +113,7 @@ async function sweep(where) {
 }
 
 async function signIn(email) {
-  await page.evaluate(() => { try { sessionStorage.removeItem('rmph_v3_session'); } catch { /* api mode */ } });
+  await page.evaluate(() => { try { sessionStorage.removeItem('linaw_v3_session'); } catch { /* api mode */ } });
   await page.goto(B + '/auth', { waitUntil: 'networkidle' });
   await page.waitForTimeout(800);
   if (!(await page.locator('input[type=email]').count())) return;
@@ -141,7 +141,7 @@ const t = async (n, fn) => {
 console.log('=== REFERENCE INTEGRITY ===');
 
 await t('every page renders with no dangling reference (all four audiences)', async () => {
-  await page.evaluate(() => { try { sessionStorage.removeItem('rmph_v3_session'); } catch {} }).catch(() => {});
+  await page.evaluate(() => { try { sessionStorage.removeItem('linaw_v3_session'); } catch {} }).catch(() => {});
   for (const route of ROUTES.public) { await page.goto(B + route, { waitUntil: 'networkidle' }); await page.waitForTimeout(1100); await sweep(route); }
   for (const role of ['seeker', 'recruiter', 'admin']) {
     await signIn(ACCOUNTS[role]);

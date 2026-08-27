@@ -1,4 +1,4 @@
-/* ResumeMatch PH — narrow-screen walkthrough
+/* Linaw PH — narrow-screen walkthrough
    ------------------------------------------------------------------
    No page may scroll HORIZONTALLY on a phone.
 
@@ -113,8 +113,8 @@ const signIn = async (page, email) => {
   await page.goto(B + '/auth', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(700);
   await page.evaluate(() => {
-    try { sessionStorage.removeItem('rmph_v3_session'); } catch {}
-    try { localStorage.removeItem('rmph_v3_session'); } catch {}
+    try { sessionStorage.removeItem('linaw_v3_session'); } catch {}
+    try { localStorage.removeItem('linaw_v3_session'); } catch {}
   });
   await page.goto(B + '/auth', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(800);

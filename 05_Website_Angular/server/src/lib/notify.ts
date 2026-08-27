@@ -1,4 +1,4 @@
-/* ResumeMatch PH — lib/notify.ts
+/* Linaw PH — lib/notify.ts
    Application-event emails: a seeker hears when a recruiter moves their
    application; recruiters hear when someone applies. Every send respects
    the user's email_notifications preference (checked by the callers'
@@ -13,7 +13,7 @@ import { mailConfigured, sendMail } from './mailer';
 const btn = (href: string, label: string) =>
   `<p style="margin:22px 0 0"><a href="${href}" style="display:inline-block;background:#C9A24B;color:#141926;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:8px">${label}</a></p>`;
 
-const foot = `<p style="margin:22px 0 0;font-size:12px;line-height:1.6;color:#8A8FA0">You’re receiving this because email updates are turned on for your ResumeMatch PH account. Turn them off any time in <b>My account</b>.</p>`;
+const foot = `<p style="margin:22px 0 0;font-size:12px;line-height:1.6;color:#8A8FA0">You’re receiving this because email updates are turned on for your Linaw PH account. Turn them off any time in <b>My account</b>.</p>`;
 
 function esc(s: string): string {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

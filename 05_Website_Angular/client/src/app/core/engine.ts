@@ -248,7 +248,7 @@ export const SKILL_ALIASES: Record<string, string> = {
 /* ------------------------------------------------------------
    SKILL CATEGORIES, keyed by the canonical normalised form, mirroring the
    `category` column of the seeded skills catalogue. An engine test reads
-   db/resumematch_ph.sql and fails if the two disagree, so this stays a copy
+   db/linaw_ph.sql and fails if the two disagree, so this stays a copy
    of the database rather than a second opinion about it.
 
    Used for ONE purpose: telling an applicant what KIND of requirement they
