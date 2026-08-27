@@ -1,0 +1,134 @@
+ResumeMatch PH — the reviewer pack
+For group members who did not build the system
+Holy Angel University · School of Computing · Garcia, Santos, Talens
+
+Rebuilt 25 August 2026.  Updated 27 August 2026.  Five documents instead of eleven.
+
+
+WHAT CHANGED, AND WHY IT IS SHORTER
+───────────────────────────────────
+
+  The old pack was eleven files and 81,000 words. It is now five files and
+  50,000, and nothing was thrown away. The difference was repetition: the
+  same ten or fifteen facts were re-explained in up to eleven places, and
+  the same questions were answered in four.
+
+  That was not only long, it had gone wrong. Two of the copies had drifted
+  into contradicting the paper:
+
+    · One told you to say the sample size of forty "comes from a power
+      calculation". The paper says in as many words that it is NOT a power
+      calculation. If a panelist reads both, that is a bad moment.
+
+    · Six files promised respondents anonymity. The form as administered
+      asks for an email address, so the responses are confidential, not
+      anonymous.
+
+  Both are corrected. Numbers now live in ONE file, so the next correction
+  is one edit and not nine.
+
+
+UPDATED 27 AUGUST 2026 — THE THIRD RESPONDENT GROUP
+───────────────────────────────────────────────────
+
+  The manuscript now has a seventh research question and a third group of
+  respondents: IT EXPERTS. They are not users. They inspect the deployed
+  system and its source code, and they rate two quality characteristics
+  nobody can judge from using a site — SECURITY and MAINTAINABILITY.
+
+  What changed across the pack, all of it checked against the manuscript
+  rather than against the previous pack:
+
+    · Seven research questions, not six.
+    · Six instruments and 147 items, not five and 117. Instrument F is the
+      IT expert evaluation: 31 items, 4 recording what was examined and 27
+      rated.
+    · Three respondent groups, fifty-five in total — forty job seekers, the
+      HR census of about ten, and five IT experts with three as the floor
+      below which that part is reported as incomplete rather than as a
+      result.
+    · FIVE of ISO 25010's eight characteristics, not three. Users rate
+      three; the experts rate those three plus two more.
+    · Three instruments go out after use, not two.
+    · The anonymity wording that survived in the ethics section of
+      The-Study is now confidentiality, matching the correction above.
+    · Two counts corrected against the code: 56 API endpoints (not 55) and
+      53 tests in the server suite (not 52).
+
+  Also merged away: 245 answered questions across four files became 225,
+  and Defense-Preparation's five variants of every answer (why they ask,
+  the ideal answer, a simpler one, a deeper one, follow-ups) became one
+  answer plus the material that actually added something.
+
+
+THE FIVE FILES
+──────────────
+
+  1. ResumeMatch-PH-Core-Facts.docx            ~15 min   READ THIS FIRST
+     Every number in the project, once. The score, the tiers, the AI
+     answer, the two resumes, the sample, what is built, how it is
+     verified, and the honest weak points. Nine short sections. If you
+     read only one file, read this one — the other four assume it.
+
+  2. ResumeMatch-PH-The-Paper-In-Brief.docx    ~25 min
+     EVERY SECTION OF THE MANUSCRIPT in a few lines each, in the order the
+     paper puts them. Read this if you have not read the paper, or the night
+     before when there is no time to read it again. Each section ends with
+     the one line to have ready if a panelist opens the paper at that page.
+
+  3. ResumeMatch-PH-The-Study.docx             ~2 hours
+     The paper section by section, the statistics worked by hand, and 123
+     research questions with answers.
+
+  4. ResumeMatch-PH-The-System.docx            ~1.5 hours
+     What each part of the site does, how the program is put together, and
+     102 technical questions with answers.
+
+  5. ResumeMatch-PH-Defence-Day.docx           ~45 min
+     One hundred questions to drill, each with a short answer under it, the
+     weaknesses to own before the panel finds them, and the night-before
+     checklist. Cover the answers and say yours out loud first.
+
+
+THE THREE ANSWERS EVERYONE MUST KNOW
+────────────────────────────────────
+
+  1. IS THIS AI?  No. Scoring, ranking and recommending are a fixed sum you
+     can check on paper. AI appears in one optional place: reading a file
+     an applicant chose to upload, so the builder can be pre-filled. It
+     never scores anybody. "The AI fills in boxes, it does not judge."
+
+  2. WHERE DID 40 COME FROM?  A practical minimum for a single-site
+     descriptive study, stated as a judgement. NOT a formula and NOT a
+     power calculation. Slovin does not apply: the sampling is purposive
+     and there is no list to draw randomly from. What we achieved is 103
+     valid responses, 46 of them matching the population the study defines.
+
+  3. WHY THESE TOOLS?  Angular and Node are one language, so the scoring
+     sum in the browser and the one on the server are provably the same —
+     and a test compares 500 generated pairs to prove it. PostgreSQL
+     enforces our rules itself.
+
+
+THE SHORT VERSION, IF YOU READ NOTHING ELSE
+───────────────────────────────────────────
+
+  Waterfall built the app. Quantitative descriptive is the study.
+  The score is arithmetic. Anyone can check it on paper.
+  BOTH resumes are scored. Only the built one decides position.
+  The AI only reads UPLOADED FILES, and never scores anybody.
+  The system never rejects anyone. A person always decides.
+
+  Skills 50, education 25, experience 25.
+  Strong is 80 and up. Possible is 50 to 79. Related is below 50.
+  A skill you cannot say where you used counts half, never zero.
+  The applicant is told HOW MANY are missing, never which.
+
+  198 automated tests across eight suites, all passing.
+  103 valid survey responses; 46 match the stated population.
+  All available HR staff, about ten. Plus five IT experts, three the floor.
+  Users rate three ISO characteristics; the experts rate five.
+
+  And when you do not know an answer:
+  "I do not know that. What I would do is ____, and I can tell you
+   by ____." Then write it down in front of them.
