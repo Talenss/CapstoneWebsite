@@ -170,6 +170,14 @@ is now incomplete** — it reads matched ÷ required and should read
 (matched − unsourced × 0.5) ÷ required. That edit has not been made to the
 paper yet, and the Manuscript Guide lists it under what is still open.
 
+> **Closed since.** The paper now carries the formula and the half credit:
+> Chapter 3 states Score = (S × Ws + E × We + X × Wx) × 100 and then, in its
+> own paragraph, that "a matched and sourced skill contributes its full share
+> of S. A matched but unsourced skill contributes half, never zero." The counts
+> above are left as they were written — this file records what was true at each
+> pass, and the current figures are 22 tables, 16 CHECK constraints and 198
+> tests across eight suites.
+
 ## The three older documents, brought in line
 
 `Linaw-PH-Codebase.docx`, `-Study-Guide.docx` and

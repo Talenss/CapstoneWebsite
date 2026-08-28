@@ -110,10 +110,19 @@ export class TourService {
     const { spot, card } = this.els;
     const r = el.getBoundingClientRect();
 
-    spot.style.top = r.top - 6 + 'px';
-    spot.style.left = r.left - 6 + 'px';
-    spot.style.width = r.width + 12 + 'px';
-    spot.style.height = r.height + 12 + 'px';
+    // The spotlight sits 6px outside the target on every side, which on a
+    // narrow phone put its right edge past the viewport: the card below is
+    // clamped, the spotlight never was, and a position:fixed box wider than
+    // the window scrolls the page sideways. Clamp the ring to the viewport
+    // so it hugs the visible part of the target instead.
+    const sl = Math.max(0, r.left - 6);
+    const sr = Math.min(window.innerWidth, r.right + 6);
+    const st = Math.max(0, r.top - 6);
+    const sb = Math.min(window.innerHeight, r.bottom + 6);
+    spot.style.top = st + 'px';
+    spot.style.left = sl + 'px';
+    spot.style.width = Math.max(0, sr - sl) + 'px';
+    spot.style.height = Math.max(0, sb - st) + 'px';
 
     // below the target if it fits, otherwise above; always inside the viewport
     const ch = card.offsetHeight, cw = card.offsetWidth, pad = 14;
