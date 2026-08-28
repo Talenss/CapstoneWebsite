@@ -816,11 +816,11 @@ test('a recruiter can set the scoring weights on their own opening', async () =>
   assert.equal(made.body.ok, true, made.body.error);
   // Whole percentages on the wire, the same units the column stores and the
   // recruiter typed — so "must total 100" stays an exact integer check.
-  assert.deepEqual(made.body.posting.weights, { skills: 70, education: 15, experience: 15 });
+  assert.deepEqual(made.body.posting.weights, { skills: 70, education: 15, experience: 15, certifications: 0 });
 
   // And they survive a round trip rather than only existing in the response.
   const back = await hr('postings/get', { id: made.body.posting.id });
-  assert.deepEqual(back.body.posting.weights, { skills: 70, education: 15, experience: 15 });
+  assert.deepEqual(back.body.posting.weights, { skills: 70, education: 15, experience: 15, certifications: 0 });
 });
 
 test('an opening that sets no weights reports none, rather than a copy of the defaults', async () => {
@@ -898,7 +898,7 @@ test('the score a seeker is given uses the opening’s own weights', async () =>
   const fraction = s.matchedSkills.length / 4;
   assert.equal(s.score, Math.floor(fraction * 80 + 10 + 10 + 0.5),
     'the score must be computed on 80/10/10, not the site default');
-  assert.deepEqual(s.weights, { skills: 0.8, education: 0.1, experience: 0.1 },
+  assert.deepEqual(s.weights, { skills: 0.8, education: 0.1, experience: 0.1, certifications: 0 },
     'and it must report the split it used, as fractions');
 });
 
@@ -1190,4 +1190,52 @@ test('a resume imported from a CV is not docked for a question it was never aske
   const relisted = await seeker('resumes/save', { resume: stripped });
   assert.deepEqual(relisted.body.resume.skillEvidence, {},
     'having been asked once, the resume stays asked');
+});
+
+test('a recruiter can put part of the score on certifications, over HTTP', async () => {
+  /* The end-to-end version of the engine tests: the four weights survive the
+     round trip through Postgres, the required certifications come back with
+     the opening, and the CHECK constraint on the table agrees with the
+     validation in the route. */
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+
+  const made = await hr('postings/save', {
+    posting: {
+      title: 'Network Engineer', department: 'Information Technology',
+      employmentType: 'full-time', description: 'Maintain the client network estate.',
+      educationLevel: 'bachelor', minExperienceMonths: 0, skills: ['Networking'],
+      certifications: ['CCNA', 'c.c.n.a.'],   // the second is the same requirement
+      weights: { skills: 40, education: 20, experience: 20, certifications: 20 },
+    },
+  });
+  assert.equal(made.body.ok, true, made.body.error);
+  assert.deepEqual(made.body.posting.weights,
+    { skills: 40, education: 20, experience: 20, certifications: 20 });
+  assert.deepEqual(made.body.posting.certifications, ['CCNA'],
+    'the duplicate is dropped on the normalised form, so the component can be scored out of 1');
+
+  // Weights that do not total 100 once certifications are counted are refused.
+  const bad = await hr('postings/save', {
+    posting: {
+      title: 'Bad weights', department: 'Information Technology',
+      employmentType: 'full-time', description: 'Should never be stored.',
+      educationLevel: 'bachelor', minExperienceMonths: 0, skills: ['Networking'],
+      weights: { skills: 50, education: 25, experience: 25, certifications: 20 },
+    },
+  });
+  assert.equal(bad.body.ok, false, 'the four weights must total 100, not the three');
+  assert.match(String(bad.body.error), /add up to 100/);
+
+  // And the three original components still cannot be switched off.
+  const off = await hr('postings/save', {
+    posting: {
+      title: 'Zeroed education', department: 'Information Technology',
+      employmentType: 'full-time', description: 'Should never be stored.',
+      educationLevel: 'bachelor', minExperienceMonths: 0, skills: ['Networking'],
+      weights: { skills: 60, education: 0, experience: 20, certifications: 20 },
+    },
+  });
+  assert.equal(off.body.ok, false);
+  assert.match(String(off.body.error), /at least 10%/);
 });

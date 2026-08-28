@@ -352,12 +352,25 @@ CREATE TABLE job_postings (
   weight_skills      SMALLINT,
   weight_education   SMALLINT,
   weight_experience  SMALLINT,
+
+  /* CERTIFICATIONS — the optional fourth component.
+     NULL means the same as 0: this opening does not score certifications at
+     all, which is the default and what every opening written before this
+     column existed carries. That is deliberate rather than lazy — it is what
+     lets the three-weight rows already in the table keep totalling 100 and
+     keep producing exactly the scores they always have, with no backfill.
+     The floor of 10 applies to the original three only: a recruiter may
+     decline to score certifications entirely, but may not switch off skills,
+     education or experience. */
+  weight_certifications SMALLINT,
   CONSTRAINT posting_weights_complete CHECK (
     (weight_skills IS NULL AND weight_education IS NULL AND weight_experience IS NULL)
     OR (
       weight_skills IS NOT NULL AND weight_education IS NOT NULL AND weight_experience IS NOT NULL
-      AND weight_skills + weight_education + weight_experience = 100
+      AND weight_skills + weight_education + weight_experience
+          + COALESCE(weight_certifications, 0) = 100
       AND weight_skills >= 10 AND weight_education >= 10 AND weight_experience >= 10
+      AND COALESCE(weight_certifications, 0) >= 0
     )
   )
 );
@@ -368,6 +381,18 @@ CREATE TABLE posting_skills (
   posting_id INT NOT NULL REFERENCES job_postings(posting_id) ON DELETE CASCADE,
   skill_id   INT NOT NULL REFERENCES skills(skill_id)         ON DELETE CASCADE,
   PRIMARY KEY (posting_id, skill_id)
+);
+
+-- The certifications an opening asks for. Free text rather than a foreign key
+-- into a catalogue, because a certificate's name is whatever the body issuing
+-- it calls it, and there is no closed list to normalise against the way there
+-- is for skills. cert_norm is the lowercase-alphanumeric form the engine
+-- compares with; the applicant's entry must CONTAIN it to count.
+CREATE TABLE posting_certifications (
+  posting_id INT NOT NULL REFERENCES job_postings(posting_id) ON DELETE CASCADE,
+  cert_name  VARCHAR(160) NOT NULL,
+  cert_norm  VARCHAR(160) NOT NULL,
+  PRIMARY KEY (posting_id, cert_norm)
 );
 
 -- A seeker's bookmarked openings.

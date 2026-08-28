@@ -5,7 +5,7 @@ import { PostingRow, UserRow, ResumeRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
 import { requireRole, currentUser } from '../lib/auth';
 import { fetchPosting, fetchResume, serializePosting, serializeResume } from '../lib/serializers';
-import { EDU_RANK, skillId, rmScore, getSettings } from '../lib/engine';
+import { EDU_RANK, skillId, rmScore, getSettings, certNorm } from '../lib/engine';
 import { notifyNewPostingMatch } from '../lib/notify';
 
 const router = asyncRouter();
@@ -114,6 +114,21 @@ router.post('/save', async (req, res) => {
   const dept = String(P.department ?? '').trim();
   const desc = String(P.description ?? '').trim();
   const skills = (Array.isArray(P.skills) ? P.skills : []).map((s: any) => String(s).trim()).filter(Boolean);
+  /* Certifications the opening asks for. Deduplicated on the NORMALISED form,
+     because "CCNA" and "C.C.N.A." are the same requirement and listing both
+     would make the component impossible to score out of. */
+  const certifications: string[] = [];
+  {
+    const seen = new Set<string>();
+    for (const c of Array.isArray(P.certifications) ? P.certifications : []) {
+      const name = String(c).trim().slice(0, 160);
+      const norm = certNorm(name);
+      if (!name || !norm || seen.has(norm)) continue;
+      seen.add(norm);
+      certifications.push(name);
+      if (certifications.length >= 20) break;
+    }
+  }
 
   if (title.length < 2) return fail(res, 'Give the opening a title.');
   if (dept === '') return fail(res, 'Which department is this for?');
@@ -133,7 +148,7 @@ router.post('/save', async (req, res) => {
      applicant whose only strength is the zeroed one would be scored on a
      scale that cannot see them at all. The same rule is a CHECK constraint on
      the table, so a bad set cannot arrive by any other route either. */
-  let weights: { skills: number; education: number; experience: number } | null = null;
+  let weights: { skills: number; education: number; experience: number; certifications: number } | null = null;
   if (P.weights != null) {
     const W = P.weights;
     const pct = (v: unknown): number | null => {
@@ -141,13 +156,19 @@ router.post('/save', async (req, res) => {
       return Number.isFinite(n) && Number.isInteger(n) ? n : null;
     };
     const sk = pct(W.skills), ed = pct(W.education), ex = pct(W.experience);
-    if (sk === null || ed === null || ex === null)
+    /* Certifications are the one component a recruiter may switch off, and
+       off is the default. Absent means 0, which is what keeps an opening
+       written before this component existed valid without being rewritten. */
+    const ce = W.certifications === undefined || W.certifications === null ? 0 : pct(W.certifications);
+    if (sk === null || ed === null || ex === null || ce === null)
       return fail(res, 'The scoring weights must be whole numbers.');
     if (sk < 10 || ed < 10 || ex < 10)
-      return fail(res, 'Each part of the score has to be at least 10% — a criterion cannot be switched off entirely.');
-    if (sk + ed + ex !== 100)
-      return fail(res, `The three weights have to add up to 100%. They currently add up to ${sk + ed + ex}%.`);
-    weights = { skills: sk, education: ed, experience: ex };
+      return fail(res, 'Skills, education and experience each have to be at least 10% — those three cannot be switched off entirely.');
+    if (ce < 0)
+      return fail(res, 'The certifications weight cannot be negative.');
+    if (sk + ed + ex + ce !== 100)
+      return fail(res, `The weights have to add up to 100%. They currently add up to ${sk + ed + ex + ce}%.`);
+    weights = { skills: sk, education: ed, experience: ex, certifications: ce };
   }
 
   // Optional "apply by" date. Must be today or later when set.
@@ -170,27 +191,41 @@ router.post('/save', async (req, res) => {
     const id = await withTransaction(async (tx) => {
       let pid = P.id ? Number(P.id) : 0;
 
-      // All three or all three null — never a mix, which the CHECK rejects.
+      // All of them or all null — never a mix, which the CHECK rejects.
       const wS = weights ? weights.skills : null;
       const wE = weights ? weights.education : null;
       const wX = weights ? weights.experience : null;
+      const wC = weights ? weights.certifications : null;
 
       if (pid) {
         await tx.exec(
           `UPDATE job_postings SET title=?, department=?, employment_type=?, description=?, education_level=?,
-             min_experience_months=?, application_deadline=?, weight_skills=?, weight_education=?, weight_experience=?
+             min_experience_months=?, application_deadline=?, weight_skills=?, weight_education=?, weight_experience=?,
+             weight_certifications=?
            WHERE posting_id=?`,
-          [title, dept, type, desc, edu, months, deadline, wS, wE, wX, pid],
+          [title, dept, type, desc, edu, months, deadline, wS, wE, wX, wC, pid],
         );
       } else {
         const ins = await tx.exec(
           `INSERT INTO job_postings (company_id, created_by, title, department, employment_type, description,
              education_level, min_experience_months, application_deadline, weight_skills, weight_education,
-             weight_experience, status)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'open') RETURNING posting_id`,
-          [u.company_id, u.user_id, title, dept, type, desc, edu, months, deadline, wS, wE, wX],
+             weight_experience, weight_certifications, status)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'open') RETURNING posting_id`,
+          [u.company_id, u.user_id, title, dept, type, desc, edu, months, deadline, wS, wE, wX, wC],
         );
         pid = ins.insertId;
+      }
+
+      /* Required certifications. Free text, so there is no catalogue to
+         intern them into the way skills are — the normalised form is stored
+         beside the name because it is what the engine compares, and it is the
+         primary key, so the same certificate cannot be listed twice. */
+      await tx.exec('DELETE FROM posting_certifications WHERE posting_id = ?', [pid]);
+      for (const c of certifications) {
+        await tx.exec(
+          'INSERT INTO posting_certifications (posting_id, cert_name, cert_norm) VALUES (?,?,?) ON CONFLICT DO NOTHING',
+          [pid, c, certNorm(c)],
+        );
       }
 
       await tx.exec('DELETE FROM posting_skills WHERE posting_id = ?', [pid]);

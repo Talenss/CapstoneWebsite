@@ -84,6 +84,10 @@ export interface PostingRow {
   weight_skills: number | null;
   weight_education: number | null;
   weight_experience: number | null;
+  /** The optional fourth component. NULL means 0 — the opening does not score
+   *  certifications — which is what every opening written before this column
+   *  existed carries, and why none of them needed rewriting. */
+  weight_certifications: number | null;
 }
 
 export interface ApplicationRow {

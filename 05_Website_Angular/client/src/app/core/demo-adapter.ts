@@ -5,7 +5,7 @@
    ============================================================ */
 import { ApiAdapter } from './adapter';
 import { AnalyzedResume, ApiResult, AppStatus, Application, Company, EvidenceKind, RejectionReason, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User } from './models';
-import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels } from './engine';
+import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert } from './engine';
 
 const KEY = 'linaw_v3_db';
 
@@ -905,6 +905,24 @@ export class DemoAdapter implements ApiAdapter {
         minExperienceMonths: Math.max(0, Number(posting.minExperienceMonths) || 0),
       };
 
+      /* Certifications the opening asks for, deduplicated on the NORMALISED
+         form, matching routes/postings.ts — "CCNA" and "C.C.N.A." are one
+         requirement, and listing both would make the component impossible to
+         score out of. */
+      {
+        const seen = new Set<string>();
+        const certs: string[] = [];
+        for (const c of Array.isArray(posting.certifications) ? posting.certifications : []) {
+          const name = String(c).trim().slice(0, 160);
+          const norm = normCert(name);
+          if (!name || !norm || seen.has(norm)) continue;
+          seen.add(norm);
+          certs.push(name);
+          if (certs.length >= 20) break;
+        }
+        posting = { ...posting, certifications: certs };
+      }
+
       /* Per-opening weights. Same three rules as routes/postings.ts, and the
          same messages: whole numbers, each at least 10%, totalling 100. The
          demo is what gets demonstrated, so a set the server would reject must
@@ -918,13 +936,18 @@ export class DemoAdapter implements ApiAdapter {
           return Number.isFinite(n) && Number.isInteger(n) ? n : null;
         };
         const sk = pct(W.skills), ed = pct(W.education), ex = pct(W.experience);
-        if (sk === null || ed === null || ex === null)
+        // Certifications are the one component that may be switched off, and
+        // off is the default; absent means 0, as on the server.
+        const ce = W.certifications === undefined || W.certifications === null ? 0 : pct(W.certifications);
+        if (sk === null || ed === null || ex === null || ce === null)
           return apiFail('The scoring weights must be whole numbers.');
         if (sk < 10 || ed < 10 || ex < 10)
-          return apiFail('Each part of the score has to be at least 10%, a criterion cannot be switched off entirely.');
-        if (sk + ed + ex !== 100)
-          return apiFail(`The three weights have to add up to 100%. They currently add up to ${sk + ed + ex}%.`);
-        posting = { ...posting, weights: { skills: sk, education: ed, experience: ex } };
+          return apiFail('Skills, education and experience each have to be at least 10%, those three cannot be switched off entirely.');
+        if (ce < 0)
+          return apiFail('The certifications weight cannot be negative.');
+        if (sk + ed + ex + ce !== 100)
+          return apiFail(`The weights have to add up to 100%. They currently add up to ${sk + ed + ex + ce}%.`);
+        posting = { ...posting, weights: { skills: sk, education: ed, experience: ex, certifications: ce } };
       } else {
         posting = { ...posting, weights: null };
       }

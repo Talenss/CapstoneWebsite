@@ -224,6 +224,10 @@ export async function serializePosting(p: PostingRow, withCompany = true): Promi
     'SELECT s.skill_name FROM posting_skills ps JOIN skills s ON s.skill_id=ps.skill_id WHERE ps.posting_id=? ORDER BY s.skill_name',
     [p.posting_id],
   );
+  const ct = await query<{ cert_name: string }>(
+    'SELECT cert_name FROM posting_certifications WHERE posting_id=? ORDER BY cert_name',
+    [p.posting_id],
+  );
 
   const out: any = {
     id: String(p.posting_id),
@@ -245,7 +249,13 @@ export async function serializePosting(p: PostingRow, withCompany = true): Promi
       skills: Number(p.weight_skills),
       education: Number(p.weight_education),
       experience: Number(p.weight_experience),
+      /* NULL means 0 rather than "unset". An opening written before this
+         component existed carries three weights totalling 100, and reporting
+         its fourth as null would make the published breakdown fail to add up
+         to the score printed beside it. */
+      certifications: p.weight_certifications == null ? 0 : Number(p.weight_certifications),
     },
+    certifications: ct.map((r) => r.cert_name),
     deadline: p.application_deadline || null,
     // past-deadline postings stop accepting applications without anyone
     // having to remember to close them (see postingExpired)
