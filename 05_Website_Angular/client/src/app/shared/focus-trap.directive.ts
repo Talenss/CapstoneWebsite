@@ -1,4 +1,4 @@
-/* ResumeMatch PH, shared/focus-trap.directive.ts
+/* Linaw PH, shared/focus-trap.directive.ts
 
    Makes a modal usable with a keyboard and announceable by a screen reader.
 

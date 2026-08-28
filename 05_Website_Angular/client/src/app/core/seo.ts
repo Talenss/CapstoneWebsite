@@ -1,5 +1,5 @@
 /* ============================================================
-   ResumeMatch PH, core/seo.ts
+   Linaw PH, core/seo.ts
    ------------------------------------------------------------
    Everything a search engine reads that is not visible on the
    page: the description, the canonical URL, the social cards, the
@@ -39,7 +39,7 @@ export interface SeoData {
   /** 140–160 characters. Shown under the title in results. */
   description: string;
   /** Overrides the route's `title` for social cards only, where the
-   *  "— ResumeMatch PH" suffix is redundant next to the site name. */
+   *  "— Linaw PH" suffix is redundant next to the site name. */
   socialTitle?: string;
   /** false for anything behind a login: those pages have nothing a searcher
    *  can use, and indexing them wastes the crawl budget on redirects. */
@@ -108,7 +108,7 @@ function addressOf(location: string | null | undefined) {
   };
 }
 
-const SITE_NAME = 'ResumeMatch PH';
+const SITE_NAME = 'Linaw PH';
 const DEFAULT_IMAGE = '/og-card.png';
 
 @Injectable({ providedIn: 'root' })

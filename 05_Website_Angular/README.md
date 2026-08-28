@@ -1,4 +1,4 @@
-# ResumeMatch PH — Angular + Node edition
+# Linaw PH — Angular + Node edition
 
 A free résumé builder + transparent, rule-based job-matching platform for
 Filipino job seekers, piloted with **Clark Outsourcing** (Clark Freeport
@@ -35,7 +35,7 @@ history only, and **nothing here depends on it.**
 - Honest match scores against every real opening (**skills 50 / education 25 /
   experience 25**, weights published), in three tiers — strong, possible,
   related. No one is auto-rejected.
-- Save openings, track applications through all five statuses, job alerts.
+- Save openings, track applications through all six statuses, job alerts.
 - **Application history** — every application keeps a dated record of each
   status it has held, and the applicant can read it: when they applied, when a
   recruiter moved it, and how long each step took. Attributed to the employer,
@@ -94,7 +94,7 @@ To wipe demo data: open the browser console → `localStorage.clear()` → refre
 The short version (full details in **[SETUP.md](./SETUP.md)**):
 
 1. **Database:** create a free Supabase project → SQL Editor → paste and run
-   `db/resumematch_ph.sql` (the whole schema + demo data in one file).
+   `db/linaw_ph.sql` (the whole schema + demo data in one file).
 2. **Server:** `cd server && npm install && cp .env.example .env`, then set
    `DATABASE_URL` to your Supabase **Session pooler** connection string.
    Start it: `npm run dev` (listens on `http://localhost:4300`).
@@ -110,7 +110,7 @@ The short version (full details in **[SETUP.md](./SETUP.md)**):
 | `GEMINI_API_KEY` | "upload & analyze" AI extraction | that one feature shows "not configured"; everything else works |
 | `SESSION_SECRET`, `DEBUG`, `TRUST_PROXY`, `COOKIE_SECURE`, `APP_URL` | production hardening | sensible dev defaults (see SETUP.md → going-live checklist) |
 
-`db/resumematch_ph.sql` is a full reset (it drops tables first) — don't run it
+`db/linaw_ph.sql` is a full reset (it drops tables first) — don't run it
 on a database whose data you want to keep. New tables/columns added over time
 are also applied automatically by idempotent migrations on server start.
 

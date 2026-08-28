@@ -1,4 +1,4 @@
-# ResumeMatch PH — crawler rules
+# Linaw PH — crawler rules
 #
 # The four public pages are the whole indexable site: the home page, the
 # openings list, the learning hub and the privacy notice. Everything else is

@@ -1,7 +1,7 @@
-/* ResumeMatch PH — lib/migrate.ts
+/* Linaw PH — lib/migrate.ts
    Additive, self-applying schema upgrades, run once at server start.
    Everything here is idempotent (IF NOT EXISTS / DROP-then-ADD), so a
-   database created from db/resumematch_ph.sql boots with nothing to do,
+   database created from db/linaw_ph.sql boots with nothing to do,
    and one carried over from an earlier feature set catches up on boot. */
 import { exec, query, withTransaction, Tx } from '../db';
 import { ensureEmailCodesTable } from './email-codes';
@@ -19,7 +19,7 @@ import { ensureEmailCodesTable } from './email-codes';
    No policies: RLS with none denies everything, which is the right answer
    for tables only this server should ever read.
 
-   Two tables are handled here rather than in db/resumematch_ph.sql because
+   Two tables are handled here rather than in db/linaw_ph.sql because
    they are created at runtime — user_sessions by connect-pg-simple on first
    boot, email_codes by ensureEmailCodesTable above — so the schema file
    never sees them. The rest are covered there. This is also the path by
@@ -177,7 +177,7 @@ export async function runMigrations(): Promise<void> {
   // Section order still lives in template_type; this only skins the sheet.
   await exec("ALTER TABLE resumes ADD COLUMN IF NOT EXISTS design TEXT NOT NULL DEFAULT 'classic'");
   // Widen the whitelist as designs are added. A database created from an
-  // older db/resumematch_ph.sql carries the narrower CHECK, which would
+  // older db/linaw_ph.sql carries the narrower CHECK, which would
   // reject a save the UI happily offers, so the constraint is replaced rather
   // than assumed. Databases upgraded by the line above have no CHECK at all —
   // DROP ... IF EXISTS makes that case a no-op instead of an error.

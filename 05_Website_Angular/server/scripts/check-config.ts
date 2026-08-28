@@ -1,5 +1,5 @@
 /* ============================================================
-   ResumeMatch PH — scripts/check-config.ts
+   Linaw PH — scripts/check-config.ts
    ------------------------------------------------------------
    Answers one question: are the three external services this
    app depends on actually reachable with the credentials in
@@ -63,7 +63,7 @@ async function checkDatabase(): Promise<void> {
       "SELECT count(*) AS n FROM information_schema.tables WHERE table_schema='public'");
     const n = Number(r.rows[0].n);
     await client.end();
-    if (n === 0) fail('database', `connected to ${host}, but the schema is EMPTY — import db/resumematch_ph.sql`);
+    if (n === 0) fail('database', `connected to ${host}, but the schema is EMPTY — import db/linaw_ph.sql`);
     else pass('database', `connected to ${host} — ${n} tables`);
   } catch (e: any) {
     fail('database', `${host || 'DB_HOST'} — ${e?.message || e}`);
@@ -126,7 +126,7 @@ async function checkGemini(): Promise<void> {
 }
 
 (async () => {
-  console.log('\nResumeMatch PH — checking external services\n');
+  console.log('\nLinaw PH — checking external services\n');
   await checkDatabase();
   await checkEmail();
   await checkGemini();

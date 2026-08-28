@@ -3,7 +3,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import { SessionService } from './session.service';
 import { Role } from './models';
 
-/** Port of RMPH.guard(role) from assets/api.js. Not signed in → redirect to
+/** Port of LINAW.guard(role) from assets/api.js. Not signed in → redirect to
  *  /auth?next=<path>. Wrong role → redirect to that role's own dashboard.
  *  Omit `role` to just require *any* signed-in user (account, resume-print). */
 export function authGuard(role?: Role): CanActivateFn {

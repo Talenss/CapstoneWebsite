@@ -1,4 +1,4 @@
-/* ResumeMatch PH — routes/companies.ts : list · get · update */
+/* Linaw PH — routes/companies.ts : list · get · update */
 import { asyncRouter } from '../lib/async-router';
 import { query, queryOne, exec } from '../db';
 import { CompanyRow } from '../types';

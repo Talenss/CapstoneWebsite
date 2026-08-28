@@ -225,7 +225,7 @@ export class Account {
     const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'resumematch-ph-my-data.json';
+    a.download = 'linaw-ph-my-data.json';
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     this.showToast('Your data was downloaded.');

@@ -1,5 +1,5 @@
 /* ============================================================
-   ResumeMatch PH, shared TypeScript models
+   Linaw PH, shared TypeScript models
    ------------------------------------------------------------
    The JSON shapes here are exactly what the Node API (and the
    demo/localStorage adapter) return, mirroring the original

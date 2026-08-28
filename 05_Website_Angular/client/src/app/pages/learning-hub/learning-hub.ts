@@ -71,7 +71,7 @@ export class LearningHub implements OnInit, AfterViewInit, OnDestroy {
         q: 'How do I write the skills section of my resume?',
         a: 'Name specific, checkable skills rather than vague phrases. "JavaScript", "Customer Service", '
           + '"Bookkeeping" and "Data Entry" are matched against a posting\'s requirements; "computer skills" '
-          + 'and "hardworking" match nothing. On ResumeMatch PH this section alone is half of your '
+          + 'and "hardworking" match nothing. On Linaw PH this section alone is half of your '
           + 'compatibility score by default, and more on openings that weight skills harder.',
       },
       {
@@ -97,7 +97,7 @@ export class LearningHub implements OnInit, AfterViewInit, OnDestroy {
       },
       {
         q: 'Does a low compatibility score mean I am rejected?',
-        a: 'No. Nothing on ResumeMatch PH is auto-rejected. A low score means the posting asks for things your '
+        a: 'No. Nothing on Linaw PH is auto-rejected. A low score means the posting asks for things your '
           + 'resume does not yet show, and you are pointed toward a role that fits better. Every application '
           + 'reaches a recruiter, and a person sets every status.',
       },

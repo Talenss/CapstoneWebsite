@@ -1,4 +1,4 @@
-/* ResumeMatch PH — in-page anchor navigation
+/* Linaw PH — in-page anchor navigation
    ------------------------------------------------------------------
    Guards a bug class that is invisible to unit tests and easy to
    reintroduce.

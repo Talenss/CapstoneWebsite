@@ -1,4 +1,4 @@
-/* ResumeMatch PH — search-engine walkthrough
+/* Linaw PH — search-engine walkthrough
    ------------------------------------------------------------------
    Checks what a crawler actually receives from each route, in a real
    browser, from the BUILT bundle — because none of it exists in the

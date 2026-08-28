@@ -24,10 +24,10 @@ import { spawn, execFileSync, ChildProcess } from 'node:child_process';
 import http from 'node:http';
 import path from 'node:path';
 
-const DB = process.env.TEST_DB_NAME || 'resumematch_analyzetest';
+const DB = process.env.TEST_DB_NAME || 'linaw_analyzetest';
 const PORT = Number(process.env.TEST_PORT || 4396);
 const BASE = `http://127.0.0.1:${PORT}/api`;
-const SCHEMA = path.join(__dirname, '..', '..', 'db', 'resumematch_ph.sql');
+const SCHEMA = path.join(__dirname, '..', '..', 'db', 'linaw_ph.sql');
 
 const PG = {
   host: process.env.DB_HOST || '127.0.0.1',

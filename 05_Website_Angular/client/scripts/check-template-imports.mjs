@@ -1,4 +1,4 @@
-/* ResumeMatch PH — scripts/check-template-imports.mjs
+/* Linaw PH — scripts/check-template-imports.mjs
  *
  * Catches a whole class of failure Angular does not report: a template
  * uses a directive the component forgot to import, and NOTHING complains.

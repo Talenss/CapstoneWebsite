@@ -1,4 +1,4 @@
-/* ResumeMatch PH — sitemap + robots finaliser
+/* Linaw PH — sitemap + robots finaliser
    ------------------------------------------------------------------
    Runs after `ng build`. Writes dist/…/sitemap.xml and fixes up the
    Sitemap: line in dist/…/robots.txt.
@@ -13,7 +13,7 @@
 
    So the origin comes from SITE_URL at build time:
 
-       SITE_URL=https://resumematch.ph npm run build:demo
+       SITE_URL=https://linaw.ph npm run build:demo
 
    WITHOUT SITE_URL this writes NO sitemap and strips the Sitemap: line
    out of robots.txt. That is deliberate. A sitemap listing URLs on the
@@ -61,7 +61,7 @@ if (!raw) {
 }
 
 if (!/^https?:\/\/[^/\s]+$/.test(raw)) {
-  console.error(`sitemap: SITE_URL must be a bare origin like https://resumematch.ph — got ${JSON.stringify(raw)}`);
+  console.error(`sitemap: SITE_URL must be a bare origin like https://linaw.ph — got ${JSON.stringify(raw)}`);
   process.exit(1);
 }
 

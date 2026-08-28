@@ -1,4 +1,4 @@
-/* ResumeMatch PH — tests/mailer-https.test.ts
+/* Linaw PH — tests/mailer-https.test.ts
 
    Render's free instances block outbound SMTP entirely, so the mailer can
    post to Brevo's REST API over HTTPS instead. These pin the request that
@@ -20,7 +20,7 @@ function load(env: Record<string, string>) {
   return require('../src/lib/mailer') as typeof import('../src/lib/mailer');
 }
 
-const FROM = 'ResumeMatch PH <team@resumematch.ph>';
+const FROM = 'Linaw PH <team@linaw.ph>';
 const realFetch = globalThis.fetch;
 
 test('HTTPS is chosen when a key is present, SMTP otherwise', () => {
@@ -58,13 +58,13 @@ test('the outgoing request carries the key, the split sender, and both bodies', 
   assert.equal(seen.init.method, 'POST');
   assert.equal(seen.init.headers['api-key'], 'secret-key');
   const b = JSON.parse(seen.init.body);
-  assert.deepEqual(b.sender, { name: 'ResumeMatch PH', email: 'team@resumematch.ph' },
+  assert.deepEqual(b.sender, { name: 'Linaw PH', email: 'team@linaw.ph' },
     'the display name and address must be separate fields, not one string');
   assert.deepEqual(b.to, [{ email: 'applicant@example.com' }]);
   assert.equal(b.subject, 'Subject line');
   assert.match(b.textContent, /plain body/);
   assert.match(b.htmlContent, /rich body/);
-  assert.match(b.htmlContent, /ResumeMatch/, 'the branded shell must still wrap the body');
+  assert.match(b.htmlContent, /Linaw/, 'the branded shell must still wrap the body');
   assert.deepEqual(b.replyTo, { email: 'recruiter@example.com' },
     'reply-to is what lets an applicant answer the recruiter directly');
 });
@@ -81,9 +81,9 @@ test('a rejected send throws, so the route can withdraw the code', async () => {
 });
 
 test('a bare address with no display name is still valid', async () => {
-  const m = load({ BREVO_API_KEY: 'k', MAIL_FROM: 'team@resumematch.ph' });
+  const m = load({ BREVO_API_KEY: 'k', MAIL_FROM: 'team@linaw.ph' });
   let body: any = null;
   globalThis.fetch = (async (_u: any, init: any) => { body = JSON.parse(init.body); return new Response('', { status: 201 }); }) as any;
   try { await m.sendMail('a@b.com', 's', 't', '<p>h</p>'); } finally { globalThis.fetch = realFetch; }
-  assert.deepEqual(body.sender, { email: 'team@resumematch.ph' });
+  assert.deepEqual(body.sender, { email: 'team@linaw.ph' });
 });

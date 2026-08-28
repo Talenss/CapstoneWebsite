@@ -47,10 +47,10 @@ function memStorage() {
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 import { DemoAdapter } from '../../client/src/app/core/demo-adapter';
 
-const DB = process.env.TEST_DB_NAME || 'resumematch_paritytest';
+const DB = process.env.TEST_DB_NAME || 'linaw_paritytest';
 const PORT = Number(process.env.TEST_PORT || 4398);
 const BASE = `http://127.0.0.1:${PORT}/api`;
-const SCHEMA = path.join(__dirname, '..', '..', 'db', 'resumematch_ph.sql');
+const SCHEMA = path.join(__dirname, '..', '..', 'db', 'linaw_ph.sql');
 
 const PG = {
   host: process.env.DB_HOST || '127.0.0.1',

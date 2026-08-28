@@ -5,7 +5,7 @@ export const environment = {
   production: false,
   mode: 'demo' as 'demo' | 'api',
   apiBase: '/api',
-  /* The site's canonical origin, e.g. 'https://resumematch.ph'. Leave EMPTY
+  /* The site's canonical origin, e.g. 'https://linaw.ph'. Leave EMPTY
      and every canonical/Open Graph URL is taken from the browser's own
      location, which is correct on localhost, on a Vercel preview and on the
      final domain without anyone remembering to change it. Set it only to

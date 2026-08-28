@@ -20,10 +20,10 @@ import { spawn, execFileSync, ChildProcess } from 'node:child_process';
 import path from 'node:path';
 import { SmtpSink } from './helpers/smtp-sink';
 
-const DB = process.env.TEST_DB_NAME || 'resumematch_emailtest';
+const DB = process.env.TEST_DB_NAME || 'linaw_emailtest';
 const PORT = Number(process.env.TEST_PORT || 4397);
 const BASE = `http://127.0.0.1:${PORT}/api`;
-const SCHEMA = path.join(__dirname, '..', '..', 'db', 'resumematch_ph.sql');
+const SCHEMA = path.join(__dirname, '..', '..', 'db', 'linaw_ph.sql');
 
 const PG = {
   host: process.env.DB_HOST || '127.0.0.1',
@@ -85,7 +85,7 @@ before(async () => {
         DEBUG: 'false',
         SMTP_HOST: '127.0.0.1', SMTP_PORT: String(smtpPort), SMTP_SECURE: 'false',
         SMTP_USER: '', SMTP_PASS: '',
-        MAIL_FROM: 'ResumeMatch PH <no-reply@rmph.test>',
+        MAIL_FROM: 'Linaw PH <no-reply@linaw.test>',
         APP_URL: `http://127.0.0.1:${PORT}`,
         GEMINI_API_KEY: '',
       },

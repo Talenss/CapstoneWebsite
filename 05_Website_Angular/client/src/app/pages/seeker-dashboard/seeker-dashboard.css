@@ -1,6 +1,17 @@
 /* Port of the inline <style> block from the PHP seeker-dashboard.html. */
-.picker{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.picker select{padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:14px;background:var(--paper);min-width:190px}
+/* min-width:0 is load-bearing. .picker is a flex item inside .head-row, and
+   a flex item defaults to min-width:auto — it will not shrink below its own
+   content. The <select> below is as wide as its longest resume title, so the
+   picker inflated to 359px inside a 276px column and scrolled the dashboard
+   sideways on a 320px phone. Without this, the select's own max-width:100%
+   cannot help: 100% of an already-inflated parent is still inflated. */
+.picker{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+/* A <select> is sized by its longest <option>, and a flex item will not
+   shrink below its own content — so a resume titled "IT — fresh graduate ·
+   file attached" pushed this to 359px inside a 276px column and scrolled
+   the whole dashboard sideways on a 320px phone. The floor has to yield
+   once the column is narrower than it. */
+.picker select{padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:14px;background:var(--paper);min-width:min(190px,100%);max-width:100%}
 .picker .attached{font-size:12px;color:var(--accent-deep);font-weight:600;white-space:nowrap}
 .tier{margin-top:40px}
 .tier-head{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap}

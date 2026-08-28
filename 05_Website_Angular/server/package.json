@@ -1,8 +1,8 @@
 {
-  "name": "resumematch-ph-server",
+  "name": "linaw-ph-server",
   "version": "1.0.0",
   "private": true,
-  "description": "ResumeMatch PH \u2014 Node/Express API (port of api/*.php)",
+  "description": "Linaw PH \u2014 Node/Express API (port of api/*.php)",
   "type": "commonjs",
   "main": "dist/server.js",
   "engines": {

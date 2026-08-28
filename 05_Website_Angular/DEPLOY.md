@@ -60,7 +60,7 @@ environment variable in **Project Settings → Environment Variables**:
 
 | Name | Value |
 |---|---|
-| `SITE_URL` | your final address, e.g. `https://resumematch-ph.vercel.app` |
+| `SITE_URL` | your final address, e.g. `https://linaw-ph.vercel.app` |
 
 Without it no sitemap is written, **on purpose** — a sitemap listing URLs
 on the wrong domain is worse than having none, because every link in it

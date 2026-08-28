@@ -1,4 +1,4 @@
-/* ResumeMatch PH — build-output CSP guard
+/* Linaw PH — build-output CSP guard
    ------------------------------------------------------------------
    Fails the build if the shipped index.html contains an inline event
    handler (onload=, onclick=, …).

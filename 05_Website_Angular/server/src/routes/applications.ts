@@ -1,4 +1,4 @@
-/* ResumeMatch PH — routes/applications.ts : apply · mine · ranked · set-status */
+/* Linaw PH — routes/applications.ts : apply · mine · ranked · set-status */
 import { asyncRouter } from '../lib/async-router';
 import { query, queryOne, exec, withTransaction } from '../db';
 import { ApplicationRow } from '../types';

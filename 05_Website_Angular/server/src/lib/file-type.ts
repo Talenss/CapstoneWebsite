@@ -1,4 +1,4 @@
-/* ResumeMatch PH — lib/file-type.ts
+/* Linaw PH — lib/file-type.ts
 
    The Content-Type on a multipart upload is supplied by the CLIENT, so it is
    a claim, not a fact. Trusting it alone meant an arbitrary blob could be

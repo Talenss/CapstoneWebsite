@@ -1,4 +1,4 @@
-/* ResumeMatch PH — routes/admin.ts
+/* Linaw PH — routes/admin.ts
    The research-team side of "recruiter accounts are provisioned, not
    self-served". An admin reviews the requests that the auth page's
    recruiter form creates, and approving one is what actually creates the
@@ -92,12 +92,12 @@ router.post('/approve', async (req, res) => {
   if (mailConfigured()) {
     sendMail(
       r.email,
-      'Your ResumeMatch PH recruiter access is approved',
+      'Your Linaw PH recruiter access is approved',
       `Welcome aboard\n\nYour recruiter account for ${co} is active.\n\nTo set your password: open ${APP_URL}/auth, click "Forgot your password?", enter this email address, and follow the code we send you. After that you can log in and manage your postings.`,
       `
         <h1 style="margin:0 0 10px;font-size:22px">Welcome aboard</h1>
         <p style="margin:0 0 14px;font-size:14.5px;line-height:1.65;color:#4C5566">Hi ${r.full_name},</p>
-        <p style="margin:0 0 14px;font-size:14.5px;line-height:1.65;color:#4C5566">Your recruiter account for <b>${co}</b> on ResumeMatch PH is now active — verified with your HR department by the research team.</p>
+        <p style="margin:0 0 14px;font-size:14.5px;line-height:1.65;color:#4C5566">Your recruiter account for <b>${co}</b> on Linaw PH is now active — verified with your HR department by the research team.</p>
         <p style="margin:0;font-size:14.5px;line-height:1.65;color:#4C5566"><b>One step left — set your password:</b> open the site, choose <b>“Forgot your password?”</b> on the log-in panel, enter this email address, and follow the code we send you. Then log in and your postings are yours to manage.</p>
         <p style="margin:22px 0 0"><a href="${APP_URL}/auth" style="display:inline-block;background:#C9A24B;color:#141926;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:8px">Set my password</a></p>`,
     ).catch((e) => console.error('approval email failed:', e?.message || e));
@@ -122,7 +122,7 @@ router.post('/decline', async (req, res) => {
   if (mailConfigured()) {
     sendMail(
       r.email,
-      'About your ResumeMatch PH recruiter request',
+      'About your Linaw PH recruiter request',
       `We couldn't verify this request\n\nYour request for recruiter access wasn't approved this time. This usually means the research team couldn't confirm the request with the partner company's HR department. If you believe this is a mistake, please coordinate with your HR and ask them to reach out to the research team.`,
       `
         <h1 style="margin:0 0 10px;font-size:22px">We couldn’t verify this request</h1>

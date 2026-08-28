@@ -1,4 +1,4 @@
-/* ResumeMatch PH — lib/password.ts
+/* Linaw PH — lib/password.ts
    One password rule for everything that SETS a password (register, reset,
    change, create-admin). Never applied at login, so accounts made under
    the older 6-character rule keep working until their next change.

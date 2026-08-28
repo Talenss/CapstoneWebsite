@@ -63,7 +63,7 @@ export class AdminMetrics implements OnInit {
     if (!data) return;
     this.save(
       new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
-      `resumematch-metrics-${this.today()}.json`,
+      `linaw-metrics-${this.today()}.json`,
     );
   }
 
@@ -100,7 +100,7 @@ export class AdminMetrics implements OnInit {
 
     // A BOM so Excel reads it as UTF-8 — the tier labels carry an en dash.
     const csv = '﻿' + rows.map((r) => r.map((c) => this.csvCell(c)).join(',')).join('\r\n');
-    this.save(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `resumematch-metrics-${this.today()}.csv`);
+    this.save(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `linaw-metrics-${this.today()}.csv`);
   }
 
   private csvCell(v: unknown): string {

@@ -5,19 +5,19 @@ documents, not source — the system itself is the folder above.
 
 | File | What it is |
 |---|---|
-| `ResumeMatch-PH-Design-Specification.pdf` | 20-page design specification: site map, user flows, five wireframes, two mockups, the design system, use case diagram, ERD, the matching algorithm, the API surface, the testing strategy, and the build sequence. Written for the adviser as the "everything you need to start building" document. |
-| `ResumeMatch-PH-Updated-Manuscript-Sections.docx` | Copy-paste-ready replacement text for every section of the capstone paper that the built system has outgrown. Thirteen substantive changes, each section reproduced in full between BEGIN/END markers. Replacement 8 carries the corrected Chapter 3 scoring formula. |
-| `ResumeMatch-PH-Appendix-B-and-C.docx` | The consent form and the two task sheets — the appendices the instruments refer to and that did not exist. Appendix B goes at the top of every Google Form; Appendix C is what a respondent works through before answering Instrument C or D, so that every respondent has done the same things before being asked about them. Drafts, for the adviser to review. |
-| `ResumeMatch-PH-Research-Instruments.docx` | The five instruments the study administers — 117 items, all closed — laid out with tick boxes so they can be printed and filled in, plus an administration sheet. Instrument C carries four items repeated word for word from Instrument A, so the change in one respondent's own answer can be tested, and the ten items of the System Usability Scale, scored on their own 0–100 scale. Instrument E is a ranking task: the recruiter orders five résumés and the study computes Spearman's rank correlation against the system's order. Generated from the same source as the manuscript's Appendix A, so the two cannot drift apart. |
-| `ResumeMatch-PH-Google-Forms.docx` | The same five instruments laid out as Google Forms questions — question type, options and section descriptions for every item — plus the checklist for what to do once responses are in. Generated from the same source, for the same reason. |
-| `ResumeMatch-PH-Study-Guide.docx` | The defence study guide: the whole paper section by section, then 125 practice questions with answers written to be said out loud, defence notes, alignment checks and the five figures. Part 4 works every statistic in the study by hand — weighted mean and SD, Wilcoxon signed-rank, the System Usability Scale, Spearman's rho and Cronbach's alpha — on numbers small enough to reproduce with a pen. |
-| `ResumeMatch-PH-Codebase.docx` | Every source file in the repository and what it does, plus the scoring engine in full with its rounding rule, the sixteen database CHECK constraints, the seven steps a single application takes from Apply to a ranked list, and the security that is actually implemented — including the gaps. |
-| `ResumeMatch-PH-Reviewer.docx` | The single document a group member studies from. Ten parts: the study on one page, the website, the four rules that make padding a skills list expensive, the code in repeatable words, the paper chapter by chapter, the research method, how many respondents and why, thirty practice questions with answers, the numbers to know, and what to say when you do not know. Written as simply as the material allows without being made wrong. |
-| `ResumeMatch-PH-Explained-Simply.docx` | The system and the study for someone starting from zero — no code, no statistics vocabulary, no assumed knowledge. Covers the problem, the site, the score with a worked example, the four rules that make padding a skills list expensive, the questionnaires, what each statistic is FOR, how many respondents and why, and a word list defining every term used anywhere in this project. Section 8 works through effect size with two sets of ten real answers, because it is the one idea in the method that has to be seen rather than described. Read this before any other document. |
-| `ResumeMatch-PH-Start-Here.docx` | The short guide, for a groupmate who did not build the system. The study, the website, the score with a worked example, where the AI is and is not, twelve questions with answers, and the numbers to memorise. About 25 minutes. |
-| `ResumeMatch-PH-Website-Guide.docx` | Every page and every feature, in the order a user meets them, with three worked scores and the design decisions worth being able to defend. |
-| `ResumeMatch-PH-Codebase-Guide.docx` | How the program is built, for whoever answers the technical questions: the two-adapter design, one request followed end to end, the scoring engine in full, the database, the six test suites, and how to run it. |
-| `ResumeMatch-PH-Manuscript-Guide.docx` | The paper chapter by chapter in plain language — what each one argues, what the instruments measure, which statistic is used and why, and a table pointing at where each claim in the manuscript is proved in the software. |
+| `Linaw-PH-Design-Specification.pdf` | 20-page design specification: site map, user flows, five wireframes, two mockups, the design system, use case diagram, ERD, the matching algorithm, the API surface, the testing strategy, and the build sequence. Written for the adviser as the "everything you need to start building" document. |
+| `Linaw-PH-Updated-Manuscript-Sections.docx` | Copy-paste-ready replacement text for every section of the capstone paper that the built system has outgrown. Thirteen substantive changes, each section reproduced in full between BEGIN/END markers. Replacement 8 carries the corrected Chapter 3 scoring formula. |
+| `Linaw-PH-Appendix-B-and-C.docx` | The consent form and the two task sheets — the appendices the instruments refer to and that did not exist. Appendix B goes at the top of every Google Form; Appendix C is what a respondent works through before answering Instrument C or D, so that every respondent has done the same things before being asked about them. Drafts, for the adviser to review. |
+| `Linaw-PH-Research-Instruments.docx` | The five instruments the study administers — 117 items, all closed — laid out with tick boxes so they can be printed and filled in, plus an administration sheet. Instrument C carries four items repeated word for word from Instrument A, so the change in one respondent's own answer can be tested, and the ten items of the System Usability Scale, scored on their own 0–100 scale. Instrument E is a ranking task: the recruiter orders five résumés and the study computes Spearman's rank correlation against the system's order. Generated from the same source as the manuscript's Appendix A, so the two cannot drift apart. |
+| `Linaw-PH-Google-Forms.docx` | The same five instruments laid out as Google Forms questions — question type, options and section descriptions for every item — plus the checklist for what to do once responses are in. Generated from the same source, for the same reason. |
+| `Linaw-PH-Study-Guide.docx` | The defence study guide: the whole paper section by section, then 125 practice questions with answers written to be said out loud, defence notes, alignment checks and the five figures. Part 4 works every statistic in the study by hand — weighted mean and SD, Wilcoxon signed-rank, the System Usability Scale, Spearman's rho and Cronbach's alpha — on numbers small enough to reproduce with a pen. |
+| `Linaw-PH-Codebase.docx` | Every source file in the repository and what it does, plus the scoring engine in full with its rounding rule, the sixteen database CHECK constraints, the seven steps a single application takes from Apply to a ranked list, and the security that is actually implemented — including the gaps. |
+| `Linaw-PH-Reviewer.docx` | The single document a group member studies from. Ten parts: the study on one page, the website, the four rules that make padding a skills list expensive, the code in repeatable words, the paper chapter by chapter, the research method, how many respondents and why, thirty practice questions with answers, the numbers to know, and what to say when you do not know. Written as simply as the material allows without being made wrong. |
+| `Linaw-PH-Explained-Simply.docx` | The system and the study for someone starting from zero — no code, no statistics vocabulary, no assumed knowledge. Covers the problem, the site, the score with a worked example, the four rules that make padding a skills list expensive, the questionnaires, what each statistic is FOR, how many respondents and why, and a word list defining every term used anywhere in this project. Section 8 works through effect size with two sets of ten real answers, because it is the one idea in the method that has to be seen rather than described. Read this before any other document. |
+| `Linaw-PH-Start-Here.docx` | The short guide, for a groupmate who did not build the system. The study, the website, the score with a worked example, where the AI is and is not, twelve questions with answers, and the numbers to memorise. About 25 minutes. |
+| `Linaw-PH-Website-Guide.docx` | Every page and every feature, in the order a user meets them, with three worked scores and the design decisions worth being able to defend. |
+| `Linaw-PH-Codebase-Guide.docx` | How the program is built, for whoever answers the technical questions: the two-adapter design, one request followed end to end, the scoring engine in full, the database, the six test suites, and how to run it. |
+| `Linaw-PH-Manuscript-Guide.docx` | The paper chapter by chapter in plain language — what each one argues, what the instruments measure, which statistic is used and why, and a table pointing at where each claim in the manuscript is proved in the software. |
 
 ## What the manuscript revisions cover
 
@@ -60,7 +60,7 @@ where the manuscript and the implementation had diverged:
 
 ## Revision of 30 July 2026
 
-`ResumeMatch-PH-Updated-Manuscript-Sections.docx` was regenerated on 30 July.
+`Linaw-PH-Updated-Manuscript-Sections.docx` was regenerated on 30 July.
 Sixteen paragraphs changed, and one of them is a reversal rather than a
 refinement: the paper's promise that the uploaded file is *never parsed and
 can never lower a score* is gone, because the file is now read and scored.
@@ -170,9 +170,17 @@ is now incomplete** — it reads matched ÷ required and should read
 (matched − unsourced × 0.5) ÷ required. That edit has not been made to the
 paper yet, and the Manuscript Guide lists it under what is still open.
 
+> **Closed since.** The paper now carries the formula and the half credit:
+> Chapter 3 states Score = (S × Ws + E × We + X × Wx) × 100 and then, in its
+> own paragraph, that "a matched and sourced skill contributes its full share
+> of S. A matched but unsourced skill contributes half, never zero." The counts
+> above are left as they were written — this file records what was true at each
+> pass, and the current figures are 22 tables, 16 CHECK constraints and 198
+> tests across eight suites.
+
 ## The three older documents, brought in line
 
-`ResumeMatch-PH-Codebase.docx`, `-Study-Guide.docx` and
+`Linaw-PH-Codebase.docx`, `-Study-Guide.docx` and
 `-Complete-Documentation.docx` predate the two features above, and had drifted
 further than that. All three were updated in place on 14 August 2026:
 
@@ -199,7 +207,7 @@ documents were read from the repository at `e26ded0`, not carried over.
 
 ## Chapter 3's formula, and a document that was never committed
 
-`ResumeMatch-PH-Updated-Manuscript-Sections.docx` now carries the corrected
+`Linaw-PH-Updated-Manuscript-Sections.docx` now carries the corrected
 scoring formula, in Replacement 8 — Development and Testing:
 
 ```
@@ -246,7 +254,7 @@ text. Forty-six findings across six documents, all corrected:
 | fourteen CHECK constraints | sixteen |
 | S = matched ÷ required | S = (matched − unsourced × 0.5) ÷ required |
 
-`ResumeMatch-PH-Defense-Preparation.docx` carried seventeen of them on its own,
+`Linaw-PH-Defense-Preparation.docx` carried seventeen of them on its own,
 including the "numbers memorised" line — the one sentence in the folder most
 likely to be recited verbatim at a defence.
 
@@ -296,7 +304,7 @@ manuscript with the rest.
 
 ## Written for people who did not build it, 15 August 2026
 
-`ResumeMatch-PH-Explained-Simply.docx` is new and should be the first thing a
+`Linaw-PH-Explained-Simply.docx` is new and should be the first thing a
 group member reads. It assumes nothing — not the code, not the method, not the
 vocabulary — and its section 9 is a word list covering every term in this
 folder, from "ATS" and "parsing" through to "effect size", "pre-experimental"
@@ -366,7 +374,7 @@ and the widened respondent definition, recorded as change 15.
 
 ## The reviewer pack, 15 August 2026
 
-`ResumeMatch-PH-Reviewer.docx` is new and is now the single document to hand a
+`Linaw-PH-Reviewer.docx` is new and is now the single document to hand a
 group member. It covers the same ground as the four guides — website, code,
 manuscript, method — at the reading level of `Explained-Simply`, and adds two
 things neither had: **thirty practice questions with answers written to be said

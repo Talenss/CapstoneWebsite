@@ -1,4 +1,4 @@
-/* ResumeMatch PH — upload & disclosure walkthrough
+/* Linaw PH — upload & disclosure walkthrough
    ------------------------------------------------------------------
    Drives the applicant's own-file upload through the real browser UI:
    the picker, the 2 MB limit, the type whitelist, and the promise the
@@ -16,7 +16,7 @@ import path from 'node:path';
 const { chromium } = pkg;
 const B = process.env.APP_URL || 'http://localhost:4210';
 
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rmph-upload-'));
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'linaw-upload-'));
 const pdf = path.join(dir, 'my-cv.pdf');
 fs.writeFileSync(pdf, Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n'));
 const big = path.join(dir, 'huge.pdf');
@@ -62,7 +62,7 @@ await step('the attached file is stored, and the ranking still comes from the bu
   // The seed data already contains a resume with an attachment, so match the
   // file THIS test uploaded rather than the first one with any ownFile.
   const state = await page.evaluate(() => {
-    const db = JSON.parse(localStorage.getItem('rmph_v3_db') || '{}');
+    const db = JSON.parse(localStorage.getItem('linaw_v3_db') || '{}');
     const r = (db.resumes || []).find(x => x.ownFile && /my-cv\.pdf/i.test(x.ownFile.name));
     return r ? { name: r.ownFile.name, hasData: !!r.ownFile.dataUrl,
                  scoredFields: { skills: r.skills?.length ?? 0 } } : null;

@@ -1,7 +1,7 @@
 /* ============================================================
-   ResumeMatch PH — scripts/go-live.ts
+   Linaw PH — scripts/go-live.ts
    ------------------------------------------------------------
-   Turns a database seeded from db/resumematch_ph.sql into one
+   Turns a database seeded from db/linaw_ph.sql into one
    fit to put in front of real people.
 
    THE PROBLEM THIS SOLVES. That file seeds seven demonstration
@@ -45,7 +45,7 @@ import { deleteFile } from '../src/lib/storage';
 const APPLY = process.argv.includes('--yes');
 
 async function main(): Promise<void> {
-  console.log(`\nResumeMatch PH — go live  ${APPLY ? '(APPLYING CHANGES)' : '(dry run — nothing will be deleted)'}\n`);
+  console.log(`\nLinaw PH — go live  ${APPLY ? '(APPLYING CHANGES)' : '(dry run — nothing will be deleted)'}\n`);
 
   const demoUsers = await query<{ user_id: number; role: string; email: string }>(
     "SELECT user_id, role, email FROM users WHERE email LIKE '%@demo.ph' ORDER BY user_id");

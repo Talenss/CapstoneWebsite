@@ -1,4 +1,4 @@
-/* ResumeMatch PH — core/demo-adapter.stub.ts
+/* Linaw PH — core/demo-adapter.stub.ts
 
    PRODUCTION STAND-IN for demo-adapter.ts. angular.json swaps the real
    file for this one in the `production` configuration, exactly as it
