@@ -97,11 +97,14 @@ export async function serializeResume(r: ResumeRow): Promise<any> {
   const skillsAddedAt: Record<string, number> = {};
   for (const r2 of sk) if (r2.added_at) skillsAddedAt[r2.skill_name] = ts(r2.added_at);
 
-  /* WHERE EACH SKILL WAS USED. Always emitted, even when it is empty: the
-     engine reads an empty object as "asked, no sources given" (partial
-     credit) and an absent one as "never asked" (full credit), so dropping
-     the key when nothing is linked would quietly hand back the credit this
-     feature exists to withhold. Skills with no source simply have no entry.
+  /* WHERE EACH SKILL WAS USED. The engine reads an empty object as "asked,
+     no sources given" (partial credit) and an absent one as "never asked"
+     (full credit), so the key is emitted whenever the applicant HAS been
+     asked — even if they linked nothing, since dropping it then would hand
+     back the credit this feature exists to withhold — and omitted when they
+     have not, which is the case for a resume imported from an uploaded CV.
+     resumes.evidence_prompted is what separates the two; see the emit below.
+     Skills with no source simply have no entry.
 
      This never reaches the printed sheet. resume-print renders `skills`, a
      flat list of strings, and has no idea this map exists. */
@@ -193,7 +196,12 @@ export async function serializeResume(r: ResumeRow): Promise<any> {
     },
     education, experience, skills, certifications, ownFile,
     ...(Object.keys(skillsAddedAt).length ? { skillsAddedAt } : {}),
-    skillEvidence, // always present, even empty — see above
+    /* Emitted only once the applicant has actually been ASKED. The builder
+       asks and so sets resumes.evidence_prompted; an import from an uploaded
+       CV never does. Omitting the key is what tells the engine "never asked",
+       and it is the difference between a CV scoring 80 and the same CV
+       scoring 65 for declining a question it was never shown. */
+    ...(r.evidence_prompted ? { skillEvidence } : {}),
     // Only present when non-empty — an empty array would still be truthy in
     // a template and could render a heading with nothing under it.
     ...(projects.length ? { projects } : {}),
@@ -214,6 +222,10 @@ export function postingExpired(p: PostingRow): boolean {
 export async function serializePosting(p: PostingRow, withCompany = true): Promise<any> {
   const st = await query<{ skill_name: string }>(
     'SELECT s.skill_name FROM posting_skills ps JOIN skills s ON s.skill_id=ps.skill_id WHERE ps.posting_id=? ORDER BY s.skill_name',
+    [p.posting_id],
+  );
+  const ct = await query<{ cert_name: string }>(
+    'SELECT cert_name FROM posting_certifications WHERE posting_id=? ORDER BY cert_name',
     [p.posting_id],
   );
 
@@ -237,7 +249,13 @@ export async function serializePosting(p: PostingRow, withCompany = true): Promi
       skills: Number(p.weight_skills),
       education: Number(p.weight_education),
       experience: Number(p.weight_experience),
+      /* NULL means 0 rather than "unset". An opening written before this
+         component existed carries three weights totalling 100, and reporting
+         its fourth as null would make the published breakdown fail to add up
+         to the score printed beside it. */
+      certifications: p.weight_certifications == null ? 0 : Number(p.weight_certifications),
     },
+    certifications: ct.map((r) => r.cert_name),
     deadline: p.application_deadline || null,
     // past-deadline postings stop accepting applications without anyone
     // having to remember to close them (see postingExpired)

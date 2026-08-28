@@ -31,13 +31,15 @@ const resume = (skills: string[], eduLevels: string[] = ['bachelor'], monthsList
 
 const posting = (
   skills: string[], educationLevel = 'bachelor', minExperienceMonths = 0,
-  weights?: { skills: number; education: number; experience: number } | null,
+  weights?: { skills: number; education: number; experience: number; certifications?: number } | null,
+  certifications?: string[],
 ) => ({
   id: 'p-test',
   skills,
   educationLevel,
   minExperienceMonths,
   ...(weights !== undefined ? { weights } : {}),
+  ...(certifications !== undefined ? { certifications } : {}),
 });
 
 /** Run one case through BOTH engines and assert they agree before
@@ -58,10 +60,14 @@ function score(r: ReturnType<typeof resume>, p: ReturnType<typeof posting>) {
 // ---------- the published constants ----------
 
 test('weights are the published 50/25/25 and sum to 1', () => {
-  assert.deepEqual(DEFAULT_SETTINGS.weights, { skills: 0.5, education: 0.25, experience: 0.25 });
+  /* Certifications are the optional fourth component and sit at 0, so the
+     published split is still 50/25/25 across three and the four still sum to
+     1. That zero is the whole reason adding the component changed no score. */
+  assert.deepEqual(DEFAULT_SETTINGS.weights,
+    { skills: 0.5, education: 0.25, experience: 0.25, certifications: 0 });
   assert.deepEqual(WEIGHTS, DEFAULT_SETTINGS.weights); // client mirrors server
   const w = DEFAULT_SETTINGS.weights;
-  assert.equal(w.skills + w.education + w.experience, 1);
+  assert.equal(w.skills + w.education + w.experience + w.certifications, 1);
 });
 
 test('tier thresholds are the published 80 (strong) and 50 (related)', () => {
@@ -246,7 +252,7 @@ test('an empty resume against a demanding posting scores 0 — Related, never hi
 // ---------- the settings really steer the engine ----------
 
 test('scoreWith honors non-default weights (the DB-tunable settings)', () => {
-  const skillsOnly: MatchSettings = { weights: { skills: 1, education: 0, experience: 0 }, thresholds: { strong: 80, related: 50 } };
+  const skillsOnly: MatchSettings = { weights: { skills: 1, education: 0, experience: 0, certifications: 0 }, thresholds: { strong: 80, related: 50 } };
   const s = scoreWith(skillsOnly, resume(['A'], [], []), posting(['A', 'B'], 'master', 120));
   assert.equal(s.score, 50); // 1/2 skills × 100% weight, nothing else counts
 });
@@ -376,7 +382,7 @@ test('the weights a score was computed with travel with the score', () => {
   // a breakdown has to be able to state the split its own number came from.
   const r = resume(['JavaScript']);
   const custom = score(r, posting(['JavaScript'], 'bachelor', 0, { skills: 60, education: 20, experience: 20 }));
-  assert.deepEqual(custom.weights, { skills: 0.6, education: 0.2, experience: 0.2 });
+  assert.deepEqual(custom.weights, { skills: 0.6, education: 0.2, experience: 0.2, certifications: 0 });
 
   const inherited = score(r, posting(['JavaScript']));
   assert.deepEqual(inherited.weights, DEFAULT_SETTINGS.weights);
@@ -387,7 +393,7 @@ test('an opening that sets no weights inherits whatever the site defaults are', 
      weights by editing match_settings, and every opening that never
      customised has to follow. */
   const tuned: MatchSettings = {
-    weights: { skills: 0.7, education: 0.2, experience: 0.1 },
+    weights: { skills: 0.7, education: 0.2, experience: 0.1, certifications: 0 },
     thresholds: DEFAULT_SETTINGS.thresholds,
   };
   const r = resume(['JavaScript', 'Git'], ['bachelor'], [24]);
@@ -686,4 +692,66 @@ test('the applicant is told how many requirements are unmet, never which', () =>
 
   assert.equal(missingHint([]), '', 'nothing to say when nothing is unmet');
   assert.match(missingHint(['Teamwork']), /1 skill this role asks for is not on your resume/);
+});
+
+// ---------- certifications: the optional fourth component ----------
+
+test('certifications score nothing until a recruiter gives them a share', () => {
+  /* The default is the point. Adding a fourth component must not move a
+     single existing score, which is why its weight starts at zero and why an
+     opening carrying only three weights still totals 100. */
+  const r: any = { ...resume(['JavaScript'], ['bachelor'], [12]),
+    certifications: [{ name: 'AWS Certified Cloud Practitioner' }] };
+  const withCerts = score(r, posting(['JavaScript'], 'bachelor', 0, undefined, ['CCNA']));
+  const without = score(resume(['JavaScript'], ['bachelor'], [12]), posting(['JavaScript']));
+  assert.equal(withCerts.score, without.score,
+    'a certification the opening asked for and the applicant lacks changes nothing at weight 0');
+  assert.equal(withCerts.score, 100);
+});
+
+test('a recruiter can put a share of the score on certifications', () => {
+  // 40 skills + 20 education + 20 experience + 20 certifications.
+  const w = { skills: 40, education: 20, experience: 20, certifications: 20 };
+  const has: any = { ...resume(['JavaScript'], ['bachelor'], [12]),
+    certifications: [{ name: 'Cisco CCNA Routing and Switching' }] };
+  const lacks: any = { ...resume(['JavaScript'], ['bachelor'], [12]), certifications: [] };
+
+  const p = posting(['JavaScript'], 'bachelor', 0, w, ['CCNA']);
+  assert.equal(score(has, p).score, 100, 'all four components met');
+  assert.equal(score(lacks, p).score, 80, 'the certification is the only thing missing, and it is worth 20');
+});
+
+test('the applicant’s certification must CONTAIN what was asked, not the reverse', () => {
+  const w = { skills: 40, education: 20, experience: 20, certifications: 20 };
+  const broad: any = { ...resume(['JavaScript'], ['bachelor'], [12]), certifications: [{ name: 'CCNA' }] };
+  // Asking for something longer and more specific than what the applicant holds.
+  const p = posting(['JavaScript'], 'bachelor', 0, w, ['CCNA Security']);
+  assert.equal(score(broad, p).score, 80, 'a shorter certificate does not answer a more specific request');
+
+  const specific: any = { ...resume(['JavaScript'], ['bachelor'], [12]),
+    certifications: [{ name: 'CCNA Security 210-260' }] };
+  assert.equal(score(specific, p).score, 100, 'but a longer one that contains it does');
+});
+
+test('an opening that asks for no certifications scores full marks on that component', () => {
+  /* The same rule the other components follow: a requirement nobody stated
+     cannot be one the applicant failed. It matters here because a recruiter
+     can give certifications a weight without naming any. */
+  const w = { skills: 40, education: 20, experience: 20, certifications: 20 };
+  const none: any = { ...resume(['JavaScript'], ['bachelor'], [12]), certifications: [] };
+  assert.equal(score(none, posting(['JavaScript'], 'bachelor', 0, w, [])).score, 100);
+});
+
+test('a weight set that ignores certifications still has to total 100', () => {
+  // Three weights summing to 100 remain valid — that is what keeps every
+  // opening written before this component existed scoring as it always did.
+  const three = score(resume(['JavaScript'], ['bachelor'], [12]),
+    posting(['JavaScript'], 'bachelor', 0, { skills: 60, education: 20, experience: 20 }));
+  assert.equal(three.weights.certifications, 0);
+  assert.equal(three.score, 100);
+
+  // But four that do not sum to 100 fall back to the defaults, unrescaled.
+  const bad = score(resume(['JavaScript'], ['bachelor'], [12]),
+    posting(['JavaScript'], 'bachelor', 0, { skills: 60, education: 20, experience: 20, certifications: 20 }));
+  assert.deepEqual(bad.weights, DEFAULT_SETTINGS.weights);
 });

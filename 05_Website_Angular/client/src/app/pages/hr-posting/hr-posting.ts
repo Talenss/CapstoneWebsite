@@ -58,26 +58,37 @@ export class HrPosting {
   wSkills = signal(Math.round(WEIGHTS.skills * 100));
   wEdu = signal(Math.round(WEIGHTS.education * 100));
   wExp = signal(Math.round(WEIGHTS.experience * 100));
+  /* Certifications start at nothing, which is the whole design: the study's
+     published split is 50/25/25 across three, and this component exists only
+     for the recruiter who deliberately wants it. */
+  wCert = signal(0);
+  certsVal = signal<string[]>([]);
+  certInput = signal('');
 
-  /** The three as the engine will read them, or null when inheriting. */
+  /** The four as the engine will read them, or null when inheriting. */
   weightPayload = computed(() => (this.customWeights()
-    ? { skills: this.wSkills(), education: this.wEdu(), experience: this.wExp() }
+    ? { skills: this.wSkills(), education: this.wEdu(), experience: this.wExp(), certifications: this.wCert() }
     : null));
 
-  weightTotal = computed(() => this.wSkills() + this.wEdu() + this.wExp());
+  weightTotal = computed(() => this.wSkills() + this.wEdu() + this.wExp() + this.wCert());
   /* The floor is policy, not arithmetic: a recruiter may decide a criterion
      matters less for a role, but switching one off entirely would score an
      applicant whose only strength is that criterion on a scale that cannot
      see them. Mirrored in routes/postings.ts and as a CHECK on the table. */
   readonly WEIGHT_FLOOR = 10;
+  /* Certifications are exempt from the floor, and only certifications. The
+     other three describe every applicant; a certificate is a thing many
+     perfectly good candidates simply do not hold, so a recruiter has to be
+     able to leave it at nothing — and nothing is where it starts. */
   weightsBelowFloor = computed(() =>
     this.wSkills() < this.WEIGHT_FLOOR || this.wEdu() < this.WEIGHT_FLOOR || this.wExp() < this.WEIGHT_FLOOR);
   weightsValid = computed(() => !this.customWeights()
     || (this.weightTotal() === 100 && !this.weightsBelowFloor()));
   weightError = computed(() => {
     if (!this.customWeights()) return null;
-    if (this.weightsBelowFloor()) return `Each part has to be at least ${this.WEIGHT_FLOOR}%, a criterion cannot be switched off entirely.`;
-    if (this.weightTotal() !== 100) return `The three have to add up to 100%. They add up to ${this.weightTotal()}%.`;
+    if (this.weightsBelowFloor()) return `Skills, education and experience each have to be at least ${this.WEIGHT_FLOOR}%, those three cannot be switched off entirely.`;
+    if (this.wCert() < 0) return 'The certifications share cannot be negative.';
+    if (this.weightTotal() !== 100) return `The four have to add up to 100%. They add up to ${this.weightTotal()}%.`;
     return null;
   });
   todayStr = new Date().toISOString().slice(0, 10);
@@ -115,6 +126,7 @@ export class HrPosting {
        ranking they are tuning. */
     const posting = {
       skills, educationLevel: this.eduVal(), minExperienceMonths: this.monthsVal(),
+      certifications: this.certsVal(),
       weights: this.weightsValid() ? this.weightPayload() : null,
     };
     return known
@@ -149,11 +161,13 @@ export class HrPosting {
       this.eduVal.set(p.educationLevel);
       this.monthsVal.set(p.minExperienceMonths || 0);
       this.deadlineVal.set(p.deadline || '');
+      this.certsVal.set([...(p.certifications ?? [])]);
       if (p.weights) {
         this.customWeights.set(true);
         this.wSkills.set(p.weights.skills);
         this.wEdu.set(p.weights.education);
         this.wExp.set(p.weights.experience);
+        this.wCert.set(p.weights.certifications ?? 0);
       }
     }
 
@@ -186,6 +200,7 @@ export class HrPosting {
   setWSkills(e: Event): void { this.wSkills.set(this.pct(e)); }
   setWEdu(e: Event): void { this.wEdu.set(this.pct(e)); }
   setWExp(e: Event): void { this.wExp.set(this.pct(e)); }
+  setWCert(e: Event): void { this.wCert.set(this.pct(e)); }
 
   toggleCustomWeights(e: Event): void {
     const on = (e.target as HTMLInputElement).checked;
@@ -199,6 +214,7 @@ export class HrPosting {
     this.wSkills.set(Math.round(WEIGHTS.skills * 100));
     this.wEdu.set(Math.round(WEIGHTS.education * 100));
     this.wExp.set(Math.round(WEIGHTS.experience * 100));
+    this.wCert.set(0);
   }
 
   onSkillKeydown(e: KeyboardEvent): void {
@@ -216,6 +232,24 @@ export class HrPosting {
 
   removeSkill(i: number): void {
     this.skillsVal.update((arr) => arr.filter((_, idx) => idx !== i));
+  }
+
+  onCertKeydown(e: KeyboardEvent): void {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); this.addCert(this.certInput()); }
+  }
+
+  /** Free text, unlike skills — a certificate is called whatever the body
+   *  issuing it calls it, and there is no catalogue to pick from. */
+  addCert(raw: string): void {
+    const c = String(raw).trim().slice(0, 160);
+    if (!c) return;
+    if (this.certsVal().some((x) => x.toLowerCase() === c.toLowerCase())) { this.showToast('Already required.'); return; }
+    this.certsVal.update((arr) => [...arr, c]);
+    this.certInput.set('');
+  }
+
+  removeCert(i: number): void {
+    this.certsVal.update((arr) => arr.filter((_, idx) => idx !== i));
   }
 
   /** The pool chips are toggles, so a chip clicked by mistake is undone by
@@ -264,6 +298,7 @@ export class HrPosting {
       title, department, employmentType: this.typeVal(), description,
       skills, educationLevel: this.eduVal(),
       minExperienceMonths: Math.max(0, this.monthsVal() || 0),
+      certifications: this.certsVal(),
       deadline: this.deadlineVal() || null,
       status: this.postingStatus(),
       weights: this.weightPayload(),

@@ -167,7 +167,10 @@ export function skillNorm(s: string): string {
 }
 
 export interface MatchSettings {
-  weights: { skills: number; education: number; experience: number };
+  /** `certifications` is the optional fourth component and defaults to 0, so
+   *  the site-wide split stays the study's published 50/25/25 across three
+   *  unless a recruiter gives certifications a share on their own opening. */
+  weights: { skills: number; education: number; experience: number; certifications: number };
   thresholds: { strong: number; related: number };
 }
 
@@ -199,6 +202,7 @@ export async function getSettings(): Promise<MatchSettings> {
       skills: n(map.weight_skills, DEFAULT_SETTINGS.weights.skills),
       education: n(map.weight_education, DEFAULT_SETTINGS.weights.education),
       experience: n(map.weight_experience, DEFAULT_SETTINGS.weights.experience),
+      certifications: n(map.weight_certifications, DEFAULT_SETTINGS.weights.certifications),
     },
     thresholds: {
       strong: n(map.threshold_strong, DEFAULT_SETTINGS.thresholds.strong),
@@ -225,6 +229,10 @@ export interface SerializedResume {
    *  builder to ask in. Penalising that would be scoring the applicant for a
    *  screen they were never shown. */
   skillEvidence?: Record<string, SkillEvidence>;
+  /** Only read when the opening asks for certifications. Free text, as the
+   *  applicant typed it — there is no catalogue for these the way there is
+   *  for skills. */
+  certifications?: { name?: string }[];
   [k: string]: any;
 }
 export interface SerializedPosting {
@@ -232,9 +240,17 @@ export interface SerializedPosting {
   skills: string[];
   educationLevel: string;
   minExperienceMonths: number;
+  /** The certifications this opening asks for, free text. Empty or absent
+   *  means it asks for none, which scores full marks on that component in
+   *  the same way an unstated education or experience requirement does. */
+  certifications?: string[];
   /** This opening's own weights as WHOLE PERCENTAGES totalling 100. Absent
-   *  or null means the opening inherits the site defaults. */
-  weights?: { skills: number; education: number; experience: number } | null;
+   *  or null means the opening inherits the site defaults.
+   *
+   *  `certifications` is optional and treated as 0 when missing, which is
+   *  what lets an opening written before the fourth component existed keep
+   *  summing to 100 without a backfill. */
+  weights?: { skills: number; education: number; experience: number; certifications?: number } | null;
   [k: string]: any;
 }
 
@@ -249,14 +265,35 @@ export interface SerializedPosting {
  *  Normalising 40/40/40 to sum to 1 would score every applicant on a scale
  *  the recruiter never chose and nothing downstream would look wrong; falling
  *  back to the published defaults is at least a number the site can explain. */
+/** Certifications are free text — there is no catalogue for them the way
+ *  there is for skills, because a certificate's name is whatever the body
+ *  that issued it calls it. So the comparison is deliberately forgiving in
+ *  one direction only: the applicant's entry must CONTAIN what the opening
+ *  asked for, once both are reduced to lowercase alphanumerics. That way
+ *  "Cisco CCNA Routing and Switching" answers a request for "CCNA", while
+ *  "CCNA" alone does not answer a request for something longer and more
+ *  specific. Nothing is guessed at, and nothing is credited that was not
+ *  claimed. */
+export function certNorm(s: string): string {
+  return String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 export function weightsFor(cfg: MatchSettings, posting: SerializedPosting): MatchSettings['weights'] {
   const w = posting.weights;
   if (!w) return cfg.weights;
   const ok = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
   if (!ok(w.skills) || !ok(w.education) || !ok(w.experience)) return cfg.weights;
-  if (w.skills + w.education + w.experience !== 100) return cfg.weights;
+  /* Absent means zero, not invalid. An opening written before certifications
+     were scoreable carries three weights totalling 100, and must keep the
+     score it has always produced. */
+  const cert = w.certifications === undefined || w.certifications === null ? 0 : w.certifications;
+  if (!ok(cert)) return cfg.weights;
+  if (w.skills + w.education + w.experience + cert !== 100) return cfg.weights;
   // Percentages in, fractions out — the single conversion point in the system.
-  return { skills: w.skills / 100, education: w.education / 100, experience: w.experience / 100 };
+  return {
+    skills: w.skills / 100, education: w.education / 100,
+    experience: w.experience / 100, certifications: cert / 100,
+  };
 }
 
 export interface MatchResult {
@@ -282,13 +319,17 @@ export interface MatchResult {
    *  from have to travel together. A screen that fetched the weights
    *  separately could show a breakdown that does not add up to the score
    *  beside it. */
-  weights: { skills: number; education: number; experience: number };
+  weights: { skills: number; education: number; experience: number; certifications: number };
+  /** Of the certifications the opening asked for, the ones the applicant
+   *  lists and the ones they do not. Both empty when none were asked for. */
+  matchedCertifications: string[];
+  missingCertifications: string[];
 }
 
 /** The defaults used when the match_settings table has no overrides —
  *  the study's published 50/25/25 weights and 80/50 tier thresholds. */
 export const DEFAULT_SETTINGS: MatchSettings = {
-  weights: { skills: 0.5, education: 0.25, experience: 0.25 },
+  weights: { skills: 0.5, education: 0.25, experience: 0.25, certifications: 0 },
   thresholds: { strong: 80, related: 50 },
 };
 
@@ -333,7 +374,25 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
   const reqMonths = Number(posting.minExperienceMonths) || 0;
   const expPart = reqMonths <= 0 ? 1.0 : Math.min(1.0, months / reqMonths);
 
-  const raw = (skillPart * W.skills + eduPart * W.education + expPart * W.experience) * 100;
+  /* CERTIFICATIONS — the optional fourth component. An opening that asks for
+     none scores full marks here, exactly as an unstated education or months
+     requirement does: a requirement nobody stated cannot be one the applicant
+     failed. That matters, because the weight defaults to zero, so this term
+     contributes nothing at all unless a recruiter deliberately gives it a
+     share. */
+  const wantCerts = posting.certifications || [];
+  const haveCerts = (resume.certifications || [])
+    .map((c) => certNorm(c?.name ?? '')).filter(Boolean);
+  const matchedCerts: string[] = [];
+  const missingCerts: string[] = [];
+  for (const want of wantCerts) {
+    const w = certNorm(want);
+    (w && haveCerts.some((h) => h.includes(w)) ? matchedCerts : missingCerts).push(want);
+  }
+  const certPart = wantCerts.length ? matchedCerts.length / wantCerts.length : 1.0;
+
+  const raw = (skillPart * W.skills + eduPart * W.education
+    + expPart * W.experience + certPart * W.certifications) * 100;
   const total = Math.floor(raw + 0.5); // half-up, explicitly — must match assets/api.js score()
 
   return {
@@ -345,6 +404,8 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
     eduMeets: eduPart >= 1.0,
     expMeets: expPart >= 1.0,
     seekerMonths: months,
+    matchedCertifications: matchedCerts,
+    missingCertifications: missingCerts,
     tier: total >= T.strong ? 'strong' : total >= T.related ? 'possible' : 'related',
     weights: W,
   };
@@ -365,7 +426,7 @@ export async function rmScore(resume: SerializedResume, posting: SerializedPosti
  *  Returns null when there is nothing to score, which is not the same as
  *  scoring zero and must never be displayed as though it were. */
 export async function rmFileScore(
-  extract: { skills?: string[]; education?: any[]; experience?: any[] } | null | undefined,
+  extract: { skills?: string[]; education?: any[]; experience?: any[]; certifications?: any[] } | null | undefined,
   posting: SerializedPosting,
 ): Promise<MatchResult | null> {
   if (!extract) return null;
@@ -373,6 +434,7 @@ export async function rmFileScore(
     skills: Array.isArray(extract.skills) ? extract.skills : [],
     education: Array.isArray(extract.education) ? extract.education : [],
     experience: Array.isArray(extract.experience) ? extract.experience : [],
+    certifications: Array.isArray(extract.certifications) ? extract.certifications : [],
   } as SerializedResume, posting);
 }
 

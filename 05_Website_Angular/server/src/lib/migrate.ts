@@ -194,6 +194,35 @@ export async function runMigrations(): Promise<void> {
   await exec('ALTER TABLE resumes ADD COLUMN IF NOT EXISTS own_file_extract_status TEXT');
   await exec('ALTER TABLE resumes ADD COLUMN IF NOT EXISTS own_file_extract_at TIMESTAMPTZ');
 
+  // resumes.evidence_prompted — whether the applicant was ever ASKED where
+  // each skill was used. The builder asks; an import from an uploaded CV
+  // does not. Existing rows default to 0, which is right for both cases:
+  // a resume already carrying evidence is unaffected (its links score in
+  // full regardless), and one carrying none stops being docked for a
+  // question it may never have been shown.
+  await exec('ALTER TABLE resumes ADD COLUMN IF NOT EXISTS evidence_prompted SMALLINT NOT NULL DEFAULT 0');
+  /* Backfill. Before this column existed, "no links at all" was ambiguous —
+     it could mean the builder asked and the applicant declined, or that
+     nothing ever asked. Only one of those deserves the half-credit penalty,
+     and the two are indistinguishable after the fact, so the backfill takes
+     the reading that does not penalise an applicant we cannot show was
+     asked: prompted where at least one skill carries a source, not prompted
+     where none does. A resume with links keeps scoring exactly as it did. */
+  await exec(`UPDATE resumes r SET evidence_prompted = 1
+                WHERE evidence_prompted = 0
+                  AND EXISTS (SELECT 1 FROM resume_skills rs
+                               WHERE rs.resume_id = r.resume_id AND rs.evidence_ref IS NOT NULL)`);
+
+  /* The certifications an opening asks for. The weight that scores them is
+     added further down, with the CHECK constraint that governs all four —
+     one migration owns that constraint, and splitting it was what let a
+     later block silently reinstate the three-weight rule. */
+  await exec(`CREATE TABLE IF NOT EXISTS posting_certifications (
+    posting_id INT NOT NULL REFERENCES job_postings(posting_id) ON DELETE CASCADE,
+    cert_name  VARCHAR(160) NOT NULL,
+    cert_norm  VARCHAR(160) NOT NULL,
+    PRIMARY KEY (posting_id, cert_norm)
+  )`);
   // job_postings.application_deadline — optional "apply by" date; past it,
   // the posting stops accepting applications (lazy auto-close, no cron)
   await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS application_deadline DATE');
@@ -290,13 +319,22 @@ export async function runMigrations(): Promise<void> {
   await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_skills SMALLINT');
   await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_education SMALLINT');
   await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_experience SMALLINT');
+  /* The fourth component is added here, with the three it has to total 100
+     alongside, because this constraint is owned by one migration and only one.
+     An earlier attempt added a second DROP/ADD pair further up; this block
+     runs later, so it silently reinstated the three-weight rule and every
+     opening that gave certifications a share was refused by the database
+     while passing the route's own validation. */
+  await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_certifications SMALLINT');
   await exec('ALTER TABLE job_postings DROP CONSTRAINT IF EXISTS posting_weights_complete');
   await exec(`ALTER TABLE job_postings ADD CONSTRAINT posting_weights_complete CHECK (
     (weight_skills IS NULL AND weight_education IS NULL AND weight_experience IS NULL)
     OR (
       weight_skills IS NOT NULL AND weight_education IS NOT NULL AND weight_experience IS NOT NULL
-      AND weight_skills + weight_education + weight_experience = 100
+      AND weight_skills + weight_education + weight_experience
+          + COALESCE(weight_certifications, 0) = 100
       AND weight_skills >= 10 AND weight_education >= 10 AND weight_experience >= 10
+      AND COALESCE(weight_certifications, 0) >= 0
     )
   )`);
 

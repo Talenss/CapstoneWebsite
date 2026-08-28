@@ -816,11 +816,11 @@ test('a recruiter can set the scoring weights on their own opening', async () =>
   assert.equal(made.body.ok, true, made.body.error);
   // Whole percentages on the wire, the same units the column stores and the
   // recruiter typed — so "must total 100" stays an exact integer check.
-  assert.deepEqual(made.body.posting.weights, { skills: 70, education: 15, experience: 15 });
+  assert.deepEqual(made.body.posting.weights, { skills: 70, education: 15, experience: 15, certifications: 0 });
 
   // And they survive a round trip rather than only existing in the response.
   const back = await hr('postings/get', { id: made.body.posting.id });
-  assert.deepEqual(back.body.posting.weights, { skills: 70, education: 15, experience: 15 });
+  assert.deepEqual(back.body.posting.weights, { skills: 70, education: 15, experience: 15, certifications: 0 });
 });
 
 test('an opening that sets no weights reports none, rather than a copy of the defaults', async () => {
@@ -898,7 +898,7 @@ test('the score a seeker is given uses the opening’s own weights', async () =>
   const fraction = s.matchedSkills.length / 4;
   assert.equal(s.score, Math.floor(fraction * 80 + 10 + 10 + 0.5),
     'the score must be computed on 80/10/10, not the site default');
-  assert.deepEqual(s.weights, { skills: 0.8, education: 0.1, experience: 0.1 },
+  assert.deepEqual(s.weights, { skills: 0.8, education: 0.1, experience: 0.1, certifications: 0 },
     'and it must report the split it used, as fractions');
 });
 
@@ -1145,4 +1145,97 @@ test('the source is never part of the resume’s own skills list', async () => {
     assert.equal(typeof s, 'string');
     assert.ok(!s.includes('LGU San Fernando'), 'the employer name must never appear in the printed skills list');
   }
+});
+
+test('a resume imported from a CV is not docked for a question it was never asked', async () => {
+  /* The regression this exists for. The engine already distinguishes an
+     ABSENT evidence map ("never asked", full credit) from an EMPTY one
+     ("asked, declined", half credit) — but the serializer used to emit a map
+     either way. An import from an uploaded CV therefore arrived looking like
+     an applicant who had been shown the question and refused it, and the same
+     document scored 65 where it should have scored 80.
+
+     The builder always sends a skillEvidence key, empty or not, because it is
+     the screen that asks. An import sends none. That is the whole signal. */
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+
+  const imported: any = {
+    title: 'Imported from CV', template: 'chronological', design: 'classic',
+    personal: { fullName: 'Jeanky Mendez', email: 'jm@example.ph' },
+    education: [{ school: 'HAU', degree: 'BSIT', level: 'bachelor', year: '2024' }],
+    experience: [{ position: 'IT Intern', company: 'Clark BPO', months: 12, description: '' }],
+    skills: ['JavaScript', 'Git'],
+    // NO skillEvidence key at all — nobody asked.
+  };
+  const made = await seeker('resumes/save', { resume: imported });
+  assert.equal(made.body.ok, true);
+  assert.ok(!('skillEvidence' in made.body.resume),
+    'an imported resume must carry NO evidence map, so the engine reads it as never asked');
+
+  // Reopened later, it still reads as never asked.
+  const again = (await seeker('resumes/get', { id: made.body.resume.id })).body.resume;
+  assert.ok(!('skillEvidence' in again), 'and it must survive the round trip that way');
+
+  // Now the applicant opens the builder, which asks and links nothing.
+  again.skillEvidence = {};
+  const opened = await seeker('resumes/save', { resume: again });
+  assert.equal(opened.body.ok, true);
+  assert.deepEqual(opened.body.resume.skillEvidence, {},
+    'once asked, an empty map is emitted and partial credit applies');
+
+  // And the flag does not flip back on a later save that omits the key.
+  const stripped = (await seeker('resumes/get', { id: made.body.resume.id })).body.resume;
+  delete stripped.skillEvidence;
+  const relisted = await seeker('resumes/save', { resume: stripped });
+  assert.deepEqual(relisted.body.resume.skillEvidence, {},
+    'having been asked once, the resume stays asked');
+});
+
+test('a recruiter can put part of the score on certifications, over HTTP', async () => {
+  /* The end-to-end version of the engine tests: the four weights survive the
+     round trip through Postgres, the required certifications come back with
+     the opening, and the CHECK constraint on the table agrees with the
+     validation in the route. */
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+
+  const made = await hr('postings/save', {
+    posting: {
+      title: 'Network Engineer', department: 'Information Technology',
+      employmentType: 'full-time', description: 'Maintain the client network estate.',
+      educationLevel: 'bachelor', minExperienceMonths: 0, skills: ['Networking'],
+      certifications: ['CCNA', 'c.c.n.a.'],   // the second is the same requirement
+      weights: { skills: 40, education: 20, experience: 20, certifications: 20 },
+    },
+  });
+  assert.equal(made.body.ok, true, made.body.error);
+  assert.deepEqual(made.body.posting.weights,
+    { skills: 40, education: 20, experience: 20, certifications: 20 });
+  assert.deepEqual(made.body.posting.certifications, ['CCNA'],
+    'the duplicate is dropped on the normalised form, so the component can be scored out of 1');
+
+  // Weights that do not total 100 once certifications are counted are refused.
+  const bad = await hr('postings/save', {
+    posting: {
+      title: 'Bad weights', department: 'Information Technology',
+      employmentType: 'full-time', description: 'Should never be stored.',
+      educationLevel: 'bachelor', minExperienceMonths: 0, skills: ['Networking'],
+      weights: { skills: 50, education: 25, experience: 25, certifications: 20 },
+    },
+  });
+  assert.equal(bad.body.ok, false, 'the four weights must total 100, not the three');
+  assert.match(String(bad.body.error), /add up to 100/);
+
+  // And the three original components still cannot be switched off.
+  const off = await hr('postings/save', {
+    posting: {
+      title: 'Zeroed education', department: 'Information Technology',
+      employmentType: 'full-time', description: 'Should never be stored.',
+      educationLevel: 'bachelor', minExperienceMonths: 0, skills: ['Networking'],
+      weights: { skills: 60, education: 0, experience: 20, certifications: 20 },
+    },
+  });
+  assert.equal(off.body.ok, false);
+  assert.match(String(off.body.error), /at least 10%/);
 });

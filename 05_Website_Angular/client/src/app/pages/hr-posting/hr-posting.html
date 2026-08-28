@@ -151,6 +151,40 @@
               <div class="wbar" aria-hidden="true"><i [style.width.%]="wExp()" style="background:var(--ink-3)"></i></div>
             </div>
 
+            <div class="wrow">
+              <label for="wCert">Certifications</label>
+              <input type="number" id="wCert" min="0" max="80" step="1" [value]="wCert()" (input)="setWCert($event)">
+              <span class="wpct">%</span>
+              <div class="wbar" aria-hidden="true"><i [style.width.%]="wCert()" style="background:var(--ink-3)"></i></div>
+            </div>
+            <p style="margin:2px 0 10px;font-size:12.5px;color:var(--muted)">
+              Certifications start at 0% and can stay there. Unlike the other three, this one may be
+              switched off entirely — plenty of good applicants hold no certificate. Give it a share
+              only if this role genuinely turns on one, then name the certificates below.
+            </p>
+
+            @if (wCert() > 0) {
+              <div class="field" style="margin-bottom:12px">
+                <label for="certInput">Certificates this role asks for</label>
+                <input id="certInput" type="text" placeholder="e.g. CCNA — type and press Enter"
+                       [value]="certInput()" (input)="certInput.set($any($event.target).value)"
+                       (keydown)="onCertKeydown($event)">
+                @if (certsVal().length) {
+                  <div class="chips" style="margin-top:8px">
+                    @for (c of certsVal(); track c; let i = $index) {
+                      <button type="button" class="chip on" (click)="removeCert(i)"
+                              [attr.aria-label]="'Remove ' + c">{{ c }} ×</button>
+                    }
+                  </div>
+                } @else {
+                  <p style="color:var(--muted);font-size:13px;margin-top:6px">
+                    No certificates named. An applicant scores full marks on this {{ wCert() }}% until you name one —
+                    a requirement nobody stated cannot be one they failed.
+                  </p>
+                }
+              </div>
+            }
+
             <div class="wtotal" [class.bad]="!weightsValid()">
               <span>Total</span>
               <b>{{ weightTotal() }}%</b>
@@ -185,6 +219,9 @@
           <div class="r"><span>Required skills matched</span><b>{{ wSkills() }}%</b></div>
           <div class="r"><span>Education level</span><b>{{ wEdu() }}%</b></div>
           <div class="r"><span>Months of experience</span><b>{{ wExp() }}%</b></div>
+          @if (wCert() > 0) {
+            <div class="r"><span>Certificates held</span><b>{{ wCert() }}%</b></div>
+          }
           <div class="r"><span>Strong match at</span><b>{{ thresholds.strong }}% and up</b></div>
           <div class="r"><span>Below {{ thresholds.related }}%</span><b>Still shown to you</b></div>
         </div>

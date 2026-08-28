@@ -269,7 +269,11 @@ export interface Posting {
    *  or null when it inherits the site defaults. Percentages rather than
    *  fractions all the way to the database, so "must total 100" is an exact
    *  integer check; the engine divides by 100 where it multiplies. */
-  weights?: { skills: number; education: number; experience: number } | null;
+  weights?: { skills: number; education: number; experience: number; certifications?: number } | null;
+  /** Certifications this opening asks for, free text. Scored only when the
+   *  recruiter gives the certifications weight a share; absent or empty means
+   *  full marks on that component, as an unstated requirement always does. */
+  certifications?: string[];
   status: 'open' | 'closed';
   createdAt: number;
   company?: Company;
@@ -377,7 +381,11 @@ export interface MatchResult {
   /** The weights this score was computed with, as fractions. Carried on the
    *  result so a breakdown always adds up to the number beside it, see the
    *  same field in server/src/lib/engine.ts. */
-  weights: { skills: number; education: number; experience: number };
+  weights: { skills: number; education: number; experience: number; certifications: number };
+  /** Of the certifications the opening asked for, the ones the applicant
+   *  lists and the ones they do not. Both empty when none were asked for. */
+  matchedCertifications: string[];
+  missingCertifications: string[];
 }
 
 export interface RecommendationItem extends MatchResult {

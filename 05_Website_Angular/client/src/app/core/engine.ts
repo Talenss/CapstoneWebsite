@@ -15,7 +15,10 @@ import { AppStatus, EduLevel, EvidenceKind, MatchResult, Posting, RejectionReaso
    live score a seeker sees stays equal to the score the server stores.
    Without that, editing match_settings would show the seeker one number and
    the recruiter another for the very same application. */
-export const WEIGHTS = { skills: 0.5, education: 0.25, experience: 0.25 };
+/** `certifications` is the optional fourth component and sits at 0, so the
+ *  site-wide split stays the study's published 50/25/25 across three unless a
+ *  recruiter gives certifications a share on their own opening. */
+export const WEIGHTS = { skills: 0.5, education: 0.25, experience: 0.25, certifications: 0 };
 export const THRESHOLDS = { strong: 80, related: 50 };
 
 /** Every accepted value of `resumes.design`. Anything else falls back to
@@ -49,8 +52,11 @@ export function applyMatchSettings(s: {
   if (w) {
     const sk = num(w.skills), ed = num(w.education), ex = num(w.experience);
     // All three or none. A partial set would silently change the total scale.
+    // Certifications are separate: absent means 0, the value they already hold.
     if (sk !== null && ed !== null && ex !== null && sk >= 0 && ed >= 0 && ex >= 0) {
       WEIGHTS.skills = sk; WEIGHTS.education = ed; WEIGHTS.experience = ex;
+      const ce = num(w.certifications);
+      WEIGHTS.certifications = ce !== null && ce >= 0 ? ce : 0;
     }
   }
   const th = s?.thresholds;
@@ -324,14 +330,31 @@ export function weightsFor(posting: Pick<Posting, 'weights'>): typeof WEIGHTS {
   if (!w) return WEIGHTS;
   const ok = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
   if (!ok(w.skills) || !ok(w.education) || !ok(w.experience)) return WEIGHTS;
-  if (w.skills + w.education + w.experience !== 100) return WEIGHTS;
+  /* Absent means zero, not invalid — an opening written before certifications
+     were scoreable carries three weights totalling 100 and must keep the score
+     it has always produced. */
+  const cert = w.certifications === undefined || w.certifications === null ? 0 : w.certifications;
+  if (!ok(cert)) return WEIGHTS;
+  if (w.skills + w.education + w.experience + cert !== 100) return WEIGHTS;
   // Percentages in, fractions out, the same single conversion the server does.
-  return { skills: w.skills / 100, education: w.education / 100, experience: w.experience / 100 };
+  return {
+    skills: w.skills / 100, education: w.education / 100,
+    experience: w.experience / 100, certifications: cert / 100,
+  };
+}
+
+/** The browser's mirror of certNorm() in server/src/lib/engine.ts. Free text,
+ *  reduced to lowercase alphanumerics; the applicant's entry must CONTAIN what
+ *  the opening asked for. */
+export function normCert(s: string): string {
+  return String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 export function scoreLocal(
-  resume: Pick<Resume, 'skills' | 'education' | 'experience'> & { skillEvidence?: Resume['skillEvidence'] },
-  posting: Pick<Posting, 'skills' | 'educationLevel' | 'minExperienceMonths' | 'weights'>,
+  resume: Pick<Resume, 'skills' | 'education' | 'experience'>
+    & { skillEvidence?: Resume['skillEvidence']; certifications?: { name?: string }[] },
+  posting: Pick<Posting, 'skills' | 'educationLevel' | 'minExperienceMonths' | 'weights'>
+    & { certifications?: string[] },
 ): MatchResult {
   const W = weightsFor(posting);
   const required = posting.skills || [];
@@ -360,7 +383,23 @@ export function scoreLocal(
   const reqMonths = Number(posting.minExperienceMonths) || 0;
   const expPart = reqMonths <= 0 ? 1 : Math.min(1, months / reqMonths);
 
-  const raw = (skillPart * W.skills + eduPart * W.education + expPart * W.experience) * 100;
+  /* CERTIFICATIONS — the optional fourth component. An opening asking for
+     none scores full marks here, exactly as an unstated education or months
+     requirement does. The weight defaults to 0, so this contributes nothing
+     unless a recruiter deliberately gives it a share. */
+  const wantCerts = posting.certifications || [];
+  const haveCerts = (resume.certifications || [])
+    .map((c) => normCert(c?.name ?? '')).filter(Boolean);
+  const matchedCerts: string[] = [];
+  const missingCerts: string[] = [];
+  for (const want of wantCerts) {
+    const w = normCert(want);
+    (w && haveCerts.some((h) => h.includes(w)) ? matchedCerts : missingCerts).push(want);
+  }
+  const certPart = wantCerts.length ? matchedCerts.length / wantCerts.length : 1;
+
+  const raw = (skillPart * W.skills + eduPart * W.education
+    + expPart * W.experience + certPart * W.certifications) * 100;
   const total = Math.floor(raw + 0.5); // half-up, explicitly, must match server rmScore()
 
   return {
@@ -372,6 +411,8 @@ export function scoreLocal(
     eduMeets: eduPart >= 1,
     expMeets: expPart >= 1,
     seekerMonths: months,
+    matchedCertifications: matchedCerts,
+    missingCertifications: missingCerts,
     tier: total >= THRESHOLDS.strong ? 'strong' : total >= THRESHOLDS.related ? 'possible' : 'related',
     weights: W,
   };
