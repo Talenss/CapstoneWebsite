@@ -179,7 +179,22 @@ runMigrations().then(
     const why = e?.message || e;
     if (IS_PROD) {
       console.error('Schema migration FAILED — refusing to start:', why);
-      console.error('The database is unreachable or the connecting role cannot alter the schema.');
+      /* The commonest cause by a distance, and the one the generic message
+         below sends people hunting for in the wrong place: DATABASE_URL is
+         simply not set on this service, so the connection fell back to a
+         local Postgres that was never going to be there. It happens whenever
+         a blueprint stands up a NEW service, because every secret in
+         render.yaml is `sync: false` and a new service starts with none of
+         them. Say so, rather than making the reader infer it from the
+         "(from DB_* settings)" line printed a moment earlier. */
+      if (!DATABASE_URL) {
+        console.error('DATABASE_URL is NOT SET on this service, so the fallback DB_* settings were used —');
+        console.error(`that is why the target above reads ${DB_HOST}:${DB_PORT}, which is this container itself.`);
+        console.error('Set DATABASE_URL (Supabase -> Project Settings -> Database -> Session pooler),');
+        console.error('along with the other values render.yaml marks `sync: false`.');
+      } else {
+        console.error('The database is unreachable or the connecting role cannot alter the schema.');
+      }
       process.exit(1);
     }
     console.error('Schema migration failed (is the database reachable?):', why);

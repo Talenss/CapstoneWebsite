@@ -421,7 +421,12 @@ secret. Render reads it, so most of this is not typed by hand.
 
 1. <https://render.com> → sign in with GitHub → **New → Blueprint**.
 2. Pick this repository. Render finds `render.yaml` and shows one web
-   service, `linaw-ph`.
+   service, `resumematch-ph`. That is the service NAME, not the product
+   name — the product is Linaw. Renaming it in `render.yaml` does not rename
+   the running service, it creates a second one with none of the secrets
+   below, so the name is left alone until someone renames the service in the
+   Render dashboard (which keeps its environment) and updates `render.yaml`
+   and `SITE_URL` to match.
 3. It prompts for the seven secrets the file deliberately does not carry:
 
    | Prompt | Where it comes from |
