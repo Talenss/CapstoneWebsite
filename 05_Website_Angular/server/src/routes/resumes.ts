@@ -84,6 +84,13 @@ router.post('/save', async (req, res) => {
      full credit, and the builder shows it as unsourced the moment the resume
      is reopened, so nothing disappears quietly. */
   const labels = evidenceLabels({ experience, projects, certifications, education });
+  /* WAS THE APPLICANT ASKED? The builder always sends a skillEvidence key,
+     empty or not, because it is the screen that asks. An import from an
+     uploaded CV sends no such key — the applicant never saw the question.
+     The engine already distinguishes the two (an absent map is full credit,
+     an empty one is half), but the serializer emitted a map either way, so
+     an imported CV was docked for declining a question never put to it. */
+  const evidencePrompted = Object.prototype.hasOwnProperty.call(R, 'skillEvidence') ? 1 : 0;
   const rawEvidence = R.skillEvidence && typeof R.skillEvidence === 'object' ? R.skillEvidence : {};
   const skillEvidence = new Map<string, { kind: EvidenceKind; ref: string }>();
   for (const [name, v] of Object.entries(rawEvidence as Record<string, any>)) {
@@ -108,16 +115,19 @@ router.post('/save', async (req, res) => {
       if (id) {
         await tx.exec(
           `UPDATE resumes SET title=?, template_type=?, design=?, full_name=?, email=?, phone=?,
-             address=?, summary=?, headline=?, linkedin=?, portfolio=? WHERE resume_id=?`,
+             address=?, summary=?, headline=?, linkedin=?, portfolio=?,
+             evidence_prompted = GREATEST(evidence_prompted, ?) WHERE resume_id=?`,
           [title, template, design, p.fullName ?? '', p.email ?? '', p.phone ?? '', p.address ?? '', p.summary ?? '',
-           String(p.headline ?? '').slice(0, 200), String(p.linkedin ?? '').slice(0, 300), String(p.portfolio ?? '').slice(0, 300), id],
+           String(p.headline ?? '').slice(0, 200), String(p.linkedin ?? '').slice(0, 300), String(p.portfolio ?? '').slice(0, 300),
+           evidencePrompted, id],
         );
       } else {
         const ins = await tx.exec(
           `INSERT INTO resumes (user_id, title, template_type, design, full_name, email, phone, address, summary,
-             headline, linkedin, portfolio) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) RETURNING resume_id`,
+             headline, linkedin, portfolio, evidence_prompted) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING resume_id`,
           [u.user_id, title, template, design, p.fullName ?? '', p.email ?? '', p.phone ?? '', p.address ?? '', p.summary ?? '',
-           String(p.headline ?? '').slice(0, 200), String(p.linkedin ?? '').slice(0, 300), String(p.portfolio ?? '').slice(0, 300)],
+           String(p.headline ?? '').slice(0, 200), String(p.linkedin ?? '').slice(0, 300), String(p.portfolio ?? '').slice(0, 300),
+           evidencePrompted],
         );
         id = ins.insertId;
         if (u.active_resume_id === null) {

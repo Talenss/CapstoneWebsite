@@ -1146,3 +1146,48 @@ test('the source is never part of the resume’s own skills list', async () => {
     assert.ok(!s.includes('LGU San Fernando'), 'the employer name must never appear in the printed skills list');
   }
 });
+
+test('a resume imported from a CV is not docked for a question it was never asked', async () => {
+  /* The regression this exists for. The engine already distinguishes an
+     ABSENT evidence map ("never asked", full credit) from an EMPTY one
+     ("asked, declined", half credit) — but the serializer used to emit a map
+     either way. An import from an uploaded CV therefore arrived looking like
+     an applicant who had been shown the question and refused it, and the same
+     document scored 65 where it should have scored 80.
+
+     The builder always sends a skillEvidence key, empty or not, because it is
+     the screen that asks. An import sends none. That is the whole signal. */
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+
+  const imported: any = {
+    title: 'Imported from CV', template: 'chronological', design: 'classic',
+    personal: { fullName: 'Jeanky Mendez', email: 'jm@example.ph' },
+    education: [{ school: 'HAU', degree: 'BSIT', level: 'bachelor', year: '2024' }],
+    experience: [{ position: 'IT Intern', company: 'Clark BPO', months: 12, description: '' }],
+    skills: ['JavaScript', 'Git'],
+    // NO skillEvidence key at all — nobody asked.
+  };
+  const made = await seeker('resumes/save', { resume: imported });
+  assert.equal(made.body.ok, true);
+  assert.ok(!('skillEvidence' in made.body.resume),
+    'an imported resume must carry NO evidence map, so the engine reads it as never asked');
+
+  // Reopened later, it still reads as never asked.
+  const again = (await seeker('resumes/get', { id: made.body.resume.id })).body.resume;
+  assert.ok(!('skillEvidence' in again), 'and it must survive the round trip that way');
+
+  // Now the applicant opens the builder, which asks and links nothing.
+  again.skillEvidence = {};
+  const opened = await seeker('resumes/save', { resume: again });
+  assert.equal(opened.body.ok, true);
+  assert.deepEqual(opened.body.resume.skillEvidence, {},
+    'once asked, an empty map is emitted and partial credit applies');
+
+  // And the flag does not flip back on a later save that omits the key.
+  const stripped = (await seeker('resumes/get', { id: made.body.resume.id })).body.resume;
+  delete stripped.skillEvidence;
+  const relisted = await seeker('resumes/save', { resume: stripped });
+  assert.deepEqual(relisted.body.resume.skillEvidence, {},
+    'having been asked once, the resume stays asked');
+});

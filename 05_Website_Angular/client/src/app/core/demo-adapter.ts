@@ -720,12 +720,20 @@ export class DemoAdapter implements ApiAdapter {
         skillEvidence[name] = { kind, ref };
       }
 
+      /* Mirrors resumes.evidence_prompted on the server. The builder always
+         sends a skillEvidence key, empty or not, because it is the screen
+         that asks; an import from an uploaded CV sends none. Only once asked
+         is the map assigned — an absent map means "never asked" to the
+         engine, and an imported CV must not be docked for declining a
+         question it was never shown. Only the INCOMING payload is inspected:
+         on an edit the merge below spreads the stored record first, so a map
+         set by an earlier builder save survives a later save that omits it. */
+      const prompted = Object.prototype.hasOwnProperty.call(resume, 'skillEvidence');
+
       resume = {
         ...resume,
         skills,
-        // Always assigned, even when empty: an absent map means "never asked"
-        // to the engine, which would hand back the credit this withholds.
-        skillEvidence,
+        ...(prompted ? { skillEvidence } : {}),
         title: (String(resume.title ?? '').trim() || 'Untitled resume').slice(0, 120),
         template: ['chronological', 'functional', 'combination'].includes(resume.template as string)
           ? resume.template : 'chronological',

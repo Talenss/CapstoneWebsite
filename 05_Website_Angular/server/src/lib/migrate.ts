@@ -194,6 +194,25 @@ export async function runMigrations(): Promise<void> {
   await exec('ALTER TABLE resumes ADD COLUMN IF NOT EXISTS own_file_extract_status TEXT');
   await exec('ALTER TABLE resumes ADD COLUMN IF NOT EXISTS own_file_extract_at TIMESTAMPTZ');
 
+  // resumes.evidence_prompted — whether the applicant was ever ASKED where
+  // each skill was used. The builder asks; an import from an uploaded CV
+  // does not. Existing rows default to 0, which is right for both cases:
+  // a resume already carrying evidence is unaffected (its links score in
+  // full regardless), and one carrying none stops being docked for a
+  // question it may never have been shown.
+  await exec('ALTER TABLE resumes ADD COLUMN IF NOT EXISTS evidence_prompted SMALLINT NOT NULL DEFAULT 0');
+  /* Backfill. Before this column existed, "no links at all" was ambiguous —
+     it could mean the builder asked and the applicant declined, or that
+     nothing ever asked. Only one of those deserves the half-credit penalty,
+     and the two are indistinguishable after the fact, so the backfill takes
+     the reading that does not penalise an applicant we cannot show was
+     asked: prompted where at least one skill carries a source, not prompted
+     where none does. A resume with links keeps scoring exactly as it did. */
+  await exec(`UPDATE resumes r SET evidence_prompted = 1
+                WHERE evidence_prompted = 0
+                  AND EXISTS (SELECT 1 FROM resume_skills rs
+                               WHERE rs.resume_id = r.resume_id AND rs.evidence_ref IS NOT NULL)`);
+
   // job_postings.application_deadline — optional "apply by" date; past it,
   // the posting stops accepting applications (lazy auto-close, no cron)
   await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS application_deadline DATE');

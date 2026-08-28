@@ -160,6 +160,13 @@ CREATE TABLE resumes (
   own_file_extract        JSONB,
   own_file_extract_status TEXT,
   own_file_extract_at     TIMESTAMPTZ,
+  -- WAS THE APPLICANT EVER ASKED where each skill was used?
+  -- The builder asks; an import from an uploaded CV does not. The engine
+  -- reads an empty evidence map as "asked, no sources given" (half credit)
+  -- and an absent one as "never asked" (full credit), so without this flag
+  -- an imported CV was docked for declining a question it was never shown.
+  -- Set the first time a save carries a skillEvidence key.
+  evidence_prompted SMALLINT NOT NULL DEFAULT 0,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -696,6 +703,15 @@ UPDATE resume_skills rs SET evidence_kind = 'certification', evidence_ref = 'Cus
   FROM skills s WHERE s.skill_id = rs.skill_id AND rs.resume_id = 3 AND s.skill_norm = 'englishproficiency';
 UPDATE resume_skills rs SET evidence_kind = 'experience', evidence_ref = 'HR Intern, Manufacturing firm'
   FROM skills s WHERE s.skill_id = rs.skill_id AND rs.resume_id = 4 AND s.skill_norm IN ('recruitment','organization');
+
+-- The four demo resumes were built in the builder, which is the screen that
+-- asks where each skill was used — so they count as prompted, and a skill
+-- left unlinked is scored at half credit rather than in full. Set from the
+-- evidence rows themselves, by the same rule migrate.ts backfills with, so
+-- the seed and an upgraded database cannot disagree.
+UPDATE resumes r SET evidence_prompted = 1
+  WHERE EXISTS (SELECT 1 FROM resume_skills rs
+                 WHERE rs.resume_id = r.resume_id AND rs.evidence_ref IS NOT NULL);
 
 -- ---------- job postings ----------
 -- Posting 6 gets a deadline two weeks out, demoing the "Apply by" chip.

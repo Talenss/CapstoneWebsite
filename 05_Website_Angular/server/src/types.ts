@@ -58,6 +58,11 @@ export interface ResumeRow {
   own_file_extract: any | null;
   own_file_extract_status: 'ok' | 'unavailable' | 'unreadable' | 'failed' | null;
   own_file_extract_at: string | null;
+  /** 1 once the applicant has been ASKED where each skill was used — which
+   *  the builder does and an import from an uploaded CV does not. Gates
+   *  whether serializeResume emits skillEvidence at all, and so whether a
+   *  matched skill with no source is scored at half credit or in full. */
+  evidence_prompted: number;
   created_at: string;
   updated_at: string;
 }
