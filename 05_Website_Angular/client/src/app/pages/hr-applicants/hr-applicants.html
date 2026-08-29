@@ -190,6 +190,17 @@
                 <span><b>Experience</b><span class="w">{{ r.weights.experience * 100 }}% weight</span></span>
                 <b [style.color]="r.expMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ r.seekerMonths }} mo · asked {{ posting()?.minExperienceMonths || 0 }} mo</b>
               </div>
+              <!-- Only when this opening scores certificates. Shown for the
+                   same reason the other three are: a breakdown that omits a
+                   component still counted in the number beside it is not a
+                   breakdown. Named in full here, as missing skills are,
+                   because the person deciding needs to know what is absent. -->
+              @if (r.weights.certifications > 0) {
+                <div class="row">
+                  <span><b>Certificates</b><span class="w">{{ r.weights.certifications * 100 }}% weight</span></span>
+                  <b>{{ r.matchedCertifications.length }} of {{ r.matchedCertifications.length + r.missingCertifications.length }}{{ r.missingCertifications.length ? ' · missing ' + r.missingCertifications.join(', ') : '' }}</b>
+                </div>
+              }
               <!-- The same posting scored against what software read out of
                    the applicant's own file. Reported, never ranked on: a
                    parser misreading a scan must not move a person down the
