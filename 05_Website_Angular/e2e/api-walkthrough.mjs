@@ -233,6 +233,45 @@ await t('logging out actually clears the server session', async () => {
   if (/"role":"seeker"/.test(r)) throw new Error('session survived logout: ' + r);
 });
 
+await t('the builder asks about sources by reaching the skills step, not by luck', async () => {
+  /* The half-credit rule turns on whether the applicant was ASKED where each
+     skill was used. Keying that on "did the save payload happen to carry a
+     skillEvidence key" was wrong: adding a skill never creates that key, only
+     setting a source does, so someone who typed the four skills a posting
+     wants and linked none of them looked like someone never asked — and
+     scored 100 where the published rule says 75.
+
+     Reaching the skills step IS being asked; the source picker sits beside
+     every skill on it. So: no map before that step, an empty map after. */
+  const seen = [];
+  const watch = (req) => {
+    if (req.url().includes('/api/resumes/save') && req.method() === 'POST') {
+      try { seen.push('skillEvidence' in (JSON.parse(req.postData() || '{}').resume || {})); } catch { /* ignore */ }
+    }
+  };
+  page.on('request', watch);
+  try {
+    await login('seeker@demo.ph', 'demo123');
+    await page.goto(B + '/resume-builder', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(1200);
+    await page.fill('#pName', 'Evidence Probe');
+    await page.click('button:has-text("Save draft")');
+    await page.waitForTimeout(1600);
+    if (seen.length === 0) throw new Error('the builder never saved');
+    if (seen[seen.length - 1] !== false)
+      throw new Error('a resume saved before the skills step must carry NO evidence map');
+
+    await page.locator('.rail button', { hasText: 'Skills' }).click();
+    await page.waitForTimeout(800);
+    await page.click('button:has-text("Save draft")');
+    await page.waitForTimeout(1600);
+    if (seen[seen.length - 1] !== true)
+      throw new Error('once the skills step is reached the map must be sent, empty or not');
+  } finally {
+    page.off('request', watch);
+  }
+});
+
 console.log('\n' + pass + '/' + (pass + fail) + ' passed');
 console.log(apiCalls.length + ' API calls observed');
 if (errors.length) {
