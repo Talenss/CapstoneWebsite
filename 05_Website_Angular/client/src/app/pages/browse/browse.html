@@ -81,6 +81,13 @@
                 @if (row.s.missingSkills.length) {
                   <span class="chip more">+{{ row.s.missingSkills.length }} more asked for</span>
                 }
+                <!-- Certificates are NAMED, where missing skills are only
+                     counted. The reasoning behind missingHint() does not
+                     apply: a certificate cannot be claimed by typing the
+                     word, and the opening states which it asks for anyway. -->
+                @for (c of row.posting.certifications ?? []; track c) {
+                  <span class="chip">{{ c }}</span>
+                }
               } @else {
                 @for (sk of row.posting.skills; track sk) {
                   <span class="chip">{{ sk }}</span>
