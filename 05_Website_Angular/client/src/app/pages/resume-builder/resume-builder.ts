@@ -87,6 +87,21 @@ export class ResumeBuilder implements OnInit {
   ready = signal(false);
   resume = signal<Resume>(blankResume());
   step = signal(0);
+  /** Has the applicant actually SEEN the skills step?
+   *
+   *  This is the signal behind evidence_prompted on the server, and it has to
+   *  be this rather than "did the payload happen to carry a skillEvidence
+   *  key". addSkill() does not create that key — only setting a source or
+   *  removing a skill does — so keying on its presence meant an applicant who
+   *  typed the four skills a posting asks for and linked none of them looked
+   *  like one who was never asked, and scored 100 where the published rule
+   *  says 75. That is precisely the padding the half-credit rule exists to
+   *  make expensive.
+   *
+   *  Reaching the step IS being asked: the source picker sits beside every
+   *  skill on it. An import that is saved from an earlier step has not been
+   *  asked, and keeps full credit until the applicant gets there. */
+  evidenceAsked = signal(false);
   dirty = signal(false);
   saving = signal(false);
   savedFlag = signal(false);
@@ -330,7 +345,9 @@ export class ResumeBuilder implements OnInit {
   }
 
   goTo(i: number): void {
-    this.step.set(Math.max(0, Math.min(STEPS.length - 1, i)));
+    const next = Math.max(0, Math.min(STEPS.length - 1, i));
+    if (STEPS[next] === 'Skills') this.evidenceAsked.set(true);
+    this.step.set(next);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -689,6 +706,11 @@ export class ResumeBuilder implements OnInit {
       this.goTo(0);
       return false;
     }
+
+    /* Emitted only once the question has been put. An empty map is not the
+       same as no map: empty means asked and no sources given, which is half
+       credit; absent means never asked, which is full. */
+    if (this.evidenceAsked() && !r.skillEvidence) r = { ...r, skillEvidence: {} };
 
     this.saving.set(true);
     // What we are actually sending. Compared against the live signal after
