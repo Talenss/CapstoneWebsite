@@ -1,38 +1,18 @@
-/* ============================================================
-   Linaw PH — lib/storage.ts
-   ------------------------------------------------------------
-   Where an applicant's uploaded resume file actually lives.
+/* Where an applicant's uploaded file lives. Two backends behind one
+   interface: a folder on disk (the default, and what development uses), or
+   Supabase Storage.
 
-   TWO BACKENDS, ONE INTERFACE:
+   Supabase is the one for a real deployment because Render's filesystem is
+   ephemeral — a redeploy hands back a blank disk while the rows pointing at
+   those files survive, so a resume would still be listed, still scored, still
+   sent to a recruiter, with nothing behind it.
 
-     · disk      — a folder on the server. The default, and what
-                   local development uses. Needs no account and
-                   no network.
-     · supabase  — Supabase Storage, over its REST API.
-
-   WHY SUPABASE IS THE ONE FOR A REAL DEPLOYMENT. Most Node
-   hosts (Render, Railway, Fly on their free and hobby tiers)
-   give the process an EPHEMERAL filesystem: every redeploy,
-   restart or sleep hands back a blank disk. The database rows
-   survive, so a resume would still be listed, still be scored,
-   still be sent to a recruiter — and the file behind it would
-   be gone. Supabase Storage is durable and independent of the
-   process, so a redeploy costs nothing.
-
-   Selection is by configuration, not by code: set
-   SUPABASE_URL and SUPABASE_SERVICE_KEY and this switches to
-   Supabase; leave either empty and it stays on disk. Nothing
-   above this file knows which is in use.
-
-   NO SDK. Supabase Storage is a plain REST API and Node 22 has
-   fetch built in, so this is three HTTP calls rather than a
-   dependency. Keys are stored under a bucket that must NOT be
-   public: every read goes through routes/file.ts, which checks
-   that the caller is the applicant or a recruiter the resume
-   was actually sent to. A public bucket would make a resume
-   reachable by guessing a URL, which is precisely what the
-   route exists to prevent.
-   ============================================================ */
+   Selected by configuration, not code: set SUPABASE_URL and
+   SUPABASE_SERVICE_KEY and it switches. Nothing above this file knows which
+   is in use. No SDK — it is a REST API and Node has fetch, so this is three
+   HTTP calls rather than a dependency. The bucket must NOT be public: reads
+   go through routes/file.ts, which checks the caller is the applicant or a
+   recruiter the resume was sent to. */
 import fs from 'fs';
 import path from 'path';
 import { UPLOAD_DIR, SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_BUCKET } from '../config';

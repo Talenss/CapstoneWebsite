@@ -9,22 +9,11 @@ import path from 'path';
 import dns from 'dns';
 import dotenv from 'dotenv';
 
-/* ---------- prefer IPv4 for every outbound connection ----------
-   Several hosts, Render among them, have no outbound IPv6. Node still
-   resolves a name to whatever the DNS returns, and for hosts that publish
-   both records that is frequently the IPv6 one — so the connection is
-   attempted over a network the machine cannot reach and fails with
-   ENETUNREACH, or simply hangs until it times out.
-
-   That is exactly how sign-up broke in production: smtp.gmail.com resolved
-   to 2404:6800:4003:c00::6d and every verification email failed, while the
-   same host was perfectly reachable on IPv4. Supabase's direct database
-   host produced the same class of failure earlier, and was worked around by
-   changing the connection string.
-
-   Preferring IPv4 costs nothing on a dual-stack machine, because IPv4 works
-   there too, and removes a failure that is invisible from the error message
-   itself. Set before any module opens a socket. */
+/* Render has no outbound IPv6, and Node will use whichever record DNS
+   returns. This broke sign-up in production: smtp.gmail.com resolved to an
+   IPv6 address and every verification email failed with ENETUNREACH, while
+   the same host answered fine on IPv4. Costs nothing on a dual-stack
+   machine. Must run before any module opens a socket. */
 dns.setDefaultResultOrder('ipv4first');
 
 
@@ -48,7 +37,7 @@ export const DB_SSL = (process.env.DB_SSL || (DATABASE_URL ? 'true' : 'false')) 
 export const PORT = Number(process.env.PORT || 4300);
 
 // Applicant resume files. Kept out of any public web root and served only
-// through /api/file.php-equivalent, which checks who's asking.
+// through routes/file.ts, which authorises every read.
 export const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads');
 export const MAX_UPLOAD = 2 * 1024 * 1024; // 2 MB
 export const ALLOWED_MIME: Record<string, string> = {
@@ -59,18 +48,13 @@ export const ALLOWED_MIME: Record<string, string> = {
   'image/png': 'png',
 };
 
-/* ---------- where uploaded resume files live ----------
-   Set SUPABASE_URL and SUPABASE_SERVICE_KEY and uploads go to Supabase
-   Storage; leave either empty and they stay in UPLOAD_DIR on local disk.
+/* Set both and uploads go to Supabase Storage; leave either empty and they
+   stay on local disk. Render's filesystem is ephemeral, so a redeploy empties
+   UPLOAD_DIR while the rows pointing at those files survive (lib/storage.ts).
 
-   This matters in production: most Node hosts give the process an ephemeral
-   filesystem, so a redeploy or a restart silently empties UPLOAD_DIR while
-   the database rows that point at those files survive. See lib/storage.ts.
-
-   SUPABASE_SERVICE_KEY is the SERVICE ROLE key, which bypasses row-level
-   security — it belongs on the server only and must never reach the browser.
-   The bucket must be PRIVATE: reads are authorised by routes/file.ts, and a
-   public bucket would make every resume reachable by guessing a URL. */
+   SUPABASE_SERVICE_KEY bypasses row-level security: server only, never the
+   browser. The bucket must be PRIVATE — routes/file.ts authorises reads, and
+   a public bucket would expose every resume to a guessed URL. */
 export const SUPABASE_URL = process.env.SUPABASE_URL || '';
 export const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
 export const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'resumes';
@@ -78,15 +62,12 @@ export const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'resumes';
 // The Angular dev server origin, so cookie-based sessions work cross-origin in dev.
 export const ALLOW_ORIGIN = process.env.ALLOW_ORIGIN || 'http://localhost:4200';
 
-/* NODE_ENV=production is the signal that this is a real deployment rather
-   than someone's laptop. It flips the two defaults that are convenient in
-   development and dangerous in the open. */
+// Flips the two defaults that are convenient in development and dangerous
+// in the open.
 export const IS_PROD = process.env.NODE_ENV === 'production';
 
-/* DEBUG echoes raw error text to clients AND returns live email
-   verification codes in API responses — with it on, anyone could register
-   or take over any address without access to the inbox. It must never
-   default to on in production. */
+// DEBUG returns live email verification codes in API responses, so with it
+// on anyone could take over any address without access to the inbox.
 export const DEBUG = (process.env.DEBUG || (IS_PROD ? 'false' : 'true')) === 'true';
 
 const DEV_SESSION_SECRET = 'linaw-dev-secret-change-in-production';
@@ -94,10 +75,9 @@ export const SESSION_SECRET = process.env.SESSION_SECRET || DEV_SESSION_SECRET;
 
 const COOKIE_SECURE_RAW = process.env.COOKIE_SECURE === 'true';
 
-/* Deployments forget .env files. Refusing to start is the only thing loud
-   enough to be noticed — a warning in a log nobody reads is not. Signed
-   sessions with a secret published in a public repository are forgeable, so
-   this is not a configuration nicety. */
+/* Refusing to start is the only thing loud enough to be noticed; a warning
+   in a log nobody reads is not. A session signed with a secret that is in a
+   public repository is forgeable. */
 if (IS_PROD) {
   const problems: string[] = [];
   if (SESSION_SECRET === DEV_SESSION_SECRET)
@@ -122,12 +102,6 @@ if (IS_PROD) {
 export const TRUST_PROXY = (process.env.TRUST_PROXY || 'false') === 'true';
 export const COOKIE_SECURE = COOKIE_SECURE_RAW;
 
-// ---------- AI resume analysis (optional) ----------
-// The "Upload & analyze" feature reads an uploaded resume with Google's
-// Gemini API (free tier) and prefills the structured resume builder.
-// Without a key, the feature shows a friendly "not configured" message;
-// everything else on the site keeps working. Get a free key at
-// https://aistudio.google.com/apikey and put it in .env.
 /* ---------- resume reading ----------
    Which reader turns an uploaded document into structured fields:
 
@@ -150,51 +124,35 @@ export const COOKIE_SECURE = COOKIE_SECURE_RAW;
    back thin. See thinReading() in lib/extract.ts for what "thin" means. */
 export type ExtractorMode = 'rules' | 'gemini' | 'auto' | 'escalate';
 
-/** Read at the point of use rather than frozen at import. The study compares
- *  the two readers over the same set of files by flipping this setting between
- *  runs, so the value has to be readable when the reader is chosen, not only
- *  when the process booted. */
+/** Read at the point of use, not frozen at import: the study flips this
+ *  between runs to compare the two readers over the same files. */
 export function resumeExtractorMode(): ExtractorMode {
   const raw = (process.env.RESUME_EXTRACTOR || 'auto').trim().toLowerCase();
   return raw === 'rules' || raw === 'gemini' || raw === 'escalate' ? raw : 'auto';
 }
 
-/** Read at the point of use, for the same reason resumeExtractorMode() is:
- *  the study flips between the two readers between runs, and a key frozen at
- *  import made activeExtractor() only half-live — the mode responded to a
- *  change and the key did not, so the two could disagree about which reader
- *  was configured. A test caught this. */
+/** Live, for the same reason. A key frozen at import made activeExtractor()
+ *  half-live: the mode responded to a change and the key did not, so the two
+ *  disagreed about which reader was configured. A test caught it. */
 export const geminiApiKey = (): string => process.env.GEMINI_API_KEY || '';
-/* NOT gemini-2.5-flash, which this defaulted to until an API key issued in
-   2026 could not call it: Google has closed that model to new keys, and the
-   request comes back 404 "no longer available to new users". It is a confusing
-   failure to inherit, because the model still appears in the /models listing
-   and an older key still works — so it fails only for whoever sets the project
-   up next. Pinned to an exact version rather than the gemini-flash-latest
-   alias, which moves when Google ships a new model and would change extraction
-   results in the middle of data collection. */
+/* NOT gemini-2.5-flash: Google closed it to new keys, so a key issued in 2026
+   gets 404 "no longer available to new users" while the model still appears in
+   /models and older keys still work — it fails only for whoever sets this up
+   next. Pinned to an exact version, not the -latest alias, which would change
+   extraction results mid-collection. */
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
-/* The API host. Overridable so the extraction route can be tested against a
-   local stand-in — the value of those tests is in OUR code (the multipart
-   handling, the MIME check, and the coercion of whatever the model returns),
-   none of which should require a paid key or a network round trip to verify. */
+/* Overridable so extraction can be tested against a local stand-in: the value
+   of those tests is in our own multipart handling, MIME check and coercion,
+   none of which should need a paid key to verify. */
 export const geminiBaseUrl = (): string =>
   process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com';
 
-// ---------- Email sending (verification codes, password reset) ----------
-// Any SMTP service works: Gmail with an "app password", Brevo's free tier,
-// Outlook, etc. — see SETUP.md. Without SMTP settings the email features
-// tell the user email isn't configured; with DEBUG=true the code is also
-// printed to this server's console so development works without SMTP.
-/* ---------- sending mail over HTTPS instead of SMTP ----------
-   Render's free instances block outbound traffic to SMTP ports 25, 465 and
-   587, so no SMTP provider can work there — the connection simply times
-   out, which reads like a credential problem and is not one. HTTPS is not
-   blocked, so with BREVO_API_KEY set the mailer posts to Brevo's REST API
-   and never opens an SMTP socket.
-
-   SMTP remains the path when this is empty: it is what local development
-   uses, and what a paid instance or any other host can use directly. */
+/* ---------- email ----------
+   Render's free instances block SMTP ports 25, 465 and 587, so no SMTP
+   provider works there — the connection times out, which reads like a bad
+   password and is not one. With BREVO_API_KEY set the mailer posts to Brevo
+   over HTTPS instead. SMTP is still the path when this is empty, which is
+   what local development and any paid host use. See SETUP.md. */
 export const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
 
 export const SMTP_HOST = process.env.SMTP_HOST || '';

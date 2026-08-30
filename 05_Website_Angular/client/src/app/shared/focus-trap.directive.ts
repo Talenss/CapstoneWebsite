@@ -1,13 +1,9 @@
-/* Linaw PH, shared/focus-trap.directive.ts
+/* Makes a modal usable with a keyboard and announceable by a screen reader.
 
-   Makes a modal usable with a keyboard and announceable by a screen reader.
-
-   Before this, all three modals were visually correct and functionally
-   broken for anyone not using a mouse: focus stayed on the button behind
-   the overlay, Tab walked through the whole page underneath (11 of 14
-   presses in a measured run landed outside), nothing identified the panel
-   as a dialog, and closing dropped focus to <body> so a keyboard user lost
-   their place entirely.
+   All three modals were visually correct and functionally broken without a
+   mouse: focus stayed behind the overlay, Tab walked the page underneath
+   (11 of 14 presses in a measured run landed outside), nothing identified the
+   panel as a dialog, and closing dropped focus to <body>.
 
    Applied with [appFocusTrap] on the panel element. It:
      · marks the element as a dialog and labels it from its own heading

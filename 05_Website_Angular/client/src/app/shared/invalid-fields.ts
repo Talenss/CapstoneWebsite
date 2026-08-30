@@ -1,36 +1,17 @@
-/* Linaw PH, shared/invalid-fields.ts
+/* Rejecting a field used to be purely visual: .invalid turned a border red
+   and revealed the error span. For anyone not looking at the screen there was
+   nothing at all — no aria-invalid, no link between the error text and its
+   control, and no focus move. The failure mode was pressing Publish, hearing
+   "fix the highlighted fields", and having no way to find out which.
 
-   Every form in the app rejects a field the same way: .invalid goes onto
-   the surrounding .field, which turns the control's border red and reveals
-   the <span class="err"> already sitting inside it.
-
-   That was the whole story, which meant that for anyone not looking at the
-   screen there was no story at all:
-
-     · no control ever carried aria-invalid, so a screen reader had no way
-       to know the field had been rejected at all;
-     · the error text was never tied to its control, so landing on the field
-       announced the label and stopped there, the sentence explaining what
-       was wrong sat in the DOM, unread;
-     · focus never moved. Two of the forms scrolled the window to the top,
-       which helps only someone who can see where it landed; the rest did
-       nothing. The summary then said to fix "the highlighted fields", and
-       highlighting is a purely visual property.
-
-   So the failure mode was: press Publish, hear "Fill in the highlighted
-   fields before publishing", and have no way to find out which ones.
-
-   Call it right after setting the invalid flags. It returns true when
-   nothing was wrong, so a handler reads as:
+   Call it right after setting the invalid flags; it returns true when nothing
+   was wrong:
 
        if (!reportInvalidFields([{ id: 'title', invalid: !titleOk }, …])) return;
 
-   The state is passed in rather than read back off the DOM on purpose. The
-   flags live in signals that were written a line earlier, and Angular has
-   not rendered them yet, inspecting .invalid here would test the PREVIOUS
-   submission's classes. Taking the truth from the caller sidesteps render
-   timing entirely, and the array's order is the reading order the author
-   declares rather than one inferred from the document. */
+   State is passed in rather than read off the DOM because the flags live in
+   signals written a line earlier and Angular has not rendered them yet —
+   inspecting .invalid here would test the PREVIOUS submission. */
 
 /** A stable-enough id for an error span that has none of its own. */
 let seq = 0;

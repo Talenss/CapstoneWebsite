@@ -1,32 +1,16 @@
-/* ============================================================
-   Linaw PH, core/seo.ts
-   ------------------------------------------------------------
-   Everything a search engine reads that is not visible on the
-   page: the description, the canonical URL, the social cards, the
-   robots directive, and the schema.org structured data.
+/* Everything a search engine reads that is not on the page: description,
+   canonical URL, social cards, robots directive, structured data.
 
-   WHY A SERVICE AND NOT index.html
-   index.html is one file shared by all eighteen routes. A single
-   description there means /browse and /learning-hub are described
-   to Google identically, and duplicate descriptions across a site
-   are treated as a signal that the pages are duplicates. So the
-   description, the canonical and the cards are set per route, from
-   the `seo` block on each route's data.
+   Per route rather than in index.html, because index.html is one file shared
+   by all eighteen routes — a single description there describes /browse and
+   /learning-hub identically, which Google reads as duplicate pages.
 
-   WHAT THIS DOES NOT DO
-   This app is client-rendered: the HTML that arrives from the
-   host is an empty <app-root>, and everything below is written by
-   JavaScript afterwards. Google renders JavaScript and will see
-   it; most other crawlers, and most social-media link previewers,
-   will not. That is a real limit of the current architecture and
-   it is stated in SETUP.md rather than hidden here.
+   The limit: this app is client-rendered, so the HTML from the host is an
+   empty <app-root>. Google runs the JavaScript and sees this; most other
+   crawlers and link previewers do not. Stated in SETUP.md rather than hidden.
 
-   CSP NOTE
-   The site ships `script-src 'self'`. A <script type="application/
-   ld+json"> block is a DATA block, not executable script, and is
-   not blocked by that policy, verified in Chromium against the
-   exact CSP the deployed site sends, with no console violation.
-   ============================================================ */
+   The ld+json block is DATA, not executable script, so `script-src 'self'`
+   does not block it — verified in Chromium against the deployed CSP. */
 import { DOCUMENT } from '@angular/common';
 import { Injectable, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';

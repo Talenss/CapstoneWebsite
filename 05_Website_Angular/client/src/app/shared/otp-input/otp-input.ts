@@ -1,27 +1,17 @@
 import { Component, ElementRef, computed, forwardRef, input, signal, viewChildren } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
-/* Linaw PH, shared/otp-input
-   ------------------------------------------------------------------
-   One box per digit for the six-digit codes the app emails: at sign-up,
-   at password reset, and when changing an account's email address.
+/* One box per digit for the six-digit codes the app emails.
 
-   It was a single text box before, which worked. What a box per digit buys,
-   and the reason the QA review raised it, is that the code arrives in an
-   EMAIL on this system, not an SMS, so the realistic action is a paste,
-   often of something with spaces or a stray character attached. A single
-   maxlength=6 field silently truncates "483 920" to "483 92". Here every
-   paste is caught and stripped to digits before it lands, so the same
-   clipboard content fills the boxes correctly.
+   The code arrives by EMAIL, not SMS, so the realistic action is a paste —
+   often with spaces attached. A single maxlength=6 field silently truncates
+   "483 920" to "483 92"; here every paste is stripped to digits first.
 
-   Written as a ControlValueAccessor so the three call sites keep their
-   existing [(ngModel)] and (ngModelChange) bindings unchanged, the forms'
-   validation, their error spans and the shared reportInvalidFields() focus
-   handling all keep working without knowing the control was replaced.
+   A ControlValueAccessor, so the three call sites keep their [(ngModel)]
+   bindings, validation, error spans and reportInvalidFields() focus handling
+   without knowing the control changed.
 
-   The accessibility of a segmented input is the part that is usually done
-   badly, and it is worth being explicit about what is done here, because
-   six unlabelled boxes are decidedly WORSE than one labelled field:
+   Six unlabelled boxes would be WORSE than one labelled field, so:
 
      · the first box carries the caller's id, so the existing
        <label for="…"> still names it, and reportInvalidFields() can still
