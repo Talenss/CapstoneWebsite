@@ -1,13 +1,9 @@
-/* Linaw PH, shared/password-reveal.directive.ts
+/* Lets someone check what they have typed into a password box.
 
-   Lets someone check what they have typed into a password box.
-
-   Typing a password blind is the ordinary cause of a failed sign-in that
-   the person cannot explain: the field says nothing about what went in,
-   and "incorrect password" cannot distinguish a wrong password from a
-   right one typed with caps lock on, a phone keyboard's autocapitalised
-   first letter, or a stray space from a paste. That falls hardest on the
-   applicants this study is for, many of whom are on a phone.
+   "Incorrect password" cannot distinguish a wrong password from a right one
+   typed with caps lock on, a phone keyboard's autocapitalised first letter,
+   or a stray space from a paste — which falls hardest on the applicants this
+   study is for, most of whom are on a phone.
 
    Applied with [appPasswordReveal] on the input. It:
      · adds a Show / Hide button inside the right edge of the field

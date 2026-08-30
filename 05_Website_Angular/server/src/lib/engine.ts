@@ -17,42 +17,26 @@ export const REJECTION_REASONS = [
 ] as const;
 export type RejectionReason = (typeof REJECTION_REASONS)[number];
 
-/* ------------------------------------------------------------
-   EVIDENCE-LINKED SKILLS
+/* EVIDENCE-LINKED SKILLS
 
-   A skill on a resume is a claim. Until now the engine treated every claim
-   identically, which is what made the ranking gameable: a posting publishes
-   the skills it wants, and an applicant can type those exact words into their
-   skills list minutes before applying at no cost. Nothing in the arithmetic
-   could tell that apart from a decade of practice.
+   A skill on a resume is a claim, and treating every claim alike is what made
+   the ranking gameable: a posting publishes the skills it wants, and anyone
+   can type those exact words minutes before applying. So the builder asks
+   where the skill was used, and the answer must point at an entry already on
+   the resume — a job, project, certification or course. It cannot be free
+   text, so padding now means also inventing the job it came from.
 
-   So the builder asks a second question — WHERE did you use this? — and the
-   answer has to point at something already on the applicant's own resume: a
-   job, a project, a certification, or a course. It cannot be free text, so it
-   cannot be invented in the same keystroke as the skill itself; padding the
-   list now means also inventing the job it came from, which is a different
-   kind of act and one an interviewer can check.
+   Two rules, both chosen over stricter alternatives:
 
-   Two rules keep this fair, and both were chosen over stricter alternatives:
+     · A skill WITHOUT a source still counts, at UNEVIDENCED_CREDIT. Plenty of
+       real skills are self-taught or from work too small to list, and refusing
+       them would punish exactly the applicants this study is for.
+     · The link is NEVER printed on the resume, so no ATS parser and none of
+       the fourteen designs are affected. Only the recruiter's view shows it.
 
-     · A skill WITHOUT a source still counts. Plenty of real skills are self-
-       taught, or come from work too small to list. Refusing to count them
-       would punish exactly the applicants this study exists to help. It
-       counts at UNEVIDENCED_CREDIT instead of in full.
-
-     · The link is NEVER printed on the resume. The document the applicant
-       downloads is unchanged — a flat skills list, the same as it has always
-       been, so no ATS parser and none of the fourteen designs are affected.
-       The evidence is shown only in the recruiter's applicant view.
-
-   Honest about what this does and does not do: partial credit REDUCES the
-   payoff for padding, it does not remove it. On a four-skill opening at the
-   default weights, an applicant with one real skill who types in the other
-   three moves from 63 to 81 rather than from 63 to 100. What stops the
-   padding from working on an application already sent is the score snapshot
-   (routes/applications.ts); this makes the padding cost something, and gives
-   the recruiter the panel to ask about it.
-   ------------------------------------------------------------ */
+   This reduces the payoff for padding, it does not remove it: on a four-skill
+   opening, one real skill plus three typed moves 63 to 81, not 63 to 100. What
+   stops padding after applying is the score snapshot in routes/applications.ts. */
 export const EVIDENCE_KINDS = ['experience', 'project', 'certification', 'education'] as const;
 export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];
 export interface SkillEvidence {

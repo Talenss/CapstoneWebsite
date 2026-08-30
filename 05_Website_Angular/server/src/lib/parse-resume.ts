@@ -1,32 +1,20 @@
-/* ============================================================
-   Linaw PH — lib/parse-resume.ts
-   ------------------------------------------------------------
-   Reading a resume DOCUMENT into structured fields WITHOUT a
-   language model. Rules only: section headings, regular
-   expressions, date arithmetic, and a lookup against the skill
-   vocabulary the scoring engine already uses.
+/* Reading a resume document into structured fields WITHOUT a language model.
+   Rules only: section headings, regular expressions, date arithmetic, and the
+   same skill vocabulary the scoring engine uses.
 
-   WHY THIS EXISTS
-   The alternative path (lib/extract.ts) sends the applicant's
-   document to Google's Gemini API. That works, but it costs the
-   study three things: an exception to the "no artificial
-   intelligence of any kind" delimitation, a disclosure that
-   applicant data leaves the country, and a hard dependency on a
-   network service the demonstration build cannot reach. This
-   file does the same job with none of those.
+   The alternative (lib/extract.ts) sends the document to Gemini, which costs
+   the study an exception to its no-AI delimitation, a disclosure that
+   applicant data leaves the country, and a network dependency the demo build
+   cannot reach. This does the same job with none of those.
 
-   WHAT IT IS NOT
-   It is not AI, and nothing here should be described as AI. It is
-   pattern matching. It will read a plain, single-column resume
-   well and a two-column or scanned one badly — which is precisely
-   the failure this study argues that applicants are subjected to
-   without being told. When it cannot read something it says so;
-   it never guesses a value into a field.
+   It is pattern matching, not AI, and should never be described as AI. It
+   reads a plain single-column resume well and a two-column or scanned one
+   badly — which is the failure this study argues applicants are subjected to
+   without being told. When it cannot read something it says so rather than
+   guessing a value into a field.
 
-   Skills are resolved through skillNorm() from lib/engine.ts, so
-   a term this parser recognises is by construction a term the
-   scoring engine can score. One vocabulary, one place to fix.
-   ============================================================ */
+   Skills resolve through skillNorm(), so anything this recognises is by
+   construction something the engine can score. */
 import { skillNorm } from './engine';
 import { query } from '../db';
 

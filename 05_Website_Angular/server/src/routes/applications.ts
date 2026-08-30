@@ -346,36 +346,23 @@ router.post('/withdraw', async (req, res) => {
 
 /* The applicant's own audit trail.
 
-   Every status change has been written to application_status_history since
-   the first version — apply, set-status and withdraw all record one, inside
-   the same transaction as the change itself, precisely so that no decision
-   exists without a record of who made it and when. Until now the only thing
-   that ever READ those rows was the researcher metrics page.
+   Every status change was already written to application_status_history, in
+   the same transaction as the change — but only the metrics page ever read
+   those rows, so the person the record is about could not see when they were
+   shortlisted, or that anything had changed at all if they missed the email.
 
-   So the person the record is about could see that they were "Shortlisted"
-   but not when it happened, nor how long it sat in review, nor that anything
-   had changed at all if they missed the email. A study that argues applicant
-   ranking should be transparent cannot keep the applicant's own history from
-   them; this closes that gap using data already being captured.
+   Visible to the applicant (their own application only) and to staff at the
+   company that owns the posting. WHO DID IT is disclosed by audience, and the
+   asymmetry is deliberate:
 
-   Visible to the applicant (their own application only) and to recruiters and
-   admins at the company that owns the posting.
+     · To the APPLICANT, never a name. They learn what was decided and when,
+       which is what affects them.
+     · To the EMPLOYER'S STAFF, the name — internal accountability is why
+       changed_by is stored, and several recruiters share one applicant pool,
+       so one picking up a colleague's work needs to know who moved this
+       person already.
 
-   WHO DID IT is disclosed by audience, and the asymmetry is deliberate:
-
-     · To the APPLICANT — never a name. They learn what was decided and when,
-       which is what affects them. Naming a particular HR staff member to an
-       applicant is a different disclosure with a different risk, and the
-       feature does not need it in order to be honest.
-
-     · To the EMPLOYER'S OWN STAFF — the name, because internal accountability
-       is the entire reason changed_by is stored. Clark Outsourcing routes departments to
-       different HR owners, so several recruiters share one applicant pool; a
-       recruiter picking up a colleague's work needs to know who already moved
-       this person and when, or two people quietly redo each other's decisions.
-
-   Same rows, same ordering; only `byName` differs, and it is attached solely
-   for a caller who works at the company that owns the posting. */
+   Same rows either way; only `byName` differs. */
 router.post('/history', async (req, res) => {
   const u = await requireUser(req, res);
   if (!u) return;
@@ -426,28 +413,18 @@ router.post('/history', async (req, res) => {
       // the recruiter already knows who they are from the row they clicked).
       if (maySeeNames && by === 'employer' && r.actor_name) e['byName'] = r.actor_name;
 
-      /* THE REASON GOES TO THE APPLICANT TOO — unlike the name beside it.
-         This was built the other way round first, and the argument for hiding
-         it was real: a code its subject will read is a code some recruiters
-         will soften, and "stronger_candidate" turns into "other" the first
-         time someone pictures it quoted back at them.
+      /* THE REASON GOES TO THE APPLICANT, unlike the name beside it.
+         Built the other way round first. The argument for hiding it is real —
+         a code its subject will read is one some recruiters will soften — but
+         Chapter 1's stated problem is applicants who hear nothing at all, and
+         a system that records why and then withholds it from the person whose
+         plans depend on it argues against its own thesis. Someone who learns
+         they were unreachable rather than unqualified can fix their number.
 
-         It is still the wrong call for THIS study. Chapter 1's stated problem
-         is applicants who apply and hear nothing at all; a system that
-         finally records why, and then withholds precisely that from the one
-         person whose plans depend on it, argues against its own thesis. A
-         recruiter who would only be candid in secret is a cost worth paying
-         for an applicant who learns they were unreachable rather than
-         unqualified, and can fix their phone number before the next
-         application.
-
-         The distinction that survives is between the DECISION and the
-         DECIDER: the applicant learns what was decided, not which member of
-         staff decided it. That is why `byName` above keeps the narrower gate
-         and this does not. The wording each side reads differs too — the
-         recruiter's list is filing language, the applicant's is written to be
-         read by the person it is about (REASON_LABELS against
-         APPLICANT_REASON_LABELS in client/src/app/core/engine.ts). */
+         What survives is the split between the DECISION and the DECIDER, which
+         is why `byName` keeps the narrower gate and this does not. The wording
+         differs by audience too: REASON_LABELS is filing language,
+         APPLICANT_REASON_LABELS is written for the person it is about. */
       if (r.reason) e['reason'] = r.reason;
       return e;
     }),
