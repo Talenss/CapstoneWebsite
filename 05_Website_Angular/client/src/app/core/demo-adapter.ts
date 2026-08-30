@@ -709,7 +709,16 @@ export class DemoAdapter implements ApiAdapter {
          apply the identical rule or the same edit would score differently in
          the two modes. */
       const skills = list(resume.skills, 100).map((s) => String(s).trim().slice(0, 80)).filter(Boolean);
-      const labels = evidenceLabels({ experience, projects: projects as any[], certifications, education });
+      /* The uploaded file is read from the STORED record, never from the
+         payload, exactly as the server reads own_file_name out of the row it
+         already holds. A resume being saved for the first time has no file
+         yet, so it offers no document source; one is offered on the next save
+         after the upload call attaches it. */
+      const stored = resume.id ? db.resumes.find((r) => r.id === resume.id && r.userId === me.id) : null;
+      const labels = evidenceLabels({
+        experience, projects: projects as any[], certifications, education,
+        ownFile: stored?.ownFile ? { name: stored.ownFile.name } : null,
+      });
       const skillEvidence: Record<string, SkillEvidence> = {};
       const rawEvidence = (resume.skillEvidence ?? {}) as Record<string, any>;
       for (const name of skills) {

@@ -344,7 +344,7 @@ export interface StatusEvent {
    still counts, at partial credit. The link is never printed on the resume, the downloaded document is unchanged, and is shown only in the
    recruiter's applicant view.
    ------------------------------------------------------------ */
-export type EvidenceKind = 'experience' | 'project' | 'certification' | 'education';
+export type EvidenceKind = 'experience' | 'project' | 'certification' | 'education' | 'document';
 
 export interface SkillEvidence {
   kind: EvidenceKind;

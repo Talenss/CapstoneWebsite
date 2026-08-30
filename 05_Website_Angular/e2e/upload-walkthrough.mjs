@@ -115,6 +115,54 @@ await step('a non-document file is refused', async () => {
   if (!/PDF|Word|image|JPG|PNG/i.test(t)) throw new Error('no type message shown: ' + t.slice(0, 200));
 });
 
+await step('an imported CV credits its skills to the file it was read from', async () => {
+  /* The gap this closes, driven through the real screens: a resume typed into
+     the builder can point each skill at a job or a project, and one read out
+     of an uploaded CV usually cannot — so it used to arrive at the Skills step
+     with nothing to point at, be counted as "asked and declined", and score
+     below an identical resume that had been typed. The file itself is the
+     source: the recruiter can open it and read the skill in place.
+
+     Reaching the Skills step is what puts the question, so this walks there
+     deliberately before saving. */
+  const cv = path.join(dir, 'Imported_CV.pdf');
+  fs.writeFileSync(cv, fs.readFileSync(pdf));
+
+  await go('/upload-resume');
+  const input = page.locator('input[type=file]').first();
+  await input.waitFor({ state: 'attached', timeout: 8000 });
+  await input.setInputFiles(cv);
+  await page.waitForTimeout(700);
+  const consent = page.locator('.consent input[type=checkbox]').first();
+  if (await consent.count()) { await consent.click(); await page.waitForTimeout(300); }
+  await page.click('button:has-text("Analyze my resume")');
+  await page.waitForTimeout(3200);
+
+  const into = page.locator('button:has-text("Review & edit in the builder"), a:has-text("Review & edit in the builder")').first();
+  if (!(await into.count())) throw new Error('the analysis never offered to open the builder');
+  await into.click();
+  await page.waitForTimeout(2500);
+
+  const skills = page.locator('button:has-text("Skills")').first();
+  if (await skills.count()) { await skills.click(); await page.waitForTimeout(900); }
+  await page.locator('button:has-text("Save")').first().click();
+  await page.waitForTimeout(3200);
+
+  const state = await page.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem('linaw_v3_db') || '{}');
+    const r = (db.resumes || []).find(x => x.ownFile && /Imported_CV\.pdf/i.test(x.ownFile.name));
+    return r ? { file: r.ownFile.name, skills: r.skills || [], ev: r.skillEvidence || {} } : null;
+  });
+  if (!state) throw new Error('the imported resume was not saved with its file attached');
+  if (!state.skills.length) throw new Error('the analysis extracted no skills to credit');
+  const unsourced = state.skills.filter(k => !state.ev[k]);
+  if (unsourced.length) throw new Error('skills read out of the file were left unsourced: ' + unsourced.join(', '));
+  for (const k of state.skills) {
+    if (state.ev[k].kind !== 'document' || state.ev[k].ref !== state.file)
+      throw new Error(`${k} points at ${JSON.stringify(state.ev[k])}, not at the uploaded file`);
+  }
+});
+
 await step('the upload-and-analyze page loads and states where the file goes', async () => {
   await go('/upload-resume');
   const t = await page.locator('body').innerText();

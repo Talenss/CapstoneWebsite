@@ -47,19 +47,38 @@ function psql(args: string[], db?: string) {
   ], { env: { ...process.env, PGPASSWORD: PG.pass }, encoding: 'utf8' });
 }
 
-/** A tiny cookie-jar fetch — enough to carry one session per "user". */
+/** A tiny cookie-jar fetch — enough to carry one session per "user".
+ *  `.upload` is the same jar sending multipart instead of JSON, for the one
+ *  endpoint that takes a file. Content-Type is left unset on purpose: fetch
+ *  writes it from the FormData, boundary included. */
 function client() {
   let cookie = '';
-  return async function call(route: string, body: any = {}): Promise<any> {
+  const keep = (res: Response) => {
+    const setCookie = res.headers.getSetCookie?.() ?? [];
+    if (setCookie.length) cookie = setCookie.map((c) => c.split(';')[0]).join('; ');
+  };
+  const call = async function call(route: string, body: any = {}): Promise<any> {
     const res = await fetch(`${BASE}/${route}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) },
       body: JSON.stringify(body),
     });
-    const setCookie = res.headers.getSetCookie?.() ?? [];
-    if (setCookie.length) cookie = setCookie.map((c) => c.split(';')[0]).join('; ');
+    keep(res);
+    return { status: res.status, body: await res.json().catch(() => ({})) };
+  } as {
+    (route: string, body?: any): Promise<any>;
+    upload(route: string, form: FormData): Promise<any>;
+  };
+  call.upload = async (route: string, form: FormData) => {
+    const res = await fetch(`${BASE}/${route}`, {
+      method: 'POST',
+      headers: { ...(cookie ? { Cookie: cookie } : {}) },
+      body: form,
+    });
+    keep(res);
     return { status: res.status, body: await res.json().catch(() => ({})) };
   };
+  return call;
 }
 
 before(async () => {
@@ -1190,6 +1209,64 @@ test('a resume imported from a CV is not docked for a question it was never aske
   const relisted = await seeker('resumes/save', { resume: stripped });
   assert.deepEqual(relisted.body.resume.skillEvidence, {},
     'having been asked once, the resume stays asked');
+});
+
+test('a skill may point at the uploaded file, but only once the file is really there', async () => {
+  /* The imported-CV gap, closed end to end. A resume typed into the builder
+     has jobs and projects to point a skill at; one read out of an uploaded CV
+     often has only the file. Offering the file as a source is what makes the
+     two score alike — and reading its name from the STORED ROW rather than
+     from the payload is what stops it becoming free text under another name.
+
+     Order matters here and the builder follows it: save, attach, then link. */
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+
+  const imported: any = {
+    title: 'Imported, sourced to the file', template: 'chronological', design: 'classic',
+    personal: { fullName: 'Jeanky Mendez', email: 'jm@example.ph' },
+    education: [{ school: 'HAU', degree: 'BSIT', level: 'bachelor', year: '2024' }],
+    experience: [], skills: ['JavaScript', 'Git'],
+  };
+  const made = await seeker('resumes/save', { resume: imported });
+  assert.equal(made.body.ok, true);
+  const id = made.body.resume.id;
+
+  // Before the file exists, its name is not a source — the row has none.
+  const early = { ...made.body.resume, skillEvidence: { JavaScript: { kind: 'document', ref: 'Mendez_Resume.pdf' } } };
+  const rejected = await seeker('resumes/save', { resume: early });
+  assert.equal(rejected.body.ok, true, 'the save still succeeds — only the unbacked source is dropped');
+  assert.deepEqual(rejected.body.resume.skillEvidence, {},
+    'a document source naming a file the resume does not hold must not be stored');
+
+  // Attach the real thing. A minimal but genuine PDF: the route sniffs the
+  // leading bytes and refuses anything whose contents contradict its type.
+  const form = new FormData();
+  form.append('resume_id', String(id));
+  form.append('file', new Blob([Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n')], { type: 'application/pdf' }),
+              'Mendez_Resume.pdf');
+  const up = await seeker.upload('resumes/upload', form);
+  assert.equal(up.body.ok, true, up.body.error);
+  assert.equal(up.body.ownFile.name, 'Mendez_Resume.pdf');
+
+  // Now the same source is accepted, under the name the applicant sees.
+  const withFile = (await seeker('resumes/get', { id })).body.resume;
+  withFile.skillEvidence = {
+    JavaScript: { kind: 'document', ref: 'Mendez_Resume.pdf' },
+    Git: { kind: 'document', ref: 'Mendez_Resume.pdf' },
+  };
+  const linked = await seeker('resumes/save', { resume: withFile });
+  assert.equal(linked.body.ok, true);
+  assert.deepEqual(linked.body.resume.skillEvidence, {
+    JavaScript: { kind: 'document', ref: 'Mendez_Resume.pdf' },
+    Git: { kind: 'document', ref: 'Mendez_Resume.pdf' },
+  });
+
+  // And a different file name is still refused, so the kind is not a bypass.
+  withFile.skillEvidence = { JavaScript: { kind: 'document', ref: 'Someone_Else.pdf' } };
+  const wrongName = await seeker('resumes/save', { resume: withFile });
+  assert.deepEqual(wrongName.body.resume.skillEvidence, {},
+    'only the file actually attached to THIS resume is a source');
 });
 
 test('a recruiter can put part of the score on certifications, over HTTP', async () => {

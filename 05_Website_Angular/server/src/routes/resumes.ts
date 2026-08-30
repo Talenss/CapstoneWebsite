@@ -83,7 +83,18 @@ router.post('/save', async (req, res) => {
      applicant from fixing a job title. Dropping it costs that one skill its
      full credit, and the builder shows it as unsourced the moment the resume
      is reopened, so nothing disappears quietly. */
-  const labels = evidenceLabels({ experience, projects, certifications, education });
+  /* The uploaded document counts as a source too, but only while it is really
+     attached — so its name is read from the stored row rather than taken from
+     the payload, where a client could put anything. A resume being created has
+     no file yet, which is why the builder attaches first and links after. */
+  const attached = R.id
+    ? await queryOne<{ own_file_name: string | null }>(
+        'SELECT own_file_name FROM resumes WHERE resume_id = ? AND user_id = ?', [Number(R.id), u.user_id])
+    : null;
+  const labels = evidenceLabels({
+    experience, projects, certifications, education,
+    ownFile: attached?.own_file_name ? { name: attached.own_file_name } : null,
+  });
   /* WAS THE APPLICANT ASKED? The builder always sends a skillEvidence key,
      empty or not, because it is the screen that asks. An import from an
      uploaded CV sends no such key — the applicant never saw the question.

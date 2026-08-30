@@ -37,7 +37,13 @@ export type RejectionReason = (typeof REJECTION_REASONS)[number];
    This reduces the payoff for padding, it does not remove it: on a four-skill
    opening, one real skill plus three typed moves 63 to 81, not 63 to 100. What
    stops padding after applying is the score snapshot in routes/applications.ts. */
-export const EVIDENCE_KINDS = ['experience', 'project', 'certification', 'education'] as const;
+/* 'document' is the applicant's own uploaded file. It is a source in the same
+   sense as the others — it points at something already ON the resume, which a
+   recruiter can open and read — and it exists because the skills read out of a
+   CV came from that document rather than being typed against a posting. Without
+   it an imported resume looked like an applicant who had been asked where each
+   skill was used and declined for every one. */
+export const EVIDENCE_KINDS = ['experience', 'project', 'certification', 'education', 'document'] as const;
 export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];
 export interface SkillEvidence {
   kind: EvidenceKind;
@@ -64,7 +70,7 @@ export function evidenceLabel(kind: EvidenceKind, e: any): string {
   const join = (a: unknown, b: unknown) => [String(a ?? '').trim(), String(b ?? '').trim()].filter(Boolean).join(', ');
   if (kind === 'experience') return join(e?.position, e?.company);
   if (kind === 'education') return join(e?.degree, e?.school);
-  return String(e?.name ?? '').trim(); // project, certification
+  return String(e?.name ?? '').trim(); // project, certification, document
 }
 
 /** Every label on this resume that a skill is allowed to point at, per kind.
@@ -75,14 +81,20 @@ export function evidenceLabel(kind: EvidenceKind, e: any): string {
  *  padding this feature is meant to make expensive. */
 export function evidenceLabels(resume: {
   experience?: any[]; projects?: any[]; certifications?: any[]; education?: any[];
+  ownFile?: { name?: string } | null;
 }): Record<EvidenceKind, Set<string>> {
   const set = (kind: EvidenceKind, rows: any[] | undefined) =>
     new Set((rows ?? []).map((e) => evidenceLabel(kind, e)).filter(Boolean));
+  /* The document is valid as a source only while it is actually attached. A
+     resume whose file is removed loses those links on its next save, exactly
+     as renaming a job loses the links pointing at it. */
+  const file = String(resume.ownFile?.name ?? '').trim();
   return {
     experience: set('experience', resume.experience),
     project: set('project', resume.projects),
     certification: set('certification', resume.certifications),
     education: set('education', resume.education),
+    document: new Set(file ? [file] : []),
   };
 }
 
