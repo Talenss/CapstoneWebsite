@@ -58,7 +58,8 @@
           <input type="checkbox" [checked]="consented()" (change)="consented.set(!consented())">
           <span>I agree that the contents of this file will be <b>sent to Google's Gemini service, outside the
             Philippines</b>, to extract my resume details and nothing else. Nothing is saved until I review and save it
-            myself. My file is never scored by the matching engine, and the copy recruiters see is read by people.</span>
+            myself. The matching engine never reads the file itself, it scores the details I review and save, and the
+            copy recruiters see is read by people.</span>
         </label>
       } @else if (reader() === 'demo') {
         <p class="notice" style="font-size:13.5px">
@@ -81,7 +82,7 @@
           <input type="checkbox" [checked]="consented()" (change)="consented.set(!consented())">
           <span>I agree that this file will be read <b>on this server</b> by Linaw PH's own reader to extract my
             resume details. It is not sent to any other company. Nothing is saved until I review and save it myself,
-            and my file is never scored by the matching engine.</span>
+            and the matching engine never reads the file itself, it scores the details I review and save.</span>
         </label>
       }
 

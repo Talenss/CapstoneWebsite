@@ -636,6 +636,56 @@ test('the source labels the builder offers are exactly the ones the server accep
   assert.deepEqual([...server.project], ['Barangay records system'], 'a nameless entry is not offerable as a source');
 });
 
+test('the uploaded file is offered as a source, but only while it is attached', () => {
+  /* The gap this closes: an applicant who UPLOADED a CV has nothing on the
+     resume to point a skill at except entries the reader extracted, and the
+     skills it extracted often come from a line the reader could not turn into
+     an entry. Those skills were therefore unsourceable, and an imported CV
+     scored below an identical one typed in by hand.
+
+     The file itself is a legitimate source — a recruiter can open it and read
+     the skill in place — so it is offered like any other, under its own name.
+     A resume with no file attached offers nothing, which is what stops the
+     kind from being a free pass. */
+  const base = {
+    experience: [{ position: 'Web Development Intern', company: 'Clark Outsourcing' }],
+    projects: [], certifications: [], education: [],
+  };
+  assert.deepEqual([...evidenceLabels(base).document], [],
+    'a resume with no attached file must offer no document source');
+
+  const withFile = { ...base, ownFile: { name: 'Mendez_Resume.pdf' } };
+  assert.deepEqual([...evidenceLabels(withFile).document], ['Mendez_Resume.pdf']);
+  assert.deepEqual([...clientEvidenceLabels(withFile).document], ['Mendez_Resume.pdf'],
+    'the builder must offer the same file label the server accepts');
+
+  assert.deepEqual([...evidenceLabels({ ...base, ownFile: { name: '   ' } }).document], [],
+    'a blank file name is not a source');
+  assert.deepEqual([...evidenceLabels({ ...base, ownFile: null }).document], []);
+});
+
+test('an imported CV scores like a typed one once its skills point at the file', () => {
+  /* The whole point of the change, stated as arithmetic. Same four skills,
+     same education, same experience. The only difference is where the resume
+     came from, and that must not be worth 25 points. */
+  const required = ['MySQL', 'JavaScript', 'Teamwork', 'Git'];
+  const fromFile = (ref: string) => ({ kind: 'document' as EvidenceKind, ref });
+  const imported = score(
+    resumeEv(required, {
+      MySQL: fromFile('Mendez_Resume.pdf'), JavaScript: fromFile('Mendez_Resume.pdf'),
+      Teamwork: fromFile('Mendez_Resume.pdf'), Git: fromFile('Mendez_Resume.pdf'),
+    }), posting(required));
+  const typed = score(
+    resumeEv(required, {
+      MySQL: usedAt('Developer, Acme'), JavaScript: usedAt('Developer, Acme'),
+      Teamwork: usedAt('Developer, Acme'), Git: usedAt('Developer, Acme'),
+    }), posting(required));
+
+  assert.equal(imported.score, typed.score);
+  assert.equal(imported.score, 100);
+  assert.deepEqual(imported.unevidencedMatches, []);
+});
+
 test('both engines agree on which matches were unsourced', () => {
   const r = resumeEv(['MySQL', 'JavaScript', 'Teamwork'], { MySQL: usedAt('Developer, Acme') });
   const p = posting(['MySQL', 'JavaScript', 'Teamwork']);
@@ -645,13 +695,36 @@ test('both engines agree on which matches were unsourced', () => {
   );
 });
 
-test('the schema will accept exactly the four source kinds the engine names', () => {
+test('the schema will accept exactly the source kinds the engine names', () => {
   const sql = readFileSync(join(__dirname, '..', '..', 'db', 'linaw_ph.sql'), 'utf8');
   const check = /evidence_kind TEXT CHECK \(evidence_kind IN \(([^)]*)\)\)/.exec(sql);
   assert.ok(check, 'resume_skills.evidence_kind must carry a CHECK constraint');
   const allowed = [...check![1].matchAll(/'([a-z]+)'/g)].map((m) => m[1]);
   assert.deepEqual(allowed.sort(), [...EVIDENCE_KINDS].sort(),
     'a kind the engine accepts but the database rejects would fail the save with a 500');
+});
+
+test('the migration widens the source-kind rule under BOTH names it can carry', () => {
+  /* A fresh database gets the inline CHECK written in db/linaw_ph.sql, which
+     Postgres names itself (resume_skills_evidence_kind_check). A database
+     upgraded from an older release gets the one migrate.ts adds by name. Both
+     exist in the wild, so widening the rule has to drop both — dropping only
+     the named one leaves an upgraded database still refusing 'document', and
+     the applicant sees a 500 on save.
+
+     The test suites all build a FRESH database, so they would have passed
+     either way. That is precisely why the constraint names are asserted here
+     rather than left to the next deploy to discover. */
+  const mig = readFileSync(join(__dirname, '..', 'src', 'lib', 'migrate.ts'), 'utf8');
+  for (const name of ['skill_evidence_kind_known', 'resume_skills_evidence_kind_check']) {
+    assert.ok(mig.includes(`DROP CONSTRAINT IF EXISTS ${name}`),
+      `migrate.ts must drop ${name} before re-adding the widened rule`);
+  }
+  const added = /ADD CONSTRAINT skill_evidence_kind_known CHECK \(([\s\S]*?)\)\s*`/.exec(mig);
+  assert.ok(added, 'migrate.ts must re-add the widened rule');
+  const allowed = [...added![1].matchAll(/'([a-z]+)'/g)].map((m) => m[1]);
+  assert.deepEqual(allowed.sort(), [...EVIDENCE_KINDS].sort(),
+    'the migrated rule and the engine must name the same kinds');
 });
 
 test('the skill categories the applicant hint uses match the seeded catalogue', () => {

@@ -122,7 +122,7 @@ export const APPLICANT_REASON_LABELS: Record<RejectionReason, string> = {
    ------------------------------------------------------------ */
 export const UNEVIDENCED_CREDIT = 0.5;
 
-export const EVIDENCE_KINDS: EvidenceKind[] = ['experience', 'project', 'certification', 'education'];
+export const EVIDENCE_KINDS: EvidenceKind[] = ['experience', 'project', 'certification', 'education', 'document'];
 
 /** What each source type is called on screen. Kept apart from the stored
  *  value so the wording can be plain without changing what is saved. */
@@ -131,6 +131,7 @@ export const EVIDENCE_KIND_LABELS: Record<EvidenceKind, string> = {
   project:       'Project',
   certification: 'Certification',
   education:     'Education',
+  document:      'Uploaded resume file',
 };
 
 /** How one resume entry is labelled when it is offered as a source.
@@ -143,7 +144,7 @@ export function evidenceLabel(kind: EvidenceKind, e: any): string {
   const join = (a: unknown, b: unknown) => [String(a ?? '').trim(), String(b ?? '').trim()].filter(Boolean).join(', ');
   if (kind === 'experience') return join(e?.position, e?.company);
   if (kind === 'education') return join(e?.degree, e?.school);
-  return String(e?.name ?? '').trim(); // project, certification
+  return String(e?.name ?? '').trim(); // project, certification, document
 }
 
 /** Every label on this resume a skill may point at, per kind. A source must
@@ -151,14 +152,17 @@ export function evidenceLabel(kind: EvidenceKind, e: any): string {
  *  the whole mechanism, and it is why this is a picker and not a text box. */
 export function evidenceLabels(resume: {
   experience?: any[]; projects?: any[]; certifications?: any[]; education?: any[];
+  ownFile?: { name?: string } | null;
 }): Record<EvidenceKind, Set<string>> {
   const set = (kind: EvidenceKind, rows: any[] | undefined) =>
     new Set((rows ?? []).map((e) => evidenceLabel(kind, e)).filter(Boolean));
+  const file = String(resume.ownFile?.name ?? '').trim();
   return {
     experience: set('experience', resume.experience),
     project: set('project', resume.projects),
     certification: set('certification', resume.certifications),
     education: set('education', resume.education),
+    document: new Set(file ? [file] : []),
   };
 }
 

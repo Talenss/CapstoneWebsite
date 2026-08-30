@@ -72,6 +72,12 @@ export class ResumeBuilder implements OnInit {
    *  resume as the recruiter-visible "own file" after the first save. */
   private pendingAnalysisFile: File | null = null;
 
+  /** The skills the analyzer read OUT of that file, kept from the prefill so
+   *  they can be credited to it once it is attached. Skills typed by hand
+   *  afterwards are not in here and are not credited: the document is a
+   *  source for what it actually contains, nothing more. */
+  private importedSkills: string[] = [];
+
   readonly STEPS = STEPS;
   readonly eduLevelOptions: { value: EduLevel; label: string }[] = [
     // The starting state of a new entry, and a real answer in its own right.
@@ -278,6 +284,7 @@ export class ResumeBuilder implements OnInit {
         ...(d.references?.length ? { references: d.references } : {}),
       });
       this.pendingAnalysisFile = pending.file;
+      this.importedSkills = [...d.skills];
       this.dirty.set(true);
       this.showToast(
         pending.simulated
@@ -746,6 +753,7 @@ export class ResumeBuilder implements OnInit {
       const up = await this.api.resumes.uploadFile(res.resume.id!, file);
       if (up.ok) {
         this.resume.update((cur) => ({ ...cur, ownFile: up.ownFile }));
+        await this.creditImportedSkillsToFile(up.ownFile?.name ?? '');
         this.showToast('Saved. And your original file is attached for recruiters to read.');
       }
     }
@@ -757,6 +765,51 @@ export class ResumeBuilder implements OnInit {
       this.showToast('Draft saved.');
     }
     return true;
+  }
+
+  /* THE UPLOADED FILE AS A SOURCE.
+
+     A resume built here and a resume uploaded here are asked the same
+     question — where was this skill used? — but only the built one could
+     answer it, because the picker only offers entries the applicant typed.
+     An imported CV therefore looked like an applicant who had been asked
+     about every skill and declined every time, and lost half the credit on
+     each one for the crime of arriving as a PDF.
+
+     The file itself closes that gap honestly. It is not a free-text excuse:
+     it is a document the recruiter can open and read, and the skill was read
+     out of it by the analyzer rather than asserted here. So the skills the
+     analyzer found are credited to the file, once, at the moment it is
+     attached. Anything typed by hand afterwards is not, and a source the
+     applicant chose for themselves is never overwritten.
+
+     The second save is what makes it stick. On the first save the file is not
+     attached yet, so the server would reject a source pointing at a file it
+     has no record of — the same rule that rejects a source pointing at a job
+     that was deleted. */
+  private async creditImportedSkillsToFile(fileName: string): Promise<void> {
+    const ref = fileName.trim();
+    if (!ref || !this.importedSkills.length) return;
+    const fromFile = new Set(this.importedSkills.map((s) => s.toLowerCase()));
+    this.importedSkills = [];
+
+    let credited = false;
+    this.resume.update((cur) => {
+      const ev = { ...(cur.skillEvidence ?? {}) };
+      for (const skill of cur.skills) {
+        if (ev[skill] || !fromFile.has(skill.toLowerCase())) continue;
+        ev[skill] = { kind: 'document', ref };
+        credited = true;
+      }
+      return credited ? { ...cur, skillEvidence: ev } : cur;
+    });
+    if (!credited) return;
+
+    // Best effort. If it fails the resume is still saved and still correct,
+    // it just scores as it did before, and the applicant can point the
+    // skills at the file by hand from the picker, where it now appears.
+    const res = await this.api.resumes.save(this.resume());
+    if (res.ok) this.resume.update((cur) => ({ ...cur, ownFile: res.resume.ownFile }));
   }
 
   /** Joins the optional bits of a line, dropping the empty ones. Template
@@ -913,7 +966,7 @@ export class ResumeBuilder implements OnInit {
     const links = [p.linkedin, p.portfolio].filter(Boolean).map((x) => esc(x)).join(' · ');
     const summary = p.summary ? `<div class="p-sec"><h2>Professional Summary</h2><p style="font-size:11.5px">${esc(p.summary)}</p></div>` : '';
     const ownFileNote = r.ownFile
-      ? `<div class="p-sec"><h2>Attached by the applicant</h2><p style="font-size:11px;color:#5A5F6B">${esc(r.ownFile.name)}, sent to the recruiter alongside this resume. Not part of the score.</p></div>`
+      ? `<div class="p-sec"><h2>Attached by the applicant</h2><p style="font-size:11px;color:#5A5F6B">${esc(r.ownFile.name)}, sent to the recruiter alongside this resume. The engine does not read it, it scores what is printed here.</p></div>`
       : '';
 
     const html =

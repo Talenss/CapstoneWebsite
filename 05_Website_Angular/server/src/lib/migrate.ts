@@ -387,8 +387,21 @@ export async function runMigrations(): Promise<void> {
      applicant's mouth and shown a recruiter evidence nobody offered. */
   await exec(`ALTER TABLE resume_skills ADD COLUMN IF NOT EXISTS evidence_kind TEXT`);
   await exec(`ALTER TABLE resume_skills ADD COLUMN IF NOT EXISTS evidence_ref VARCHAR(200)`);
+  /* 'document' joined the list when the applicant's own uploaded file became a
+     source in its own right. Widening a CHECK is why both names are dropped and
+     one is re-added, rather than adding it only when absent: a database built
+     before that change carries the narrower rule and would reject the save with
+     a 500 the moment an applicant pointed a skill at their own file.
+
+     BOTH names, because there are two. A database created from db/linaw_ph.sql
+     gets the inline column CHECK, which Postgres names for itself; one upgraded
+     from an older schema gets the named one added below. Dropping only the
+     named one left the auto-named rule in place and still narrow — the fresh
+     database used by the tests would have passed either way, which is exactly
+     why this is spelled out rather than trusted. */
   await exec('ALTER TABLE resume_skills DROP CONSTRAINT IF EXISTS skill_evidence_kind_known');
+  await exec('ALTER TABLE resume_skills DROP CONSTRAINT IF EXISTS resume_skills_evidence_kind_check');
   await exec(`ALTER TABLE resume_skills ADD CONSTRAINT skill_evidence_kind_known CHECK (
-    evidence_kind IS NULL OR evidence_kind IN ('experience','project','certification','education')
+    evidence_kind IS NULL OR evidence_kind IN ('experience','project','certification','education','document')
   )`);
 }

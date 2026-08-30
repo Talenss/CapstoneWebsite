@@ -306,7 +306,7 @@ CREATE TABLE resume_skills (
   --      full; one without counts at UNEVIDENCED_CREDIT (see lib/engine.ts).
   --      Both are still counted — a skill you cannot point at is not a lie,
   --      it is just weaker proof, and the arithmetic says so.
-  evidence_kind TEXT CHECK (evidence_kind IN ('experience','project','certification','education')),
+  evidence_kind TEXT CHECK (evidence_kind IN ('experience','project','certification','education','document')),
   evidence_ref  VARCHAR(200),
   PRIMARY KEY (resume_id, skill_id)
 );
