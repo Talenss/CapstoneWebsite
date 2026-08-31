@@ -114,9 +114,10 @@
     <svg class="mark-wm" viewBox="0 0 100 100" aria-hidden="true"><path d="M22 54 L42 76 L82 24" fill="none" stroke="#fff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <div class="inner">
       <h2>Clark Outsourcing</h2>
+      @if (openingsLine(); as line) { <p class="live">{{ line }}</p> }
       <p>Every opening on this platform is a real position at Clark Outsourcing in Clark Freeport Zone, customer support, administration, finance and accounting, information technology, digital marketing, and healthcare support, posted and reviewed by their own verified HR personnel.</p>
       <div class="acts">
-        <a class="btn primary" routerLink="/browse">See the openings</a>
+        <a class="btn primary" routerLink="/browse">{{ openingsLabel() }}</a>
         <a class="btn ghost-dark" routerLink="/learning-hub">Read the resume guides</a>
       </div>
     </div>

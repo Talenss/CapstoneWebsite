@@ -106,6 +106,10 @@
 .company-band .mark-wm{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);opacity:.05;width:560px}
 .company-band .inner{position:relative;z-index:1;max-width:640px;margin:0 auto}
 .company-band h2{color:#fff;font-size:clamp(26px,3.4vw,32px);font-weight:560;margin-top:12px}
+/* The live count. Set in the accent so it reads as the one current fact on
+   a page of standing ones, but kept to a sentence rather than a figure in
+   a band — the number is worth stating, not worth a headline. */
+.company-band p.live{color:#F0A9AC;font-family:var(--mono);font-size:12.5px;letter-spacing:.02em;margin-top:14px}
 .company-band p{color:#B4C0D6;font-size:15px;margin-top:16px;line-height:1.75;max-width:58ch;margin-left:auto;margin-right:auto}
 .company-band .acts{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:24px}
 
