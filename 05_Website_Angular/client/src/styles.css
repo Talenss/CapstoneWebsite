@@ -8,7 +8,7 @@
    surface = the desk.
 
    Palette : Navy · Signal Red · Cool Grey · Emerald · Amber · Wine
-   Type    : Fraunces (display, used sparingly) + Manrope
+   Type    : Newsreader (display, used sparingly) + Manrope
    Radius  : small (3px) — refined, not rounded-SaaS
 
    COLOUR ROLES — the one rule that matters here:
@@ -123,9 +123,9 @@ h1,h2,h3{font-family:var(--display);color:var(--text);font-weight:600;line-heigh
    main element, the footer — sits inside it, so `main{flex:1}` was being asked
    to grow inside a plain block box and did nothing at all. The page still
    filled the viewport wherever the content was long enough to do it by itself,
-   which is why this survived: it is invisible on seventeen pages and obvious on
-   the eighteenth. On /auth the navy panel simply stopped halfway down, with the
-   page's grey showing beneath it.
+   which is why this survived: it shows only on the pages short enough to run
+   out first. Four do — /auth, /my-resumes, /resume-print and /hr-company — and
+   on /auth the navy panel simply stopped, with the page's grey beneath it.
 
    Making app-root the column, and letting it grow, is what body's
    min-height:100vh was for in the first place. */
