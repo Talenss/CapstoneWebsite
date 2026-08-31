@@ -109,11 +109,24 @@ export class Browse implements OnInit, OnDestroy {
     return `${n} open position${n === 1 ? '' : 's'} at Clark Outsourcing, every one posted by their own HR staff.`;
   });
 
+  /** The order actually applied, which is not always the one the signal holds.
+   *  'score' is the default, and a guest has no resume to score against, so it
+   *  falls back to newest-first for them.
+   *
+   *  The SELECT binds to this rather than to the raw signal, and that is the
+   *  whole point of it existing: "Best match first" is only rendered as an
+   *  option when there is a resume, so binding the control to a signal holding
+   *  'score' left a guest looking at an empty dropdown. The list underneath was
+   *  ordered correctly the entire time — only the control that names the order
+   *  was blank, which is the worse failure of the two, because it reads as a
+   *  broken page rather than as a default. */
+  effectiveSort = computed<SortKey>(() =>
+    this.resume() ? this.sort() : this.sort() === 'score' ? 'new' : this.sort());
+
   filteredRows = computed<BrowseRow[]>(() => {
     const q = this.query().trim().toLowerCase();
     const d = this.dept();
-    const hasResume = !!this.resume();
-    const sort: SortKey = hasResume ? this.sort() : this.sort() === 'score' ? 'new' : this.sort();
+    const sort = this.effectiveSort();
 
     let out = this.rows().filter((r) => {
       if (d && r.posting.department !== d) return false;

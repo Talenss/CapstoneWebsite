@@ -24,7 +24,7 @@
         <option [value]="d">{{ d }}</option>
       }
     </select>
-    <select aria-label="Sort openings" [value]="sort()" (change)="onSortChange($event)">
+    <select aria-label="Sort openings" [value]="effectiveSort()" (change)="onSortChange($event)">
       @if (resume()) {
         <option value="score">Best match first</option>
       }
