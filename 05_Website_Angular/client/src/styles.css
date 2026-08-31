@@ -119,6 +119,27 @@ h1,h2,h3{font-family:var(--display);color:var(--text);font-weight:600;line-heigh
 /* ---------- layout ---------- */
 .container{max-width:1180px;margin:0 auto;padding:0 22px;width:100%}
 .container.narrow{max-width:820px}
+/* app-root is the ONLY flex child body has. Everything else — the header, the
+   main element, the footer — sits inside it, so `main{flex:1}` was being asked
+   to grow inside a plain block box and did nothing at all. The page still
+   filled the viewport wherever the content was long enough to do it by itself,
+   which is why this survived: it is invisible on seventeen pages and obvious on
+   the eighteenth. On /auth the navy panel simply stopped halfway down, with the
+   page's grey showing beneath it.
+
+   Making app-root the column, and letting it grow, is what body's
+   min-height:100vh was for in the first place. */
+app-root{display:flex;flex-direction:column;flex:1 0 auto}
+/* And the routed component, which is the piece that was actually missing. The
+   router inserts each page as a SIBLING of <router-outlet> inside app-root, so
+   the flex item is <app-auth>, <app-home> and so on — not the <main> inside
+   it. Those hosts are plain blocks the browser sizes to their content, so
+   main's flex:1 had nothing to grow against and every short page stopped where
+   its content did. Measured on /auth: the page ended at 924px in a 1000px
+   viewport, leaving 76px of the body's grey under a navy panel.
+   router-outlet is excluded deliberately: it is an empty anchor element, and
+   letting it grow would hand it a share of the free space. */
+app-root > *:not(router-outlet){display:flex;flex-direction:column;flex:1 0 auto;min-width:0}
 main{flex:1}
 .grid{display:grid;gap:20px}
 .cols-2{grid-template-columns:1fr 1fr}
