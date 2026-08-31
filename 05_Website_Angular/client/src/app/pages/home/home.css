@@ -1,12 +1,20 @@
 /* Linaw PH home — redesign informed by Philippine HR-SaaS sites
-   (device-mockup hero, dark stat band, icon tiles, pill toggle, dark
-   persona card, cited stats, mark-watermark partner band). */
+   (device-mockup hero, icon tiles, pill toggle, dark persona card, cited
+   stats, mark-watermark partner band).
+
+   There was a dark band of round numbers under the hero — 7 open roles, 3
+   match tiers, 0 auto-rejected, 50/25/25. It is gone on purpose. A row of
+   unsourced figures directly below a hero is the most recognisable shape of
+   a generated landing page, and three of those four were not measurements
+   at all: they restated settings the page explains properly further down.
+   The statistics that remain are the three under "The mismatch runs both
+   ways", and every one of them carries its source. */
 
 .screen{background:var(--ivory);color:var(--text)}
 .pcontainer{max-width:1180px;margin:0 auto;padding:0 40px}
 
 /* ---- hero ---- */
-.hero{padding:60px 40px 0;position:relative}
+.hero{padding:60px 40px 40px;position:relative}
 .hero-top{display:grid;gap:16px;max-width:760px;margin:0 auto;text-align:center}
 .hero-top h1{font-size:clamp(36px,5vw,60px);font-weight:560;line-height:1.03;color:var(--text)}
 .hero-top h1 .hl{color:var(--accent);font-style:italic}
@@ -39,14 +47,6 @@
 .mini-tag{font-family:var(--mono);font-size:9px;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px;font-weight:700}
 .board-foot{margin-top:14px;padding-top:14px;border-top:1px solid var(--rule-2);font-size:11px;color:var(--muted)}
 .board-foot b{color:var(--text)}
-
-/* ---- stat band (full-bleed dark) ---- */
-.stat-band{background:var(--ink);padding:56px 40px;position:relative;overflow:hidden;margin-top:60px}
-.stat-band .mark-wm{position:absolute;right:-60px;top:50%;transform:translateY(-50%);opacity:.06;width:420px}
-.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#33291A;border-radius:var(--r);overflow:hidden;position:relative;z-index:1}
-.stat-cell{background:var(--ink);padding:22px 26px;text-align:center}
-.stat-cell b{font-family:var(--mono);font-size:clamp(24px,3vw,34px);color:var(--accent-bright);display:block;font-weight:700}
-.stat-cell span{font-size:12px;color:#B9AE94;display:block;margin-top:8px;line-height:1.5}
 
 /* ---- sections ---- */
 .p-section{padding:74px 40px}
@@ -111,11 +111,10 @@
 
 @media(max-width:880px){
   .tiles4,.roles,.stats3{grid-template-columns:1fr 1fr}
-  .stat-row{grid-template-columns:1fr 1fr}
 }
 @media(max-width:560px){
-  .pcontainer,.hero,.p-section,.stat-band,.company-band{padding-left:22px;padding-right:22px}
-  .tiles4,.roles,.stats3,.stat-row{grid-template-columns:1fr}
+  .pcontainer,.hero,.p-section,.company-band{padding-left:22px;padding-right:22px}
+  .tiles4,.roles,.stats3{grid-template-columns:1fr}
   .dual{grid-template-columns:1fr}
   .plus{display:none}
 
