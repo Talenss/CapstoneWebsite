@@ -61,6 +61,44 @@ UPDATED 27 AUGUST 2026 — THE THIRD RESPONDENT GROUP
   answer plus the material that actually added something.
 
 
+UPDATED 30 AUGUST 2026 — THE UPLOADED FILE COUNTS AS A SOURCE
+─────────────────────────────────────────────────────────────
+
+  A skill has to say where it was used, and the answer is picked from what
+  is already on the resume. An applicant who UPLOADED their resume had
+  almost nothing to pick from: the reader pulls skills out of a document,
+  and those skills usually belong to no single job or project. So an
+  uploaded resume was recorded as "asked, named nothing", lost half the
+  credit on every skill, and scored 75 where the same content typed into
+  the builder scored 100.
+
+  The uploaded file is now a source in its own right. The skills read out
+  of it point at it by name, and the recruiter can open the file and read
+  them there.
+
+  What changed in the pack:
+
+    · Core-Facts — the S row and the two-resumes table say the file is a
+      source; the per-suite counts are corrected to 59 (matching engine)
+      and 56 (server over HTTP); a seventh weak point and a glossary entry
+      for "source" are added.
+    · The-System — the "saying where you used each skill" section and the
+      recruiter's panel include the file.
+    · The-Study — the source list, and the follow-up trap about gaming.
+    · Defence-Day — question 28, a new weakness W11, and the memorised
+      numbers line.
+    · The-Paper-In-Brief — unchanged. It summarises each section of the
+      paper in a few lines and never goes down to this level.
+
+  The total is now 209 automated tests, not 205.
+
+  THE NEW WEAKNESS, SO IT IS NOT A SURPRISE. Nothing opens the file to
+  check the skill is really in it. Concede that, then give the bound: the
+  file is sent to the recruiter with the application, so it is a claim
+  they can open and read — unlike an invented job, which only ever existed
+  on the resume.
+
+
 THE FIVE FILES
 ──────────────
 
@@ -122,9 +160,11 @@ THE SHORT VERSION, IF YOU READ NOTHING ELSE
   Skills 50, education 25, experience 25.
   Strong is 80 and up. Possible is 50 to 79. Related is below 50.
   A skill you cannot say where you used counts half, never zero.
+  A source is a job, a project, a certificate, a course, or the file
+  they uploaded. It is picked from a list, never typed.
   The applicant is told HOW MANY are missing, never which.
 
-  198 automated tests across eight suites, all passing.
+  209 automated tests across eight suites, all passing.
   103 valid survey responses; 46 match the stated population.
   All available HR staff, about ten. Plus five IT experts, three the floor.
   Users rate three ISO characteristics; the experts rate five.

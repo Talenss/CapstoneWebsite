@@ -245,7 +245,7 @@
                 <div class="p-contact">{{ linkLine(r.resume.personal) }}</div>
               }
               @if (r.resume.personal.summary) {
-                <div class="p-sec"><h4>Professional Summary</h4><p style="font-size:11.5px">{{ r.resume.personal.summary }}</p></div>
+                <div class="p-sec"><h4>Professional Summary</h4><p style="font-size:12.5px">{{ r.resume.personal.summary }}</p></div>
               }
               @if (r.resume.education.length) {
                 <div class="p-sec">
@@ -341,7 +341,7 @@
               @if (r.resume.languages?.length) {
                 <div class="p-sec">
                   <h4>Languages</h4>
-                  <p style="font-size:11.5px">{{ languageLine(r.resume) }}</p>
+                  <p style="font-size:12.5px">{{ languageLine(r.resume) }}</p>
                 </div>
               }
               @if (r.resume.references?.length) {

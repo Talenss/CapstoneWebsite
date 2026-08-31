@@ -20,8 +20,8 @@
    sideways. `anywhere` is the one value that lowers min-content too. */
 .req .facts b { font-weight: 600; text-align: right; overflow-wrap: anywhere; }
 .req .note {
-  font-size: 13px; color: var(--muted); background: var(--paper); border-left: 2px solid var(--accent);
-  padding: 10px 14px; border-radius: 0 var(--r) var(--r) 0; margin: 12px 0 0; line-height: 1.6;
+  font-size: 13px; color: var(--muted); background: var(--paper); border: 1px solid var(--rule);
+  padding: 10px 14px; border-radius: var(--r); margin: 12px 0 0; line-height: 1.6;
 }
 .req .acts { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 16px; }
 

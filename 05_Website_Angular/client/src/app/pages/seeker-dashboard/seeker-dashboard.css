@@ -38,8 +38,8 @@
 /* "How to raise this score" — actionable coaching in the apply modal.
    Deliberately framed as guidance, never a barrier: applying stays one
    click away, and the advice only appears when there's real headroom. */
-.coach{margin-top:16px;border-left:2px solid var(--accent);background:var(--accent-wash);
-  border-radius:0 var(--r) var(--r) 0;padding:14px 16px}
+.coach{margin-top:16px;border:1px solid var(--accent-line);background:var(--accent-wash);
+  border-radius:var(--r);padding:14px 16px}
 .coach > b{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-deep);margin-bottom:6px}
 .coach p{font-size:13.5px;line-height:1.65;color:var(--text);margin-bottom:12px}
 .coach p b{color:var(--accent-deep)}
