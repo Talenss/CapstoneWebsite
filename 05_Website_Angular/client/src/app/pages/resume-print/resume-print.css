@@ -8,11 +8,11 @@
    designing against one shows a document nobody actually receives.   */
 .toolbar{background:var(--ink);padding:14px 0}
 .toolbar .container{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
-.toolbar p{color:#9BA2B1;font-size:13px}
+.toolbar p{color:#A9B0BE;font-size:13px}
 .toolbar b{color:var(--accent)}
 /* A4 / Letter switch — changes only the @page size below */
 .paper-size{display:flex;border:1px solid #3A4050;border-radius:var(--r);overflow:hidden}
-.paper-size button{background:none;border:none;color:#9BA2B1;font-family:var(--body);font-size:12px;font-weight:600;
+.paper-size button{background:none;border:none;color:#A9B0BE;font-family:var(--body);font-size:12px;font-weight:600;
   padding:6px 12px;cursor:pointer}
 .paper-size button.on{background:var(--accent);color:#1a1a1a}
 

@@ -2,7 +2,7 @@
 @media(max-width:900px){.hub{grid-template-columns:1fr;gap:26px}}
 .toc{position:sticky;top:88px}
 @media(max-width:900px){.toc{position:static}}
-.toc b{display:block;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+.toc b{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
 .toc a{display:block;padding:9px 0 9px 14px;border-left:1px solid var(--rule);text-decoration:none;color:var(--muted);
   font-size:13.5px;font-weight:500;transition:.15s}
 .toc a:hover{color:var(--text);border-left-color:var(--accent)}
@@ -14,6 +14,9 @@
 article{scroll-margin-top:92px;margin-bottom:22px}
 article h2{font-size:27px;margin-bottom:4px}
 article .kicker{font-size:13.5px;color:var(--muted);margin-bottom:18px}
+/* 72ch, because these two pages are the only ones anybody READS rather than
+   scans, and they ran to 112 characters a line at desktop width. */
+article p,article li{max-width:60ch}
 article p{font-size:14.5px;margin-bottom:13px;line-height:1.72}
 article ul{margin:0 0 16px 0;list-style:none}
 article li{position:relative;padding:7px 0 7px 22px;font-size:14.5px;line-height:1.65}
@@ -22,8 +25,8 @@ article h3{font-size:19px;margin:22px 0 8px}
 .split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}
 @media(max-width:600px){.split{grid-template-columns:1fr}}
 .split div{border-radius:var(--r);padding:16px 18px;font-size:13.5px;line-height:1.65}
-.split .yes{background:var(--emerald-wash);border-left:2px solid var(--emerald)}
-.split .no{background:var(--wine-wash);border-left:2px solid var(--wine)}
+.split .yes{background:var(--emerald-wash);border:1px solid #BFDCCB}
+.split .no{background:var(--wine-wash);border:1px solid #E2C4CA}
 .split b{display:block;margin-bottom:7px;font-size:11px;letter-spacing:.1em;text-transform:uppercase}
 .split .yes b{color:var(--emerald)} .split .no b{color:var(--wine)}
 .ladder{border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;margin:18px 0}
