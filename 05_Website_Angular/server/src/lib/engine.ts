@@ -164,8 +164,8 @@ export function skillNorm(s: string): string {
 
 export interface MatchSettings {
   /** `certifications` is the optional fourth component and defaults to 0, so
-   *  the site-wide split stays the study's published 50/25/25 across three
-   *  unless a recruiter gives certifications a share on their own opening. */
+   *  the site-wide split stays across three unless a recruiter gives
+   *  certifications a share on their own opening. */
   weights: { skills: number; education: number; experience: number; certifications: number };
   thresholds: { strong: number; related: number };
 }
@@ -322,10 +322,11 @@ export interface MatchResult {
   missingCertifications: string[];
 }
 
-/** The defaults used when the match_settings table has no overrides —
- *  the study's published 50/25/25 weights and 80/50 tier thresholds. */
+/** The defaults used when the match_settings table has no overrides — the
+ *  partner's 70/20/10 weights and 80/50 tier thresholds. Kept identical to
+ *  WEIGHTS in client/src/app/core/engine.ts; engine.test.ts asserts it. */
 export const DEFAULT_SETTINGS: MatchSettings = {
-  weights: { skills: 0.5, education: 0.25, experience: 0.25, certifications: 0 },
+  weights: { skills: 0.1, education: 0.2, experience: 0.7, certifications: 0 },
   thresholds: { strong: 80, related: 50 },
 };
 

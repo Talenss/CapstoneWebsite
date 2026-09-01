@@ -518,9 +518,9 @@ CREATE TABLE match_settings (
 );
 
 INSERT INTO match_settings (setting_key, setting_value, note) VALUES
-  ('weight_skills',     0.50, 'Share of the score from required-skill overlap'),
-  ('weight_education',  0.25, 'Share of the score from meeting the education level'),
-  ('weight_experience', 0.25, 'Share of the score from meeting the months required'),
+  ('weight_skills',     0.10, 'Share of the score from required-skill overlap'),
+  ('weight_education',  0.20, 'Share of the score from meeting the education level'),
+  ('weight_experience', 0.70, 'Share of the score from meeting the months required'),
   ('threshold_strong',  80.00, 'At or above this, a match is Strong'),
   ('threshold_related', 50.00, 'Below this, related roles are suggested — never a rejection');
 
@@ -779,11 +779,11 @@ INSERT INTO department_assignments (company_id, department, user_id) VALUES
 
 -- ---------- applications (with status history, so the audit trail isn't empty) ----------
 INSERT INTO applications (application_id, seeker_id, resume_id, posting_id, status, score_snapshot, applied_at) VALUES
- (1, 3, 2, 1, 'review',      88, now() - INTERVAL '3 days'),
- (2, 4, 3, 1, 'submitted',   63, now() - INTERVAL '2 days'),
- (3, 4, 3, 3, 'shortlisted', 75, now() - INTERVAL '4 days'),
- (4, 5, 4, 5, 'review',      75, now() - INTERVAL '3 days'),
- (5, 5, 4, 6, 'submitted',   50, now() - INTERVAL '1 day');
+ (1, 3, 2, 1, 'review',      96, now() - INTERVAL '3 days'),
+ (2, 4, 3, 1, 'submitted',   91, now() - INTERVAL '2 days'),
+ (3, 4, 3, 3, 'shortlisted', 99, now() - INTERVAL '4 days'),
+ (4, 5, 4, 5, 'review',      91, now() - INTERVAL '3 days'),
+ (5, 5, 4, 6, 'submitted',   93, now() - INTERVAL '1 day');
 
 INSERT INTO application_status_history (application_id, old_status, new_status, changed_by, changed_at) VALUES
  (1, NULL, 'submitted', 3, now() - INTERVAL '3 days'), (1, 'submitted', 'review', 2, now() - INTERVAL '2 days'),

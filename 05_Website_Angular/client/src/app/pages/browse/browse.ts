@@ -41,7 +41,8 @@ export class Browse implements OnInit, OnDestroy {
 
   /** The weights an opening is scored with, for the GUEST view — a visitor
    *  with no resume has no MatchResult to read them off, and the openings
-   *  each carry their own now, so a fixed 50/25/25 here would misdescribe
+   *  each carry their own now, so the site-wide split hardcoded here would
+   *  misdescribe
    *  any opening the recruiter tuned. */
   postingWeights = (p: Posting) => weightsFor(p);
 

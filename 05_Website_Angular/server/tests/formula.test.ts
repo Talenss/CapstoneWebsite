@@ -21,6 +21,20 @@ import { scoreLocal } from '../../client/src/app/core/engine';
 
 const UNEVIDENCED = 0.5;
 
+/* Written out rather than imported, because importing the engine's own
+   constants would make the harness agree with the engine by construction and
+   it would stop being independent. The one assertion below is the guard that
+   keeps a deliberate retune from reading as 4000 scoring failures: if the site
+   split changes, this literal is what has to be updated with it, and the
+   message says so. */
+const PAPER_WEIGHTS = { skills: 0.1, education: 0.2, experience: 0.7, certifications: 0 };
+
+test('the split this harness checks against is the one the site actually uses', () => {
+  assert.deepEqual(DEFAULT_SETTINGS.weights, PAPER_WEIGHTS,
+    'the site weights were retuned — update PAPER_WEIGHTS here to match, or the ' +
+    '4000-case sweep below will report every score as a formula disagreement');
+});
+
 /** Score = (S*Ws + E*We + X*Wx + C*Wc) * 100, rounded half-up. */
 function byThePaper(resume: any, posting: any) {
   // the posting carries PERCENTAGES that must total 100; anything else falls
@@ -30,7 +44,7 @@ function byThePaper(resume: any, posting: any) {
     && (pw.skills + pw.education + pw.experience + (pw.certifications || 0)) === 100;
   const W = valid
     ? { skills: pw.skills/100, education: pw.education/100, experience: pw.experience/100, certifications: (pw.certifications||0)/100 }
-    : { skills: 0.5, education: 0.25, experience: 0.25, certifications: 0 };
+    : PAPER_WEIGHTS;
 
   const req: string[] = posting.skills || [];
   const have = new Set((resume.skills || []).map(skillNorm));
