@@ -16,7 +16,12 @@ router.post('/list', async (_req, res) => {
   const rows = await query<PostingRow>(
     `SELECT * FROM job_postings
       WHERE status='open' AND (application_deadline IS NULL OR application_deadline >= CURRENT_DATE)
-      ORDER BY created_at DESC`,
+      -- posting_id breaks the tie. Two openings posted in the same second is
+      -- not hypothetical — the seed does exactly that if its dates are ever
+      -- flattened again — and an ORDER BY with ties is free to return a
+      -- different order on each request, so a list a recruiter is reading
+      -- reshuffles under them for no reason they can see.
+      ORDER BY created_at DESC, posting_id DESC`,
   );
   ok(res, { postings: await Promise.all(rows.map((p) => serializePosting(p))) });
 });
@@ -69,7 +74,7 @@ async function alertMatchingSeekers(postingId: number): Promise<void> {
 router.post('/mine', async (req, res) => {
   const u = await requireRole(req, res, 'recruiter');
   if (!u) return;
-  const rows = await query<PostingRow>('SELECT * FROM job_postings WHERE company_id = ? ORDER BY created_at DESC', [u.company_id]);
+  const rows = await query<PostingRow>('SELECT * FROM job_postings WHERE company_id = ? ORDER BY created_at DESC, posting_id DESC', [u.company_id]);
 
   const out = [];
   for (const p of rows) {

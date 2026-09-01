@@ -740,21 +740,27 @@ UPDATE resumes r SET evidence_prompted = 1
 
 -- ---------- job postings ----------
 -- Posting 6 gets a deadline two weeks out, demoing the "Apply by" chip.
-INSERT INTO job_postings (posting_id, company_id, created_by, title, department, employment_type, description, education_level, min_experience_months, application_deadline, status) VALUES
+-- created_at is set explicitly, and staggered to match the demo seed's ages.
+-- Left to its DEFAULT every row took the same timestamp, which had three
+-- consequences: every opening showed the same posting date, "newest first" had
+-- nothing to sort on, and ORDER BY created_at DESC over seven identical values
+-- returns whatever the planner likes — so the recruiter's dashboard and the
+-- public openings list had no stable order and could reorder between requests.
+INSERT INTO job_postings (posting_id, company_id, created_by, title, department, employment_type, description, education_level, min_experience_months, application_deadline, status, created_at) VALUES
  (1, 1, 2, 'Junior Web Developer', 'Information Technology', 'full-time',
-     'Build and maintain client-facing web pages and internal tools alongside the development team. Fresh graduates are welcome to apply.', 'bachelor', 0, NULL, 'open'),
+     'Build and maintain client-facing web pages and internal tools alongside the development team. Fresh graduates are welcome to apply.', 'bachelor', 0, NULL, 'open', NOW() - INTERVAL '9 days'),
  (2, 1, 2, 'Technical Support Agent', 'Customer Support', 'full-time',
-     'First-line technical support for client accounts across email, chat, and voice. Night shift.', 'bachelor', 0, NULL, 'open'),
+     'First-line technical support for client accounts across email, chat, and voice. Night shift.', 'bachelor', 0, NULL, 'open', NOW() - INTERVAL '7 days'),
  (3, 1, 2, 'Customer Support Agent', 'Customer Support', 'full-time',
-     'Handle customer enquiries for offshore client accounts by phone, email, and live chat.', 'highschool', 0, NULL, 'open'),
+     'Handle customer enquiries for offshore client accounts by phone, email, and live chat.', 'highschool', 0, NULL, 'open', NOW() - INTERVAL '6 days'),
  (4, 1, 2, 'Data Entry and Admin Assistant', 'Administration', 'full-time',
-     'Encode and maintain client records, prepare reports, and support the administration team.', 'highschool', 0, NULL, 'open'),
+     'Encode and maintain client records, prepare reports, and support the administration team.', 'highschool', 0, NULL, 'open', NOW() - INTERVAL '5 days'),
  (5, 1, 2, 'Accounting and Bookkeeping Support', 'Finance and Accounting', 'full-time',
-     'Assist with accounts payable and receivable, bank reconciliation, and month-end reporting for client accounts.', 'bachelor', 0, NULL, 'open'),
+     'Assist with accounts payable and receivable, bank reconciliation, and month-end reporting for client accounts.', 'bachelor', 0, NULL, 'open', NOW() - INTERVAL '4 days'),
  (6, 1, 2, 'Social Media Manager', 'Digital Marketing', 'full-time',
-     'Plan and publish content across client social channels; report on engagement.', 'bachelor', 6, CURRENT_DATE + INTERVAL '14 days', 'open'),
+     'Plan and publish content across client social channels; report on engagement.', 'bachelor', 6, CURRENT_DATE + INTERVAL '14 days', 'open', NOW() - INTERVAL '3 days'),
  (7, 1, 2, 'Patient Coordinator', 'Healthcare Support', 'full-time',
-     'Coordinate scheduling and records for a US healthcare client; liaise with patients by phone and email.', 'bachelor', 12, NULL, 'open');
+     'Coordinate scheduling and records for a US healthcare client; liaise with patients by phone and email.', 'bachelor', 12, NULL, 'open', NOW() - INTERVAL '2 days');
 
 INSERT INTO posting_skills (posting_id, skill_id) SELECT 1, skill_id FROM skills WHERE skill_norm IN ('htmlcss','javascript','git','teamwork');
 INSERT INTO posting_skills (posting_id, skill_id) SELECT 2, skill_id FROM skills WHERE skill_norm IN ('troubleshooting','windows','computernetworking','communication');

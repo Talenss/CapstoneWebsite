@@ -790,6 +790,23 @@ export class ResumeBuilder implements OnInit {
   private async creditImportedSkillsToFile(fileName: string): Promise<void> {
     const ref = fileName.trim();
     if (!ref || !this.importedSkills.length) return;
+
+    /* ONLY WHEN THE QUESTION WAS PUT. An applicant who never reached the Skills
+       step has no evidence map at all, and the engine reads that as "never
+       asked" and credits every matched skill in full. Writing a map here would
+       answer a question they were never shown — and it can only cost them,
+       because any skill the analyzer's list does not match then counts at half.
+       Measured on a four-skill opening where the applicant corrected one
+       skill's spelling in the builder: 100 before, 94 after. The feature exists
+       to stop an imported CV scoring below a typed one, so it must not be the
+       thing that does it.
+
+       And it does not come back. resumes.evidence_prompted is written with
+       GREATEST, so once a map exists the resume can never be "never asked"
+       again — which makes this the kind of mistake that is not recoverable by
+       editing, and worth a guard rather than a note. */
+    if (!this.evidenceAsked()) { this.importedSkills = []; return; }
+
     const fromFile = new Set(this.importedSkills.map((s) => s.toLowerCase()));
     this.importedSkills = [];
 
