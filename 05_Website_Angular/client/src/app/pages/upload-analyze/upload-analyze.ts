@@ -5,7 +5,7 @@ import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { AnalysisService } from '../../core/analysis.service';
 import { AnalyzedResume } from '../../core/models';
-import { ALLOWED_MIME, MAX_UPLOAD } from '../../core/engine';
+import { ALLOWED_MIME, MAX_UPLOAD, WEIGHTS} from '../../core/engine';
 
 /** The "Upload & analyze my resume" page — the opt-in AI path.
  *
@@ -25,6 +25,10 @@ import { ALLOWED_MIME, MAX_UPLOAD } from '../../core/engine';
   styleUrl: './upload-analyze.css',
 })
 export class UploadAnalyze implements OnInit {
+  /** Read, never restated. The weights are rows in match_settings, so an
+   *  admin can retune them without a redeploy; prose that hardcoded the split
+   *  would keep publishing the old numbers after they changed. */
+  readonly WEIGHTS = WEIGHTS;
   private api = inject(ApiService);
   private analysis = inject(AnalysisService);
   private router = inject(Router);

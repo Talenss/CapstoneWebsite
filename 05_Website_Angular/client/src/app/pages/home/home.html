@@ -53,7 +53,7 @@
       </div>
       <div class="tiles4">
         <div class="tile"><div class="ic">1</div><h3>Build it, step by step</h3><p>A guided wizard with writing tips and ATS formatting built in.</p></div>
-        <div class="tile"><div class="ic">2</div><h3>See your real score</h3><p>Skills at 50%, education at 25%, experience at 25%, shown in full.</p></div>
+        <div class="tile"><div class="ic">2</div><h3>See your real score</h3><p>Skills at {{ WEIGHTS.skills * 100 }}%, education at {{ WEIGHTS.education * 100 }}%, experience at {{ WEIGHTS.experience * 100 }}%, shown in full.</p></div>
         <div class="tile"><div class="ic">3</div><h3>Apply, and follow it</h3><p>Submitted → Under review → Shortlisted → Hired, or Not selected by a person.</p></div>
         <div class="tile"><div class="ic">4</div><h3>A recruiter reads it</h3><p>Clark Outsourcing's HR sees the ranked list, and both resumes side by side.</p></div>
       </div>
@@ -90,7 +90,7 @@
         </div>
         <div class="role-card dark">
           <h3>Recruiters &amp; HR</h3><p class="sub">Verified personnel of our partner company.</p>
-          <ul><li>Applications arrive scored and ranked, with the maths shown</li><li>See both résumés side by side: structured and uploaded</li><li>No auto-reject, the whole applicant pool stays visible</li></ul>
+          <ul><li>Applications arrive scored and ranked, with the maths shown</li><li>See both resumes side by side: structured and uploaded</li><li>No auto-reject, the whole applicant pool stays visible</li></ul>
           <a class="btn ghost-dark" routerLink="/auth" fragment="register-hr">Request recruiter access</a>
         </div>
       </div>

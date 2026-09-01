@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
+import { WEIGHTS } from '../../core/engine';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 
@@ -20,6 +21,10 @@ import { Footer } from '../../layout/footer/footer';
   styleUrl: './home.css',
 })
 export class Home implements OnInit {
+  /** Read, never restated. The weights are rows in match_settings, so an
+   *  admin can retune them without a redeploy; prose that hardcoded the split
+   *  would keep publishing the old numbers after they changed. */
+  readonly WEIGHTS = WEIGHTS;
   private api = inject(ApiService);
 
   /** null until the request answers, which is not the same as zero: an

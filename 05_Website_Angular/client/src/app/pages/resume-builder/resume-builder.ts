@@ -8,7 +8,7 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { AnalysisService } from '../../core/analysis.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels } from '../../core/engine';
+import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, WEIGHTS} from '../../core/engine';
 import { Education, EduLevel, EvidenceKind, Experience, Language, Project, Reference, Resume, ResumeDesign, Template } from '../../core/models';
 
 const STEPS = ['Details', 'Education', 'Experience', 'Skills', 'Certifications', 'More sections', 'Finish'];
@@ -60,6 +60,8 @@ const esc = (s: unknown): string => String(s ?? '').replace(/[&<>"']/g, (c) => E
   styleUrl: './resume-builder.css',
 })
 export class ResumeBuilder implements OnInit {
+  /** Read, never restated — the split is a row in match_settings. */
+  readonly WEIGHTS = WEIGHTS;
   private api = inject(ApiService);
   private session = inject(SessionService);
   private analysis = inject(AnalysisService);

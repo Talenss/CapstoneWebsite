@@ -6,7 +6,7 @@
     <div>
       <span class="eyebrow">Your matches</span>
       <h1>{{ hello() }}</h1>
-      <p>Scored from your <b>active resume</b> against every open position, skills 50%, education 25%, experience 25%. Change the resume and the whole board re-scores.</p>
+      <p>Scored from your <b>active resume</b> against every open position, skills {{ WEIGHTS.skills * 100 }}%, education {{ WEIGHTS.education * 100 }}%, experience {{ WEIGHTS.experience * 100 }}%. Change the resume and the whole board re-scores.</p>
     </div>
     @if (resumes().length) {
       <div class="picker" id="picker">
