@@ -287,6 +287,19 @@
             <span><b>Skills matched</b><span class="w">{{ item.weights.skills * 100 }}% of the score</span></span>
             <b>{{ item.matchedSkills.length }} of {{ item.posting.skills.length }}{{ item.matchedSkills.length ? ', ' + item.matchedSkills.join(', ') : '' }}</b>
           </div>
+          <!-- Where the rest of the skills weight went. Without this the panel
+               showed "4 of 4 matched", education met, experience satisfied — every
+               component full, which is 100 — beside a score of 94, and nothing on
+               the screen accounted for the six points. The browse page and the
+               recruiter's own panel both explain it; this one, the screen the
+               applicant looks at most, did not. A deduction the person being
+               scored cannot see is a hidden formula, whatever the code says. -->
+          @if (item.unevidencedMatches.length) {
+            <div class="row">
+              <span><b>Counting at half</b><span class="w">no source on your resume</span></span>
+              <b>{{ item.unevidencedMatches.join(', ') }}, <a routerLink="/resume-builder" [queryParams]="{ id: activeResume()?.id }">say where you used {{ item.unevidencedMatches.length === 1 ? 'it' : 'them' }}</a></b>
+            </div>
+          }
           <div class="row">
             <span><b>Education</b><span class="w">{{ item.weights.education * 100 }}% of the score</span></span>
             <b [style.color]="item.eduMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ item.eduMeets ? 'Meets ' + EDU_LABELS[item.posting.educationLevel] : 'Below ' + EDU_LABELS[item.posting.educationLevel] }}</b>

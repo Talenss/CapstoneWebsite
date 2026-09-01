@@ -68,10 +68,21 @@
     } @else if (loading()) {
       <div class="loading"><span class="spinner"></span> Ranking applicants…</div>
     } @else if (!rows().length) {
+      <!-- The opening is NAMED here on purpose. "No applicants yet" on its own
+           is the same sentence whichever opening you are looking at, so a
+           recruiter who came here expecting to find somebody's application has
+           no way to tell they opened the wrong one — and the dashboard lists
+           openings newest first, so its top row is usually the newest, which is
+           usually the one nobody has applied to. That is the likeliest reason
+           for "they applied but it is not showing". -->
       <div class="empty">
-        <h2>No applicants yet</h2>
-        <p>When someone applies, they’ll appear here ranked by compatibility, with the score broken down and both of their resumes attached.</p>
-        <a class="btn ghost" routerLink="/hr-dashboard">Back to dashboard</a>
+        <h2>No applicants yet for {{ posting()?.title || 'this opening' }}</h2>
+        <p>When someone applies to <b>this</b> opening they’ll appear here, ranked by compatibility, with the score broken down and both of their resumes attached.</p>
+        <p style="font-size:13px;color:var(--muted);max-width:52ch;margin:0 auto 22px">
+          Expecting somebody? Applications belong to the opening they were sent to. The dashboard lists
+          every opening with its own applicant count beside it.
+        </p>
+        <a class="btn ghost" routerLink="/hr-dashboard">Back to all openings</a>
       </div>
     } @else if (!filteredRows().length) {
       <div class="empty">
