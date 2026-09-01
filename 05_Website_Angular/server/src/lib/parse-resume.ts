@@ -299,6 +299,9 @@ function splitSections(text: string): { head: string[]; sections: Record<string,
 /* ---------------- contact details ---------------- */
 
 const RE_EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
+/** Same shape, global, so every address can be struck out of the header
+ *  before it is searched for a portfolio link. */
+const RE_EMAIL_ALL = new RegExp(RE_EMAIL.source, 'g');
 /** Philippine mobile and landline shapes, plus generic international. */
 const RE_PHONE = /(\+?63[\s-]?9\d{2}|09\d{2})[\s.-]?\d{3}[\s.-]?\d{4}|\(0\d{2}\)\s?\d{3}[\s.-]?\d{4}|\+\d{1,3}[\s-]?\d[\d\s.-]{7,13}\d/;
 const RE_LINKEDIN = /(?:https?:\/\/)?(?:[a-z]{2,3}\.)?linkedin\.com\/in\/[A-Za-z0-9_-]+\/?/i;
@@ -724,7 +727,12 @@ export async function parseResume(buffer: Buffer, mimetype: string, fileName: st
 
   const headText = head.join('\n');
   const linkedin = (headText.match(RE_LINKEDIN) || [''])[0];
-  const portfolioMatch = headText.replace(RE_LINKEDIN, '').match(RE_URL);
+  /* Struck out first, both of them: an address's domain is a bare host that
+     RE_URL matches happily, so a header carrying nothing but an email came
+     back with a portfolio of "gmail.com" — printed on the resume, under a
+     heading the applicant never filled in. Testing the MATCH for an email
+     shape could not catch it, the match was only the tail of one. */
+  const portfolioMatch = headText.replace(RE_LINKEDIN, '').replace(RE_EMAIL_ALL, '').match(RE_URL);
   const summaryLines = sections.summary ?? [];
 
   /* Every education entry carries its own level. The engine takes the highest
@@ -742,7 +750,7 @@ export async function parseResume(buffer: Buffer, mimetype: string, fileName: st
       address: '',
       summary: clean(summaryLines.join(' '), 1000),
       ...(linkedin ? { linkedin } : {}),
-      ...(portfolioMatch && !RE_EMAIL.test(portfolioMatch[0]) ? { portfolio: portfolioMatch[0] } : {}),
+      ...(portfolioMatch ? { portfolio: portfolioMatch[0] } : {}),
     },
     education,
     experience,
