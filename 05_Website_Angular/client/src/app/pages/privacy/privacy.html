@@ -32,7 +32,7 @@
     <p>Uploaded resume files are served through an access-checked route, not a public URL, so a file cannot be reached by guessing an address.</p>
 
     <h2>Automated processing, and its limits</h2>
-    <p>The system calculates a compatibility score using a fixed, published, rule-based formula: skills at 50%, education at 25%, experience at 25%. The scoring itself is not machine learning, it does not adapt, and it does not make decisions.</p>
+    <p>The system calculates a compatibility score using a fixed, published, rule-based formula: skills at {{ WEIGHTS.skills * 100 }}%, education at {{ WEIGHTS.education * 100 }}%, experience at {{ WEIGHTS.experience * 100 }}%. The scoring itself is not machine learning, it does not adapt, and it does not make decisions.</p>
     <p><b>No application is ever rejected automatically.</b> The score ranks a list for a human recruiter to read. Every hiring outcome, including a rejection, is a decision made by a person at the partner company, and it is recorded against their account. If your score falls below the threshold, you are still shown to the recruiter, and the system additionally suggests roles that better fit the skills you have.</p>
     <p>The resume file you attach is read twice: by the recruiter, and by the same AI service described above, which extracts its text so the rule-based formula can score it as well. That second score is shown to you and to the recruiter, clearly labelled as a machine reading of your document. <b>It is never what you are ranked by</b>. That stays with the resume you typed and can correct. If you would rather no software read your file, do not attach one: everything else on this site works without it.</p>
 

@@ -137,7 +137,7 @@
                       <!-- Deliberately not tagged "optional": this select is
                            never empty, it starts at "Not stated yet", and it is
                            the only field on this step the score reads. -->
-                      <label [for]="'edu-level-' + $index">Level <span class="opt">counts for 25%</span></label>
+                      <label [for]="'edu-level-' + $index">Level <span class="opt">counts for {{ WEIGHTS.education * 100 }}%</span></label>
                       <select [id]="'edu-level-' + $index" [value]="e.level" (change)="updateEducation($index, 'level', inputValue($event))">
                         @for (opt of eduLevelOptions; track opt.value) {
                           <option [value]="opt.value">{{ opt.label }}</option>
