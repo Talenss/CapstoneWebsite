@@ -7,7 +7,7 @@ import { query, queryOne, exec, withTransaction } from '../db';
 import { ResumeRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
 import { requireUser, requireRole } from '../lib/auth';
-import { fetchResume, serializeResume, recruiterMayReadResume } from '../lib/serializers';
+import { fetchResume, prefetchResumeChildren, serializeResume, recruiterMayReadResume } from '../lib/serializers';
 import { EDU_RANK, EVIDENCE_KINDS, EvidenceKind, evidenceLabels, skillId, skillNorm } from '../lib/engine';
 import { extractResume } from '../lib/extract';
 import { MAX_UPLOAD, ALLOWED_MIME } from '../config';
@@ -24,7 +24,8 @@ router.post('/list', async (req, res) => {
   const u = await requireUser(req, res);
   if (!u) return;
   const rows = await query<ResumeRow>('SELECT * FROM resumes WHERE user_id = ? ORDER BY updated_at DESC', [u.user_id]);
-  ok(res, { resumes: await Promise.all(rows.map(serializeResume)) });
+  const kids = await prefetchResumeChildren(rows.map((r) => r.resume_id));
+  ok(res, { resumes: await Promise.all(rows.map((r) => serializeResume(r, kids))) });
 });
 
 router.post('/get', async (req, res) => {

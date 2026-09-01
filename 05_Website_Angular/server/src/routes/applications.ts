@@ -1,10 +1,10 @@
 /* Linaw PH — routes/applications.ts : apply · mine · ranked · set-status */
 import { asyncRouter } from '../lib/async-router';
 import { query, queryOne, exec, withTransaction } from '../db';
-import { ApplicationRow } from '../types';
+import { ApplicationRow, ResumeRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
 import { requireRole, requireUser } from '../lib/auth';
-import { fetchResume, fetchPosting, postingExpired, serializeResume, serializePosting, serializeApplication, ts } from '../lib/serializers';
+import { fetchResume, fetchPosting, postingExpired, prefetchResumeChildren, serializeResume, serializePosting, serializeApplication, ts } from '../lib/serializers';
 import { rmScore, rmFileScore, cacheScore, getSettings, REJECTION_REASONS } from '../lib/engine';
 import { notifyStatusChange, notifyNewApplication, sendInterviewInvite } from '../lib/notify';
 import { UserRow } from '../types';
@@ -154,9 +154,18 @@ router.post('/ranked', async (req, res) => {
       WHERE a.posting_id = ?`, [pid],
   );
 
+  /* One set of child-row queries for the whole list rather than seven per
+     applicant. Measured on a posting with 302 applications: 1.6 s before,
+     because every applicant meant a fresh round trip for their education,
+     experience, skills, certificates, projects, languages and references. */
+  const resumeRows = await query<ResumeRow>(
+    'SELECT * FROM resumes WHERE resume_id = ANY(?)', [[...new Set(rows.map((a) => a.resume_id))]]);
+  const byId = new Map(resumeRows.map((r) => [r.resume_id, r]));
+  const children = await prefetchResumeChildren(resumeRows.map((r) => r.resume_id));
+
   const out: any[] = [];
   for (const a of rows) {
-    const r = await fetchResume(a.resume_id);
+    const r = byId.get(a.resume_id) ?? null;
 
     // An applicant whose resume row has gone must still appear. Skipping the
     // iteration used to drop them from the list silently, which contradicts
@@ -177,7 +186,7 @@ router.post('/ranked', async (req, res) => {
       continue;
     }
 
-    const resume = await serializeResume(r);
+    const resume = await serializeResume(r, children);
     const s = await rmScore(resume, posting);
     await cacheScore(a.resume_id, pid, s);
 
