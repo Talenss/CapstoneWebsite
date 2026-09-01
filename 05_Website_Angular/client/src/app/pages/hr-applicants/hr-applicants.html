@@ -184,7 +184,7 @@
             }
             <div class="breakdown" style="margin:8px 0 0">
               <div class="row">
-                <span><b>Skills</b><span class="w">{{ r.weights.skills * 100 }}% weight</span></span>
+                <span><b>Skills</b><span class="w">{{ r.weights.skills * 100 }}% of the score</span></span>
                 <b>{{ r.matchedSkills.length }} of {{ r.totalSkills }}{{ r.missingSkills.length ? ' · missing ' + r.missingSkills.join(', ') : '' }}</b>
               </div>
               @if (r.unevidencedMatches.length) {
@@ -194,12 +194,12 @@
                 </div>
               }
               <div class="row">
-                <span><b>Education</b><span class="w">{{ r.weights.education * 100 }}% weight</span></span>
+                <span><b>Education</b><span class="w">{{ r.weights.education * 100 }}% of the score</span></span>
                 <b [style.color]="r.eduMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ r.eduMeets ? 'Meets' : 'Below' }} {{ posting() ? eduLabels[posting()!.educationLevel] : '' }}</b>
               </div>
               <div class="row">
-                <span><b>Experience</b><span class="w">{{ r.weights.experience * 100 }}% weight</span></span>
-                <b [style.color]="r.expMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ r.seekerMonths }} mo · asked {{ posting()?.minExperienceMonths || 0 }} mo</b>
+                <span><b>Experience</b><span class="w">{{ r.weights.experience * 100 }}% of the score</span></span>
+                <b [style.color]="r.expMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ r.seekerMonths }} mo · asks for {{ posting()?.minExperienceMonths || 0 }} mo</b>
               </div>
               <!-- Only when this opening scores certificates. Shown for the
                    same reason the other three are: a breakdown that omits a
@@ -208,7 +208,7 @@
                    because the person deciding needs to know what is absent. -->
               @if (r.weights.certifications > 0) {
                 <div class="row">
-                  <span><b>Certificates</b><span class="w">{{ r.weights.certifications * 100 }}% weight</span></span>
+                  <span><b>Certificates</b><span class="w">{{ r.weights.certifications * 100 }}% of the score</span></span>
                   <b>{{ r.matchedCertifications.length }} of {{ r.matchedCertifications.length + r.missingCertifications.length }}{{ r.missingCertifications.length ? ' · missing ' + r.missingCertifications.join(', ') : '' }}</b>
                 </div>
               }

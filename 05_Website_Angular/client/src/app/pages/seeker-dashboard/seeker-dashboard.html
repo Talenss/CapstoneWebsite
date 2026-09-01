@@ -296,7 +296,7 @@
                scored cannot see is a hidden formula, whatever the code says. -->
           @if (item.unevidencedMatches.length) {
             <div class="row">
-              <span><b>Counting at half</b><span class="w">no source on your resume</span></span>
+              <span><b>Counted at half</b><span class="w">no source on your resume</span></span>
               <b>{{ item.unevidencedMatches.join(', ') }}, <a routerLink="/resume-builder" [queryParams]="{ id: activeResume()?.id }">say where you used {{ item.unevidencedMatches.length === 1 ? 'it' : 'them' }}</a></b>
             </div>
           }
