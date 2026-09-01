@@ -181,6 +181,46 @@ test('withdrawing is the applicant’s decision, and a decided application is fi
   assert.notEqual(byHr.body.ok, true, 'a recruiter withdrew on the applicant’s behalf');
 });
 
+test('paging narrows what is drawn, never what is counted', async () => {
+  /* The page promises that everyone who applied is on this list. A pager can
+     keep that promise or break it, and the difference is whether `total`
+     follows the filters. It must not: the tally is the pool, the page is the
+     slice. Filters run on the SERVER for the same reason — narrowing one page
+     would hide matching applicants sitting on another. */
+  const p = bestMatch();
+  const all = await hr('applications/ranked', { postingId: p.id });
+  const everyone = all.body.rows.length;
+  assert.ok(everyone >= 2, 'this test needs at least two applicants to page');
+
+  const first = await hr('applications/ranked', { postingId: p.id, page: 1, pageSize: 1 });
+  assert.equal(first.body.rows.length, 1, 'a page of one returns one row');
+  assert.equal(first.body.total, everyone, 'total must report the whole pool, not the page');
+  assert.equal(first.body.matched, everyone, 'with no filters, matched is the pool');
+  assert.equal(first.body.pages, everyone, 'one row a page means one page per applicant');
+
+  const second = await hr('applications/ranked', { postingId: p.id, page: 2, pageSize: 1 });
+  assert.notEqual(second.body.rows[0].application.id, first.body.rows[0].application.id,
+    'page two must be a different applicant');
+
+  // the pages together are exactly the unpaged list, in the same order
+  const walked: string[] = [];
+  for (let i = 1; i <= everyone; i++) {
+    const pg = await hr('applications/ranked', { postingId: p.id, page: i, pageSize: 1 });
+    walked.push(pg.body.rows[0].application.id);
+  }
+  assert.deepEqual(walked, all.body.rows.map((r: any) => r.application.id),
+    'walking the pages must reproduce the full ranking exactly');
+
+  // an absent pageSize still means everything, so no existing caller is truncated
+  assert.equal((await hr('applications/ranked', { postingId: p.id })).body.rows.length, everyone);
+
+  // a filter narrows `matched` but never `total`
+  const filtered = await hr('applications/ranked', { postingId: p.id, status: 'withdrawn' });
+  assert.equal(filtered.body.total, everyone, 'a filter must not change the pool count');
+  assert.ok(filtered.body.matched <= everyone);
+  assert.equal(filtered.body.rows.length, filtered.body.matched);
+});
+
 test('every status the client names is one the server can hold', () => {
   for (const st of ALL_STATUSES) assert.ok(STATUS_LABELS[st], `'${st}' has no label`);
   assert.ok(ALL_STATUSES.includes('withdrawn'), 'withdrawn must be counted, not hidden');

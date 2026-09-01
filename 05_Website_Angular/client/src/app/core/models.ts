@@ -397,6 +397,19 @@ export interface RecommendationItem extends MatchResult {
   fileScore?: MatchResult;
 }
 
+/** What the recruiter's applicant list asks for: which slice, and filtered
+ *  how. Filtering is server-side because the list is paged — narrowing a
+ *  single page would hide matching applicants sitting on another. */
+export interface RankedQuery {
+  page?: number;
+  /** 0 or absent means every matching row, which is what export and print need. */
+  pageSize?: number;
+  q?: string;
+  status?: string;
+  tier?: string;
+  file?: '' | 'yes' | 'no';
+}
+
 export interface RankedRow extends MatchResult {
   application: Application;
   resume: Resume;

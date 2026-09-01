@@ -22,8 +22,8 @@
        shortlisting meeting away from the system, that the ranking does not
        decide anything. -->
   <p class="printed-note">
-    {{ filteredRows().length }} of {{ rows().length }} applicants
-    @if (filteredRows().length !== rows().length) { <span>(filtered view)</span> }
+    {{ matched() }} of {{ total() }} applicants
+    @if (matched() !== total()) { <span>(filtered view)</span> }
     · ranked by compatibility score, never filtered by it
     · the score is a reading aid; the hiring decision rests with the recruiter
     · printed {{ printedOn }}
@@ -46,7 +46,7 @@
       <option value="yes">Has own file</option>
       <option value="no">System resume only</option>
     </select>
-    <span class="n">{{ filteredRows().length }} of {{ rows().length }} shown</span>
+    <span class="n">{{ matched() }} of {{ total() }} shown</span>
     <!-- Both act on the FILTERED rows, so what leaves the screen is exactly
          what is on it. A recruiter who filtered to "strong only" gets the
          shortlist they are looking at, not the whole pile. -->
@@ -114,6 +114,22 @@
             <button class="btn primary sm" type="button"
                     (click)="openModal(r); $event.stopPropagation()">Open both resumes</button>
           </div>
+        </div>
+      }
+      <!-- The pager narrows what is DRAWN and never what is counted: the tally
+           above always reports the whole pool, and the note at the top of the
+           page still promises that everyone who applied is on this list. Both
+           remain true — page two is not a filter. -->
+      @if (pages() > 1) {
+        <div class="pager no-print">
+          <button class="btn ghost sm" type="button" [disabled]="page() <= 1"
+                  (click)="goToPage(page() - 1)">&larr; Previous</button>
+          <span class="pager-at">
+            Page {{ page() }} of {{ pages() }}
+            <span class="w">showing {{ filteredRows().length }} of {{ matched() }} matching</span>
+          </span>
+          <button class="btn ghost sm" type="button" [disabled]="page() >= pages()"
+                  (click)="goToPage(page() + 1)">Next &rarr;</button>
         </div>
       }
     }

@@ -4,7 +4,7 @@
    real departments so all three match tiers actually demonstrate.
    ============================================================ */
 import { ApiAdapter } from './adapter';
-import { AnalyzedResume, ApiResult, AppStatus, Application, Company, EvidenceKind, RejectionReason, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User } from './models';
+import { AnalyzedResume, ApiResult, AppStatus, Application, Company, EvidenceKind, RejectionReason, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User, RankedQuery} from './models';
 import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert } from './engine';
 
 const KEY = 'linaw_v3_db';
@@ -1032,7 +1032,7 @@ export class DemoAdapter implements ApiAdapter {
       });
     },
     // The ranked shortlist. Every applicant is on it, nobody is filtered off.
-    ranked: (postingId: string) => {
+    ranked: (postingId: string, opts?: RankedQuery) => {
       const db = load(); const me = meRow(db);
       if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
       const p = db.postings.find((x) => x.id === postingId);
@@ -1061,7 +1061,29 @@ export class DemoAdapter implements ApiAdapter {
           scoreDrifted: a.scoreSnapshot != null && a.scoreSnapshot !== live.score,
         };
       }).sort((x, y) => y.score - x.score || x.application.appliedAt - y.application.appliedAt);
-      return apiOk({ posting: p, rows: rows as unknown as RankedRow[] });
+
+      /* Filtering then paging, mirroring routes/applications.ts exactly. The
+         filters run here rather than in the page for the same reason they run
+         on the server: filtering one page would hide matching applicants who
+         sit on another, and `total` stays everyone who applied whatever the
+         filters say. */
+      const q = (opts?.q ?? '').trim().toLowerCase();
+      const matchedRows = (rows as any[]).filter((r) => {
+        if (opts?.status && r.application.status !== opts.status) return false;
+        if (opts?.tier && r.tier !== opts.tier) return false;
+        if (opts?.file === 'yes' && !r.resume?.ownFile) return false;
+        if (opts?.file === 'no' && r.resume?.ownFile) return false;
+        if (!q) return true;
+        return (r.seeker.name + ' ' + (r.resume?.skills || []).join(' ')).toLowerCase().includes(q);
+      });
+      const size = Number(opts?.pageSize);
+      const pageSize = Number.isFinite(size) && size > 0 ? Math.min(size, 200) : 0;
+      const pages = pageSize ? Math.max(1, Math.ceil(matchedRows.length / pageSize)) : 1;
+      const page = Math.min(Math.max(1, Number(opts?.page) || 1), pages);
+      const slice = pageSize ? matchedRows.slice((page - 1) * pageSize, page * pageSize) : matchedRows;
+
+      return apiOk({ posting: p, rows: slice as unknown as RankedRow[],
+                     total: rows.length, matched: matchedRows.length, page, pages, pageSize });
     },
     setStatus: (applicationId: string, status: string, reason?: string | null) => {
       const db = load(); const me = meRow(db);

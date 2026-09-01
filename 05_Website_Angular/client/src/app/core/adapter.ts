@@ -5,8 +5,7 @@
    ApiService without caring which mode is active.
    ============================================================ */
 import {
-  AdminRecruiter, AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User,
-} from './models';
+  AdminRecruiter, AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
 
 export interface ApiAdapter {
   auth: {
@@ -62,7 +61,14 @@ export interface ApiAdapter {
   applications: {
     apply(resumeId: string, postingId: string): Promise<ApiResult<{ application: Application }>>;
     mine(): Promise<ApiResult<{ applications: Application[] }>>;
-    ranked(postingId: string): Promise<ApiResult<{ posting: Posting; rows: RankedRow[] }>>;
+    ranked(postingId: string, opts?: RankedQuery): Promise<ApiResult<{
+      posting: Posting; rows: RankedRow[];
+      /** Everyone who applied, whatever the filters say. */
+      total?: number;
+      /** How many survived the filters, across all pages. */
+      matched?: number;
+      page?: number; pages?: number; pageSize?: number;
+    }>>;
     /** `reason` is optional and only meaningful on a rejection. It is recorded
      *  on the history row and read by BOTH audiences, the employer's staff in
      *  their own filing wording, the applicant in the second person. What the

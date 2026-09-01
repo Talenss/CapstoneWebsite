@@ -159,3 +159,13 @@
    name back at the recruiter. */
 .docx-block.docx-who b{font-family:var(--display);font-size:16px;letter-spacing:0;
   text-transform:none;color:var(--ink)}
+
+/* ---------- pager ----------
+   Sits inside the list card, under the last row, so it reads as the end of
+   the list rather than as a separate control. Hidden on paper: the printed
+   sheet carries every matching row, not one page of them. */
+.pager{display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:16px 20px;border-top:1px solid var(--rule-2);flex-wrap:wrap}
+.pager-at{font-size:13px;color:var(--muted);text-align:center}
+.pager-at .w{display:block;font-size:11.5px;color:var(--faint);margin-top:2px}
+@media(max-width:520px){ .pager{justify-content:center} }

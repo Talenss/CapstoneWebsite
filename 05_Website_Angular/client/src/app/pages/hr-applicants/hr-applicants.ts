@@ -5,7 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
-import { AppStatus, Personal, Posting, RankedRow, RejectionReason, Resume, ScreeningNote, SkillEvidence, StatusEvent, Tier } from '../../core/models';
+import { AppStatus, Personal, Posting, RankedRow, RejectionReason, Resume, ScreeningNote, SkillEvidence, StatusEvent, Tier, RankedQuery} from '../../core/models';
 import { APPLICANT_REASON_LABELS, EDU_LABELS, EVIDENCE_KIND_LABELS, REASON_LABELS, REJECTION_REASONS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 
@@ -41,6 +41,19 @@ export class HrApplicants {
   loadError = signal<string | null>(null);
 
   q = signal('');
+  /* PAGING. 25 a page: enough that a recruiter rarely leaves page one on a
+     normal opening, small enough that a pool of hundreds does not ship as one
+     600 KB response. Filtering is done by the SERVER now — see the route —
+     because narrowing a single page would hide matching applicants sitting on
+     another page, which is worse than not filtering at all. */
+  readonly PAGE_SIZE = 25;
+  page = signal(1);
+  pages = signal(1);
+  /** Everyone who applied, whatever the filters say. */
+  total = signal(0);
+  /** How many survived the filters, across every page. */
+  matched = signal(0);
+
   fStatus = signal('');
   fTier = signal('');
   fFile = signal('');
@@ -109,20 +122,11 @@ export class HrApplicants {
     year: 'numeric', month: 'long', day: 'numeric',
   });
 
-  filteredRows = computed(() => {
-    const q = this.q().trim().toLowerCase();
-    const fs = this.fStatus();
-    const ft = this.fTier();
-    const ff = this.fFile();
-    return this.rows().filter((r) => {
-      if (fs && r.application.status !== fs) return false;
-      if (ft && r.tier !== ft) return false;
-      if (ff === 'yes' && !r.resume.ownFile) return false;
-      if (ff === 'no' && r.resume.ownFile) return false;
-      if (!q) return true;
-      return (r.seeker.name + ' ' + (r.resume.skills || []).join(' ')).toLowerCase().indexOf(q) !== -1;
-    });
-  });
+  /** The rows the server sent for this page. It has already applied the
+   *  filters, so there is nothing left to narrow here — the name is kept
+   *  because it is what the template asks for, and because "filtered" is
+   *  still what these rows are. */
+  filteredRows = computed(() => this.rows());
 
   subLabel = computed(() => {
     const p = this.posting();
@@ -150,18 +154,49 @@ export class HrApplicants {
     });
   }
 
+  private query(pageSize = this.PAGE_SIZE): RankedQuery {
+    return {
+      page: this.page(), pageSize,
+      q: this.q().trim(), status: this.fStatus(), tier: this.fTier(),
+      file: this.fFile() as '' | 'yes' | 'no',
+    };
+  }
+
   private async load(id: string): Promise<void> {
     this.loading.set(true);
     this.loadError.set(null);
-    const res = await this.api.applications.ranked(id);
+    const res = await this.api.applications.ranked(id, this.query());
     this.loading.set(false);
     if (!res.ok) { this.loadError.set(res.error); return; }
     this.posting.set(res.posting);
     this.rows.set(res.rows);
+    this.total.set(res.total ?? res.rows.length);
+    this.matched.set(res.matched ?? res.rows.length);
+    this.pages.set(res.pages ?? 1);
+    this.page.set(res.page ?? 1);
   }
 
+  /** Re-runs the query. Any change to a filter goes back to page one: staying
+   *  on page four of a narrower result is how a recruiter ends up looking at
+   *  an empty list and concluding there are no applicants. */
+  private async refilter(): Promise<void> {
+    this.page.set(1);
+    const id = this.postingId();
+    if (id) await this.load(id);
+  }
+
+  async goToPage(n: number): Promise<void> {
+    const target = Math.min(Math.max(1, n), this.pages());
+    if (target === this.page()) return;
+    this.page.set(target);
+    const id = this.postingId();
+    if (id) await this.load(id);
+    document.getElementById('list')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+
+  /** True rank in the whole pool, not position on the page. */
   rank(r: RankedRow): number {
-    return this.rows().indexOf(r) + 1;
+    return (this.page() - 1) * this.PAGE_SIZE + this.rows().indexOf(r) + 1;
   }
 
   day(ts: number): string {
@@ -248,10 +283,17 @@ export class HrApplicants {
     return url ? this.sanitizer.bypassSecurityTrustUrl(url) : null;
   }
 
-  setQuery(e: Event): void { this.q.set((e.target as HTMLInputElement).value); }
-  setFStatus(e: Event): void { this.fStatus.set((e.target as HTMLSelectElement).value); }
-  setFTier(e: Event): void { this.fTier.set((e.target as HTMLSelectElement).value); }
-  setFFile(e: Event): void { this.fFile.set((e.target as HTMLSelectElement).value); }
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Debounced, because the search now reaches the server: without this every
+   *  keystroke is a query, and the replies can arrive out of order. */
+  setQuery(e: Event): void {
+    this.q.set((e.target as HTMLInputElement).value);
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => { void this.refilter(); }, 250);
+  }
+  setFStatus(e: Event): void { this.fStatus.set((e.target as HTMLSelectElement).value); void this.refilter(); }
+  setFTier(e: Event): void { this.fTier.set((e.target as HTMLSelectElement).value); void this.refilter(); }
+  setFFile(e: Event): void { this.fFile.set((e.target as HTMLSelectElement).value); void this.refilter(); }
   setModalStatus(e: Event): void { this.modalStatus.set((e.target as HTMLSelectElement).value as AppStatus); }
   setModalReason(e: Event): void { this.modalReason.set((e.target as HTMLSelectElement).value); }
 
@@ -428,8 +470,14 @@ export class HrApplicants {
     return (s || 'applicants').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
   }
 
-  exportCsv(): void {
-    const rows = this.filteredRows();
+  async exportCsv(): Promise<void> {
+    /* Asks for every matching row rather than the page on screen. The comment
+       below has always said what leaves is exactly what the recruiter filtered
+       to; with a pager on the page that is only true if we go and fetch it. */
+    const id = this.postingId();
+    if (!id) return;
+    const all = await this.api.applications.ranked(id, this.query(0));
+    const rows = all.ok ? all.rows : this.filteredRows();
     if (!rows.length) return;
     const p = this.posting();
 
@@ -473,8 +521,20 @@ export class HrApplicants {
   /** Print the ranked list. print.css hides the page chrome and the filters,
    *  so the sheet carries the posting, the ranking and the reasoning — the
    *  thing a recruiter actually takes into a shortlisting meeting. */
-  printList(): void {
-    window.print();
+  /** The printed sheet is the whole filtered set too, for the same reason.
+   *  The rows are put back afterwards so the pager on screen still matches
+   *  the page the recruiter was reading. */
+  async printList(): Promise<void> {
+    const id = this.postingId();
+    const page = this.rows();
+    if (id) {
+      const all = await this.api.applications.ranked(id, this.query(0));
+      if (all.ok) this.rows.set(all.rows);
+    }
+    setTimeout(() => {
+      window.print();
+      this.rows.set(page);
+    }, 60);
   }
 
   private showToast(msg: string): void {
