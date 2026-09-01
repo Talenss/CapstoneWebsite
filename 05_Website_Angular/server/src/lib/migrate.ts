@@ -254,7 +254,7 @@ export async function runMigrations(): Promise<void> {
      NOTHING here is read by the matching engine. It scores on skills,
      education.level and work_experience.months, and on nothing else —
      which is exactly why a resume can carry far more without disturbing
-     the published formula or a single one of its tests. */
+     the published 50/25/25 formula or a single one of its tests. */
   await exec('ALTER TABLE resumes ADD COLUMN IF NOT EXISTS headline VARCHAR(200)');
   await exec('ALTER TABLE resumes ADD COLUMN IF NOT EXISTS linkedin VARCHAR(300)');
   await exec('ALTER TABLE resumes ADD COLUMN IF NOT EXISTS portfolio VARCHAR(300)');
@@ -399,20 +399,6 @@ export async function runMigrations(): Promise<void> {
      named one left the auto-named rule in place and still narrow — the fresh
      database used by the tests would have passed either way, which is exactly
      why this is spelled out rather than trusted. */
-  /* THE PARTNER'S WEIGHTING, 70/20/10. The match_settings table exists so the
-     split can be retuned without a redeploy, which is exactly why this update
-     is conditional: it moves a row ONLY while that row still holds the old
-     shipped default. A deployment whose weights were deliberately tuned to
-     anything else keeps what it was tuned to, and a second run of this
-     migration changes nothing, because the values no longer match.
-
-     Live scores move the moment this runs. Applications already sent do not:
-     they are ranked on the score snapshotted when they were submitted, so no
-     decision already taken shifts underneath anybody. */
-  await exec(`UPDATE match_settings SET setting_value = 0.10 WHERE setting_key = 'weight_skills'     AND setting_value = 0.50`);
-  await exec(`UPDATE match_settings SET setting_value = 0.20 WHERE setting_key = 'weight_education'  AND setting_value = 0.25`);
-  await exec(`UPDATE match_settings SET setting_value = 0.70 WHERE setting_key = 'weight_experience' AND setting_value = 0.25`);
-
   await exec('ALTER TABLE resume_skills DROP CONSTRAINT IF EXISTS skill_evidence_kind_known');
   await exec('ALTER TABLE resume_skills DROP CONSTRAINT IF EXISTS resume_skills_evidence_kind_check');
   await exec(`ALTER TABLE resume_skills ADD CONSTRAINT skill_evidence_kind_known CHECK (

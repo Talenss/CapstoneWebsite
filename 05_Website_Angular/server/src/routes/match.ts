@@ -14,7 +14,7 @@ const router = asyncRouter();
 /* The weights and thresholds the SERVER is scoring with. The browser keeps
    its own copy so it can show a live score without a round trip, and the two
    must not drift: if an admin edits match_settings and the client keeps the
-   compiled-in copy, a seeker is shown one number and the recruiter sees
+   compiled-in 50/25/25, a seeker is shown one number and the recruiter sees
    another for the same application. The client fetches this once at startup.
    Public because the study publishes these values anyway. */
 router.post('/settings', async (_req, res) => {

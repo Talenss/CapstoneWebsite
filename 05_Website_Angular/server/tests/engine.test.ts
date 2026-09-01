@@ -59,14 +59,12 @@ function score(r: ReturnType<typeof resume>, p: ReturnType<typeof posting>) {
 
 // ---------- the published constants ----------
 
-test('weights are the partner\u2019s 70/20/10 and sum to 1', () => {
-  /* Experience 70, education 20, skills 10 \u2014 the split Clark Outsourcing's
-     senior recruitment manager gave for how their team weighs a candidate.
-     Certifications are the optional fourth component and sit at 0, so the
-     split is across three and the four still sum to 1. That zero is the whole
-     reason adding the component changed no score. */
+test('weights are the published 50/25/25 and sum to 1', () => {
+  /* Certifications are the optional fourth component and sit at 0, so the
+     published split is still 50/25/25 across three and the four still sum to
+     1. That zero is the whole reason adding the component changed no score. */
   assert.deepEqual(DEFAULT_SETTINGS.weights,
-    { skills: 0.1, education: 0.2, experience: 0.7, certifications: 0 });
+    { skills: 0.5, education: 0.25, experience: 0.25, certifications: 0 });
   assert.deepEqual(WEIGHTS, DEFAULT_SETTINGS.weights); // client mirrors server
   const w = DEFAULT_SETTINGS.weights;
   assert.equal(w.skills + w.education + w.experience + w.certifications, 1);
@@ -92,11 +90,11 @@ test('all required skills present → full skill credit → 100', () => {
   assert.deepEqual(s.missingSkills, []);
 });
 
-test('half the required skills → exactly the skills weight halved → 95', () => {
+test('half the required skills → exactly the 50% weight halved → 75', () => {
   const s = score(resume(['MySQL', 'JavaScript']), posting(['MySQL', 'JavaScript', 'POS', 'Food Safety']));
-  // 0.5×10 + 1.0×20 + 1.0×70 = 95
-  assert.equal(s.score, 95);
-  assert.equal(s.tier, 'strong');
+  // 0.5×50 + 1.0×25 + 1.0×25 = 75
+  assert.equal(s.score, 75);
+  assert.equal(s.tier, 'possible');
   assert.deepEqual(s.missingSkills, ['POS', 'Food Safety']);
 });
 
@@ -130,7 +128,7 @@ test('skill aliases are conservative — different skills stay different', () =>
   assert.notEqual(skillNorm('Salesforce'), skillNorm('CRM Software'));  // a product is not the category
   assert.notEqual(skillNorm('Bookkeeping'), skillNorm('Accounting'));
   const s = score(resume(['Java']), posting(['JavaScript']));
-  assert.equal(s.score, 90); // education + experience only; skills earn nothing
+  assert.equal(s.score, 50); // education + experience only; skills earn nothing
   assert.deepEqual(s.missingSkills, ['JavaScript']);
 });
 
@@ -155,8 +153,8 @@ test('matched/missing lists keep the POSTING’s original casing', () => {
 
 test('duplicate skills on the resume don’t double-count', () => {
   const s = score(resume(['MySQL', 'MySQL', 'my sql']), posting(['MySQL', 'JavaScript']));
-  // still only 1 of 2 required → 0.5×10 + 20 + 70 = 95
-  assert.equal(s.score, 95);
+  // still only 1 of 2 required → 0.5×50 + 25 + 25 = 75
+  assert.equal(s.score, 75);
 });
 
 test('a posting with no required skills gives full skill credit', () => {
@@ -165,12 +163,12 @@ test('a posting with no required skills gives full skill credit', () => {
   assert.equal(s.totalSkills, 0);
 });
 
-// ---------- education (20%) ----------
+// ---------- education (25%) ----------
 
 test('education below requirement earns proportional credit, not zero', () => {
   const s = score(resume(['A'], ['highschool']), posting(['A'], 'bachelor', 0));
-  // highschool(1)/bachelor(4) = 0.25 → 10 + 5 + 70 = 85
-  assert.equal(s.score, 85);
+  // highschool(1)/bachelor(4) = 0.25 → 50 + 6.25 + 25 = 81.25 → 81
+  assert.equal(s.score, 81);
   assert.equal(s.eduMeets, false);
 });
 
@@ -193,14 +191,14 @@ test("'none' education requirement is always fully met", () => {
   assert.equal(s.eduMeets, true);
 });
 
-// ---------- experience (70%) ----------
+// ---------- experience (25%) ----------
 
 test('partial experience earns the proportional share — and shows half-up rounding', () => {
-  const s = score(resume(['A'], ['bachelor'], [3]), posting(['A'], 'bachelor', 12));
-  // 10 + 20 + (3/12)×70 = 47.5 → rounds half-up to 48, not down to 47
-  assert.equal(s.score, 48);
+  const s = score(resume(['A'], ['bachelor'], [6]), posting(['A'], 'bachelor', 12));
+  // 50 + 25 + (6/12)×25 = 87.5 → rounds half-up to 88
+  assert.equal(s.score, 88);
   assert.equal(s.expMeets, false);
-  assert.equal(s.seekerMonths, 3);
+  assert.equal(s.seekerMonths, 6);
 });
 
 test('experience beyond the requirement is capped at full credit', () => {
@@ -223,26 +221,23 @@ test('zero-month requirement is met even with no experience at all', () => {
 // ---------- tiers, exactly at the boundaries ----------
 
 test('exactly 80 is Strong; 79 is Possible', () => {
-  /* Against a 70-month requirement each month worked is worth exactly one
-     point, because experience carries exactly 70 of them — so the arithmetic
-     on a boundary is readable rather than a coincidence of rounding.
-     full skills (10) + full edu (20) + 50/70 months (50) = 80 */
-  const at80 = score(resume(['A'], ['bachelor'], [50]), posting(['A'], 'bachelor', 70));
+  // full skills (50) + full edu (25) + 2/10 months (5) = 80
+  const at80 = score(resume(['A'], ['bachelor'], [2]), posting(['A'], 'bachelor', 10));
   assert.equal(at80.score, 80);
   assert.equal(at80.tier, 'strong');
-  // one month fewer: 10 + 20 + 49 = 79
-  const at79 = score(resume(['A'], ['bachelor'], [49]), posting(['A'], 'bachelor', 70));
+  // full skills (50) + full edu (25) + 4/25 months (4) = 79
+  const at79 = score(resume(['A'], ['bachelor'], [4]), posting(['A'], 'bachelor', 25));
   assert.equal(at79.score, 79);
   assert.equal(at79.tier, 'possible');
 });
 
 test('exactly 50 is Possible; 49 is Related', () => {
-  // full skills (10) + full edu (20) + 20/70 months (20) = 50
-  const at50 = score(resume(['A'], ['bachelor'], [20]), posting(['A'], 'bachelor', 70));
+  // 1/2 skills (25) + full edu (25) + 0/12 months (0) = 50
+  const at50 = score(resume(['A'], ['bachelor'], []), posting(['A', 'B'], 'bachelor', 12));
   assert.equal(at50.score, 50);
   assert.equal(at50.tier, 'possible');
-  // one month fewer: 10 + 20 + 19 = 49
-  const at49 = score(resume(['A'], ['bachelor'], [19]), posting(['A'], 'bachelor', 70));
+  // 0/1 skills (0) + full edu (25) + 24/25 months (24) = 49
+  const at49 = score(resume([], ['bachelor'], [24]), posting(['X'], 'bachelor', 25));
   assert.equal(at49.score, 49);
   assert.equal(at49.tier, 'related');
 });
@@ -272,25 +267,19 @@ test('Juan (all 4 skills, BSIT, 4 mo) vs Junior Web Developer → 100 Strong', (
   assert.equal(s.tier, 'strong');
 });
 
-test('Ana (3 of 4 skills) vs Junior Web Developer → 98 Strong', () => {
+test('Ana (3 of 4 skills) vs Junior Web Developer → 88 Strong', () => {
   const s = score(resume(['HTML/CSS', 'JavaScript', 'Communication', 'Teamwork'], ['bachelor'], [3]), juniorWebDev);
-  assert.equal(s.score, 98); // 0.75×10 + 20 + 70 = 97.5 → 98
+  assert.equal(s.score, 88); // 0.75×50 + 25 + 25 = 87.5 → 88
   assert.equal(s.tier, 'strong');
 });
 
-test('Marco (1 of 4 skills, hospitality) vs Junior Web Developer → 93 under the partner weighting', () => {
-  /* Worth stating rather than burying: at skills 10 this is a STRONG match for
-     a developer role held by someone with one of its four skills, because the
-     opening asks for no months and the 70 is therefore free to everybody. The
-     same resume scored 63 Possible at skills 50. It is the arithmetic the
-     partner asked for, and the reason a recruiter filling a junior opening
-     should set the weights on that opening rather than take the site's. */
+test('Marco (1 of 4 skills, hospitality) vs Junior Web Developer → 63 Possible — visible, not rejected', () => {
   const s = score(
     resume(['Customer Service', 'Communication', 'MS Office', 'English Proficiency', 'POS', 'Teamwork', 'Food Safety'], ['bachelor'], [6]),
     juniorWebDev,
   );
-  assert.equal(s.score, 93); // 0.25×10 + 20 + 70 = 92.5 → 93
-  assert.equal(s.tier, 'strong');
+  assert.equal(s.score, 63); // 0.25×50 + 25 + 25 = 62.5 → 63
+  assert.equal(s.tier, 'possible');
 });
 
 // ---------- parity sweep: the two engines are the same engine ----------
@@ -388,8 +377,8 @@ test('an opening with its own weights is scored with them, not the site defaults
   const r = resume(['JavaScript', 'Git'], ['bachelor'], [24]);
 
   const dflt = score(r, posting(['JavaScript', 'Git', 'SQL', 'Excel'], 'bachelor', 12));
-  // 0.5 skills × 10 + 1 × 20 + 1 × 70 = 95
-  assert.equal(dflt.score, 95);
+  // 0.5 skills × 50 + 1 × 25 + 1 × 25 = 75
+  assert.equal(dflt.score, 75);
 
   // The same applicant against a skills-heavy version of the same opening.
   const heavy = score(r, posting(['JavaScript', 'Git', 'SQL', 'Excel'], 'bachelor', 12,
@@ -443,7 +432,7 @@ test('a malformed weight set falls back to the defaults instead of rescaling the
     { skills: -10, education: 60, experience: 50 },
   ]) {
     const got = score(r, posting(skills, 'bachelor', 12, bad as any));
-    assert.equal(got.score, 95, `a weight set of ${JSON.stringify(bad)} must score as the site default`);
+    assert.equal(got.score, 75, `a weight set of ${JSON.stringify(bad)} must score as the default 50/25/25`);
     assert.deepEqual(got.weights, DEFAULT_SETTINGS.weights);
   }
 });
@@ -562,23 +551,23 @@ test('a skill with a source counts in full', () => {
 });
 
 test('a skill with NO source still counts — at half, never at zero', () => {
-  // 4 of 4 matched, none sourced: 4 − 4×0.5 = 2 credited → skills 10% × 0.5
+  // 4 of 4 matched, none sourced: 4 − 4×0.5 = 2 credited → skills 50% × 0.5
   const s = score(resumeEv(['MySQL', 'JavaScript', 'Teamwork', 'Git'], {}),
                   posting(['MySQL', 'JavaScript', 'Teamwork', 'Git']));
-  assert.equal(s.score, 95);
+  assert.equal(s.score, 75);
   assert.ok(s.score > 50, 'half credit must still clear the related tier — an unsourced skill is not a lie');
   assert.deepEqual(s.unevidencedMatches, ['MySQL', 'JavaScript', 'Teamwork', 'Git']);
 });
 
 test('sourced and unsourced skills mix in one score', () => {
-  // 4 matched, 2 sourced: 4 − 2×0.5 = 3 credited → 0.75 × 10 + 20 + 70 = 97.5 → 98
+  // 4 matched, 2 sourced: 4 − 2×0.5 = 3 credited → 0.75 × 50 + 25 + 25 = 87.5 → 88
   const s = score(
     resumeEv(['MySQL', 'JavaScript', 'Teamwork', 'Git'], {
       MySQL: usedAt('Developer, Acme'), JavaScript: usedAt('Developer, Acme'),
     }),
     posting(['MySQL', 'JavaScript', 'Teamwork', 'Git']),
   );
-  assert.equal(s.score, 98);
+  assert.equal(s.score, 88);
   assert.deepEqual(s.unevidencedMatches, ['Teamwork', 'Git']);
 });
 
@@ -590,7 +579,7 @@ test('an ABSENT evidence map means the question was never asked, so nothing is d
   const asked = score(resumeEv(['MySQL', 'JavaScript'], {}), posting(['MySQL', 'JavaScript']));
   const neverAsked = score(resumeEv(['MySQL', 'JavaScript'], undefined), posting(['MySQL', 'JavaScript']));
   assert.equal(neverAsked.score, 100);
-  assert.equal(asked.score, 95);
+  assert.equal(asked.score, 75);
   assert.deepEqual(neverAsked.unevidencedMatches, [],
     'a resume that was never asked must not report skills as unsourced');
 });
@@ -621,15 +610,12 @@ test('a source on a skill the posting never asked for changes nothing', () => {
 });
 
 test('padding the skills list is cheaper than it was, and still not free', () => {
-  /* The exploit this feature answers, priced honestly — and at the partner's
-     weighting the price is small. An applicant with one real skill who types in
-     the other three reaches 96 against an honest 98: still lower, still not
-     excluded, but two points apart rather than the seven it was when skills
-     carried half the score. Partial credit is doing the same work; there is
-     simply much less of the score for it to act on. What actually holds the
-     line here is the snapshot in routes/applications.ts, which stops a padded
-     resume moving an application already sent, and the recruiter's evidence
-     panel, which names every skill counted at half. */
+  /* The exploit this feature answers, priced honestly. An applicant with one
+     real skill who types in the other three used to reach a perfect score.
+     They now reach 81 — lower, but NOT excluded. The paper must say both
+     halves of that: partial credit reduces the payoff, the score snapshot in
+     routes/applications.ts is what stops it moving an application already
+     sent, and the recruiter's evidence panel is what makes it visible. */
   const required = ['MySQL', 'JavaScript', 'Teamwork', 'Git'];
   const honest = score(
     resumeEv(['MySQL', 'JavaScript', 'Teamwork'], {
@@ -638,8 +624,8 @@ test('padding the skills list is cheaper than it was, and still not free', () =>
   const padded = score(
     resumeEv(required, { MySQL: usedAt('Developer, Acme') }), posting(required));
 
-  assert.equal(honest.score, 98);
-  assert.equal(padded.score, 96);
+  assert.equal(honest.score, 88);
+  assert.equal(padded.score, 81);
   assert.ok(padded.score < 100, 'padding must no longer produce a perfect score');
   assert.ok(padded.score < honest.score,
     'three sourceless skills must not outrank three sourced ones');
@@ -739,8 +725,8 @@ test('the three states of the evidence map score as the rule publishes them', ()
   });
 
   assert.equal(score(absent, p).score, 100, 'never asked must cost nothing');
-  assert.equal(score(empty, p).score, 95, 'asked and declined is half on every match');
-  assert.equal(score(partial, p).score, 99, 'three of four sourced');
+  assert.equal(score(empty, p).score, 75, 'asked and declined is half on every match');
+  assert.equal(score(partial, p).score, 94, 'three of four sourced');
 
   assert.ok(score(absent, p).score > score(partial, p).score,
     'THE TRAP: filling in a map for SOME skills scores BELOW never having been asked. ' +

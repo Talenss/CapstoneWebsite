@@ -111,7 +111,7 @@ export interface Company {
    Richer alternatives were considered (grouped skills, start/end dates in
    place of months, dropping level in favour of free-text degree) and
    rejected: they would have required rewriting the engine, its demo-mode
-   twin, the parity suite, and the weighted formula published in the study.
+   twin, the parity suite, and the 50/25/25 formula published in the study.
    A resume can now carry far more, and the score still comes from the same
    three inputs it always did.
    --------------------------------------------------------------------- */

@@ -15,24 +15,10 @@ import { AppStatus, EduLevel, EvidenceKind, MatchResult, Posting, RejectionReaso
    live score a seeker sees stays equal to the score the server stores.
    Without that, editing match_settings would show the seeker one number and
    the recruiter another for the very same application. */
-/** The split Clark Outsourcing's senior recruitment manager gave when asked
- *  how their team actually weighs a candidate: experience 70, education 20,
- *  skills 10, with the justification that most client accounts want people
- *  who are already experienced, and that education and awards are what a
- *  recruiter reads knowledge and communication off.
- *
- *  It is a partner decision, and its consequence should be understood rather
- *  than discovered: on an opening that asks for months, an applicant with
- *  none of them cannot exceed 30 however many of the required skills they
- *  hold, while one with the months and none of the skills reaches 90. On an
- *  opening asking for no experience the 70 does nothing at all, because that
- *  component is 1 for everybody. A recruiter who wants the old emphasis for a
- *  fresh-graduate opening sets it per posting.
- *
- *  `certifications` is the optional fourth component and sits at 0, so the
- *  site-wide split stays 70/20/10 across three unless a recruiter gives
- *  certifications a share on their own opening. */
-export const WEIGHTS = { skills: 0.1, education: 0.2, experience: 0.7, certifications: 0 };
+/** `certifications` is the optional fourth component and sits at 0, so the
+ *  site-wide split stays the study's published 50/25/25 across three unless a
+ *  recruiter gives certifications a share on their own opening. */
+export const WEIGHTS = { skills: 0.5, education: 0.25, experience: 0.25, certifications: 0 };
 export const THRESHOLDS = { strong: 80, related: 50 };
 
 /** Every accepted value of `resumes.design`. Anything else falls back to

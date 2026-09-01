@@ -239,7 +239,7 @@ await t('the builder asks about sources by reaching the skills step, not by luck
      skillEvidence key" was wrong: adding a skill never creates that key, only
      setting a source does, so someone who typed the four skills a posting
      wants and linked none of them looked like someone never asked — and
-     scored 100 where the published rule says 95.
+     scored 100 where the published rule says 75.
 
      Reaching the skills step IS being asked; the source picker sits beside
      every skill on it. So: no map before that step, an empty map after. */
