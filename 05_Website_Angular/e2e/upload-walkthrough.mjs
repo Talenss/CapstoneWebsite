@@ -163,6 +163,53 @@ await step('an imported CV credits its skills to the file it was read from', asy
   }
 });
 
+await step('an imported CV that never reached the skills step keeps full credit', async () => {
+  /* THE OTHER HALF OF THE RULE, and the one a change here can quietly break.
+     An applicant who imports a CV and saves without reaching the Skills step
+     was never asked where each skill was used, so their resume must carry NO
+     evidence map at all — the engine reads an absent map as "never asked" and
+     credits every matched skill in full.
+
+     Crediting the skills to the file here would look like a kindness and cost
+     them: any skill the analyzer's list does not match would then count at
+     half, where before it counted whole. Measured on a four-skill opening,
+     100 became 94. The map must stay absent until the question is put. */
+  const cv = path.join(dir, 'Never_Asked.pdf');
+  fs.writeFileSync(cv, fs.readFileSync(pdf));
+
+  await go('/upload-resume');
+  const input = page.locator('input[type=file]').first();
+  await input.waitFor({ state: 'attached', timeout: 8000 });
+  await input.setInputFiles(cv);
+  await page.waitForTimeout(700);
+  const consent = page.locator('.consent input[type=checkbox]').first();
+  if (await consent.count()) { await consent.click(); await page.waitForTimeout(300); }
+  await page.click('button:has-text("Analyze my resume")');
+  await page.waitForTimeout(3200);
+
+  const into = page.locator('button:has-text("Review & edit in the builder"), a:has-text("Review & edit in the builder")').first();
+  if (!(await into.count())) throw new Error('the analysis never offered to open the builder');
+  await into.click();
+  await page.waitForTimeout(2500);
+
+  // straight to Save — the Skills step is deliberately never opened
+  await page.locator('button:has-text("Save")').first().click();
+  await page.waitForTimeout(3200);
+
+  const state = await page.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem('linaw_v3_db') || '{}');
+    const r = (db.resumes || []).find(x => x.ownFile && /Never_Asked\.pdf/i.test(x.ownFile.name));
+    return r ? { file: r.ownFile.name, skills: (r.skills || []).length, hasMap: 'skillEvidence' in r,
+                 map: r.skillEvidence || null } : null;
+  });
+  if (!state) throw new Error('the imported resume was not saved with its file attached');
+  if (!state.skills) throw new Error('the analysis extracted no skills');
+  if (state.hasMap) {
+    throw new Error('an evidence map was written for an applicant who was never asked: '
+      + JSON.stringify(state.map).slice(0, 120));
+  }
+});
+
 await step('the upload-and-analyze page loads and states where the file goes', async () => {
   await go('/upload-resume');
   const t = await page.locator('body').innerText();

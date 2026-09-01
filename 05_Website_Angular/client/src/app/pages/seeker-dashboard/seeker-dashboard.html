@@ -136,6 +136,16 @@
       <span class="badge slate">Statuses are set by the recruiter</span>
     </div>
     <p>Every change here was made by a person at Clark Outsourcing. The system never moves an application on its own.</p>
+    <!-- Why two numbers for one opening. The board above scores the resume as it
+         stands NOW; an application carries the score it had when it was sent, and
+         that is the one the recruiter ranks on. Editing a resume afterwards cannot
+         reshuffle a shortlist somebody has already worked through — which protects
+         the applicant as much as the recruiter, but only if they are told. -->
+    <p class="w" style="margin-top:6px">
+      <b>Score sent</b> is the score this resume had on the day you applied, and it is the one the
+      recruiter ranks on. Editing your resume afterwards changes the scores on the board above, never
+      an application already sent &mdash; so a shortlist nobody can reshuffle underneath them.
+    </p>
     @if (applications().length) {
       <div class="tally" id="tally">
         <div><b>{{ applications().length }}</b><span>Applied</span></div>
@@ -147,13 +157,20 @@
     <div class="card flush" style="margin-top:18px">
       <div class="wrap-x">
         <table class="tbl" id="apps">
-          <thead><tr><th>Position</th><th>Company</th><th>Resume sent</th><th>Applied</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Position</th><th>Company</th><th>Resume sent</th><th>Score sent</th><th>Applied</th><th>Status</th><th></th></tr></thead>
           <tbody>
             @for (a of applications(); track a.id) {
               <tr>
                 <td><b>{{ a.posting ? a.posting.title : 'Removed' }}</b></td>
                 <td>{{ a.company ? a.company.name : '—' }}</td>
                 <td>{{ a.resumeTitle || '—' }}</td>
+                <!-- The number this application actually carries. Without it the
+                     board above shows a live score for the same opening while the
+                     recruiter ranks on the frozen one, and nothing on this page
+                     accounts for the difference. -->
+                <td style="white-space:nowrap">
+                  @if (a.scoreSnapshot != null) { <b>{{ a.scoreSnapshot }}%</b> } @else { <span class="w">—</span> }
+                </td>
                 <td style="white-space:nowrap">{{ day(a.appliedAt) }}</td>
                 <td><span class="badge {{ statusBadge(a.status) }}">{{ STATUS_LABELS[a.status] }}</span></td>
                 <td style="text-align:right;white-space:nowrap">

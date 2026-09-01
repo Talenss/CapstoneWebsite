@@ -641,17 +641,33 @@ test('"PERSONAL INFORMATION" stays out of the way of the contact block', () => {
    it was written for: a section that ends early loses whole skills, not
    spellings.
    ============================================================ */
+/* Five fixtures run open-ended ranges ending in "Present", so their month
+   counts grow by one on the first of every month. Frozen at 39, the suite passed for a year and then
+   failed on 1 September 2026 for no reason connected to the code. Bumping it to
+   40 would buy exactly one more month, so the expectation is expressed the way
+   the fixture is written: counted from its start date to the current month,
+   inclusive of both, which is the rule the reader itself applies. */
+const monthsSince = (year: number, month: number) => {
+  const now = new Date();
+  return (now.getFullYear() - year) * 12 + (now.getMonth() + 1 - month) + 1;
+};
+
 const CORPUS: Record<string, { name: string; skills: number; education: number; level: string; months: number }> = {
   '01-fresh-grad-ojt.txt':          { name: 'Juan Dela Cruz',       skills: 5, education: 1, level: 'bachelor',   months: 4 },
-  '02-spaced-headings.txt':         { name: 'Maria Santos',         skills: 3, education: 1, level: 'bachelor',   months: 39 },
+  // "June 2023 - Present" — open-ended, so this one is counted, not frozen.
+  '02-spaced-headings.txt':         { name: 'Maria Santos',         skills: 3, education: 1, level: 'bachelor',   months: monthsSince(2023, 6) },
   '03-numbered-practicum.txt':      { name: 'Ana Reyes',            skills: 4, education: 1, level: 'bachelor',   months: 5 },
   // The banner that must NOT become a section, or the contact block is lost.
   '04-personal-info-banner.txt':    { name: 'Juan Miguel Dela Cruz', skills: 5, education: 1, level: 'bachelor',  months: 4 },
-  '05-employment-history.txt':      { name: 'Ana Marie Reyes',      skills: 4, education: 1, level: 'bachelor',   months: 47 },
+  // March 2023 - Present, plus a closed June-October 2022 run of five months.
+  '05-employment-history.txt':      { name: 'Ana Marie Reyes',      skills: 4, education: 1, level: 'bachelor',   months: monthsSince(2023, 3) + 5 },
   // Carries the word "employment." alone on a wrapped line, mid-bullet.
-  '06-prose-trap.txt':              { name: 'Roberto Lim',          skills: 4, education: 1, level: 'bachelor',   months: 104 },
-  '07-arrow-bullets.txt':           { name: 'Grace Ann Lopez',      skills: 4, education: 1, level: 'bachelor',   months: 66 },
-  '08-lowercase-headings.txt':      { name: 'Marco Antonio Garcia', skills: 3, education: 1, level: 'bachelor',   months: 27 },
+  // January 2018 - Present.
+  '06-prose-trap.txt':              { name: 'Roberto Lim',          skills: 4, education: 1, level: 'bachelor',   months: monthsSince(2018, 1) },
+  // March 2021 - Present.
+  '07-arrow-bullets.txt':           { name: 'Grace Ann Lopez',      skills: 4, education: 1, level: 'bachelor',   months: monthsSince(2021, 3) },
+  // June 2024 - Present.
+  '08-lowercase-headings.txt':      { name: 'Marco Antonio Garcia', skills: 3, education: 1, level: 'bachelor',   months: monthsSince(2024, 6) },
   '09-inline-skills.txt':           { name: 'Liza Mae Cruz',        skills: 4, education: 1, level: 'vocational', months: 3 },
   '10-no-experience-fresh-grad.txt':{ name: 'Patricia Anne Bautista', skills: 5, education: 1, level: 'bachelor', months: 4 },
 };

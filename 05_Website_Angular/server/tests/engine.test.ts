@@ -296,7 +296,23 @@ test('500 randomized cases: server rmScore core and client scoreLocal agree exac
   for (let i = 0; i < 500; i++) {
     const rSkills = skillPool.filter(() => rnd() < 0.5);
     const pSkills = skillPool.filter(() => rnd() < 0.4);
-    const r = resume(rSkills, rnd() < 0.15 ? [] : [pick(levels)], rnd() < 0.15 ? [] : [Math.floor(rnd() * 60)]);
+    const r: any = resume(rSkills, rnd() < 0.15 ? [] : [pick(levels)], rnd() < 0.15 ? [] : [Math.floor(rnd() * 60)]);
+
+    /* WITH THE EVIDENCE MAP IN THE SWEEP. It was absent from every generated
+       case, so 500 pairs only ever exercised the "never asked" path and the
+       half-credit rule — the part of the score an applicant is most likely to
+       question — was never compared across the two engines at all. All three
+       states are generated, and sources are drawn from every kind the engine
+       accepts, so a kind added on one side and not the other fails here. */
+    const mode = Math.floor(rnd() * 3);
+    if (mode === 1) {
+      r.skillEvidence = {};                                  // asked, named nothing
+    } else if (mode === 2) {
+      const ev: Record<string, { kind: EvidenceKind; ref: string }> = {};
+      for (const sk of rSkills) if (rnd() < 0.6) ev[sk] = { kind: pick([...EVIDENCE_KINDS]), ref: 'ref' };
+      r.skillEvidence = ev;                                  // asked, some sourced
+    }                                                        // mode 0: never asked
+
     const p = posting(pSkills, pick(levels), Math.floor(rnd() * 36));
     score(r, p); // asserts parity internally
   }
@@ -684,6 +700,56 @@ test('an imported CV scores like a typed one once its skills point at the file',
   assert.equal(imported.score, typed.score);
   assert.equal(imported.score, 100);
   assert.deepEqual(imported.unevidencedMatches, []);
+});
+
+test('the three states of the evidence map score as the rule publishes them', () => {
+  /* THE WHOLE RULE, IN ONE PLACE, ON BOTH ENGINES. These three states are what
+     an applicant is actually promised, and each has been broken at least once
+     by a change that looked unrelated:
+
+       absent   never asked        every matched skill counts in full
+       empty    asked, named none  every matched skill counts at half
+       partial  asked, some named  named in full, the rest at half
+
+     The absent case is the one that keeps getting damaged, because it is the
+     only one where doing MORE work — writing a map, filling it in — makes the
+     score worse. It is also the case an imported CV lands in. */
+  const required = ['MySQL', 'JavaScript', 'Teamwork', 'Git'];
+  const p = posting(required);
+  const at = (kind: EvidenceKind) => (ref: string) => ({ kind, ref });
+
+  const absent = resumeEv(required, undefined);
+  const empty = resumeEv(required, {});
+  const partial = resumeEv(required, {
+    MySQL: at('document')('CV.pdf'), JavaScript: at('document')('CV.pdf'), Teamwork: at('document')('CV.pdf'),
+  });
+
+  assert.equal(score(absent, p).score, 100, 'never asked must cost nothing');
+  assert.equal(score(empty, p).score, 75, 'asked and declined is half on every match');
+  assert.equal(score(partial, p).score, 94, 'three of four sourced');
+
+  assert.ok(score(absent, p).score > score(partial, p).score,
+    'THE TRAP: filling in a map for SOME skills scores BELOW never having been asked. ' +
+    'Anything that writes a map on the applicant\'s behalf must therefore only do it ' +
+    'once the question has actually been put to them.');
+
+  // and the client agrees on all three
+  for (const [name, r] of [['absent', absent], ['empty', empty], ['partial', partial]] as const) {
+    assert.equal(scoreLocal(r as any, p as any).score, scoreWith(DEFAULT_SETTINGS, r as any, p as any).score,
+      `the two engines disagree on the ${name} state`);
+  }
+});
+
+test('the kind of a source never changes what it is worth', () => {
+  /* A source is a source. The kind decides what the recruiter is shown and what
+     the applicant may pick from, never the arithmetic — so the uploaded file
+     cannot be worth more or less than a job, and adding a sixth kind later
+     cannot quietly reweight anybody. */
+  const required = ['MySQL', 'JavaScript'];
+  const p = posting(required);
+  const scores = EVIDENCE_KINDS.map((kind) =>
+    score(resumeEv(required, { MySQL: { kind, ref: 'r' }, JavaScript: { kind, ref: 'r' } }), p).score);
+  assert.deepEqual([...new Set(scores)], [100], `every kind must score alike, got ${JSON.stringify(scores)}`);
 });
 
 test('both engines agree on which matches were unsourced', () => {
