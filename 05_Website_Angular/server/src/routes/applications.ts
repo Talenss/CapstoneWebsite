@@ -257,7 +257,48 @@ router.post('/ranked', async (req, res) => {
 
   out.sort((x, y) => y.score - x.score || x.application.appliedAt - y.application.appliedAt);
 
-  ok(res, { posting, rows: out });
+  /* FILTERING AND PAGING, both server-side and in that order.
+   *
+   * The filters have to run HERE rather than in the browser now that the list
+   * is paged. Filtering a single page would mean "strong only" hid strong
+   * applicants who happened to sit on page two — a filter that silently lies
+   * about the pool is worse than no filter at all.
+   *
+   * `total` is everyone who applied and is reported whatever the filters say,
+   * because the page promises that everyone who applied is on this list. The
+   * pager narrows what is DRAWN; it never narrows what is counted.
+   *
+   * pageSize 0 means "all matching rows", which is what Export CSV and Print
+   * ask for: what leaves the screen must be the whole filtered set, not
+   * whichever page the recruiter happens to be looking at. */
+  const total = out.length;
+  const q = String(req.body?.q ?? '').trim().toLowerCase();
+  const fStatus = String(req.body?.status ?? '');
+  const fTier = String(req.body?.tier ?? '');
+  const fFile = String(req.body?.file ?? '');
+
+  const matchedRows = out.filter((r: any) => {
+    if (fStatus && r.application.status !== fStatus) return false;
+    if (fTier && r.tier !== fTier) return false;
+    if (fFile === 'yes' && !r.resume?.ownFile) return false;
+    if (fFile === 'no' && r.resume?.ownFile) return false;
+    if (!q) return true;
+    return (r.seeker.name + ' ' + (r.resume?.skills || []).join(' ')).toLowerCase().includes(q);
+  });
+
+  /* Absent pageSize means "everything", which is what this route has always
+     returned. Paging is something the caller ASKS for: defaulting to a page
+     would silently truncate every existing caller, and the ranking has to
+     score the whole pool anyway to know what belongs on page one — the saving
+     is payload and DOM, not work. 200 is the ceiling so a hand-written request
+     cannot ask for an unbounded page and call it paging. */
+  const rawSize = Number(req.body?.pageSize);
+  const pageSize = Number.isFinite(rawSize) && rawSize > 0 ? Math.min(rawSize, 200) : 0;
+  const pages = pageSize ? Math.max(1, Math.ceil(matchedRows.length / pageSize)) : 1;
+  const page = Math.min(Math.max(1, Number(req.body?.page) || 1), pages);
+  const slice = pageSize ? matchedRows.slice((page - 1) * pageSize, page * pageSize) : matchedRows;
+
+  ok(res, { posting, rows: slice, total, matched: matchedRows.length, page, pages, pageSize });
 });
 
 /* Every status change is a HUMAN decision, and it is recorded as one. */

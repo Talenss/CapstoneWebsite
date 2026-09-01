@@ -8,7 +8,7 @@
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ApiAdapter } from './adapter';
-import { AdminRecruiter, AnalyzedResume, Application, ApiResult, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User } from './models';
+import { AdminRecruiter, AnalyzedResume, Application, ApiResult, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
 import { MAX_UPLOAD, ALLOWED_MIME } from './engine';
 
 export class HttpAdapter implements ApiAdapter {
@@ -87,7 +87,10 @@ export class HttpAdapter implements ApiAdapter {
   applications = {
     apply: (resumeId: string, postingId: string) => this.call<{ application: Application }>('applications', 'apply', { resumeId, postingId }),
     mine: () => this.call<{ applications: Application[] }>('applications', 'mine'),
-    ranked: (postingId: string) => this.call<{ posting: Posting; rows: RankedRow[] }>('applications', 'ranked', { postingId }),
+    ranked: (postingId: string, opts?: RankedQuery) => this.call<{
+      posting: Posting; rows: RankedRow[];
+      total?: number; matched?: number; page?: number; pages?: number; pageSize?: number;
+    }>('applications', 'ranked', { postingId, ...(opts ?? {}) }),
     setStatus: (id: string, status: string, reason?: string | null) =>
       this.call<{ application: Application }>('applications', 'set-status', { id, status, reason: reason ?? null }),
     notes: (id: string) => this.call<{ notes: ScreeningNote[] }>('applications', 'notes', { id }),
