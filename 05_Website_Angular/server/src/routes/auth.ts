@@ -7,7 +7,7 @@ import { query, queryOne, exec } from '../db';
 import { UserRow, ResumeRow, ApplicationRow } from '../types';
 import { ok, fail } from '../lib/http';
 import { currentUser, requireUser } from '../lib/auth';
-import { serializeUser, serializeResume, serializeApplication } from '../lib/serializers';
+import { serializeUser, serializeResume, serializeApplication, prefetchResumeChildren} from '../lib/serializers';
 import { DEBUG } from '../config';
 import { deleteFile } from '../lib/storage';
 import { mailConfigured, sendCodeEmail, sendMail, CodePurpose } from '../lib/mailer';
@@ -377,7 +377,8 @@ router.post('/export', async (req, res) => {
   if (!u) return;
 
   const resumeRows = await query<ResumeRow>('SELECT * FROM resumes WHERE user_id = ?', [u.user_id]);
-  const resumes = await Promise.all(resumeRows.map(serializeResume));
+  const kids = await prefetchResumeChildren(resumeRows.map((r) => r.resume_id));
+  const resumes = await Promise.all(resumeRows.map((r) => serializeResume(r, kids)));
 
   const appRows = await query<ApplicationRow>('SELECT * FROM applications WHERE seeker_id = ?', [u.user_id]);
   const applications = appRows.map(serializeApplication);
