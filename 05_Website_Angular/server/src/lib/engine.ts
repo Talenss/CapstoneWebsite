@@ -99,7 +99,10 @@ export function evidenceLabels(resume: {
 }
 
 export const EDU_RANK: Record<string, number> = {
-  none: 0, highschool: 1, vocational: 2, associate: 3, bachelor: 4, master: 5,
+  // Mirrors client engine.ts. 'college_level' is undergraduate/some-college,
+  // ranked between associate and bachelor at 3.5 so no existing whole-number
+  // rank (or the ratios built from them) changes.
+  none: 0, highschool: 1, vocational: 2, associate: 3, college_level: 3.5, bachelor: 4, master: 5,
 };
 
 /* ------------------------------------------------------------

@@ -413,7 +413,11 @@ const LEVEL_PATTERNS: [string, RegExp][] = [
      lost — but with no pattern at all a doctorate read as 'none', and a
      posting asking for a bachelor's scored its holder zero on education. */
   ['master', /\b(doctor(ate|al)?|ph\.?\s?d|d\.?i\.?t\.?|ed\.?d|d\.?b\.?a|master'?s?|mba|ms\.?c|m\.?a\.?\b|m\.?s\.?\b|post-?graduate|graduate\s+studies)\b/i],
-  ['bachelor', /\b(bachelor'?s?|b\.?s\.?\b|b\.?a\.?\b|bsc|undergraduate|college\s+graduate|ab\b)\b/i],
+  ['bachelor', /\b(bachelor'?s?|b\.?s\.?\b|b\.?a\.?\b|bsc|college\s+graduate|ab\b)\b/i],
+  // 'college_level' = reached college, no degree yet. Kept BELOW bachelor so
+  // an explicit "college graduate" still reads as bachelor; this catches the
+  // undergraduate/ongoing cases that used to be read as a full bachelor's.
+  ['college_level', /\b(college\s+level|college\s+undergrad\w*|undergraduate|under\s?grad|some\s+college|college\s+student|presently\s+enrolled)\b/i],
   ['associate', /\b(associate'?s?|2-?year\s+course|diploma\s+in)\b/i],
   ['vocational', /\b(vocational|tesda|nc\s?(i{1,3}|iv)\b|technical\s+course|certificate\s+course)\b/i],
   ['highschool', /\b(high\s?school|senior\s+high|junior\s+high|secondary|k-?12|shs\b|hs\b)\b/i],

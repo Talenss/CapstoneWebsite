@@ -192,6 +192,16 @@ export async function runMigrations(): Promise<void> {
     'classic','modern','minimal','executive','banner','split','bar','categorized',
     'traditional','clean','compact','senior','graduate','technical'))`);
 
+  // education level gains 'college_level' — the undergraduate/some-college tier
+  // the partner asked for (Clark Outsourcing information request, section 5).
+  // Both the resume education table and the posting requirement carry the same
+  // TEXT + CHECK; widen them in place. One list, reused for both.
+  const EDU_SET = "'none','highschool','vocational','associate','college_level','bachelor','master'";
+  await exec('ALTER TABLE education DROP CONSTRAINT IF EXISTS education_level_check');
+  await exec(`ALTER TABLE education ADD CONSTRAINT education_level_check CHECK (level IN (${EDU_SET}))`);
+  await exec('ALTER TABLE job_postings DROP CONSTRAINT IF EXISTS job_postings_education_level_check');
+  await exec(`ALTER TABLE job_postings ADD CONSTRAINT job_postings_education_level_check CHECK (education_level IN (${EDU_SET}))`);
+
   // resumes.own_file_extract — the applicant's own document, read into the
   // same structured shape the builder edits so the engine can score it. The
   // status column is what keeps "we could not read this" distinguishable

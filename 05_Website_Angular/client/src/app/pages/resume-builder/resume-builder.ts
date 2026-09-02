@@ -88,6 +88,7 @@ export class ResumeBuilder implements OnInit {
     { value: 'highschool', label: EDU_LABELS.highschool },
     { value: 'vocational', label: EDU_LABELS.vocational },
     { value: 'associate', label: EDU_LABELS.associate },
+    { value: 'college_level', label: EDU_LABELS.college_level },
     { value: 'bachelor', label: EDU_LABELS.bachelor },
     { value: 'master', label: EDU_LABELS.master },
   ];

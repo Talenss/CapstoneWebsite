@@ -76,7 +76,7 @@ test('tier thresholds are the published 80 (strong) and 50 (related)', () => {
 });
 
 test('education ladder ranks match on both sides', () => {
-  assert.deepEqual(EDU_RANK, { none: 0, highschool: 1, vocational: 2, associate: 3, bachelor: 4, master: 5 });
+  assert.deepEqual(EDU_RANK, { none: 0, highschool: 1, vocational: 2, associate: 3, college_level: 3.5, bachelor: 4, master: 5 });
   assert.deepEqual(CLIENT_EDU_RANK as Record<string, number>, EDU_RANK);
 });
 

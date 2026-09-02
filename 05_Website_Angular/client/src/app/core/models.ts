@@ -48,7 +48,7 @@ export interface RoutingCompany {
   recruiters: { id: string; name: string }[];
   assignments: DeptAssignment[];
 }
-export type EduLevel = 'none' | 'highschool' | 'vocational' | 'associate' | 'bachelor' | 'master';
+export type EduLevel = 'none' | 'highschool' | 'vocational' | 'associate' | 'college_level' | 'bachelor' | 'master';
 export type Template = 'chronological' | 'functional' | 'combination';
 /** Visual style of the rendered/printed resume. Every design is single-column
  *  and ATS-safe: real headings, real text, no tables, no graphics.

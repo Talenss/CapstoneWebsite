@@ -197,11 +197,16 @@ export const STATUS_ORDER: AppStatus[] = [
 export const ALL_STATUSES: AppStatus[] = [...STATUS_ORDER, 'withdrawn', 'review'];
 
 export const EDU_RANK: Record<EduLevel, number> = {
-  none: 0, highschool: 1, vocational: 2, associate: 3, bachelor: 4, master: 5,
+  // Ordinal positions; only their order and ratio matter to the score.
+  // 'college_level' (some college, no degree yet) sits between a completed
+  // associate and a bachelor, so it takes 3.5 rather than renumbering the
+  // ladder — which would have shifted every existing education ratio.
+  none: 0, highschool: 1, vocational: 2, associate: 3, college_level: 3.5, bachelor: 4, master: 5,
 };
 export const EDU_LABELS: Record<EduLevel, string> = {
   none: 'No requirement', highschool: 'High school', vocational: 'Vocational / TESDA',
-  associate: 'Associate degree', bachelor: 'Bachelor’s degree', master: 'Master’s degree',
+  associate: 'Associate degree', college_level: 'College level (undergraduate)',
+  bachelor: 'Bachelor’s degree', master: 'Master’s degree',
 };
 
 /** How a posting's minimum-experience requirement reads to a person. The

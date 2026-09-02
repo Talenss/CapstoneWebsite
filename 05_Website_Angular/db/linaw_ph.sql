@@ -184,7 +184,7 @@ CREATE TABLE education (
   school       VARCHAR(160),
   degree       VARCHAR(160),
   -- SCORED: feeds EDU_RANK for the education quarter of the match.
-  level        TEXT NOT NULL DEFAULT 'bachelor' CHECK (level IN ('none','highschool','vocational','associate','bachelor','master')),
+  level        TEXT NOT NULL DEFAULT 'bachelor' CHECK (level IN ('none','highschool','vocational','associate','college_level','bachelor','master')),
   year_grad    VARCHAR(10),
   field        VARCHAR(160),
   location     VARCHAR(160),
@@ -324,7 +324,7 @@ CREATE TABLE job_postings (
   department      VARCHAR(120),
   employment_type TEXT NOT NULL DEFAULT 'full-time' CHECK (employment_type IN ('full-time','part-time','contract','internship')),
   description     TEXT,
-  education_level TEXT NOT NULL DEFAULT 'bachelor' CHECK (education_level IN ('none','highschool','vocational','associate','bachelor','master')),
+  education_level TEXT NOT NULL DEFAULT 'bachelor' CHECK (education_level IN ('none','highschool','vocational','associate','college_level','bachelor','master')),
   min_experience_months INT NOT NULL DEFAULT 0,
   application_deadline  DATE,
   status          TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed')),
