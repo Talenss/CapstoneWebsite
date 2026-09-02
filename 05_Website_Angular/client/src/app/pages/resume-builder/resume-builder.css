@@ -83,23 +83,31 @@
    could be read as belonging to the skill on either side of it would be worse
    than no dropdown at all. */
 /* Source-first evidence: one card per job/school/project/certification, each
-   holding the skill chips as toggles. Reuses the .pool chip styles below. */
+   holding the skill chips as toggles. Shares the chip styling below with the
+   suggestion pools, so a ticked chip reads the same everywhere. */
 .src-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
-.src-card { border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; background: var(--paper); }
-.src-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 9px; margin-bottom: 8px; }
+.src-card {
+  border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; background: var(--paper);
+  transition: border-color .15s, box-shadow .15s;
+}
+.src-card:focus-within { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-wash); }
+.src-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 9px; margin-bottom: 10px; }
 .src-head b { font-size: 14px; color: var(--ink); }
 .src-kind {
-  font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
-  color: var(--muted); background: var(--wash, rgba(0,0,0,.04)); border-radius: 3px; padding: 2px 7px;
+  font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--muted); background: var(--slate-wash, rgba(0,0,0,.045)); border: 1px solid var(--rule-2);
+  border-radius: 999px; padding: 2px 9px; line-height: 1.6;
 }
 /* An unlinked skill chip is not an error, so it is only marked, not coloured. */
 .tag.nosrc { border-style: dashed; opacity: .8; }
-.sugg .pool { display: flex; flex-wrap: wrap; gap: 6px; }
-.sugg button {
-  border: 1px dashed var(--rule); background: var(--paper); border-radius: 2px; font-size: 12px; color: var(--muted);
-  padding: 5px 11px; cursor: pointer; font-family: var(--body);
+.sugg .pool, .src-card .pool { display: flex; flex-wrap: wrap; gap: 7px; }
+.sugg button, .src-card .pool button {
+  display: inline-flex; align-items: center;
+  border: 1px dashed var(--rule); background: var(--paper); border-radius: 999px; font-size: 12.5px; color: var(--muted);
+  padding: 6px 13px 6px 11px; cursor: pointer; font-family: var(--body); line-height: 1.2;
+  transition: border-color .12s, background .12s, color .12s;
 }
-.sugg button:hover { border-color: var(--accent); color: var(--accent-deep); border-style: solid; }
+.sugg button:hover, .src-card .pool button:hover { border-color: var(--accent); color: var(--accent-deep); border-style: solid; }
 
 /* A chosen suggestion stays in place, marked, instead of being removed from
    the pool. Removing it reflowed every chip after it into the gap, so a
@@ -112,11 +120,11 @@
    border stays 1px, and the weight does not change. Choosing a chip must not
    move any other chip by a pixel, or the fix reintroduces the bug in
    miniature. */
-.sugg .mark { display: inline-block; width: 1em; margin-right: 5px; text-align: center; font-weight: 700; }
+.sugg .mark, .src-card .mark { display: inline-block; width: 1em; margin-right: 6px; text-align: center; font-weight: 700; }
 .sugg .n { color: var(--faint); }
-.sugg button.on {
+.sugg button.on, .src-card .pool button.on {
   border-style: solid; border-color: var(--accent-line);
-  background: var(--accent-wash); color: var(--accent-deep);
+  background: var(--accent-wash); color: var(--accent-deep); font-weight: 500;
 }
 .sugg button.on .n { color: var(--accent-deep); opacity: .65; }
 
