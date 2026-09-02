@@ -336,8 +336,6 @@ main{flex:1}
 .arrivals .foot{padding:13px 20px;background:var(--ink-2);border-top:1px solid var(--ink-line);
   font-size:11.5px;color:#8F96A5}
 .arrivals .foot b{color:var(--accent);font-weight:600}
-.reveal{opacity:0;transform:translateY(6px);animation:reveal .5s cubic-bezier(.2,.7,.3,1) forwards}
-@keyframes reveal{to{opacity:1;transform:none}}
 
 /* ---------- forms ---------- */
 .field{margin-bottom:18px}

@@ -771,7 +771,7 @@ export async function parseResume(buffer: Buffer, mimetype: string, fileName: st
     return {
       status: 'failed', resume: null,
       message: 'Nothing readable was found in that file. If it uses columns, tables or a picture of text, '
-        + 'the reader cannot follow it — which is exactly what an employer’s screening software would also struggle with.',
+        + 'the reader cannot follow it, which is exactly what an employer’s screening software would also struggle with.',
     };
 
   return { status: 'ok', resume };

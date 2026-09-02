@@ -450,8 +450,8 @@ export class DemoAdapter implements ApiAdapter {
       const ln = String(lastName ?? '').trim().replace(/\s+/g, ' ');
       const em = String(email).trim().toLowerCase();
       if (fn.length < 2) return apiFail('Enter your first name.');
-      if (fn.length > 60) return apiFail('That first name is too long — 60 characters at most.');
-      if (ln.length > 60) return apiFail('That last name is too long — 60 characters at most.');
+      if (fn.length > 60) return apiFail('That first name is too long: 60 characters at most.');
+      if (ln.length > 60) return apiFail('That last name is too long: 60 characters at most.');
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return apiFail('Enter a valid email address.');
       const user: DemoUser = { id: uid(), role: 'seeker', firstName: fn, lastName: ln,
         email: em, password, activeResumeId: null, createdAt: Date.now() };
@@ -528,8 +528,8 @@ export class DemoAdapter implements ApiAdapter {
       const fn = String(firstName ?? '').trim().replace(/\s+/g, ' ');
       const ln = String(lastName ?? '').trim().replace(/\s+/g, ' ');
       if (fn.length < 2) return apiFail('Enter your first name.');
-      if (fn.length > 60) return apiFail('That first name is too long — 60 characters at most.');
-      if (ln.length > 60) return apiFail('That last name is too long — 60 characters at most.');
+      if (fn.length > 60) return apiFail('That first name is too long: 60 characters at most.');
+      if (ln.length > 60) return apiFail('That last name is too long: 60 characters at most.');
       u.firstName = fn; u.lastName = ln; persist(db);
       return apiOk({ user: pubUser(u)! });
     },

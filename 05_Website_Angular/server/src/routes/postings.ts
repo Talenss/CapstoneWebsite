@@ -138,7 +138,7 @@ router.post('/save', async (req, res) => {
   if (title.length < 2) return fail(res, 'Give the opening a title.');
   if (dept === '') return fail(res, 'Which department is this for?');
   if (desc.length < 10) return fail(res, 'Describe the role in a sentence or two.');
-  if (!skills.length) return fail(res, "Add at least one required skill — there is nothing to match an applicant against without one.");
+  if (!skills.length) return fail(res, "Add at least one required skill. There is nothing to match an applicant against without one.");
 
   const edu = Object.keys(EDU_RANK).includes(P.educationLevel) ? P.educationLevel : 'bachelor';
   const type = ['full-time', 'part-time', 'contract', 'internship'].includes(P.employmentType) ? P.employmentType : 'full-time';
@@ -168,7 +168,7 @@ router.post('/save', async (req, res) => {
     if (sk === null || ed === null || ex === null || ce === null)
       return fail(res, 'The scoring weights must be whole numbers.');
     if (sk < 10 || ed < 10 || ex < 10)
-      return fail(res, 'Skills, education and experience each have to be at least 10% — those three cannot be switched off entirely.');
+      return fail(res, 'Skills, education and experience each have to be at least 10%. Those three cannot be switched off entirely.');
     if (ce < 0)
       return fail(res, 'The certifications weight cannot be negative.');
     if (sk + ed + ex + ce !== 100)
@@ -180,7 +180,7 @@ router.post('/save', async (req, res) => {
   let deadline: string | null = null;
   if (P.deadline) {
     const d = String(P.deadline).slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return fail(res, 'The application deadline looks wrong — use the date picker.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return fail(res, 'The application deadline looks wrong. Use the date picker.');
     if (d < new Date().toISOString().slice(0, 10)) return fail(res, "The application deadline can't be in the past.");
     deadline = d;
   }

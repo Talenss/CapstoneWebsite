@@ -328,7 +328,7 @@
                      the same fact twice. -->
                 <div class="p-sec evsec">
                   <h4>Where they used each skill</h4>
-                  <p class="evnote">Answered by the applicant when they built the resume. A source of &ldquo;Uploaded resume file&rdquo; means the skill was read out of the document they attached, which you can open above. Not printed on their resume &mdash; this view is the only place it appears.</p>
+                  <p class="evnote">Answered by the applicant when they built the resume. A source of &ldquo;Uploaded resume file&rdquo; means the skill was read out of the document they attached, which you can open above. Not printed on their resume: this view is the only place it appears.</p>
                   @for (s of r.resume.skills; track s) {
                     <div class="evrow">
                       <b [class.hit]="r.matchedSkills.includes(s)">{{ s }}</b>
@@ -401,7 +401,7 @@
                        place they can see what the software made of the
                        document — which is the point of scoring it at all. -->
                   <div class="docx-read">
-                    <p class="docx-note">Word files can't be shown in a browser. This is what the system read out of it — download for the original layout.</p>
+                    <p class="docx-note">Word files can't be shown in a browser. This is what the system read out of it. Download it for the original layout.</p>
                     <!-- Each section binds its field with `as` before reading it.
                          `extract` is unvalidated JSON out of a database column, so a
                          field can genuinely be absent; binding narrows the type and

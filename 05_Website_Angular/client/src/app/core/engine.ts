@@ -182,7 +182,7 @@ export const STATUS_LABELS: Record<AppStatus, string> = {
   shortlisted: 'Shortlisted',
   final_interview: 'Final interview & selection',
   offer: 'Job offer',
-  hired: 'Hired — onboarding',
+  hired: 'Hired (onboarding)',
   rejected: 'Not selected',
   withdrawn: 'Withdrawn',
   review: 'Under review', // legacy — only for rows written before the pipeline was expanded

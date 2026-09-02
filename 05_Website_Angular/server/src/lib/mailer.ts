@@ -96,7 +96,7 @@ const COPY: Record<CodePurpose, { subject: string; heading: string; line: string
   reset: {
     subject: 'Your Linaw PH password reset code',
     heading: 'Reset your password',
-    line: 'Use this code to set a new password for your Linaw PH account. It expires in 10 minutes. If you didn’t ask for this, you can safely ignore this email — your password is unchanged.',
+    line: 'Use this code to set a new password for your Linaw PH account. It expires in 10 minutes. If you didn’t ask for this, you can safely ignore this email. Your password is unchanged.',
   },
 };
 
@@ -149,7 +149,7 @@ export async function sendCodeEmail(to: string, code: string, purpose: CodePurpo
       <p style="margin:0 0 22px;font-size:14.5px;line-height:1.65;color:#4C5566">${c.line}</p>
       <div style="text-align:center;margin:0 0 22px">${digits}</div>
       <p style="margin:0;font-size:12.5px;line-height:1.6;color:#8A8FA0">
-        Never share this code with anyone — Linaw PH staff will never ask for it.
+        Never share this code with anyone. Linaw PH staff will never ask for it.
         If you didn’t request it, no action is needed.
       </p>`,
   );

@@ -15,7 +15,9 @@
 }
 .aside > * { position: relative; }
 .aside h2 { color: #fff; font-size: 36px; margin-bottom: 16px; line-height: 1.1; }
-.aside h2 em { font-style: italic; color: #F0A9AC; }
+/* <em> keeps its meaning for a screen reader; the italic is dropped because
+   a serif italic accent in a headline reads as a generated-UI default. */
+.aside h2 em { font-style: normal; color: #F0A9AC; }
 .aside p { font-size: 15px; line-height: 1.75; max-width: 44ch; }
 .aside .plaque {
   margin-top: 32px; background: var(--ink-2); border: 1px solid var(--ink-line);
