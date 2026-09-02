@@ -4,7 +4,7 @@
   <div class="page-head">
     <span class="eyebrow">Upload &amp; analyze</span>
     <h1>Start from the resume you already have</h1>
-    <p>Upload your existing resume and the system reads it for you. It extracts your skills, education, and experience into the guided builder, where <b>you review and correct everything before anything is saved</b>. The same transparent formula (skills {{ WEIGHTS.skills * 100 }}% · education {{ WEIGHTS.education * 100 }}% · experience {{ WEIGHTS.experience * 100 }}%) then scores it against every opening. Prefer to type it in yourself? <a routerLink="/resume-builder">Use the builder directly</a>.</p>
+    <p>Upload your existing resume and the system reads it for you. It extracts your skills, education, and experience into the guided builder, where <b>you review and correct everything before anything is saved</b>. The same transparent, rule-based formula then scores it against each opening, on the skills, education and experience that opening asks for. Prefer to type it in yourself? <a routerLink="/resume-builder">Use the builder directly</a>.</p>
   </div>
 
   @if (errorMsg()) {
@@ -124,7 +124,7 @@
         </div>
 
         <div class="f-sec">
-          <h3>Skills <span class="n">({{ result()!.skills.length }}), half of every score</span></h3>
+          <h3>Skills <span class="n">({{ result()!.skills.length }}), usually the biggest part of a score</span></h3>
           @if (result()!.skills.length) {
             <div>
               @for (s of result()!.skills; track s) { <span class="chip">{{ s }}</span> }

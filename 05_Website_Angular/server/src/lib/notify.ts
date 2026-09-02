@@ -167,7 +167,7 @@ export async function notifyNewPostingMatch(
     `
       <h1 style="margin:0 0 10px;font-size:22px">A new opening fits your resume</h1>
       <p style="margin:0;font-size:14.5px;line-height:1.65;color:#4C5566">Hi ${esc(seekerName)},</p>
-      <p style="margin:10px 0 0;font-size:14.5px;line-height:1.65;color:#4C5566">${esc(companyName)} just posted <b>${t}</b>, and your active resume scores <b>${Math.round(score)}%</b> against its stated requirements — ${label}. Same transparent formula as always: skills 50%, education 25%, experience 25%.</p>
+      <p style="margin:10px 0 0;font-size:14.5px;line-height:1.65;color:#4C5566">${esc(companyName)} just posted <b>${t}</b>, and your active resume scores <b>${Math.round(score)}%</b> against its stated requirements — ${label}. The score reflects the skills, education and experience this opening asks for; open it to see the exact breakdown.</p>
       ${btn(`${APP_URL}/browse`, 'See the opening')}
       ${foot}`,
   );

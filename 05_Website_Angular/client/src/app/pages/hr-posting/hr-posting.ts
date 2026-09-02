@@ -63,7 +63,7 @@ export class HrPosting {
   wEdu = signal(Math.round(WEIGHTS.education * 100));
   wExp = signal(Math.round(WEIGHTS.experience * 100));
   /* Certifications start at nothing, which is the whole design: the study's
-     published split is 50/25/25 across three, and this component exists only
+     default split is 50/25/25 across three, and this component exists only
      for the recruiter who deliberately wants it. */
   wCert = signal(0);
   certsVal = signal<string[]>([]);

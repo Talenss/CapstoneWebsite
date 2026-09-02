@@ -108,7 +108,7 @@
                  "optional" tag and four did not, while only the school is
                  actually needed. Stating the rule is what makes the tags
                  below mean anything. -->
-            <p class="sub">The level you pick here is a quarter of every compatibility score, so choose the one that matches the diploma you actually hold. A new entry starts at <b>Not stated yet</b>, which counts as nothing. The system never assumes a qualification for you. An entry needs the <b>school</b> filled in before your resume can be scored; anything marked <b>optional</b> can be left blank, though a recruiter reads all of it.</p>
+            <p class="sub">The level you pick here counts toward every compatibility score, so choose the one that matches the diploma you actually hold. A new entry starts at <b>Not stated yet</b>, which counts as nothing. The system never assumes a qualification for you. An entry needs the <b>school</b> filled in before your resume can be scored; anything marked <b>optional</b> can be left blank, though a recruiter reads all of it.</p>
             <div>
               @for (e of resume().education; track $index) {
                 <div class="item">
@@ -137,7 +137,7 @@
                       <!-- Deliberately not tagged "optional": this select is
                            never empty, it starts at "Not stated yet", and it is
                            the only field on this step the score reads. -->
-                      <label [for]="'edu-level-' + $index">Level <span class="opt">counts for {{ WEIGHTS.education * 100 }}%</span></label>
+                      <label [for]="'edu-level-' + $index">Level <span class="opt">counts toward your score</span></label>
                       <select [id]="'edu-level-' + $index" [value]="e.level" (change)="updateEducation($index, 'level', inputValue($event))">
                         @for (opt of eduLevelOptions; track opt.value) {
                           <option [value]="opt.value">{{ opt.label }}</option>
@@ -249,7 +249,7 @@
         @if (step() === 3) {
           <section class="step" id="s3">
             <h2>Skills</h2>
-            <p class="sub">Half of every score comes from this one list. Be specific. "MySQL" scores; "computer skills" doesn't match anything.</p>
+            <p class="sub">Usually the biggest part of a score comes from this one list. Be specific. "MySQL" scores; "computer skills" doesn't match anything.</p>
             <div class="field" style="margin-bottom:8px">
               <label for="skillInput">Add a skill</label>
               <input type="text" id="skillInput" list="skillOpts" placeholder="Type any skill, then press Enter" autocomplete="off" (keydown)="onSkillKeydown($event)" (change)="onSkillChange($event)">

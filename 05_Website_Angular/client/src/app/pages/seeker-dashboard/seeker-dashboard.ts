@@ -223,7 +223,7 @@ export class SeekerDashboard implements OnInit {
       [
         { sel: '#picker', title: 'Your active resume', text: 'Every score on this page comes from this one resume. Keep several versions and switch between them, the board re-scores instantly.' },
         { sel: '#board .tier:first-child', title: 'Matches, in three tiers', text: 'Strong, possible, and related. That third tier is the point: a low score redirects you to roles that fit, rather than shutting a door.' },
-        { sel: '#board .score-ring', title: 'What the number means', text: 'Skills are half of it, education and experience a quarter each. Open any match to see the full breakdown, the same one the recruiter sees.' },
+        { sel: '#board .score-ring', title: 'What the number means', text: 'Skills usually count for the most, with education and experience behind them. Open any match to see the exact breakdown for that opening — each one sets its own balance, and it is the same breakdown the recruiter sees.' },
         { sel: '#appsSection', title: 'Follow your applications', text: 'Submitted, Under review, Shortlisted, Hired, or Not selected. Every one of those is set by a person at Clark Outsourcing, never by the system.' },
         { sel: '[data-tour]', title: 'Lost? Come back here', text: 'This tour is always available from this button, on every page. Nothing you do here is permanent until you say so.' },
       ],
