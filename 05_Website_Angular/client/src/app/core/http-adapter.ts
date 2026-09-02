@@ -8,7 +8,7 @@
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ApiAdapter } from './adapter';
-import { AdminRecruiter, AnalyzedResume, Application, ApiResult, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
+import { AdminRecruiter, AnalyzedResume, Application, ApiResult, Company, HrStats, InviteSchedule, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
 import { MAX_UPLOAD, ALLOWED_MIME } from './engine';
 
 export class HttpAdapter implements ApiAdapter {
@@ -97,7 +97,10 @@ export class HttpAdapter implements ApiAdapter {
     noteAdd: (id: string, body: string) => this.call<{ id: string }>('applications', 'note-add', { id, body }),
     noteDelete: (id: string) => this.call<Record<string, never>>('applications', 'note-delete', { id }),
     withdraw: (id: string) => this.call<{ application: Application }>('applications', 'withdraw', { id }),
-    invite: (id: string, message: string) => this.call<{ sent?: boolean; simulated?: boolean }>('applications', 'invite', { id, message }),
+    invite: (id: string, message: string, schedule?: InviteSchedule) => this.call<{ sent?: boolean; simulated?: boolean }>('applications', 'invite', {
+      id, message,
+      ...(schedule ? { when: schedule.startIso, durationMinutes: schedule.durationMinutes, location: schedule.location } : {}),
+    }),
     history: (id: string) => this.call<{ events: StatusEvent[] }>('applications', 'history', { id }),
   };
 

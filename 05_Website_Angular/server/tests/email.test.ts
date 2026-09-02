@@ -299,6 +299,37 @@ test('an interview invitation reaches the applicant and replies to the recruiter
   assert.match(mail.raw, /Reply-To:/i, 'an interview invitation needs a Reply-To');
 });
 
+test('an invite with a chosen time carries a Google Calendar link and an .ics', async () => {
+  sink.clear();
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const postingId = (await hr('postings/mine')).body.postings[0].id;
+  const ranked = (await hr('applications/ranked', { postingId })).body.rows;
+  if (!ranked?.length) return;
+
+  const sent = await hr('applications/invite', {
+    id: ranked[0].application.id,
+    message: 'Please find a proposed interview time below. Reply to confirm or suggest another.',
+    when: '2026-09-10T06:30:00.000Z',
+    durationMinutes: 45,
+    location: 'Video call',
+  });
+  assert.equal(sent.body.ok, true, 'the scheduled invitation must send: ' + JSON.stringify(sent.body));
+
+  const mail = await sink.waitFor((m) => /calendar\.google\.com/.test(m.raw));
+  assert.match(mail.raw, /calendar\.google\.com\/calendar\/render/, 'an Add-to-Google-Calendar link must be present');
+  assert.match(mail.raw, /text\/calendar/i, 'the calendar file must be attached');
+
+  /* The .ics rides as a base64 MIME part, so decode every base64-looking
+     block and prove the real event text — not just the header — went out. */
+  const decoded = (mail.raw.match(/(?:[A-Za-z0-9+/=]{60,}\r?\n)+[A-Za-z0-9+/=]*/g) || [])
+    .map((b) => Buffer.from(b.replace(/\s+/g, ''), 'base64').toString('utf8'))
+    .join('\n');
+  assert.match(decoded, /BEGIN:VCALENDAR/, 'the attachment must be a real calendar document');
+  assert.match(decoded, /DTSTART:20260910T063000Z/, 'the .ics must carry the chosen start time');
+  assert.match(decoded, /DTEND:20260910T071500Z/, 'the .ics must honour the 45-minute length');
+});
+
 test('a new posting alerts seekers whose resume matches', async () => {
   sink.clear();
   const hr = client();

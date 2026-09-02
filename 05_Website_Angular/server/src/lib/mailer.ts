@@ -8,6 +8,13 @@ import { SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, MAIL_FROM, BRE
 
 export type CodePurpose = 'verify' | 'reset';
 
+/** A small text attachment — used for the interview .ics calendar file. */
+export interface MailAttachment {
+  filename: string;
+  content: string;
+  contentType?: string;
+}
+
 export function mailConfigured(): boolean {
   return !!(MAIL_FROM && (BREVO_API_KEY || SMTP_HOST));
 }
@@ -32,6 +39,7 @@ function parseAddress(v: string): { name?: string; email: string } {
  *  free instances cannot reach an SMTP port at all, while HTTPS is open. */
 async function sendViaHttps(
   to: string, subject: string, text: string, html: string, replyTo?: string,
+  attachment?: MailAttachment,
 ): Promise<void> {
   const res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
@@ -43,6 +51,8 @@ async function sendViaHttps(
       htmlContent: html,
       textContent: text,
       ...(replyTo ? { replyTo: { email: replyTo } } : {}),
+      // Brevo takes attachments as base64 content plus a filename.
+      ...(attachment ? { attachment: [{ name: attachment.filename, content: Buffer.from(attachment.content, 'utf8').toString('base64') }] } : {}),
     }),
   });
   if (!res.ok) {
@@ -108,16 +118,19 @@ function shell(bodyHtml: string): string {
 
 /** Generic branded email. `bodyHtml` goes inside the shell; `text` is the
  *  plain-text alternative. */
-export async function sendMail(to: string, subject: string, text: string, bodyHtml: string, opts?: { replyTo?: string }): Promise<void> {
+export async function sendMail(to: string, subject: string, text: string, bodyHtml: string, opts?: { replyTo?: string; attachment?: MailAttachment }): Promise<void> {
   const body = `${text}\n\n— Linaw PH · an academic capstone project, Holy Angel University`;
   const html = shell(bodyHtml);
 
   if (mailTransport() === 'https') {
-    await sendViaHttps(to, subject, body, html, opts?.replyTo);
+    await sendViaHttps(to, subject, body, html, opts?.replyTo, opts?.attachment);
     return;
   }
   await getTransport().sendMail({
     from: MAIL_FROM, to, replyTo: opts?.replyTo, subject, text: body, html,
+    ...(opts?.attachment
+      ? { attachments: [{ filename: opts.attachment.filename, content: opts.attachment.content, contentType: opts.attachment.contentType || 'text/calendar; method=REQUEST' }] }
+      : {}),
   });
 }
 

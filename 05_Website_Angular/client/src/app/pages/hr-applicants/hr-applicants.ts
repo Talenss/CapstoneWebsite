@@ -5,7 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
-import { AppStatus, Personal, Posting, RankedRow, RejectionReason, Resume, ScreeningNote, SkillEvidence, StatusEvent, Tier, RankedQuery} from '../../core/models';
+import { AppStatus, InviteSchedule, Personal, Posting, RankedRow, RejectionReason, Resume, ScreeningNote, SkillEvidence, StatusEvent, Tier, RankedQuery} from '../../core/models';
 import { APPLICANT_REASON_LABELS, EDU_LABELS, EVIDENCE_KIND_LABELS, evidenceSources, experienceLabel, REASON_LABELS, REJECTION_REASONS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 
@@ -86,6 +86,11 @@ export class HrApplicants {
   inviteOpen = signal(false);
   inviteText = signal('');
   inviteSending = signal(false);
+  // Optional interview time. When inviteWhen is set, the email also carries
+  // an "Add to Google Calendar" link and an .ics attachment.
+  inviteWhen = signal('');
+  inviteDuration = signal(60);
+  inviteLocation = signal('');
 
   openInvite(): void {
     const r = this.current();
@@ -94,24 +99,52 @@ export class HrApplicants {
     this.inviteText.set(
       `Hi ${first},\n\nThank you for applying to ${this.posting()?.title ?? 'our opening'}. We'd like to invite you to an interview. Could you tell us which days and times work for you this coming week?\n\nWe look forward to meeting you.`,
     );
+    this.inviteWhen.set('');
+    this.inviteDuration.set(60);
+    this.inviteLocation.set('');
     this.inviteOpen.set(true);
   }
 
   setInviteText(e: Event): void {
     this.inviteText.set((e.target as HTMLTextAreaElement).value);
   }
+  setInviteWhen(e: Event): void {
+    this.inviteWhen.set((e.target as HTMLInputElement).value);
+  }
+  setInviteDuration(e: Event): void {
+    this.inviteDuration.set(Number((e.target as HTMLSelectElement).value) || 60);
+  }
+  setInviteLocation(e: Event): void {
+    this.inviteLocation.set((e.target as HTMLInputElement).value);
+  }
 
   async sendInvite(): Promise<void> {
     const r = this.current();
     if (!r) return;
+    // A datetime-local value ("2026-09-10T14:30") has no timezone; new Date()
+    // reads it as the recruiter's local time, and toISOString() pins it to an
+    // absolute instant so every calendar shows the same wall-clock time.
+    let schedule: InviteSchedule | undefined;
+    const whenRaw = this.inviteWhen().trim();
+    if (whenRaw) {
+      const d = new Date(whenRaw);
+      if (!Number.isNaN(d.getTime())) {
+        schedule = {
+          startIso: d.toISOString(),
+          durationMinutes: this.inviteDuration(),
+          location: this.inviteLocation().trim() || undefined,
+        };
+      }
+    }
     this.inviteSending.set(true);
-    const res = await this.api.applications.invite(r.application.id, this.inviteText().trim());
+    const res = await this.api.applications.invite(r.application.id, this.inviteText().trim(), schedule);
     this.inviteSending.set(false);
     if (!res.ok) { this.showToast(res.error); return; }
     this.inviteOpen.set(false);
+    const withCal = schedule ? ' A calendar invite was included.' : '';
     this.showToast(res.simulated
-      ? `Demo mode, in the real system this message is emailed to ${r.seeker.name}, with replies going to your inbox.`
-      : `Message emailed to ${r.seeker.name}. Their reply will land in your inbox.`);
+      ? `Demo mode, in the real system this message is emailed to ${r.seeker.name}, with replies going to your inbox.${withCal}`
+      : `Message emailed to ${r.seeker.name}. Their reply will land in your inbox.${withCal}`);
   }
 
   toastMsg = signal<string | null>(null);

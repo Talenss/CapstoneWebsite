@@ -350,6 +350,16 @@ export interface StatusEvent {
   reason?: RejectionReason;
 }
 
+/** An optional interview time a recruiter attaches to an invite. `startIso`
+ *  is an absolute instant (a datetime-local field converted to ISO), so the
+ *  applicant's calendar shows it in their own timezone. Turned into an
+ *  "Add to Google Calendar" link and an .ics attachment in the email. */
+export interface InviteSchedule {
+  startIso: string;
+  durationMinutes?: number;
+  location?: string;
+}
+
 /* ------------------------------------------------------------
    EVIDENCE-LINKED SKILLS, mirrored from server/src/lib/engine.ts, where the
    reasoning is written out in full. In short: the builder asks where each
