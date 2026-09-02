@@ -226,10 +226,10 @@ function seed(): Db {
         skills: ['Medical Terminology', 'Customer Service', 'Scheduling', 'English Proficiency'], educationLevel: 'bachelor', minExperienceMonths: 12, status: 'open', createdAt: Date.now() - D * 2 },
     ] as unknown as Posting[],
     applications: [
-      { id: 'a1', seekerId: 'u3', resumeId: 'r2', postingId: 'p1', status: 'review', appliedAt: Date.now() - D * 3, scoreSnapshot: 82 },
+      { id: 'a1', seekerId: 'u3', resumeId: 'r2', postingId: 'p1', status: 'initial_interview', appliedAt: Date.now() - D * 3, scoreSnapshot: 82 },
       { id: 'a2', seekerId: 'u4', resumeId: 'r3', postingId: 'p1', status: 'submitted', appliedAt: Date.now() - D * 2, scoreSnapshot: 64 },
       { id: 'a3', seekerId: 'u4', resumeId: 'r3', postingId: 'p3', status: 'shortlisted', appliedAt: Date.now() - D * 4, scoreSnapshot: 91 },
-      { id: 'a4', seekerId: 'u5', resumeId: 'r4', postingId: 'p5', status: 'review', appliedAt: Date.now() - D * 3, scoreSnapshot: 47 },
+      { id: 'a4', seekerId: 'u5', resumeId: 'r4', postingId: 'p5', status: 'scheduling', appliedAt: Date.now() - D * 3, scoreSnapshot: 47 },
       { id: 'a5', seekerId: 'u5', resumeId: 'r4', postingId: 'p6', status: 'submitted', appliedAt: Date.now() - D * 1, scoreSnapshot: 73 },
     ] as unknown as Application[],
     recruiterRequests: [
@@ -252,16 +252,17 @@ function seed(): Db {
        the one event that applying creates. */
     statusHistory: [
       { applicationId: 'a1', from: null, to: 'submitted', at: Date.now() - D * 3, by: 'applicant' },
-      { applicationId: 'a1', from: 'submitted', to: 'review', at: Date.now() - D * 1, by: 'employer', byUserId: 'u2' },
+      { applicationId: 'a1', from: 'submitted', to: 'scheduling', at: Date.now() - D * 2, by: 'employer', byUserId: 'u2' },
+      { applicationId: 'a1', from: 'scheduling', to: 'initial_interview', at: Date.now() - D * 1, by: 'employer', byUserId: 'u2' },
 
       { applicationId: 'a2', from: null, to: 'submitted', at: Date.now() - D * 2, by: 'applicant' },
 
       { applicationId: 'a3', from: null, to: 'submitted', at: Date.now() - D * 4, by: 'applicant' },
-      { applicationId: 'a3', from: 'submitted', to: 'review', at: Date.now() - D * 3, by: 'employer', byUserId: 'u2' },
-      { applicationId: 'a3', from: 'review', to: 'shortlisted', at: Date.now() - D * 1, by: 'employer', byUserId: 'u7' },
+      { applicationId: 'a3', from: 'submitted', to: 'testing', at: Date.now() - D * 3, by: 'employer', byUserId: 'u2' },
+      { applicationId: 'a3', from: 'testing', to: 'shortlisted', at: Date.now() - D * 1, by: 'employer', byUserId: 'u7' },
 
       { applicationId: 'a4', from: null, to: 'submitted', at: Date.now() - D * 3, by: 'applicant' },
-      { applicationId: 'a4', from: 'submitted', to: 'review', at: Date.now() - D * 2, by: 'employer', byUserId: 'u2' },
+      { applicationId: 'a4', from: 'submitted', to: 'scheduling', at: Date.now() - D * 2, by: 'employer', byUserId: 'u2' },
 
       { applicationId: 'a5', from: null, to: 'submitted', at: Date.now() - D * 1, by: 'applicant' },
     ],

@@ -149,7 +149,7 @@
     @if (applications().length) {
       <div class="tally" id="tally">
         <div><b>{{ applications().length }}</b><span>Applied</span></div>
-        <div><b>{{ countByStatus('submitted') + countByStatus('review') }}</b><span>In progress</span></div>
+        <div><b>{{ inProgressCount() }}</b><span>In progress</span></div>
         <div><b>{{ countByStatus('shortlisted') }}</b><span>Shortlisted</span></div>
         <div><b>{{ countByStatus('hired') }}</b><span>Hired</span></div>
       </div>

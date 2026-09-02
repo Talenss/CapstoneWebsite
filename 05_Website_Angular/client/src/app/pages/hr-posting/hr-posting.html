@@ -93,9 +93,9 @@
           </select>
         </div>
         <div class="field">
-          <label for="months">Minimum experience <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">· {{ wExp() }}%</span></label>
-          <input type="number" id="months" min="0" step="1" [value]="monthsVal()" (input)="setMonths($event)">
-          <p class="hint">In months. Enter 0 to open the role to fresh graduates.</p>
+          <label for="years">Minimum experience <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">· {{ wExp() }}%</span></label>
+          <input type="number" id="years" min="0" step="0.5" [value]="yearsVal()" (input)="setYears($event)">
+          <p class="hint">In years. Enter 0 to open the role to fresh graduates. Half-years are fine — 0.5 is six months.</p>
         </div>
       </div>
 

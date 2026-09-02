@@ -6,7 +6,7 @@ import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { AppStatus, Personal, Posting, RankedRow, RejectionReason, Resume, ScreeningNote, SkillEvidence, StatusEvent, Tier, RankedQuery} from '../../core/models';
-import { APPLICANT_REASON_LABELS, EDU_LABELS, EVIDENCE_KIND_LABELS, REASON_LABELS, REJECTION_REASONS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
+import { APPLICANT_REASON_LABELS, EDU_LABELS, EVIDENCE_KIND_LABELS, experienceLabel, REASON_LABELS, REJECTION_REASONS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 
 /** Port of the PHP hr-applicants.html — the ranked-applicant list
@@ -27,6 +27,7 @@ export class HrApplicants {
   private sanitizer = inject(DomSanitizer);
 
   readonly statusOrder = STATUS_ORDER;
+  readonly experienceLabel = experienceLabel;
   readonly statusLabels = STATUS_LABELS;
   readonly eduLabels = EDU_LABELS;
   readonly weights = WEIGHTS;
@@ -135,7 +136,7 @@ export class HrApplicants {
     return (
       n + ' applicant' + (n === 1 ? '' : 's') + ' · asking for ' +
       p.skills.join(', ') + ' · ' + EDU_LABELS[p.educationLevel].toLowerCase() +
-      (p.minExperienceMonths ? ' · ' + p.minExperienceMonths + ' months experience' : ' · no experience required')
+      ' · ' + experienceLabel(p.minExperienceMonths || 0).toLowerCase()
     );
   });
 

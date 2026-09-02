@@ -34,6 +34,31 @@ const STATUS_COPY: Record<string, { subject: (t: string) => string; heading: str
     heading: 'Someone is reading your application',
     line: (t, c) => `A person at ${c} has started reviewing your application for <b>${t}</b>. No action needed — you’ll hear again when they decide the next step.`,
   },
+  scheduling: {
+    subject: (t) => `Your ${t} application is moving forward`,
+    heading: 'You’re being scheduled',
+    line: (t, c) => `A recruiter at ${c} moved your application for <b>${t}</b> to scheduling. They’ll reach you through the contact details on your resume to arrange the next step.`,
+  },
+  initial_interview: {
+    subject: (t) => `Initial interview — ${t}`,
+    heading: 'You’re up for an initial interview',
+    line: (t, c) => `A recruiter at ${c} has set your application for <b>${t}</b> for an initial interview. Watch the email and phone number on your resume for the details.`,
+  },
+  testing: {
+    subject: (t) => `Assessment stage — ${t}`,
+    heading: 'You’ve reached the assessment stage',
+    line: (t, c) => `Your application for <b>${t}</b> at ${c} has moved to testing. A recruiter will send you what the assessment involves.`,
+  },
+  final_interview: {
+    subject: (t) => `Final interview — ${t}`,
+    heading: 'You’ve reached the final interview',
+    line: (t, c) => `Good news — a recruiter at ${c} moved your application for <b>${t}</b> to the final interview and selection stage. Expect them to make contact soon.`,
+  },
+  offer: {
+    subject: (t) => `A job offer for ${t}`,
+    heading: 'There’s an offer on the table',
+    line: (t, c) => `A recruiter at ${c} marked your application for <b>${t}</b> as a <b>job offer</b>. They’ll be in touch about the details — congratulations.`,
+  },
   shortlisted: {
     subject: (t) => `You’ve been shortlisted for ${t}`,
     heading: 'You made the shortlist',

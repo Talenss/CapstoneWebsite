@@ -167,18 +167,34 @@ export function evidenceLabels(resume: {
 }
 
 export const STATUS_LABELS: Record<AppStatus, string> = {
-  submitted: 'Submitted', review: 'Under review', shortlisted: 'Shortlisted', rejected: 'Not selected', hired: 'Hired',
+  submitted: 'Applied',
+  scheduling: 'For scheduling',
+  initial_interview: 'For initial interview',
+  testing: 'For testing',
+  shortlisted: 'Shortlisted',
+  final_interview: 'Final interview & selection',
+  offer: 'Job offer',
+  hired: 'Hired — onboarding',
+  rejected: 'Not selected',
   withdrawn: 'Withdrawn',
+  review: 'Under review', // legacy — only for rows written before the pipeline was expanded
 };
-/** The statuses a RECRUITER may set, in pipeline order. 'withdrawn' is
- *  deliberately absent: only the applicant can withdraw their own
- *  application, so it is never an option in a recruiter's status picker. */
-export const STATUS_ORDER: AppStatus[] = ['submitted', 'review', 'shortlisted', 'rejected', 'hired'];
+/** The statuses a RECRUITER may set, in the partner's pipeline order, with
+ *  'rejected' as the off-ramp at the end. 'withdrawn' is deliberately absent:
+ *  only the applicant can withdraw their own application, so it is never an
+ *  option in a recruiter's status picker. 'review' is absent too — it is a
+ *  legacy value that predates the eight-stage pipeline, kept renderable below
+ *  but no longer offered. */
+export const STATUS_ORDER: AppStatus[] = [
+  'submitted', 'scheduling', 'initial_interview', 'testing', 'shortlisted',
+  'final_interview', 'offer', 'hired', 'rejected',
+];
 
 /* Every status a row can actually hold. Counts and breakdowns must use this
    one, building them from STATUS_ORDER left 'withdrawn' out entirely, so a
-   withdrawn application simply vanished from the recruiter's totals. */
-export const ALL_STATUSES: AppStatus[] = [...STATUS_ORDER, 'withdrawn'];
+   withdrawn application simply vanished from the recruiter's totals. 'review'
+   is included for the same reason: a legacy row must still be counted. */
+export const ALL_STATUSES: AppStatus[] = [...STATUS_ORDER, 'withdrawn', 'review'];
 
 export const EDU_RANK: Record<EduLevel, number> = {
   none: 0, highschool: 1, vocational: 2, associate: 3, bachelor: 4, master: 5,
@@ -187,6 +203,21 @@ export const EDU_LABELS: Record<EduLevel, string> = {
   none: 'No requirement', highschool: 'High school', vocational: 'Vocational / TESDA',
   associate: 'Associate degree', bachelor: 'Bachelor’s degree', master: 'Master’s degree',
 };
+
+/** How a posting's minimum-experience requirement reads to a person. The
+ *  partner states requirements in years (Clark Outsourcing information
+ *  request, section 5), so the recruiter now enters years and this renders
+ *  them: whole years read as years, a sub-year requirement as months (also
+ *  the unit an applicant enters on their own resume), and a mixed one as both.
+ *  The stored value stays months so the scoring engine is untouched. */
+export function experienceLabel(months: number): string {
+  const m = Math.max(0, Math.round(Number(months) || 0));
+  if (m === 0) return 'No experience required';
+  if (m % 12 === 0) { const y = m / 12; return `${y} year${y > 1 ? 's' : ''}`; }
+  if (m < 12) return `${m} month${m > 1 ? 's' : ''}`;
+  const y = Math.floor(m / 12), r = m % 12;
+  return `${y} year${y > 1 ? 's' : ''} ${r} month${r > 1 ? 's' : ''}`;
+}
 
 /** Password rule for anything that SETS a password, mirrored in
  *  server/src/lib/password.ts. Never checked at login, so accounts made
@@ -434,5 +465,11 @@ export function tierLabel(n: number): string {
   return t === 'strong' ? 'Strong match' : t === 'possible' ? 'Possible match' : 'Related role';
 }
 export function statusBadge(s: AppStatus): string {
-  return { submitted: 'slate', review: 'amber', shortlisted: 'green', hired: 'solid', rejected: 'wine', withdrawn: 'slate' }[s] || 'slate';
+  return {
+    submitted: 'slate',
+    scheduling: 'amber', initial_interview: 'amber', testing: 'amber',
+    shortlisted: 'green', final_interview: 'green', offer: 'green',
+    hired: 'solid', rejected: 'wine', withdrawn: 'slate',
+    review: 'amber', // legacy
+  }[s] || 'slate';
 }

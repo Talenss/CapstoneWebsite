@@ -5,7 +5,7 @@ import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { Company, MatchResult, Posting, Resume } from '../../core/models';
-import { EDU_LABELS, WEIGHTS, missingHint, scoreLocal, tierColor, tierLabel, tierOf, weightsFor } from '../../core/engine';
+import { EDU_LABELS, WEIGHTS, experienceLabel, missingHint, scoreLocal, tierColor, tierLabel, tierOf, weightsFor } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 import { Seo } from '../../core/seo';
 
@@ -36,6 +36,7 @@ export class Browse implements OnInit, OnDestroy {
 
   readonly EDU_LABELS = EDU_LABELS;
   readonly WEIGHTS = WEIGHTS;
+  readonly experienceLabel = experienceLabel;
   readonly tierColor = tierColor;
   readonly tierLabel = tierLabel;
 

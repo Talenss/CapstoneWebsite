@@ -63,7 +63,18 @@ export type ResumeDesign =
   | 'classic' | 'modern' | 'minimal' | 'executive' | 'banner' | 'split' | 'bar' | 'categorized'
   | 'traditional' | 'clean' | 'compact' | 'senior' | 'graduate' | 'technical';
 export type EmploymentType = 'full-time' | 'part-time' | 'contract' | 'internship';
-export type AppStatus = 'submitted' | 'review' | 'shortlisted' | 'rejected' | 'hired' | 'withdrawn';
+/* The application pipeline, aligned to the partner's own eight stages
+   (Clark Outsourcing information request, section 6). The recruiter-settable
+   pipeline is: submitted (their "Applied") → scheduling → initial_interview →
+   testing → shortlisted → final_interview → offer → hired (their "New employee
+   onboarding"), with 'rejected' as the off-ramp and 'withdrawn' as the
+   applicant's own exit. 'review' is retained only so rows written before the
+   pipeline was expanded still render and count — it is no longer offered in
+   the picker. */
+export type AppStatus =
+  | 'submitted' | 'scheduling' | 'initial_interview' | 'testing' | 'shortlisted'
+  | 'final_interview' | 'offer' | 'hired' | 'rejected' | 'withdrawn'
+  | 'review';
 export type Tier = 'strong' | 'possible' | 'related';
 
 export interface User {

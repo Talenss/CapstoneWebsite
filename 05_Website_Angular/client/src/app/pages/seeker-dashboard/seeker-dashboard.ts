@@ -117,7 +117,11 @@ export class SeekerDashboard implements OnInit {
   historyLabel(e: StatusEvent): string {
     if (e.from === null) return 'You applied';
     if (e.to === 'withdrawn') return 'You withdrew this application';
-    return 'Moved to ' + STATUS_LABELS[e.to].toLowerCase();
+    // Several pipeline labels begin with "For " (For scheduling, For initial
+    // interview…), which reads as a state on a badge but as a stumble after
+    // "Moved to". Drop that lead-in here only.
+    const label = STATUS_LABELS[e.to].replace(/^For /, '');
+    return 'Moved to ' + label.toLowerCase();
   }
 
   /** How many requirements are unmet and of what kind, never which ones —
@@ -268,6 +272,16 @@ export class SeekerDashboard implements OnInit {
 
   countByStatus(status: AppStatus): number {
     return this.applications().filter((a) => a.status === status).length;
+  }
+
+  /** "In progress" = with a recruiter and still moving: every pipeline stage
+   *  between applying and a shortlist, plus the legacy 'review'. Written as a
+   *  set of the stages that are NOT in progress so a new pipeline stage is
+   *  counted by default rather than silently dropped from the summary — the
+   *  bug that appeared when the pipeline grew from six stages to eight. */
+  inProgressCount(): number {
+    const settled = new Set<AppStatus>(['shortlisted', 'hired', 'rejected', 'withdrawn']);
+    return this.applications().filter((a) => !settled.has(a.status)).length;
   }
 
   day(ts: number): string {

@@ -677,7 +677,7 @@ test('a recruiter sees WHICH colleague made each change', async () => {
   assert.ok(row, 'expected a non-withdrawn applicant on posting 1');
 
   // make a change so there is definitely a named employer event
-  await hr('applications/set-status', { id: row.application.id, status: 'review' });
+  await hr('applications/set-status', { id: row.application.id, status: 'scheduling' });
 
   const { body } = await hr('applications/history', { id: row.application.id });
   assert.equal(body.ok, true);

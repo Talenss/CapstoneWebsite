@@ -95,7 +95,7 @@
             </div>
             <div class="req">
               <span>{{ EDU_LABELS[row.posting.educationLevel] }}</span>
-              <span>{{ row.posting.minExperienceMonths ? row.posting.minExperienceMonths + ' months experience' : 'No experience required' }}</span>
+              <span>{{ experienceLabel(row.posting.minExperienceMonths || 0) }}</span>
               @if (deadlineLabel(row.posting); as dl) {
                 <span class="deadline">{{ dl }}</span>
               }
@@ -147,7 +147,7 @@
         <p style="font-size:14px;background:var(--ivory);border-radius:var(--r);padding:14px 16px;margin:16px 0">{{ row.posting.description }}</p>
         <div style="margin-bottom:14px">
           <span class="badge slate">{{ EDU_LABELS[row.posting.educationLevel] }}</span>
-          <span class="badge slate">{{ row.posting.minExperienceMonths ? row.posting.minExperienceMonths + ' months experience' : 'No experience required' }}</span>
+          <span class="badge slate">{{ experienceLabel(row.posting.minExperienceMonths || 0) }}</span>
           <span class="badge slate">{{ row.posting.employmentType || 'full-time' }}</span>
           @if (deadlineLabel(row.posting); as dl) {
             <span class="badge amber">{{ dl }}</span>
