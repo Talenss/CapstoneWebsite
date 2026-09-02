@@ -5,7 +5,7 @@
    src/styles.css — only the page-specific rules live here.
    ============================================================ */
 
-.wiz { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; margin: 26px 0 70px; }
+.wiz { display: grid; grid-template-columns: 1fr 1fr; gap:32px; align-items: start; margin:26px 0 72px; }
 @media (max-width: 1000px) { .wiz { grid-template-columns: 1fr; } }
 /* Grid items default to min-width:auto, which would let the step rail's
    content width blow the page out past a phone screen. Letting the
@@ -13,38 +13,38 @@
 .wiz > * { min-width: 0; }
 
 /* step rail — a real sequence, so it's numbered */
-.rail { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 1px solid var(--rule); overflow-x: auto; }
+.rail { display: flex; gap:0; margin-bottom:24px; border-bottom: 1px solid var(--rule); overflow-x: auto; }
 .rail button {
   flex: none; background: none; border: none; font-family: var(--body); font-size: 12.5px; font-weight: 600;
-  color: var(--muted); padding: 11px 15px; cursor: pointer; border-bottom: 2px solid transparent;
-  white-space: nowrap; display: flex; gap: 7px; align-items: center;
+  color: var(--muted); padding:12px 16px; cursor: pointer; border-bottom: 2px solid transparent;
+  white-space: nowrap; display: flex; gap:8px; align-items: center;
 }
 .rail button .n { font-family: var(--display); font-size: 15px; color: var(--faint); }
 .rail button[aria-current="true"] { color:var(--text); border-bottom-color: var(--accent); }
 .rail button[aria-current="true"] .n { color: var(--accent-deep); }
 .rail button.done .n { color: var(--emerald); }
 
-.step > h2 { font-size: 26px; margin-bottom: 4px; }
-.step > .sub { font-size: 13.5px; color: var(--muted); margin-bottom: 22px; max-width: 60ch; }
+.step > h2 { font-size: 26px; margin-bottom:4px; }
+.step > .sub { font-size: 13.5px; color: var(--muted); margin-bottom:22px; max-width: 60ch; }
 
-.item { border: 1px solid var(--rule); border-radius: var(--r); padding: 18px; margin-bottom: 14px; position: relative; background: var(--paper); }
+.item { border: 1px solid var(--rule); border-radius: var(--r); padding:18px; margin-bottom:14px; position: relative; background: var(--paper); }
 /* Per-entry controls. Order is part of a resume — the learning hub tells
    applicants to list the most recent first, and the chronological template
    is defined by it — so every repeatable entry can be moved instead of
    deleted and retyped. The row sits in normal flow rather than floating
    over the corner the way the lone Remove button used to: three controls
    are wide enough to land on top of a field on a narrow screen. */
-.item .tools { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin: -4px 0 12px; }
+.item .tools { display: flex; justify-content: flex-end; align-items: center; gap:6px; margin:-4px 0 12px; }
 .item .mv, .item .kill {
   background: none; border: 1px solid var(--rule); color: var(--muted); border-radius: 2px;
-  padding: 3px 9px; font-size: 11px; font-weight: 600; line-height: 1.35; cursor: pointer; font-family: var(--body);
+  padding:4px 8px; font-size: 11px; font-weight: 600; line-height: 1.35; cursor: pointer; font-family: var(--body);
 }
-.item .mv { min-width: 27px; padding: 3px 6px; }
+.item .mv { min-width: 27px; padding:4px 6px; }
 .item .mv:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-deep); background: var(--accent-wash); }
 .item .mv:disabled { opacity: .35; cursor: not-allowed; }
 .item .kill:hover { border-color: var(--wine); color: var(--wine); background: var(--wine-wash); }
 .add {
-  width: 100%; border: 1px dashed var(--rule); background: transparent; border-radius: var(--r); padding: 13px;
+  width: 100%; border: 1px dashed var(--rule); background: transparent; border-radius: var(--r); padding:12px;
   font-family: var(--body); font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer;
 }
 .add:hover { border-color: var(--accent); color: var(--accent-deep); background: var(--accent-wash); }
@@ -52,31 +52,31 @@
 /* "optional" marker inside a label, which is uppercase + letterspaced */
 .opt { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--muted); }
 /* a checkbox that has to sit at the same height as the input beside it */
-.check { display: flex; align-items: center; gap: 9px; min-height: 40px; cursor: pointer; }
-.check input { width: 16px; height: 16px; flex: none; margin: 0; }
+.check { display: flex; align-items: center; gap:8px; min-height: 40px; cursor: pointer; }
+.check input { width: 16px; height: 16px; flex: none; margin:0; }
 .check span { font-size: 13px; color: var(--muted); }
 /* group heading inside the "More sections" step */
-.grp { font-size: 19px; margin: 30px 0 4px; }
-.grp:first-of-type { margin-top: 6px; }
+.grp { font-size: 19px; margin:32px 0 4px; }
+.grp:first-of-type { margin-top:6px; }
 
-.tags { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0; }
+.tags { display: flex; flex-wrap: wrap; gap:8px; margin:12px 0; }
 .tag {
-  display: inline-flex; align-items: center; gap: 8px; background: var(--accent-wash); border: 1px solid var(--accent-line);
-  color: var(--accent-deep); font-size: 13px; font-weight: 600; border-radius: 2px; padding: 6px 7px 6px 12px;
+  display: inline-flex; align-items: center; gap:8px; background: var(--accent-wash); border: 1px solid var(--accent-line);
+  color: var(--accent-deep); font-size: 13px; font-weight: 600; border-radius: 2px; padding:6px 8px 6px 12px;
 }
 .tag button {
   border: none; background: var(--accent-deep); color: #fff; width: 17px; height: 17px; border-radius: 50%;
-  font-size: 10px; cursor: pointer; line-height: 1; display: grid; place-items: center; padding: 0;
+  font-size: 10px; cursor: pointer; line-height: 1; display: grid; place-items: center; padding:0;
 }
-.sugg { margin-top: 14px; }
+.sugg { margin-top:14px; }
 .sugg > b,
-.chosen > b { display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 9px; }
+.chosen > b { display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom:8px; }
 /* The chosen list is the one element on this step whose height changes as you
    click, so it sits after both pools. Above them it pushed the chips down by a
    row every time it wrapped, which is the same mis-click the picker itself
    used to cause. */
-.chosen { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--rule-2); }
-.chosen .tags { margin: 0; }
+.chosen { margin-top:20px; padding-top:16px; border-top: 1px solid var(--rule-2); }
+.chosen .tags { margin:0; }
 
 /* Each skill sits on its own row with its source beside it, rather than
    wrapping as free chips. The pairing has to be unambiguous — a dropdown that
@@ -85,26 +85,26 @@
 /* Source-first evidence: one card per job/school/project/certification, each
    holding the skill chips as toggles. Shares the chip styling below with the
    suggestion pools, so a ticked chip reads the same everywhere. */
-.src-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.src-list { display: flex; flex-direction: column; gap:10px; margin-top:12px; }
 .src-card {
-  border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; background: var(--paper);
+  border: 1px solid var(--rule); border-radius: 8px; padding:12px 14px; background: var(--paper);
   transition: border-color .15s, box-shadow .15s;
 }
 .src-card:focus-within { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-wash); }
-.src-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 9px; margin-bottom: 10px; }
+.src-head { display: flex; align-items: center; flex-wrap: wrap; gap:6px 8px; margin-bottom:10px; }
 .src-head b { font-size: 14px; color: var(--ink); }
 .src-kind {
   font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
   color: var(--muted); background: var(--slate-wash, rgba(0,0,0,.045)); border: 1px solid var(--rule-2);
-  border-radius: 999px; padding: 2px 9px; line-height: 1.6;
+  border-radius: 999px; padding:2px 8px; line-height: 1.6;
 }
 /* An unlinked skill chip is not an error, so it is only marked, not coloured. */
 .tag.nosrc { border-style: dashed; opacity: .8; }
-.sugg .pool, .src-card .pool { display: flex; flex-wrap: wrap; gap: 7px; }
+.sugg .pool, .src-card .pool { display: flex; flex-wrap: wrap; gap:8px; }
 .sugg button, .src-card .pool button {
   display: inline-flex; align-items: center;
   border: 1px dashed var(--rule); background: var(--paper); border-radius: 999px; font-size: 12.5px; color: var(--muted);
-  padding: 6px 13px 6px 11px; cursor: pointer; font-family: var(--body); line-height: 1.2;
+  padding:6px 12px 6px 12px; cursor: pointer; font-family: var(--body); line-height: 1.2;
   transition: border-color .12s, background .12s, color .12s;
 }
 .sugg button:hover, .src-card .pool button:hover { border-color: var(--accent); color: var(--accent-deep); border-style: solid; }
@@ -120,7 +120,7 @@
    border stays 1px, and the weight does not change. Choosing a chip must not
    move any other chip by a pixel, or the fix reintroduces the bug in
    miniature. */
-.sugg .mark, .src-card .mark { display: inline-block; width: 1em; margin-right: 6px; text-align: center; font-weight: 700; }
+.sugg .mark, .src-card .mark { display: inline-block; width: 1em; margin-right:6px; text-align: center; font-weight: 700; }
 .sugg .n { color: var(--faint); }
 .sugg button.on, .src-card .pool button.on {
   border-style: solid; border-color: var(--accent-line);
@@ -128,28 +128,28 @@
 }
 .sugg button.on .n { color: var(--accent-deep); opacity: .65; }
 
-.drop { border: 1px dashed var(--accent); border-radius: var(--r); background: var(--accent-wash); padding: 20px; text-align: center; }
+.drop { border: 1px dashed var(--accent); border-radius: var(--r); background: var(--accent-wash); padding:20px; text-align: center; }
 .drop.has { background: var(--paper); border-style: solid; border-color: var(--rule); text-align: left; }
-.drop .file { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.drop .file { display: flex; align-items: center; gap:12px; flex-wrap: wrap; }
 .drop .file b { font-size: 14px; }
 .drop .file span { font-size: 12px; color: var(--muted); }
 
-.tpl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.tpl { display: grid; grid-template-columns: repeat(3, 1fr); gap:10px; }
 @media (max-width: 560px) { .tpl { grid-template-columns: 1fr; } }
-.tpl label { border: 1px solid var(--rule); border-radius: var(--r); padding: 14px; cursor: pointer; background: var(--paper); transition: .15s; position: relative; }
+.tpl label { border: 1px solid var(--rule); border-radius: var(--r); padding:14px; cursor: pointer; background: var(--paper); transition: .15s; position: relative; }
 .tpl label:has(input:checked) { border-color: var(--accent); background: var(--accent-wash); }
 .tpl input { position: absolute; opacity: 0; }
 .tpl b { display: block; font-size: 13.5px; color:var(--text); }
-.tpl small { display: block; font-size: 11.5px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+.tpl small { display: block; font-size: 11.5px; color: var(--muted); margin-top:4px; line-height: 1.5; }
 
-.checks { list-style: none; display: grid; gap: 9px; margin-top: 6px; }
-.checks li { display: flex; gap: 9px; align-items: flex-start; font-size: 13.5px; color: var(--muted); }
+.checks { list-style: none; display: grid; gap:8px; margin-top:6px; }
+.checks li { display: flex; gap:8px; align-items: flex-start; font-size: 13.5px; color: var(--muted); }
 .checks li b { flex: none; width: 16px; text-align: center; font-weight: 700; }
 .checks li.ok b { color: var(--emerald); }
 .checks li.ok { color: var(--text); }
 .checks li.no b { color: var(--faint); }
 
-.nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
+.nav { display: flex; justify-content: space-between; gap:10px; margin-top:26px; flex-wrap: wrap; }
 
 /* live preview — the actual document.
 
@@ -168,7 +168,7 @@
    flow with the page — a capped, self-scrolling box there would trap the
    phone's scroll gesture inside the sheet. */
 @media (max-width: 1000px) { .preview { position: static; max-height: none; overflow: visible; } }
-.pv-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.pv-head { display: flex; justify-content: space-between; align-items: center; gap:10px; margin-bottom:12px; flex-wrap: wrap; }
 .pv-head h3 { font-size: 17px; }
 .paper {
   background: #fff; border: 1px solid var(--rule); border-radius: var(--r); padding: 34px 36px;
@@ -195,9 +195,9 @@
 .p-item li { font-size: 11.5px; margin-bottom: 2px; }
 
 /* ---- design picker ---- */
-.designs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-height: 320px; overflow-y: auto; padding-right: 2px; }
+.designs { display: grid; grid-template-columns: repeat(4, 1fr); gap:8px; max-height: 320px; overflow-y: auto; padding-right:2px; }
 @media (max-width: 520px) { .designs { grid-template-columns: repeat(2, 1fr); } }
-.design-opt { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 10px 12px;
+.design-opt { display: flex; flex-direction: column; gap:2px; text-align: left; padding:10px 12px;
   border: 1px solid var(--rule); border-radius: var(--r); background: var(--paper); cursor: pointer; transition: .14s; }
 .design-opt:hover { border-color: var(--accent); }
 .design-opt.on { border-color: var(--accent); background: var(--accent-wash); box-shadow: 0 0 0 1px var(--accent); }
@@ -276,13 +276,13 @@
 /* ---- the applicant's own file, previewed under the sheet ----
    Same treatment the recruiter's screen gives it, so what the applicant
    checks here is what the recruiter opens. */
-.own-file { margin-top: 16px; border: 1px solid var(--rule); border-radius: var(--r); overflow: hidden; background: var(--paper); }
-.own-file .of-head { display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 10px 14px; border-bottom: 1px solid var(--rule); background: var(--ivory); }
+.own-file { margin-top:16px; border: 1px solid var(--rule); border-radius: var(--r); overflow: hidden; background: var(--paper); }
+.own-file .of-head { display: flex; align-items: center; justify-content: space-between; gap:10px;
+  padding:10px 14px; border-bottom: 1px solid var(--rule); background: var(--ivory); }
 .own-file .of-head b { font-size: 13px; }
 .own-file iframe { display: block; width: 100%; height: 460px; border: none; background: #fff; }
-.own-file img { display: block; max-width: 100%; max-height: 460px; margin: 0 auto; object-fit: contain; background: #fff; }
-.own-file .of-none { padding: 34px 20px; text-align: center; color: var(--muted); font-size: 13px; background: #fff; }
-.own-file .of-foot { padding: 9px 14px; font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--rule); background: var(--ivory); }
+.own-file img { display: block; max-width: 100%; max-height: 460px; margin:0 auto; object-fit: contain; background: #fff; }
+.own-file .of-none { padding:32px 20px; text-align: center; color: var(--muted); font-size: 13px; background: #fff; }
+.own-file .of-foot { padding:8px 14px; font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--rule); background: var(--ivory); }
 
-.exports { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 14px; }
+.exports { display: flex; gap:8px; flex-wrap: wrap; margin-top:14px; }

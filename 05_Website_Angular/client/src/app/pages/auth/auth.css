@@ -5,7 +5,7 @@
 }
 
 .aside {
-  background: var(--ink); color: #A9B0BE; padding: 64px 52px;
+  background: var(--ink); color: #A9B0BE; padding:64px 52px;
   display: flex; flex-direction: column; justify-content: center;
   position: relative; overflow: hidden;
 }
@@ -14,28 +14,28 @@
   background: rgba(198, 166, 100, .05);
 }
 .aside > * { position: relative; }
-.aside h2 { color: #fff; font-size: 36px; margin-bottom: 16px; line-height: 1.1; }
+.aside h2 { color: #fff; font-size: 36px; margin-bottom:16px; line-height: 1.1; }
 /* <em> keeps its meaning for a screen reader; the italic is dropped because
    a serif italic accent in a headline reads as a generated-UI default. */
 .aside h2 em { font-style: normal; color: #F0A9AC; }
 .aside p { font-size: 15px; line-height: 1.75; max-width: 44ch; }
 .aside .plaque {
-  margin-top: 32px; background: var(--ink-2); border: 1px solid var(--ink-line);
+  margin-top:32px; background: var(--ink-2); border: 1px solid var(--ink-line);
   border-radius: var(--r);
-  padding: 20px 22px; font-size: 13.5px; line-height: 1.7;
+  padding:20px 22px; font-size: 13.5px; line-height: 1.7;
 }
-.aside .plaque b { display: block; color: #fff; font-weight: 600; margin-bottom: 6px; }
+.aside .plaque b { display: block; color: #fff; font-weight: 600; margin-bottom:6px; }
 
-.main { padding: 56px 24px; display: flex; justify-content: center; align-items: flex-start; }
+.main { padding:56px 24px; display: flex; justify-content: center; align-items: flex-start; }
 .panel-wrap { width: 100%; max-width: 480px; }
 
 .tabs {
   display: flex; border: 1px solid var(--rule); border-radius: var(--r);
-  overflow: hidden; margin-bottom: 26px; background: var(--paper);
+  overflow: hidden; margin-bottom:26px; background: var(--paper);
 }
 .tabs button {
   flex: 1; border: none; background: transparent; font-family: var(--body);
-  font-weight: 600; font-size: 13.5px; padding: 13px; cursor: pointer;
+  font-weight: 600; font-size: 13.5px; padding:12px; cursor: pointer;
   color: var(--muted); border-bottom: 2px solid transparent; transition: .15s;
 }
 .tabs button[aria-selected="true"] { color:var(--text); border-bottom-color: var(--accent); background: var(--ivory); }
@@ -43,54 +43,54 @@
 .panel { display: none; }
 .panel.show { display: block; }
 
-.roles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 22px; }
+.roles { display: grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:22px; }
 @media (max-width: 480px) {
   .roles { grid-template-columns: 1fr; }
 }
 .roles label {
-  border: 1px solid var(--rule); border-radius: var(--r); padding: 14px; cursor: pointer;
-  display: flex; gap: 10px; align-items: flex-start; transition: .15s; background: var(--paper);
+  border: 1px solid var(--rule); border-radius: var(--r); padding:14px; cursor: pointer;
+  display: flex; gap:10px; align-items: flex-start; transition: .15s; background: var(--paper);
 }
 .roles label:has(input:checked) { border-color: var(--accent); background: var(--accent-wash); }
-.roles input { margin-top: 3px; accent-color: var(--accent-deep); width: auto; }
+.roles input { margin-top:4px; accent-color: var(--accent-deep); width: auto; }
 .roles b { display: block; font-size: 13.5px; color:var(--text); }
-.roles small { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+.roles small { display: block; font-size: 12px; color: var(--muted); margin-top:4px; line-height: 1.5; }
 
 .keys {
-  margin-top: 24px; border: 1px dashed var(--rule); border-radius: var(--r);
-  padding: 16px 18px; font-size: 12.5px; color: var(--muted); background: var(--paper);
+  margin-top:24px; border: 1px dashed var(--rule); border-radius: var(--r);
+  padding:16px 18px; font-size: 12.5px; color: var(--muted); background: var(--paper);
 }
-.keys b { display: block; color:var(--text); margin-bottom: 9px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }
-.keys code { background: var(--ivory); border: 1px solid var(--rule-2); padding: 2px 7px; border-radius: 2px; color:var(--text); font-size: 12px; }
-.keys .k { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; }
+.keys b { display: block; color:var(--text); margin-bottom:8px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }
+.keys code { background: var(--ivory); border: 1px solid var(--rule-2); padding:2px 8px; border-radius: 2px; color:var(--text); font-size: 12px; }
+.keys .k { display: flex; justify-content: space-between; gap:10px; padding:4px 0; }
 
 /* ---- email-code flows (verify on sign-up, forgot password) ---- */
 .linklike {
-  border: none; background: none; padding: 0; cursor: pointer;
+  border: none; background: none; padding:0; cursor: pointer;
   font-family: var(--body); font-size: 12.5px; font-weight: 600;
   color: var(--accent-deep); text-decoration: underline; text-underline-offset: 3px;
 }
 .linklike:disabled { color: var(--muted); cursor: default; text-decoration: none; }
 
-.forgot-row { text-align: right; margin: -8px 0 16px; }
+.forgot-row { text-align: right; margin:-8px 0 16px; }
 
 .dev-code {
   border: 1px dashed var(--accent-deep); background: var(--accent-wash);
-  border-radius: var(--r); padding: 12px 16px; margin-bottom: 16px;
+  border-radius: var(--r); padding:12px 16px; margin-bottom:16px;
   font-size: 13px; line-height: 1.6;
 }
-.dev-code b { text-transform: uppercase; letter-spacing: .1em; font-size: 10.5px; display: block; color: var(--accent-deep); margin-bottom: 2px; }
-.dev-code code { background: var(--ivory); border: 1px solid var(--rule); padding: 3px 10px; border-radius: 4px; font-size: 17px; font-weight: 700; letter-spacing: .2em; }
+.dev-code b { text-transform: uppercase; letter-spacing: .1em; font-size: 10.5px; display: block; color: var(--accent-deep); margin-bottom:2px; }
+.dev-code code { background: var(--ivory); border: 1px solid var(--rule); padding:4px 10px; border-radius: 4px; font-size: 17px; font-weight: 700; letter-spacing: .2em; }
 
-.exists { border: 1px solid var(--accent-line); border-radius: var(--r); padding: 18px 20px; margin-bottom: 18px; background: var(--paper); }
-.exists h3 { font-size: 17px; margin-bottom: 6px; }
-.exists p { font-size: 13.5px; color: var(--muted); margin-bottom: 14px; }
-.exists .acts { display: flex; gap: 9px; flex-wrap: wrap; }
-.exists .hint { margin-bottom: 0; }
+.exists { border: 1px solid var(--accent-line); border-radius: var(--r); padding:18px 20px; margin-bottom:18px; background: var(--paper); }
+.exists h3 { font-size: 17px; margin-bottom:6px; }
+.exists p { font-size: 13.5px; color: var(--muted); margin-bottom:14px; }
+.exists .acts { display: flex; gap:8px; flex-wrap: wrap; }
+.exists .hint { margin-bottom:0; }
 
-.code-links { display: flex; gap: 10px; justify-content: center; align-items: center; margin-top: 14px; font-size: 12.5px; color: var(--muted); }
+.code-links { display: flex; gap:10px; justify-content: center; align-items: center; margin-top:14px; font-size: 12.5px; color: var(--muted); }
 
 /* First and last name side by side, stacking on a narrow screen. Matches
    .roles above rather than introducing a second way to do two columns. */
-.two-up { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.two-up { display: grid; grid-template-columns: 1fr 1fr; gap:0 14px; }
 @media (max-width: 560px) { .two-up { grid-template-columns: 1fr; } }
