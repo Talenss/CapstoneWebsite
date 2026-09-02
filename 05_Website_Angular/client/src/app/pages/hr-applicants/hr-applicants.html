@@ -464,6 +464,32 @@
           <h4>Message {{ r.seeker.name }}</h4>
           <p class="hint" style="margin-bottom:8px">Sent to their email with <b>your address as the reply-to</b>, so their answer lands straight in your inbox. Edit freely. This is a person writing to a person.</p>
           <textarea rows="7" [value]="inviteText()" (input)="setInviteText($event)"></textarea>
+
+          <details class="invite-cal">
+            <summary>📅 Propose an interview time <span class="opt">(optional)</span></summary>
+            <p class="hint" style="margin:6px 0 10px">Pick a date and time and we'll add an <b>“Add to Google Calendar”</b> button plus a calendar file to the email, so the applicant can save the interview in one click.</p>
+            <div class="cal-grid">
+              <label>
+                <span>Date &amp; time</span>
+                <input type="datetime-local" [value]="inviteWhen()" (input)="setInviteWhen($event)">
+              </label>
+              <label>
+                <span>Length</span>
+                <select (change)="setInviteDuration($event)">
+                  <option value="30" [selected]="inviteDuration() === 30">30 minutes</option>
+                  <option value="45" [selected]="inviteDuration() === 45">45 minutes</option>
+                  <option value="60" [selected]="inviteDuration() === 60">1 hour</option>
+                  <option value="90" [selected]="inviteDuration() === 90">1½ hours</option>
+                  <option value="120" [selected]="inviteDuration() === 120">2 hours</option>
+                </select>
+              </label>
+              <label class="cal-where">
+                <span>Where <span class="opt">(optional)</span></span>
+                <input type="text" [value]="inviteLocation()" (input)="setInviteLocation($event)" placeholder="Video call, office address, or meeting link" maxlength="200">
+              </label>
+            </div>
+          </details>
+
           <div style="display:flex;gap:9px;justify-content:flex-end;margin-top:10px">
             <button class="btn ghost sm" type="button" (click)="inviteOpen.set(false)">Cancel</button>
             <button class="btn primary sm" type="button" [disabled]="inviteSending()" (click)="sendInvite()">

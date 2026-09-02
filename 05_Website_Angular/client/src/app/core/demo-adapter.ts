@@ -4,7 +4,7 @@
    real departments so all three match tiers actually demonstrate.
    ============================================================ */
 import { ApiAdapter } from './adapter';
-import { AnalyzedResume, ApiResult, AppStatus, Application, Company, EvidenceKind, RejectionReason, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User, RankedQuery} from './models';
+import { AnalyzedResume, ApiResult, AppStatus, Application, Company, EvidenceKind, RejectionReason, HrStats, InviteSchedule, MatchResult, Posting, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User, RankedQuery} from './models';
 import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert } from './engine';
 
 const KEY = 'linaw_v3_db';
@@ -1144,7 +1144,7 @@ export class DemoAdapter implements ApiAdapter {
     },
     /* Demo mode can't send the applicant a real email, the panel shows
        what WOULD be sent, clearly labelled. */
-    invite: (applicationId: string, message: string) => {
+    invite: (applicationId: string, message: string, _schedule?: InviteSchedule) => {
       const db = load(); const me = meRow(db);
       if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
       const msg = String(message).trim();

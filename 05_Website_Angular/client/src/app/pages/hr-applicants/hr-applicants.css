@@ -81,6 +81,19 @@
 .invite h4{font-family:var(--display);font-size:17px;margin-bottom:4px}
 .invite textarea{width:100%;padding:12px 14px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px;line-height:1.6;resize:vertical}
 
+/* Optional "propose an interview time" block, collapsed by default so the
+   plain message stays the fast path. Surfaces and text come from the theme
+   tokens, so the block follows light and dark mode with the rest of the page. */
+.invite-cal{margin-top:12px;border:1px solid var(--rule);border-radius:var(--r);background:var(--stone-2);padding:10px 14px}
+.invite-cal>summary{cursor:pointer;font-weight:600;font-size:13.5px;color:var(--text);list-style:none}
+.invite-cal>summary::-webkit-details-marker{display:none}
+.invite-cal .opt{font-weight:400;color:var(--faint)}
+.invite-cal .cal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.invite-cal .cal-grid .cal-where{grid-column:1 / -1}
+.invite-cal label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted)}
+.invite-cal input,.invite-cal select{padding:9px 11px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px;background:var(--paper);color:var(--text)}
+@media (max-width:520px){.invite-cal .cal-grid{grid-template-columns:1fr}}
+
 /* Print-only banner — see hr-applicants.html. */
 .printed-note{ display:none }
 

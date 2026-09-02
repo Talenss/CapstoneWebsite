@@ -583,6 +583,22 @@ router.post('/invite', async (req, res) => {
   if (message.length < 10) return fail(res, 'Write the applicant a short message first.');
   if (message.length > 2000) return fail(res, 'Keep the message under 2000 characters.');
 
+  /* Optional interview time. When a start instant is given, it must parse
+     and (to keep the calendar file sane) fall in a reasonable window. */
+  let schedule: { startIso: string; durationMinutes?: number; location?: string } | undefined;
+  const startRaw = req.body?.when;
+  if (startRaw != null && String(startRaw).trim() !== '') {
+    const start = new Date(String(startRaw));
+    if (Number.isNaN(start.getTime())) return fail(res, 'That interview date and time could not be read.');
+    const durationMinutes = Number(req.body?.durationMinutes);
+    const location = String(req.body?.location ?? '').trim().slice(0, 200) || undefined;
+    schedule = {
+      startIso: start.toISOString(),
+      durationMinutes: Number.isFinite(durationMinutes) && durationMinutes > 0 ? Math.min(durationMinutes, 24 * 60) : undefined,
+      location,
+    };
+  }
+
   const a = await queryOne<ApplicationRow & { company_id: number }>(
     `SELECT a.*, p.company_id
        FROM applications a
@@ -599,7 +615,7 @@ router.post('/invite', async (req, res) => {
 
   const sent = await sendInterviewInvite(
     seeker.email, seeker.full_name, u.full_name, u.email,
-    p.title, co?.company_name || 'the company', message,
+    p.title, co?.company_name || 'the company', message, schedule,
   );
   if (!sent.ok) return fail(res, sent.error);
   ok(res, { sent: sent.sent });

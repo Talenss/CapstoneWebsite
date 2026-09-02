@@ -9,6 +9,7 @@
    decision, and a low score or a rejection is never a closed door. */
 import { APP_URL, DEBUG } from '../config';
 import { mailConfigured, sendMail } from './mailer';
+import { InterviewSchedule, googleCalendarUrl, buildIcs, describeSchedule } from './calendar';
 
 const btn = (href: string, label: string) =>
   `<p style="margin:22px 0 0"><a href="${href}" style="display:inline-block;background:#C9A24B;color:#141926;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:8px">${label}</a></p>`;
@@ -119,6 +120,7 @@ export async function sendInterviewInvite(
   postingTitle: string,
   companyName: string,
   message: string,
+  schedule?: InterviewSchedule,
 ): Promise<{ ok: true; sent: boolean } | { ok: false; error: string }> {
   if (!mailConfigured()) {
     if (DEBUG) {
@@ -128,17 +130,45 @@ export async function sendInterviewInvite(
     return { ok: false, error: "Email sending isn't configured on this server, so the message can't be delivered." };
   }
   const t = esc(postingTitle);
+
+  /* If the recruiter picked a time, turn it into a friendly line, an
+     "Add to Google Calendar" button and an .ics the applicant can import
+     into any calendar. A bad/missing time simply skips the calendar bits —
+     the message still goes out. */
+  const eventTitle = `Interview: ${postingTitle} — ${companyName}`;
+  const eventDetails = `Interview for your ${postingTitle} application with ${companyName}. Contact: ${recruiterName} (${recruiterEmail}).`;
+  const when = schedule ? describeSchedule(schedule) : null;
+  const gcalUrl = schedule ? googleCalendarUrl(schedule, eventTitle, eventDetails) : null;
+  const ics = schedule
+    ? buildIcs(schedule, { title: eventTitle, description: eventDetails, organizerName: recruiterName, organizerEmail: recruiterEmail, attendeeEmail: seekerEmail })
+    : null;
+
+  const whenBlockHtml = when
+    ? `<div style="margin:16px 0 0;border:1px solid #E3DCCB;border-radius:10px;padding:14px 18px;background:#FFFDF8">
+        <p style="margin:0;font-size:12.5px;letter-spacing:.04em;text-transform:uppercase;color:#8A8FA0">Proposed interview time</p>
+        <p style="margin:6px 0 0;font-size:15px;font-weight:700;color:#1E2430">📅 ${esc(when)}</p>
+        ${schedule?.location ? `<p style="margin:4px 0 0;font-size:13.5px;color:#4C5566">Where: ${esc(schedule.location)}</p>` : ''}
+        ${gcalUrl ? btn(gcalUrl, 'Add to Google Calendar') : ''}
+        <p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:#8A8FA0">A calendar file is attached too — open it to add this to Apple Calendar, Outlook or any other app. Reply to confirm or suggest another time.</p>
+      </div>`
+    : '';
+  const whenTextLine = when ? `\n\nProposed interview time: ${when}${schedule?.location ? ` — ${schedule.location}` : ''}${gcalUrl ? `\nAdd to Google Calendar: ${gcalUrl}` : ''}` : '';
+
   try {
     await sendMail(
       seekerEmail,
       `${companyName} — about your ${postingTitle} application`,
-      `A message about your application\n\nFrom ${recruiterName} (${companyName}) regarding ${postingTitle}:\n\n${message}\n\nReply to this email to answer them directly.`,
+      `A message about your application\n\nFrom ${recruiterName} (${companyName}) regarding ${postingTitle}:\n\n${message}${whenTextLine}\n\nReply to this email to answer them directly.`,
       `
         <h1 style="margin:0 0 10px;font-size:22px">A message about your application</h1>
         <p style="margin:0 0 14px;font-size:14.5px;line-height:1.65;color:#4C5566">Hi ${esc(seekerName)} — <b>${esc(recruiterName)}</b> of <b>${esc(companyName)}</b> wrote to you about your application for <b>${t}</b>:</p>
         <div style="border-left:3px solid #C9A24B;background:#FAF6EE;padding:14px 18px;border-radius:0 8px 8px 0;font-size:14.5px;line-height:1.7;color:#1E2430;white-space:pre-wrap">${esc(message)}</div>
+        ${whenBlockHtml}
         <p style="margin:14px 0 0;font-size:13px;line-height:1.6;color:#8A8FA0">Reply to this email to answer ${esc(recruiterName)} directly.</p>`,
-      { replyTo: recruiterEmail },
+      {
+        replyTo: recruiterEmail,
+        ...(ics ? { attachment: { filename: 'interview.ics', content: ics, contentType: 'text/calendar; method=REQUEST' } } : {}),
+      },
     );
     return { ok: true, sent: true };
   } catch (e: any) {

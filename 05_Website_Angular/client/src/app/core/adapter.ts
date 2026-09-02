@@ -5,7 +5,7 @@
    ApiService without caring which mode is active.
    ============================================================ */
 import {
-  AdminRecruiter, AnalyzedResume, ApiResult, Application, Company, HrStats, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
+  AdminRecruiter, AnalyzedResume, ApiResult, Application, Company, HrStats, InviteSchedule, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
 
 export interface ApiAdapter {
   auth: {
@@ -85,8 +85,10 @@ export interface ApiAdapter {
      *  refused once a final decision (hired/not selected) has been made. */
     withdraw(applicationId: string): Promise<ApiResult<{ application: Application }>>;
     /** Recruiter's personal message to an applicant (interview invite).
-     *  Emailed with reply-to the recruiter; simulated in demo mode. */
-    invite(applicationId: string, message: string): Promise<ApiResult<{ sent?: boolean; simulated?: boolean }>>;
+     *  Emailed with reply-to the recruiter; simulated in demo mode. When a
+     *  schedule is given, the email also carries an "Add to Google Calendar"
+     *  link and an .ics attachment for the proposed interview time. */
+    invite(applicationId: string, message: string, schedule?: InviteSchedule): Promise<ApiResult<{ sent?: boolean; simulated?: boolean }>>;
     /** The recorded status changes for one application, oldest first.
      *  Readable by the applicant it belongs to and by recruiters at the
      *  company that owns the posting. */
