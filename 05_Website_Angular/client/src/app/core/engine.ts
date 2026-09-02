@@ -6,7 +6,7 @@
    in BOTH modes (the API mode still calls the server for anything
    that must be authoritative, e.g. applying).
    ============================================================ */
-import { AppStatus, EduLevel, EvidenceKind, MatchResult, Posting, RejectionReason, Resume, Tier } from './models';
+import { AppStatus, EduLevel, EvidenceKind, MatchResult, Posting, RejectionReason, Resume, SkillEvidence, Tier } from './models';
 
 /* The study's published defaults. The SERVER is the authority, it reads
    these from the match_settings table, so an admin can retune them without a
@@ -123,6 +123,14 @@ export const APPLICANT_REASON_LABELS: Record<RejectionReason, string> = {
 export const UNEVIDENCED_CREDIT = 0.5;
 
 export const EVIDENCE_KINDS: EvidenceKind[] = ['experience', 'project', 'certification', 'education', 'document'];
+
+/** Normalise a skill's evidence to a list of sources, tolerating the older
+ *  single-object shape. Mirrors server engine.ts. Scoring only asks whether
+ *  the list is non-empty; extra sources record where a skill came from. */
+export function evidenceSources(ev: SkillEvidence | SkillEvidence[] | null | undefined): SkillEvidence[] {
+  if (!ev) return [];
+  return (Array.isArray(ev) ? ev : [ev]).filter((s) => s && s.ref);
+}
 
 /** What each source type is called on screen. Kept apart from the stored
  *  value so the wording can be plain without changing what is saved. */
@@ -409,7 +417,7 @@ export function scoreLocal(
   const evidence = resume.skillEvidence;
   const evidenced = new Set<string>();
   if (evidence) {
-    for (const [name, ev] of Object.entries(evidence)) if (ev?.ref) evidenced.add(normSkill(name));
+    for (const [name, ev] of Object.entries(evidence)) if (evidenceSources(ev).length) evidenced.add(normSkill(name));
   }
   const unevidenced = evidence ? matched.filter((s) => !evidenced.has(normSkill(s))) : [];
   const credited = matched.length - unevidenced.length * (1 - UNEVIDENCED_CREDIT);

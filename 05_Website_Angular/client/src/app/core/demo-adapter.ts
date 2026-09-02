@@ -135,7 +135,11 @@ function seed(): Db {
         skillEvidence: {
           'HTML/CSS':   { kind: 'experience', ref: 'Web Development Intern, LGU San Fernando' },
           'JavaScript': { kind: 'experience', ref: 'Web Development Intern, LGU San Fernando' },
-          'Git':        { kind: 'project',    ref: 'Barangay records system' },
+          // Learned in TWO places — the demo's example of a multi-source skill,
+          // so the recruiter's panel shows both. Extra sources never raise the
+          // score above full; they only record where the skill came from.
+          'Git':        [{ kind: 'project', ref: 'Barangay records system' },
+                         { kind: 'experience', ref: 'Web Development Intern, LGU San Fernando' }],
         },
         certifications: [{ name: 'TESDA Web Development NC III', year: '2025', issuer: 'TESDA', credentialId: 'NC-III-2025-014352' }],
         projects: [{ name: 'Barangay records system', role: 'Front-end developer', startDate: 'Aug 2025', endDate: 'Feb 2026',
@@ -720,14 +724,27 @@ export class DemoAdapter implements ApiAdapter {
         experience, projects: projects as any[], certifications, education,
         ownFile: stored?.ownFile ? { name: stored.ownFile.name } : null,
       });
-      const skillEvidence: Record<string, SkillEvidence> = {};
+      // A skill may name SEVERAL sources (a job and a school), so a value can
+      // be an array; the older single-object shape is still accepted. Mirrors
+      // the server validation in routes/resumes.ts — each source's kind must be
+      // known and its ref must be a label that exists on the resume, and
+      // duplicates are folded.
+      const skillEvidence: Record<string, SkillEvidence[]> = {};
       const rawEvidence = (resume.skillEvidence ?? {}) as Record<string, any>;
       for (const name of skills) {
-        const v = rawEvidence[name];
-        const kind = v?.kind as EvidenceKind;
-        const ref = String(v?.ref ?? '').trim().slice(0, 200);
-        if (!EVIDENCE_KINDS.includes(kind) || !ref || !labels[kind].has(ref)) continue;
-        skillEvidence[name] = { kind, ref };
+        const raw = Array.isArray(rawEvidence[name]) ? rawEvidence[name] : rawEvidence[name] ? [rawEvidence[name]] : [];
+        const sources: SkillEvidence[] = [];
+        const seen = new Set<string>();
+        for (const one of raw) {
+          const kind = one?.kind as EvidenceKind;
+          const ref = String(one?.ref ?? '').trim().slice(0, 200);
+          if (!EVIDENCE_KINDS.includes(kind) || !ref || !labels[kind].has(ref)) continue;
+          const key = kind + '|' + ref;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          sources.push({ kind, ref });
+        }
+        if (sources.length) skillEvidence[name] = sources;
       }
 
       /* Mirrors resumes.evidence_prompted on the server. The builder always

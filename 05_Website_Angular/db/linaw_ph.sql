@@ -308,6 +308,12 @@ CREATE TABLE resume_skills (
   --      it is just weaker proof, and the arithmetic says so.
   evidence_kind TEXT CHECK (evidence_kind IN ('experience','project','certification','education','document')),
   evidence_ref  VARCHAR(200),
+  -- A skill can be learned in more than one place (a job AND a school), so the
+  -- full list of sources lives here as a JSON array of {kind, ref}. The single
+  -- evidence_kind/evidence_ref pair above holds the FIRST of them, kept so any
+  -- older reader still sees a source and the "has evidence" check stays cheap.
+  -- Scoring only asks whether at least one source exists.
+  evidence_sources JSONB,
   PRIMARY KEY (resume_id, skill_id)
 );
 
@@ -718,7 +724,11 @@ SELECT 4, skill_id FROM skills WHERE skill_norm IN ('communication','recruitment
 -- side by side, and those skills score at partial credit rather than zero.
 UPDATE resume_skills rs SET evidence_kind = 'experience', evidence_ref = 'Web Development Intern, LGU San Fernando'
   FROM skills s WHERE s.skill_id = rs.skill_id AND rs.resume_id = 1 AND s.skill_norm IN ('htmlcss','javascript');
-UPDATE resume_skills rs SET evidence_kind = 'project', evidence_ref = 'Barangay records system'
+UPDATE resume_skills rs SET evidence_kind = 'project', evidence_ref = 'Barangay records system',
+  -- Git was learned in TWO places — the demo's multi-source example. The pair
+  -- above holds the first; evidence_sources holds the full list a recruiter
+  -- sees. Extra sources never raise the score; a skill with any source is full.
+  evidence_sources = '[{"kind":"project","ref":"Barangay records system"},{"kind":"experience","ref":"Web Development Intern, LGU San Fernando"}]'::jsonb
   FROM skills s WHERE s.skill_id = rs.skill_id AND rs.resume_id = 1 AND s.skill_norm = 'git';
 UPDATE resume_skills rs SET evidence_kind = 'project', evidence_ref = 'School event portal'
   FROM skills s WHERE s.skill_id = rs.skill_id AND rs.resume_id = 2 AND s.skill_norm IN ('htmlcss','javascript');

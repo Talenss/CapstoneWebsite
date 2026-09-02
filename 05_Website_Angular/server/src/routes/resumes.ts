@@ -104,13 +104,28 @@ router.post('/save', async (req, res) => {
      an imported CV was docked for declining a question never put to it. */
   const evidencePrompted = Object.prototype.hasOwnProperty.call(R, 'skillEvidence') ? 1 : 0;
   const rawEvidence = R.skillEvidence && typeof R.skillEvidence === 'object' ? R.skillEvidence : {};
-  const skillEvidence = new Map<string, { kind: EvidenceKind; ref: string }>();
+  /* Each skill may name SEVERAL sources (a job and a school), so a value can be
+     an array; the older single-object shape is still accepted. Every source is
+     validated the same way — its kind is known and its ref is a label that
+     actually exists elsewhere on this resume — and duplicates are folded, so a
+     skill cannot point at the same entry twice or at one that was renamed or
+     deleted. */
+  const skillEvidence = new Map<string, { kind: EvidenceKind; ref: string }[]>();
   for (const [name, v] of Object.entries(rawEvidence as Record<string, any>)) {
-    const kind = v?.kind as EvidenceKind;
-    const ref = String(v?.ref ?? '').trim().slice(0, 200);
-    if (!EVIDENCE_KINDS.includes(kind) || !ref) continue;
-    if (!labels[kind].has(ref)) continue;
-    skillEvidence.set(skillNorm(name), { kind, ref });
+    const raw = Array.isArray(v) ? v : v ? [v] : [];
+    const sources: { kind: EvidenceKind; ref: string }[] = [];
+    const seen = new Set<string>();
+    for (const one of raw) {
+      const kind = one?.kind as EvidenceKind;
+      const ref = String(one?.ref ?? '').trim().slice(0, 200);
+      if (!EVIDENCE_KINDS.includes(kind) || !ref) continue;
+      if (!labels[kind].has(ref)) continue;
+      const key = kind + '|' + ref;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      sources.push({ kind, ref });
+    }
+    if (sources.length) skillEvidence.set(skillNorm(name), sources);
   }
 
   // Ownership check up front so we can send a clean 403 (an error thrown
@@ -254,11 +269,13 @@ router.post('/save', async (req, res) => {
         const firstSeen = priorSkillDates.get(sid) ?? null;   // null → the column default, i.e. now
         // Looked up on the normalized name so "JS" and "JavaScript" reach the
         // same row the engine will later score — the same folding skillId did.
-        const ev = skillEvidence.get(skillNorm(trimmed)) ?? null;
+        const sources = skillEvidence.get(skillNorm(trimmed)) ?? [];
+        const first = sources[0] ?? null;   // mirrored into the single pair for old readers
         await tx.exec(
-          `INSERT INTO resume_skills (resume_id, skill_id, added_at, evidence_kind, evidence_ref)
-           VALUES (?,?, COALESCE(?::timestamptz, now()), ?, ?) ON CONFLICT DO NOTHING`,
-          [id, sid, firstSeen, ev?.kind ?? null, ev?.ref ?? null],
+          `INSERT INTO resume_skills (resume_id, skill_id, added_at, evidence_kind, evidence_ref, evidence_sources)
+           VALUES (?,?, COALESCE(?::timestamptz, now()), ?, ?, ?::jsonb) ON CONFLICT DO NOTHING`,
+          [id, sid, firstSeen, first?.kind ?? null, first?.ref ?? null,
+           sources.length ? JSON.stringify(sources) : null],
         );
       }
 

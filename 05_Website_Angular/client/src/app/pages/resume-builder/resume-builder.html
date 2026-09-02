@@ -319,40 +319,52 @@
                      the number in front of them is made. Nothing here is a
                      warning: leaving a source blank is allowed. -->
                 <p class="hint" style="margin:2px 0 10px">
-                  Say where you used each skill. A skill you can point to counts in full; one you can't still counts,
-                  at half. Choose from what's already on this resume &mdash; and don't worry, <b>none of this is printed
-                  on your resume</b>. Only the recruiter reading your application sees it.
+                  In the cards below, tick the skills you learned at each job, school, project or certification. A skill
+                  you can point to somewhere counts in full; one you can&rsquo;t still counts, at half. You can tick the
+                  same skill in more than one place. <b>None of this is printed on your resume</b> &mdash; only the
+                  recruiter reading your application sees it.
                 </p>
               }
-              <div class="tags evidence-list">
+              <!-- The skills as a plain list. An unlinked one carries a quiet
+                   marker, not a warning: half credit is a rule, not an error. -->
+              <div class="tags">
                 @for (s of resume().skills; track s; let i = $index) {
-                  <div class="ev-row">
-                    <span class="tag">{{ s }}<button type="button" [attr.aria-label]="'Remove ' + s" (click)="removeSkill(i)">&times;</button></span>
-                    @if (noEvidenceSources()) {
-                      <span class="ev-none">Add a job, project, certification or school first, then you can point this skill at it.</span>
-                    } @else {
-                      <select class="ev-pick" [attr.aria-label]="'Where did you use ' + s + '?'"
-                              [value]="evidenceValue(s)" (change)="setEvidence(s, $event)">
-                        <option value="">Where did you use this? &mdash; counts half if left blank</option>
-                        @for (g of evidenceOptions(); track g.kind) {
-                          <optgroup [label]="g.label">
-                            @for (o of g.items; track o) {
-                              <option [value]="g.kind + '|' + o">{{ o }}</option>
-                            }
-                          </optgroup>
-                        }
-                      </select>
-                    }
-                  </div>
+                  <span class="tag" [class.nosrc]="!skillHasSource(s)">{{ s }}<button type="button" [attr.aria-label]="'Remove ' + s" (click)="removeSkill(i)">&times;</button></span>
                 } @empty {
                   <p style="color:var(--muted);font-size:13.5px">No skills yet. This list is the biggest part of your score on most openings.</p>
                 }
               </div>
-              @if (unsourcedSkills(); as n) {
-                <p class="hint" style="margin-top:9px">
-                  {{ n }} of your {{ resume().skills.length }} skills {{ n === 1 ? 'has' : 'have' }} no source yet.
-                  {{ n === 1 ? 'It' : 'They' }} still count &mdash; at half &mdash; on every opening that asks for {{ n === 1 ? 'it' : 'them' }}.
-                </p>
+
+              @if (resume().skills.length) {
+                @if (noEvidenceSources()) {
+                  <p class="hint" style="margin-top:10px">Add a job, project, certification or school on the earlier steps, then come back here to tick the skills you learned at each.</p>
+                } @else {
+                  <!-- ONE CARD PER SOURCE. Ticking a skill under a card links it
+                       to that entry; a skill may be ticked under several. This is
+                       the inverse of a per-skill dropdown, and far fewer clicks
+                       when one job or school taught many skills. -->
+                  <div class="src-list">
+                    @for (src of evidenceSourceList(); track src.kind + '|' + src.ref) {
+                      <div class="src-card">
+                        <div class="src-head"><span class="src-kind">{{ src.kindLabel }}</span><b>{{ src.ref }}</b></div>
+                        <div class="pool">
+                          @for (s of resume().skills; track s) {
+                            <button type="button" [class.on]="skillLinkedTo(s, src.kind, src.ref)"
+                                    [attr.aria-pressed]="skillLinkedTo(s, src.kind, src.ref)"
+                                    [attr.title]="(skillLinkedTo(s, src.kind, src.ref) ? 'Learned ' + s + ' here — tick to unlink' : 'Tick if you learned ' + s + ' here')"
+                                    (click)="toggleSkillSource(s, src.kind, src.ref)"><span class="mark" aria-hidden="true">{{ skillLinkedTo(s, src.kind, src.ref) ? '&check;' : '+' }}</span>{{ s }}</button>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                  @if (unsourcedSkills(); as n) {
+                    <p class="hint" style="margin-top:10px">
+                      {{ n }} of your {{ resume().skills.length }} skills {{ n === 1 ? 'is' : 'are' }} not ticked anywhere yet.
+                      {{ n === 1 ? 'It' : 'They' }} still count &mdash; at half &mdash; on every opening that asks for {{ n === 1 ? 'it' : 'them' }}.
+                    </p>
+                  }
+                }
               }
             </div>
           </section>

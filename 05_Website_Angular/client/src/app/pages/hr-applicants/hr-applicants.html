@@ -332,8 +332,8 @@
                   @for (s of r.resume.skills; track s) {
                     <div class="evrow">
                       <b [class.hit]="r.matchedSkills.includes(s)">{{ s }}</b>
-                      @if (evidenceOf(r, s); as ev) {
-                        <span>{{ evidenceKindLabels[ev.kind] }} &mdash; {{ ev.ref }}</span>
+                      @if (evidenceTextOf(r, s); as txt) {
+                        <span>{{ txt }}</span>
                       } @else {
                         <span class="nosrc">No source given{{ r.matchedSkills.includes(s) ? ' · counted at half' : '' }}</span>
                       }

@@ -8,8 +8,8 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { AnalysisService } from '../../core/analysis.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, WEIGHTS} from '../../core/engine';
-import { Education, EduLevel, EvidenceKind, Experience, Language, Project, Reference, Resume, ResumeDesign, Template } from '../../core/models';
+import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, WEIGHTS} from '../../core/engine';
+import { Education, EduLevel, EvidenceKind, Experience, Language, Project, Reference, Resume, ResumeDesign, SkillEvidence, Template } from '../../core/models';
 
 const STEPS = ['Details', 'Education', 'Experience', 'Skills', 'Certifications', 'More sections', 'Finish'];
 
@@ -565,52 +565,59 @@ export class ResumeBuilder implements OnInit {
      did before; the source is read only by the recruiter's applicant view,
      and by the engine, which counts an unsourced skill at half. */
 
-  /** The options offered, grouped by section, skipping empty sections and
-   *  entries that have not been filled in enough to name yet. */
-  evidenceOptions = computed(() => {
-    const r = this.resume();
-    const labels = evidenceLabels(r);
-    return EVIDENCE_KINDS
-      .map((kind) => ({ kind, label: EVIDENCE_KIND_LABELS[kind], items: [...labels[kind]] }))
-      .filter((g) => g.items.length);
+  /** Every source ON the resume as a flat list, each with the section label
+   *  it belongs to. The Skills step renders one card per entry here and lets
+   *  the applicant tick which skills they learned at it — the inverse of the
+   *  old per-skill dropdown, and far fewer clicks when one place taught many
+   *  skills. */
+  evidenceSourceList = computed(() => {
+    const labels = evidenceLabels(this.resume());
+    const out: { kind: EvidenceKind; ref: string; kindLabel: string }[] = [];
+    for (const kind of EVIDENCE_KINDS)
+      for (const ref of labels[kind]) out.push({ kind, ref, kindLabel: EVIDENCE_KIND_LABELS[kind] });
+    return out;
   });
 
-  /** True when there is nothing on the resume to point at yet, so the picker
-   *  can say why it is empty rather than showing a dropdown with one dead
-   *  option in it. */
-  noEvidenceSources = computed(() => this.evidenceOptions().length === 0);
+  /** True when there is nothing on the resume to point at yet, so the step can
+   *  say why there are no cards rather than showing an empty section. */
+  noEvidenceSources = computed(() => this.evidenceSourceList().length === 0);
 
-  /** The select's current value, as "kind|label". Empty when the skill has no
-   *  source — including when it points at an entry that has since been
-   *  renamed or deleted, which is honest: that source no longer exists. */
-  evidenceValue(skill: string): string {
-    const ev = this.resume().skillEvidence?.[skill];
-    if (!ev) return '';
-    const known = this.evidenceOptions().find((g) => g.kind === ev.kind && g.items.includes(ev.ref));
-    return known ? `${ev.kind}|${ev.ref}` : '';
+  /** The sources a skill currently points at, tolerating the older single
+   *  object shape. */
+  private sourcesFor(skill: string): SkillEvidence[] {
+    return evidenceSources(this.resume().skillEvidence?.[skill]);
   }
 
-  setEvidence(skill: string, e: Event): void {
-    const raw = (e.target as HTMLSelectElement).value;
+  /** Is this skill ticked under this particular source? */
+  skillLinkedTo(skill: string, kind: EvidenceKind, ref: string): boolean {
+    return this.sourcesFor(skill).some((s) => s.kind === kind && s.ref === ref);
+  }
+
+  /** Does the skill point at anything at all? Drives the "counts at half" hint
+   *  and the quiet marker on an unlinked chip. */
+  skillHasSource(skill: string): boolean {
+    return this.sourcesFor(skill).length > 0;
+  }
+
+  /** Add or remove one source from a skill's list. A skill can be learned in
+   *  several places, so this is a set toggle, not a single choice. Removing the
+   *  last source drops the key so an empty list is never stored. */
+  toggleSkillSource(skill: string, kind: EvidenceKind, ref: string): void {
     this.resume.update((r) => {
-      const ev = { ...(r.skillEvidence ?? {}) };
-      if (!raw) delete ev[skill];
-      else {
-        const cut = raw.indexOf('|');
-        ev[skill] = { kind: raw.slice(0, cut) as EvidenceKind, ref: raw.slice(cut + 1) };
-      }
-      return { ...r, skillEvidence: ev };
+      const map = { ...(r.skillEvidence ?? {}) };
+      const cur = evidenceSources(map[skill]);
+      const has = cur.some((s) => s.kind === kind && s.ref === ref);
+      const next = has ? cur.filter((s) => !(s.kind === kind && s.ref === ref)) : [...cur, { kind, ref }];
+      if (next.length) map[skill] = next; else delete map[skill];
+      return { ...r, skillEvidence: map };
     });
     this.markDirty();
   }
 
-  /** How many claimed skills have no source. Shown as a plain count with the
-   *  consequence spelled out — not as a warning icon, because nothing here is
-   *  wrong. Half credit is a rule, not an error. */
-  unsourcedSkills = computed(() => {
-    const r = this.resume();
-    return r.skills.filter((s) => !this.evidenceValue(s)).length;
-  });
+  /** How many claimed skills point at nothing. A plain count with the
+   *  consequence spelled out — not a warning, because half credit is a rule,
+   *  not an error. */
+  unsourcedSkills = computed(() => this.resume().skills.filter((s) => !this.skillHasSource(s)).length);
   /** A suggestion chip is a toggle, so the chip that added a skill by mistake
    *  is the one that takes it off again — in place, without hunting for it
    *  in the list above. */
@@ -818,7 +825,7 @@ export class ResumeBuilder implements OnInit {
       const ev = { ...(cur.skillEvidence ?? {}) };
       for (const skill of cur.skills) {
         if (ev[skill] || !fromFile.has(skill.toLowerCase())) continue;
-        ev[skill] = { kind: 'document', ref };
+        ev[skill] = [{ kind: 'document', ref }];
         credited = true;
       }
       return credited ? { ...cur, skillEvidence: ev } : cur;

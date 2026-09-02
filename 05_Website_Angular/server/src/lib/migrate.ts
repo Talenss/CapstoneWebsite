@@ -192,6 +192,12 @@ export async function runMigrations(): Promise<void> {
     'classic','modern','minimal','executive','banner','split','bar','categorized',
     'traditional','clean','compact','senior','graduate','technical'))`);
 
+  // resume_skills.evidence_sources — the full list of places a skill was
+  // learned, as a JSON array of {kind, ref}. The older evidence_kind/ref pair
+  // stays as the first source; existing rows leave this null and the reader
+  // falls back to that pair, so nothing needs backfilling.
+  await exec('ALTER TABLE resume_skills ADD COLUMN IF NOT EXISTS evidence_sources JSONB');
+
   // education level gains 'college_level' — the undergraduate/some-college tier
   // the partner asked for (Clark Outsourcing information request, section 5).
   // Both the resume education table and the posting requirement carry the same

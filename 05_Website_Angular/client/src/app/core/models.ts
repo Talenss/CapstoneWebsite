@@ -256,7 +256,10 @@ export interface Resume {
    *  applicant named no source for that skill, which is allowed and costs
    *  partial credit rather than the whole match. NEVER rendered by the print
    *  sheet or any of the fourteen designs. */
-  skillEvidence?: Record<string, SkillEvidence>;
+  /** Each skill maps to a LIST of sources — a skill can be learned in more
+   *  than one place. Older resumes stored a single object; readers normalise
+   *  both via evidenceSources(). */
+  skillEvidence?: Record<string, SkillEvidence | SkillEvidence[]>;
   certifications: Certification[];
   ownFile: OwnFile | null;
   updatedAt?: number;
