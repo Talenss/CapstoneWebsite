@@ -230,7 +230,7 @@ async function buildPrompt(): Promise<string> {
   const prompt = `You are a resume parser for a job-matching platform. Read the resume provided and extract its content into the required structure.
 
 Rules:
-- "title": a short private label for this resume, e.g. "IT — fresh graduate".
+- "title": a short private label for this resume, e.g. "IT fresh graduate".
 - "personal.address": city/province only.
 - "personal.summary": the resume's own summary/profile/objective section, copied as written; "" if it has none.
 - "personal.headline": the professional title line the resume itself states under the name; "" if it has none.

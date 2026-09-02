@@ -356,7 +356,7 @@ export class HrApplicants {
    *  "Work experience — IT Support, Clark BPO · Education — BS IT, HAU".
    *  Empty string when there are none, which the template reads as "no source". */
   evidenceTextOf(r: RankedRow, skill: string): string {
-    return this.evidenceOf(r, skill).map((ev) => `${EVIDENCE_KIND_LABELS[ev.kind]} — ${ev.ref}`).join(' · ');
+    return this.evidenceOf(r, skill).map((ev) => `${EVIDENCE_KIND_LABELS[ev.kind]}: ${ev.ref}`).join(' · ');
   }
 
   /* ---------- who already handled this applicant ----------

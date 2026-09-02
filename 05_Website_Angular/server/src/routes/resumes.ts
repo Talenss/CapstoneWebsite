@@ -301,7 +301,7 @@ router.post('/delete', async (req, res) => {
   // still needs to see exactly what was sent to them.
   const inUse = await queryOne('SELECT 1 FROM applications WHERE resume_id = ? LIMIT 1', [id]);
   if (inUse)
-    return fail(res, "This resume is attached to an application, so it can't be deleted — the recruiter still needs to see exactly what you sent. Duplicate it and edit the copy instead.");
+    return fail(res, "This resume is attached to an application, so it can't be deleted. The recruiter still needs to see exactly what you sent. Duplicate it and edit the copy instead.");
 
   if (r.own_file_path) await deleteFile(r.own_file_path);
 

@@ -312,7 +312,7 @@
                  move. The chips carry a tick, so what is on the list is still
                  visible while choosing without looking down here. -->
             <div class="chosen">
-              <b>Your skills &mdash; {{ resume().skills.length }}</b>
+              <b>Your skills ({{ resume().skills.length }})</b>
               @if (resume().skills.length) {
                 <!-- WHERE EACH SKILL WAS USED. Said plainly, including the
                      consequence, because the applicant is entitled to know how
@@ -321,7 +321,7 @@
                 <p class="hint" style="margin:2px 0 10px">
                   In the cards below, tick the skills you learned at each job, school, project or certification. A skill
                   you can point to somewhere counts in full; one you can&rsquo;t still counts, at half. You can tick the
-                  same skill in more than one place. <b>None of this is printed on your resume</b> &mdash; only the
+                  same skill in more than one place. <b>None of this is printed on your resume.</b> Only the
                   recruiter reading your application sees it.
                 </p>
               }
@@ -351,7 +351,7 @@
                           @for (s of resume().skills; track s) {
                             <button type="button" [class.on]="skillLinkedTo(s, src.kind, src.ref)"
                                     [attr.aria-pressed]="skillLinkedTo(s, src.kind, src.ref)"
-                                    [attr.title]="(skillLinkedTo(s, src.kind, src.ref) ? 'Learned ' + s + ' here — tick to unlink' : 'Tick if you learned ' + s + ' here')"
+                                    [attr.title]="(skillLinkedTo(s, src.kind, src.ref) ? 'Learned ' + s + ' here. Tick to unlink' : 'Tick if you learned ' + s + ' here')"
                                     (click)="toggleSkillSource(s, src.kind, src.ref)"><span class="mark" aria-hidden="true">{{ skillLinkedTo(s, src.kind, src.ref) ? '&check;' : '+' }}</span>{{ s }}</button>
                           }
                         </div>
@@ -361,7 +361,7 @@
                   @if (unsourcedSkills(); as n) {
                     <p class="hint" style="margin-top:10px">
                       {{ n }} of your {{ resume().skills.length }} skills {{ n === 1 ? 'is' : 'are' }} not ticked anywhere yet.
-                      {{ n === 1 ? 'It' : 'They' }} still count &mdash; at half &mdash; on every opening that asks for {{ n === 1 ? 'it' : 'them' }}.
+                      {{ n === 1 ? 'It' : 'They' }} still count, at half, on every opening that asks for {{ n === 1 ? 'it' : 'them' }}.
                     </p>
                   }
                 }
@@ -557,7 +557,7 @@
         @if (step() === 6) {
           <section class="step" id="s6">
             <h2>Your own resume file</h2>
-            <p class="sub">If you already have a resume, attach it. The recruiter reads it with their own eyes, alongside the one you just built &mdash; and software reads it too, so you can see the score your own document gets. <b>Your ranking still comes from the resume above</b>, the one you can correct, so a formatting quirk in your file can't count against you.</p>
+            <p class="sub">If you already have a resume, attach it. The recruiter reads it with their own eyes, alongside the one you just built, and software reads it too, so you can see the score your own document gets. <b>Your ranking still comes from the resume above</b>, the one you can correct, so a formatting quirk in your file can't count against you.</p>
 
             <div class="drop" [class.has]="!!resume().ownFile">
               @if (resume().ownFile; as file) {
@@ -799,7 +799,7 @@
                 <img [src]="fileUrl()" [alt]="'Your uploaded resume, ' + file.name">
               }
               @default {
-                <p class="of-none">A Word document can&rsquo;t be shown in the browser. The recruiter downloads and opens it &mdash; use <b>View</b> on the last step to check it yourself.</p>
+                <p class="of-none">A Word document can&rsquo;t be shown in the browser. The recruiter downloads and opens it. Use <b>View</b> on the last step to check it yourself.</p>
               }
             }
             <p class="of-foot">{{ file.name }} &middot; {{ formatSize(file.size) }} &middot; read by the recruiter{{ readByMachine() ? ', and by software so it can be scored' : '' }}</p>

@@ -151,8 +151,8 @@ function readName(body: any): { first: string; last: string; error: string | nul
   const first = String(body?.firstName ?? '').trim().replace(/\s+/g, ' ');
   const last = String(body?.lastName ?? '').trim().replace(/\s+/g, ' ');
   if (first.length < 2) return { first, last, error: 'Enter your first name.' };
-  if (first.length > 60) return { first, last, error: 'That first name is too long — 60 characters at most.' };
-  if (last.length > 60) return { first, last, error: 'That last name is too long — 60 characters at most.' };
+  if (first.length > 60) return { first, last, error: 'That first name is too long: 60 characters at most.' };
+  if (last.length > 60) return { first, last, error: 'That last name is too long: 60 characters at most.' };
   return { first, last, error: null };
 }
 
