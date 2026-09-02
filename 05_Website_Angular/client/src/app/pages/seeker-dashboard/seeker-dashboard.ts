@@ -117,7 +117,11 @@ export class SeekerDashboard implements OnInit {
   historyLabel(e: StatusEvent): string {
     if (e.from === null) return 'You applied';
     if (e.to === 'withdrawn') return 'You withdrew this application';
-    return 'Moved to ' + STATUS_LABELS[e.to].toLowerCase();
+    // Several pipeline labels begin with "For " (For scheduling, For initial
+    // interview…), which reads as a state on a badge but as a stumble after
+    // "Moved to". Drop that lead-in here only.
+    const label = STATUS_LABELS[e.to].replace(/^For /, '');
+    return 'Moved to ' + label.toLowerCase();
   }
 
   /** How many requirements are unmet and of what kind, never which ones —
@@ -219,7 +223,7 @@ export class SeekerDashboard implements OnInit {
       [
         { sel: '#picker', title: 'Your active resume', text: 'Every score on this page comes from this one resume. Keep several versions and switch between them, the board re-scores instantly.' },
         { sel: '#board .tier:first-child', title: 'Matches, in three tiers', text: 'Strong, possible, and related. That third tier is the point: a low score redirects you to roles that fit, rather than shutting a door.' },
-        { sel: '#board .score-ring', title: 'What the number means', text: 'Skills are half of it, education and experience a quarter each. Open any match to see the full breakdown, the same one the recruiter sees.' },
+        { sel: '#board .score-ring', title: 'What the number means', text: 'Skills usually count for the most, with education and experience behind them. Open any match to see the exact breakdown for that opening — each one sets its own balance, and it is the same breakdown the recruiter sees.' },
         { sel: '#appsSection', title: 'Follow your applications', text: 'Submitted, Under review, Shortlisted, Hired, or Not selected. Every one of those is set by a person at Clark Outsourcing, never by the system.' },
         { sel: '[data-tour]', title: 'Lost? Come back here', text: 'This tour is always available from this button, on every page. Nothing you do here is permanent until you say so.' },
       ],
@@ -268,6 +272,16 @@ export class SeekerDashboard implements OnInit {
 
   countByStatus(status: AppStatus): number {
     return this.applications().filter((a) => a.status === status).length;
+  }
+
+  /** "In progress" = with a recruiter and still moving: every pipeline stage
+   *  between applying and a shortlist, plus the legacy 'review'. Written as a
+   *  set of the stages that are NOT in progress so a new pipeline stage is
+   *  counted by default rather than silently dropped from the summary — the
+   *  bug that appeared when the pipeline grew from six stages to eight. */
+  inProgressCount(): number {
+    const settled = new Set<AppStatus>(['shortlisted', 'hired', 'rejected', 'withdrawn']);
+    return this.applications().filter((a) => !settled.has(a.status)).length;
   }
 
   day(ts: number): string {

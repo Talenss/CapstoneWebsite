@@ -147,7 +147,10 @@ test('the same record reads identically from both sides', async () => {
 test('a status set by the recruiter is the status the applicant sees', async () => {
   const p = bestMatch();
   const appId = (await hr('applications/ranked', { postingId: p.id })).body.rows[0].application.id;
-  for (const st of ['review', 'shortlisted', 'hired'] as const) {
+  // The partner's pipeline, end to end — every stage the recruiter can set,
+  // in order, must land on the applicant's own view unchanged.
+  for (const st of ['scheduling', 'initial_interview', 'testing', 'shortlisted',
+                    'final_interview', 'offer', 'hired'] as const) {
     const set = await hr('applications/set-status', { id: appId, status: st, reason: null });
     assert.equal(set.body.ok, true, `recruiter could not set ${st}: ${set.body.error}`);
     const mine = (await seeker('applications/mine')).body.applications.find((x: any) => x.id === appId);

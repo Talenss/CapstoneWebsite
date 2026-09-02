@@ -6,7 +6,7 @@
     <div>
       <span class="eyebrow">Your matches</span>
       <h1>{{ hello() }}</h1>
-      <p>Scored from your <b>active resume</b> against every open position, skills {{ WEIGHTS.skills * 100 }}%, education {{ WEIGHTS.education * 100 }}%, experience {{ WEIGHTS.experience * 100 }}%. Change the resume and the whole board re-scores.</p>
+      <p>Scored from your <b>active resume</b> against every open position, on the skills, education and experience each opening asks for. Change the resume and the whole board re-scores.</p>
     </div>
     @if (resumes().length) {
       <div class="picker" id="picker">
@@ -149,7 +149,7 @@
     @if (applications().length) {
       <div class="tally" id="tally">
         <div><b>{{ applications().length }}</b><span>Applied</span></div>
-        <div><b>{{ countByStatus('submitted') + countByStatus('review') }}</b><span>In progress</span></div>
+        <div><b>{{ inProgressCount() }}</b><span>In progress</span></div>
         <div><b>{{ countByStatus('shortlisted') }}</b><span>Shortlisted</span></div>
         <div><b>{{ countByStatus('hired') }}</b><span>Hired</span></div>
       </div>

@@ -23,12 +23,15 @@ router.post('/hr', async (req, res) => {
       GROUP BY a.status`, [cid],
   );
 
-  // All six statuses seeded to zero, including withdrawn — building this
-  // from the five pipeline statuses left withdrawn out unless a row happened
-  // to have it, so the shape the client typed as Record<AppStatus, number>
-  // was sometimes missing a key.
+  // Every status seeded to zero — the partner's eight-stage pipeline, plus
+  // 'rejected', 'withdrawn' and the legacy 'review'. The recruiter dashboard
+  // renders one pipeline tile per stage in STATUS_ORDER, so a stage missing
+  // from this object shows a blank tile rather than a 0; keeping the full set
+  // here means a newly added stage is counted, not dropped. Kept in step with
+  // the client's STATUS_LABELS.
   const byStatus: Record<string, number> = {
-    submitted: 0, review: 0, shortlisted: 0, rejected: 0, hired: 0, withdrawn: 0,
+    submitted: 0, scheduling: 0, initial_interview: 0, testing: 0, shortlisted: 0,
+    final_interview: 0, offer: 0, hired: 0, rejected: 0, withdrawn: 0, review: 0,
   };
   let total = 0;
   for (const r of rows) { byStatus[r.status] = Number(r.n); total += Number(r.n); }

@@ -82,21 +82,18 @@
    wrapping as free chips. The pairing has to be unambiguous — a dropdown that
    could be read as belonging to the skill on either side of it would be worse
    than no dropdown at all. */
-.evidence-list { display: block; }
-.ev-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 5px 0; }
-.ev-row + .ev-row { border-top: 1px dotted var(--rule-2); }
-.ev-row .tag { flex: 0 0 auto; }
-.ev-pick {
-  flex: 1 1 220px; min-width: 0; font-size: 13px; padding: 6px 8px;
-  border: 1px solid var(--rule); border-radius: 2px; background: var(--paper); color: var(--ink);
+/* Source-first evidence: one card per job/school/project/certification, each
+   holding the skill chips as toggles. Reuses the .pool chip styles below. */
+.src-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.src-card { border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; background: var(--paper); }
+.src-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 9px; margin-bottom: 8px; }
+.src-head b { font-size: 14px; color: var(--ink); }
+.src-kind {
+  font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--muted); background: var(--wash, rgba(0,0,0,.04)); border-radius: 3px; padding: 2px 7px;
 }
-/* An unsourced skill is not an error, so it is not coloured like one — it is
-   simply a select still showing its placeholder. */
-.ev-none { flex: 1 1 220px; font-size: 12.5px; color: var(--muted); }
-@media (max-width: 560px) {
-  .ev-row { align-items: stretch; }
-  .ev-pick, .ev-none { flex-basis: 100%; }
-}
+/* An unlinked skill chip is not an error, so it is only marked, not coloured. */
+.tag.nosrc { border-style: dashed; opacity: .8; }
 .sugg .pool { display: flex; flex-wrap: wrap; gap: 6px; }
 .sugg button {
   border: 1px dashed var(--rule); background: var(--paper); border-radius: 2px; font-size: 12px; color: var(--muted);

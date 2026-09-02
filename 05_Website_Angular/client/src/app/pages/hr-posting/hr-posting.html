@@ -93,9 +93,9 @@
           </select>
         </div>
         <div class="field">
-          <label for="months">Minimum experience <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">· {{ wExp() }}%</span></label>
-          <input type="number" id="months" min="0" step="1" [value]="monthsVal()" (input)="setMonths($event)">
-          <p class="hint">In months. Enter 0 to open the role to fresh graduates.</p>
+          <label for="years">Minimum experience <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">· {{ wExp() }}%</span></label>
+          <input type="number" id="years" min="0" step="0.5" [value]="yearsVal()" (input)="setYears($event)">
+          <p class="hint">In years. Enter 0 to open the role to fresh graduates. Half-years are fine — 0.5 is six months.</p>
         </div>
       </div>
 
@@ -112,8 +112,8 @@
            published weights still moves every opening that never customised.
 
            Whatever is set here is shown to the applicant on the opening and
-           in their dashboard breakdown. The site tells them "the formula is
-           published, not hidden, you see exactly what the recruiter sees",
+           in their dashboard breakdown. The site tells them "nothing about the scoring is hidden, you see
+           exactly what the recruiter sees",
            and that promise does not survive a recruiter tuning the score in
            private. -->
       <div class="field">

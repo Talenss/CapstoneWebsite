@@ -308,7 +308,12 @@ router.post('/set-status', async (req, res) => {
   const aid = idOf(req.body?.id);
   const status = String(req.body?.status ?? '');
 
-  if (!['submitted', 'review', 'shortlisted', 'rejected', 'hired'].includes(status)) return fail(res, 'Unknown status.');
+  // The recruiter-settable pipeline (partner's eight stages + the rejected
+   // off-ramp). Kept in step with STATUS_ORDER on the client. 'review' is a
+   // legacy value that is no longer settable; 'withdrawn' is the applicant's.
+  if (!['submitted', 'scheduling', 'initial_interview', 'testing', 'shortlisted',
+        'final_interview', 'offer', 'hired', 'rejected'].includes(status))
+    return fail(res, 'Unknown status.');
 
   /* WHY, when the recruiter gave one.
    *

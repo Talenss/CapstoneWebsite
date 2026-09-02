@@ -32,7 +32,7 @@
     <p>Uploaded resume files are served through an access-checked route, not a public URL, so a file cannot be reached by guessing an address.</p>
 
     <h2>Automated processing, and its limits</h2>
-    <p>The system calculates a compatibility score using a fixed, published, rule-based formula: skills at {{ WEIGHTS.skills * 100 }}%, education at {{ WEIGHTS.education * 100 }}%, experience at {{ WEIGHTS.experience * 100 }}%. The scoring itself is not machine learning, it does not adapt, and it does not make decisions.</p>
+    <p>The system calculates a compatibility score using a transparent, rule-based formula that weighs the skills, education and experience each opening asks for. The scoring itself is not machine learning, it does not adapt, and it does not make decisions.</p>
     <p><b>No application is ever rejected automatically.</b> The score ranks a list for a human recruiter to read. Every hiring outcome, including a rejection, is a decision made by a person at the partner company, and it is recorded against their account. If your score falls below the threshold, you are still shown to the recruiter, and the system additionally suggests roles that better fit the skills you have.</p>
     <p>The resume file you attach is read twice: by the recruiter, and by the same AI service described above, which extracts its text so the rule-based formula can score it as well. That second score is shown to you and to the recruiter, clearly labelled as a machine reading of your document. <b>It is never what you are ranked by</b>. That stays with the resume you typed and can correct. If you would rather no software read your file, do not attach one: everything else on this site works without it.</p>
 
@@ -40,7 +40,7 @@
     <p>There is one place on the site where software reads a file you upload: the <b>"Upload &amp; analyze my resume"</b> option. It runs only when you explicitly choose it and tick its consent box, never automatically, and never on the copy you attach for recruiters.</p>
     <ul>
       <li><b>What it does:</b> the file you submit for analysis is read by an AI service (Google's Gemini API) which extracts your details, skills, education, experience, to prefill the resume builder. You review, correct, and approve everything before anything is saved.</li>
-      <li><b>What it doesn't do:</b> the AI never scores you, never ranks you, and never recommends anything on its own. Once you save, the same published rule-based formula above does the matching, identically to a hand-typed resume.</li>
+      <li><b>What it doesn't do:</b> the AI never scores you, never ranks you, and never recommends anything on its own. Once you save, the same rule-based formula above does the matching, identically to a hand-typed resume.</li>
       <li><b>Where the file goes:</b> when you use this option, the file's content is sent to Google for processing under <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">Google's API terms</a>. If you'd rather not, simply type your resume into the builder instead. The feature is entirely optional and everything else works without it.</li>
     </ul>
 

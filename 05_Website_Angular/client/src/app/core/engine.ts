@@ -6,7 +6,7 @@
    in BOTH modes (the API mode still calls the server for anything
    that must be authoritative, e.g. applying).
    ============================================================ */
-import { AppStatus, EduLevel, EvidenceKind, MatchResult, Posting, RejectionReason, Resume, Tier } from './models';
+import { AppStatus, EduLevel, EvidenceKind, MatchResult, Posting, RejectionReason, Resume, SkillEvidence, Tier } from './models';
 
 /* The study's published defaults. The SERVER is the authority, it reads
    these from the match_settings table, so an admin can retune them without a
@@ -124,6 +124,14 @@ export const UNEVIDENCED_CREDIT = 0.5;
 
 export const EVIDENCE_KINDS: EvidenceKind[] = ['experience', 'project', 'certification', 'education', 'document'];
 
+/** Normalise a skill's evidence to a list of sources, tolerating the older
+ *  single-object shape. Mirrors server engine.ts. Scoring only asks whether
+ *  the list is non-empty; extra sources record where a skill came from. */
+export function evidenceSources(ev: SkillEvidence | SkillEvidence[] | null | undefined): SkillEvidence[] {
+  if (!ev) return [];
+  return (Array.isArray(ev) ? ev : [ev]).filter((s) => s && s.ref);
+}
+
 /** What each source type is called on screen. Kept apart from the stored
  *  value so the wording can be plain without changing what is saved. */
 export const EVIDENCE_KIND_LABELS: Record<EvidenceKind, string> = {
@@ -167,26 +175,62 @@ export function evidenceLabels(resume: {
 }
 
 export const STATUS_LABELS: Record<AppStatus, string> = {
-  submitted: 'Submitted', review: 'Under review', shortlisted: 'Shortlisted', rejected: 'Not selected', hired: 'Hired',
+  submitted: 'Applied',
+  scheduling: 'For scheduling',
+  initial_interview: 'For initial interview',
+  testing: 'For testing',
+  shortlisted: 'Shortlisted',
+  final_interview: 'Final interview & selection',
+  offer: 'Job offer',
+  hired: 'Hired — onboarding',
+  rejected: 'Not selected',
   withdrawn: 'Withdrawn',
+  review: 'Under review', // legacy — only for rows written before the pipeline was expanded
 };
-/** The statuses a RECRUITER may set, in pipeline order. 'withdrawn' is
- *  deliberately absent: only the applicant can withdraw their own
- *  application, so it is never an option in a recruiter's status picker. */
-export const STATUS_ORDER: AppStatus[] = ['submitted', 'review', 'shortlisted', 'rejected', 'hired'];
+/** The statuses a RECRUITER may set, in the partner's pipeline order, with
+ *  'rejected' as the off-ramp at the end. 'withdrawn' is deliberately absent:
+ *  only the applicant can withdraw their own application, so it is never an
+ *  option in a recruiter's status picker. 'review' is absent too — it is a
+ *  legacy value that predates the eight-stage pipeline, kept renderable below
+ *  but no longer offered. */
+export const STATUS_ORDER: AppStatus[] = [
+  'submitted', 'scheduling', 'initial_interview', 'testing', 'shortlisted',
+  'final_interview', 'offer', 'hired', 'rejected',
+];
 
 /* Every status a row can actually hold. Counts and breakdowns must use this
    one, building them from STATUS_ORDER left 'withdrawn' out entirely, so a
-   withdrawn application simply vanished from the recruiter's totals. */
-export const ALL_STATUSES: AppStatus[] = [...STATUS_ORDER, 'withdrawn'];
+   withdrawn application simply vanished from the recruiter's totals. 'review'
+   is included for the same reason: a legacy row must still be counted. */
+export const ALL_STATUSES: AppStatus[] = [...STATUS_ORDER, 'withdrawn', 'review'];
 
 export const EDU_RANK: Record<EduLevel, number> = {
-  none: 0, highschool: 1, vocational: 2, associate: 3, bachelor: 4, master: 5,
+  // Ordinal positions; only their order and ratio matter to the score.
+  // 'college_level' (some college, no degree yet) sits between a completed
+  // associate and a bachelor, so it takes 3.5 rather than renumbering the
+  // ladder — which would have shifted every existing education ratio.
+  none: 0, highschool: 1, vocational: 2, associate: 3, college_level: 3.5, bachelor: 4, master: 5,
 };
 export const EDU_LABELS: Record<EduLevel, string> = {
   none: 'No requirement', highschool: 'High school', vocational: 'Vocational / TESDA',
-  associate: 'Associate degree', bachelor: 'Bachelor’s degree', master: 'Master’s degree',
+  associate: 'Associate degree', college_level: 'College level (undergraduate)',
+  bachelor: 'Bachelor’s degree', master: 'Master’s degree',
 };
+
+/** How a posting's minimum-experience requirement reads to a person. The
+ *  partner states requirements in years (Clark Outsourcing information
+ *  request, section 5), so the recruiter now enters years and this renders
+ *  them: whole years read as years, a sub-year requirement as months (also
+ *  the unit an applicant enters on their own resume), and a mixed one as both.
+ *  The stored value stays months so the scoring engine is untouched. */
+export function experienceLabel(months: number): string {
+  const m = Math.max(0, Math.round(Number(months) || 0));
+  if (m === 0) return 'No experience required';
+  if (m % 12 === 0) { const y = m / 12; return `${y} year${y > 1 ? 's' : ''}`; }
+  if (m < 12) return `${m} month${m > 1 ? 's' : ''}`;
+  const y = Math.floor(m / 12), r = m % 12;
+  return `${y} year${y > 1 ? 's' : ''} ${r} month${r > 1 ? 's' : ''}`;
+}
 
 /** Password rule for anything that SETS a password, mirrored in
  *  server/src/lib/password.ts. Never checked at login, so accounts made
@@ -373,7 +417,7 @@ export function scoreLocal(
   const evidence = resume.skillEvidence;
   const evidenced = new Set<string>();
   if (evidence) {
-    for (const [name, ev] of Object.entries(evidence)) if (ev?.ref) evidenced.add(normSkill(name));
+    for (const [name, ev] of Object.entries(evidence)) if (evidenceSources(ev).length) evidenced.add(normSkill(name));
   }
   const unevidenced = evidence ? matched.filter((s) => !evidenced.has(normSkill(s))) : [];
   const credited = matched.length - unevidenced.length * (1 - UNEVIDENCED_CREDIT);
@@ -434,5 +478,11 @@ export function tierLabel(n: number): string {
   return t === 'strong' ? 'Strong match' : t === 'possible' ? 'Possible match' : 'Related role';
 }
 export function statusBadge(s: AppStatus): string {
-  return { submitted: 'slate', review: 'amber', shortlisted: 'green', hired: 'solid', rejected: 'wine', withdrawn: 'slate' }[s] || 'slate';
+  return {
+    submitted: 'slate',
+    scheduling: 'amber', initial_interview: 'amber', testing: 'amber',
+    shortlisted: 'green', final_interview: 'green', offer: 'green',
+    hired: 'solid', rejected: 'wine', withdrawn: 'slate',
+    review: 'amber', // legacy
+  }[s] || 'slate';
 }

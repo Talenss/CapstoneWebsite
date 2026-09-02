@@ -95,7 +95,8 @@ export interface ApplicationRow {
   seeker_id: number;
   resume_id: number;
   posting_id: number;
-  status: 'submitted' | 'review' | 'shortlisted' | 'rejected' | 'hired' | 'withdrawn';
+  status: 'submitted' | 'scheduling' | 'initial_interview' | 'testing' | 'shortlisted'
+    | 'final_interview' | 'offer' | 'hired' | 'rejected' | 'withdrawn' | 'review';
   score_snapshot: number | null;
   applied_at: string;
   updated_at: string;

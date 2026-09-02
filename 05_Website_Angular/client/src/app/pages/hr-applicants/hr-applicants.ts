@@ -6,7 +6,7 @@ import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { AppStatus, Personal, Posting, RankedRow, RejectionReason, Resume, ScreeningNote, SkillEvidence, StatusEvent, Tier, RankedQuery} from '../../core/models';
-import { APPLICANT_REASON_LABELS, EDU_LABELS, EVIDENCE_KIND_LABELS, REASON_LABELS, REJECTION_REASONS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
+import { APPLICANT_REASON_LABELS, EDU_LABELS, EVIDENCE_KIND_LABELS, evidenceSources, experienceLabel, REASON_LABELS, REJECTION_REASONS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 
 /** Port of the PHP hr-applicants.html — the ranked-applicant list
@@ -27,6 +27,7 @@ export class HrApplicants {
   private sanitizer = inject(DomSanitizer);
 
   readonly statusOrder = STATUS_ORDER;
+  readonly experienceLabel = experienceLabel;
   readonly statusLabels = STATUS_LABELS;
   readonly eduLabels = EDU_LABELS;
   readonly weights = WEIGHTS;
@@ -135,7 +136,7 @@ export class HrApplicants {
     return (
       n + ' applicant' + (n === 1 ? '' : 's') + ' · asking for ' +
       p.skills.join(', ') + ' · ' + EDU_LABELS[p.educationLevel].toLowerCase() +
-      (p.minExperienceMonths ? ' · ' + p.minExperienceMonths + ' months experience' : ' · no experience required')
+      ' · ' + experienceLabel(p.minExperienceMonths || 0).toLowerCase()
     );
   });
 
@@ -311,11 +312,18 @@ export class HrApplicants {
 
   readonly evidenceKindLabels = EVIDENCE_KIND_LABELS;
 
-  /** Where the applicant said they used one skill, or null if they named no
-   *  source. A method rather than a template lookup so an older resume with
-   *  no map at all reads as "no source" instead of throwing. */
-  evidenceOf(r: RankedRow, skill: string): SkillEvidence | null {
-    return r.resume.skillEvidence?.[skill] ?? null;
+  /** Every source the applicant named for one skill — a skill can be learned
+   *  in several places, so this is a list. Empty when they named none, and for
+   *  an older resume with no map at all. */
+  evidenceOf(r: RankedRow, skill: string): SkillEvidence[] {
+    return evidenceSources(r.resume.skillEvidence?.[skill]);
+  }
+
+  /** The sources for one skill as a single line for the recruiter view, e.g.
+   *  "Work experience — IT Support, Clark BPO · Education — BS IT, HAU".
+   *  Empty string when there are none, which the template reads as "no source". */
+  evidenceTextOf(r: RankedRow, skill: string): string {
+    return this.evidenceOf(r, skill).map((ev) => `${EVIDENCE_KIND_LABELS[ev.kind]} — ${ev.ref}`).join(' · ');
   }
 
   /* ---------- who already handled this applicant ----------

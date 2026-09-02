@@ -677,7 +677,7 @@ test('a recruiter sees WHICH colleague made each change', async () => {
   assert.ok(row, 'expected a non-withdrawn applicant on posting 1');
 
   // make a change so there is definitely a named employer event
-  await hr('applications/set-status', { id: row.application.id, status: 'review' });
+  await hr('applications/set-status', { id: row.application.id, status: 'scheduling' });
 
   const { body } = await hr('applications/history', { id: row.application.id });
   assert.equal(body.ok, true);
@@ -1106,7 +1106,9 @@ test('a skill with no source scores less than the same skill with one', async ()
 
   // Same skills, sources removed.
   const again = (await seeker('resumes/get', { id: listed.id })).body.resume;
-  assert.deepEqual(again.skillEvidence, { JavaScript: source, Git: source },
+  // Read back as a LIST of sources per skill (a skill can be learned in
+  // several places); a single source is stored as a one-element list.
+  assert.deepEqual(again.skillEvidence, { JavaScript: [source], Git: [source] },
     'the source must survive the save — it is stored on resume_skills, which is deleted and rewritten every save');
   again.skillEvidence = {};
   assert.equal((await seeker('resumes/save', { resume: again })).body.ok, true);
@@ -1116,6 +1118,39 @@ test('a skill with no source scores less than the same skill with one', async ()
     `an unsourced skill must score lower (${unsourced.score} vs ${sourced.score})`);
   assert.ok(unsourced.score > 0, 'but it must still count — half credit, not zero');
   assert.deepEqual(unsourced.unevidencedMatches.sort(), ['Git', 'JavaScript']);
+});
+
+test('a skill can be linked to several sources, and all of them survive the round trip', async () => {
+  /* The multi-source model: a skill learned in more than one place carries a
+     LIST of sources. Extra sources never lift the score above full — a skill
+     with any source is already full — they only record where it came from for
+     the recruiter. This proves the whole list persists through the save. */
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const listed = (await seeker('resumes/list')).body.resumes[0];
+  const r = (await seeker('resumes/get', { id: listed.id })).body.resume;
+
+  r.experience = [{ position: 'Web Development Intern', company: 'LGU San Fernando', months: 4, description: '' }];
+  r.projects = [{ name: 'Barangay records system' }];
+  r.skills = ['JavaScript'];
+  const two = [
+    { kind: 'experience', ref: 'Web Development Intern, LGU San Fernando' },
+    { kind: 'project', ref: 'Barangay records system' },
+  ];
+  r.skillEvidence = { JavaScript: two };
+  assert.equal((await seeker('resumes/save', { resume: r })).body.ok, true);
+
+  const back = (await seeker('resumes/get', { id: listed.id })).body.resume;
+  assert.deepEqual(back.skillEvidence, { JavaScript: two },
+    'both sources for the skill must come back, in order');
+
+  // Duplicates fold, and a source the resume no longer contains is dropped —
+  // the rest survive.
+  r.skillEvidence = { JavaScript: [two[0], two[0], { kind: 'project', ref: 'Does Not Exist' }] };
+  assert.equal((await seeker('resumes/save', { resume: r })).body.ok, true);
+  const folded = (await seeker('resumes/get', { id: listed.id })).body.resume;
+  assert.deepEqual(folded.skillEvidence, { JavaScript: [two[0]] },
+    'a duplicate is folded and an unbacked source dropped, leaving the one real source');
 });
 
 test('a source the resume does not contain is refused', async () => {
@@ -1258,8 +1293,8 @@ test('a skill may point at the uploaded file, but only once the file is really t
   const linked = await seeker('resumes/save', { resume: withFile });
   assert.equal(linked.body.ok, true);
   assert.deepEqual(linked.body.resume.skillEvidence, {
-    JavaScript: { kind: 'document', ref: 'Mendez_Resume.pdf' },
-    Git: { kind: 'document', ref: 'Mendez_Resume.pdf' },
+    JavaScript: [{ kind: 'document', ref: 'Mendez_Resume.pdf' }],
+    Git: [{ kind: 'document', ref: 'Mendez_Resume.pdf' }],
   });
 
   // And a different file name is still refused, so the kind is not a bypass.

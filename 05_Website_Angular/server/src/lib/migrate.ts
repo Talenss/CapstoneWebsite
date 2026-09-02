@@ -159,19 +159,25 @@ export async function runMigrations(): Promise<void> {
   await exec('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check');
   await exec("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('seeker','recruiter','admin'))");
 
-  // applications.status gains 'withdrawn' — a seeker-only action, so the
-  // privacy notice's promise that consent can be withdrawn has a real
-  // mechanism per application (not just deleting the whole account).
-  // The status columns are TEXT + CHECK; widen the constraints in place.
+  // applications.status carries the partner's eight-stage pipeline plus
+  // 'rejected', 'withdrawn' (a seeker-only action, so the privacy notice's
+  // promise that consent can be withdrawn has a real per-application
+  // mechanism) and the legacy 'review' (kept valid so rows written before the
+  // pipeline was expanded still validate). The status columns are TEXT +
+  // CHECK; widen the constraints in place. One list, reused for all three so
+  // the two history columns can never drift from the applications column.
+  const STATUS_SET =
+    "'submitted','scheduling','initial_interview','testing','shortlisted'," +
+    "'final_interview','offer','hired','rejected','withdrawn','review'";
   await exec('ALTER TABLE applications DROP CONSTRAINT IF EXISTS applications_status_check');
   await exec(`ALTER TABLE applications ADD CONSTRAINT applications_status_check
-    CHECK (status IN ('submitted','review','shortlisted','rejected','hired','withdrawn'))`);
+    CHECK (status IN (${STATUS_SET}))`);
   await exec('ALTER TABLE application_status_history DROP CONSTRAINT IF EXISTS application_status_history_old_status_check');
   await exec(`ALTER TABLE application_status_history ADD CONSTRAINT application_status_history_old_status_check
-    CHECK (old_status IN ('submitted','review','shortlisted','rejected','hired','withdrawn'))`);
+    CHECK (old_status IN (${STATUS_SET}))`);
   await exec('ALTER TABLE application_status_history DROP CONSTRAINT IF EXISTS application_status_history_new_status_check');
   await exec(`ALTER TABLE application_status_history ADD CONSTRAINT application_status_history_new_status_check
-    CHECK (new_status IN ('submitted','review','shortlisted','rejected','hired','withdrawn'))`);
+    CHECK (new_status IN (${STATUS_SET}))`);
 
   // resumes.design — the visual style of the printed resume (ATS-safe skins).
   // Section order still lives in template_type; this only skins the sheet.
@@ -185,6 +191,22 @@ export async function runMigrations(): Promise<void> {
   await exec(`ALTER TABLE resumes ADD CONSTRAINT resumes_design_check CHECK (design IN (
     'classic','modern','minimal','executive','banner','split','bar','categorized',
     'traditional','clean','compact','senior','graduate','technical'))`);
+
+  // resume_skills.evidence_sources — the full list of places a skill was
+  // learned, as a JSON array of {kind, ref}. The older evidence_kind/ref pair
+  // stays as the first source; existing rows leave this null and the reader
+  // falls back to that pair, so nothing needs backfilling.
+  await exec('ALTER TABLE resume_skills ADD COLUMN IF NOT EXISTS evidence_sources JSONB');
+
+  // education level gains 'college_level' — the undergraduate/some-college tier
+  // the partner asked for (Clark Outsourcing information request, section 5).
+  // Both the resume education table and the posting requirement carry the same
+  // TEXT + CHECK; widen them in place. One list, reused for both.
+  const EDU_SET = "'none','highschool','vocational','associate','college_level','bachelor','master'";
+  await exec('ALTER TABLE education DROP CONSTRAINT IF EXISTS education_level_check');
+  await exec(`ALTER TABLE education ADD CONSTRAINT education_level_check CHECK (level IN (${EDU_SET}))`);
+  await exec('ALTER TABLE job_postings DROP CONSTRAINT IF EXISTS job_postings_education_level_check');
+  await exec(`ALTER TABLE job_postings ADD CONSTRAINT job_postings_education_level_check CHECK (education_level IN (${EDU_SET}))`);
 
   // resumes.own_file_extract — the applicant's own document, read into the
   // same structured shape the builder edits so the engine can score it. The

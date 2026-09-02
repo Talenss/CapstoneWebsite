@@ -46,7 +46,11 @@ export class HrPosting {
   descVal = signal('');
   skillsVal = signal<string[]>([]);
   eduVal = signal<EduLevel>('bachelor');
-  monthsVal = signal(0);
+  monthsVal = signal(0); // canonical unit — the engine and API speak months
+  /** The recruiter enters YEARS (partner states requirements in years); the
+   *  field shows this and stores months underneath. Whole and half years are
+   *  the norm, so 24 months reads as 2 and 6 months as 0.5. */
+  yearsVal = computed(() => { const m = this.monthsVal(); return m ? +(m / 12).toFixed(2) : 0; });
   deadlineVal = signal(''); // optional YYYY-MM-DD; empty = no deadline
   skillInput = signal('');
 
@@ -59,7 +63,7 @@ export class HrPosting {
   wEdu = signal(Math.round(WEIGHTS.education * 100));
   wExp = signal(Math.round(WEIGHTS.experience * 100));
   /* Certifications start at nothing, which is the whole design: the study's
-     published split is 50/25/25 across three, and this component exists only
+     default split is 50/25/25 across three, and this component exists only
      for the recruiter who deliberately wants it. */
   wCert = signal(0);
   certsVal = signal<string[]>([]);
@@ -189,7 +193,10 @@ export class HrPosting {
   setType(e: Event): void { this.typeVal.set((e.target as HTMLSelectElement).value as EmploymentType); }
   setDesc(e: Event): void { this.descVal.set((e.target as HTMLTextAreaElement).value); }
   setEdu(e: Event): void { this.eduVal.set((e.target as HTMLSelectElement).value as EduLevel); }
-  setMonths(e: Event): void { this.monthsVal.set(Number((e.target as HTMLInputElement).value) || 0); }
+  setYears(e: Event): void {
+    const y = Number((e.target as HTMLInputElement).value) || 0;
+    this.monthsVal.set(Math.max(0, Math.round(y * 12)));
+  }
   setDeadline(e: Event): void { this.deadlineVal.set((e.target as HTMLInputElement).value); }
   setSkillInput(e: Event): void { this.skillInput.set((e.target as HTMLInputElement).value); }
 

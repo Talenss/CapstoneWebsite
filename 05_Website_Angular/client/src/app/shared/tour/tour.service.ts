@@ -184,6 +184,15 @@ export class TourService {
     }
     if (!this.visible().length) return;
 
+    // Mark it seen the moment it AUTO-opens, not only when it is finished.
+    // Otherwise a person who navigates away mid-tour (an in-app link destroys
+    // the page, and the next page's init() calls stop() → finish(false)) is
+    // never recorded as having seen it, so the tour re-appears on every visit.
+    // The requirement is that it shows once per page; recording it here is
+    // what makes that true. The "Show me around" button calls start(true),
+    // which skips this whole block, so replay is unaffected.
+    if (!force) { try { localStorage.setItem(this.seenKey(), '1'); } catch { /* ignore */ } }
+
     this.lastFocus = document.activeElement as HTMLElement;
     this.open = true; this.i = 0;
     this.build();

@@ -71,8 +71,8 @@ export class LearningHub implements OnInit, AfterViewInit, OnDestroy {
         q: 'How do I write the skills section of my resume?',
         a: 'Name specific, checkable skills rather than vague phrases. "JavaScript", "Customer Service", '
           + '"Bookkeeping" and "Data Entry" are matched against a posting\'s requirements; "computer skills" '
-          + 'and "hardworking" match nothing. On Linaw PH this section alone is half of your '
-          + 'compatibility score by default, and more on openings that weight skills harder.',
+          + 'and "hardworking" match nothing. On Linaw PH this section is usually the biggest part of your '
+          + 'compatibility score, and even more on openings that weight skills harder.',
       },
       {
         q: 'What do I put on a resume when I have no work experience?',

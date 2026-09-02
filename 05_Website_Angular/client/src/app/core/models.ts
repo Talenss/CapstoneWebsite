@@ -48,7 +48,7 @@ export interface RoutingCompany {
   recruiters: { id: string; name: string }[];
   assignments: DeptAssignment[];
 }
-export type EduLevel = 'none' | 'highschool' | 'vocational' | 'associate' | 'bachelor' | 'master';
+export type EduLevel = 'none' | 'highschool' | 'vocational' | 'associate' | 'college_level' | 'bachelor' | 'master';
 export type Template = 'chronological' | 'functional' | 'combination';
 /** Visual style of the rendered/printed resume. Every design is single-column
  *  and ATS-safe: real headings, real text, no tables, no graphics.
@@ -63,7 +63,18 @@ export type ResumeDesign =
   | 'classic' | 'modern' | 'minimal' | 'executive' | 'banner' | 'split' | 'bar' | 'categorized'
   | 'traditional' | 'clean' | 'compact' | 'senior' | 'graduate' | 'technical';
 export type EmploymentType = 'full-time' | 'part-time' | 'contract' | 'internship';
-export type AppStatus = 'submitted' | 'review' | 'shortlisted' | 'rejected' | 'hired' | 'withdrawn';
+/* The application pipeline, aligned to the partner's own eight stages
+   (Clark Outsourcing information request, section 6). The recruiter-settable
+   pipeline is: submitted (their "Applied") → scheduling → initial_interview →
+   testing → shortlisted → final_interview → offer → hired (their "New employee
+   onboarding"), with 'rejected' as the off-ramp and 'withdrawn' as the
+   applicant's own exit. 'review' is retained only so rows written before the
+   pipeline was expanded still render and count — it is no longer offered in
+   the picker. */
+export type AppStatus =
+  | 'submitted' | 'scheduling' | 'initial_interview' | 'testing' | 'shortlisted'
+  | 'final_interview' | 'offer' | 'hired' | 'rejected' | 'withdrawn'
+  | 'review';
 export type Tier = 'strong' | 'possible' | 'related';
 
 export interface User {
@@ -111,7 +122,7 @@ export interface Company {
    Richer alternatives were considered (grouped skills, start/end dates in
    place of months, dropping level in favour of free-text degree) and
    rejected: they would have required rewriting the engine, its demo-mode
-   twin, the parity suite, and the 50/25/25 formula published in the study.
+   twin, the parity suite, and the default 50/25/25 split.
    A resume can now carry far more, and the score still comes from the same
    three inputs it always did.
    --------------------------------------------------------------------- */
@@ -245,7 +256,10 @@ export interface Resume {
    *  applicant named no source for that skill, which is allowed and costs
    *  partial credit rather than the whole match. NEVER rendered by the print
    *  sheet or any of the fourteen designs. */
-  skillEvidence?: Record<string, SkillEvidence>;
+  /** Each skill maps to a LIST of sources — a skill can be learned in more
+   *  than one place. Older resumes stored a single object; readers normalise
+   *  both via evidenceSources(). */
+  skillEvidence?: Record<string, SkillEvidence | SkillEvidence[]>;
   certifications: Certification[];
   ownFile: OwnFile | null;
   updatedAt?: number;

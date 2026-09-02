@@ -50,6 +50,16 @@ export interface SkillEvidence {
   /** The label of the entry it points at, as the applicant wrote it. */
   ref: string;
 }
+/** A skill's evidence is a LIST of sources — a skill can be learned in more
+ *  than one place (a job and a school). Older resumes stored a single source
+ *  as one object; this normalises both shapes to a list, dropping anything
+ *  with no ref. Scoring only asks "is the list non-empty?" — more than one
+ *  source never lifts a skill above full credit; it only records where it came
+ *  from for the recruiter to read. */
+export function evidenceSources(ev: SkillEvidence | SkillEvidence[] | null | undefined): SkillEvidence[] {
+  if (!ev) return [];
+  return (Array.isArray(ev) ? ev : [ev]).filter((s) => s && s.ref);
+}
 
 /** What a matched skill is worth when the applicant named no source for it.
  *
@@ -99,7 +109,10 @@ export function evidenceLabels(resume: {
 }
 
 export const EDU_RANK: Record<string, number> = {
-  none: 0, highschool: 1, vocational: 2, associate: 3, bachelor: 4, master: 5,
+  // Mirrors client engine.ts. 'college_level' is undergraduate/some-college,
+  // ranked between associate and bachelor at 3.5 so no existing whole-number
+  // rank (or the ratios built from them) changes.
+  none: 0, highschool: 1, vocational: 2, associate: 3, college_level: 3.5, bachelor: 4, master: 5,
 };
 
 /* ------------------------------------------------------------
@@ -224,7 +237,7 @@ export interface SerializedResume {
    *  rmFileScore, scoring a document a machine read, where there was no
    *  builder to ask in. Penalising that would be scoring the applicant for a
    *  screen they were never shown. */
-  skillEvidence?: Record<string, SkillEvidence>;
+  skillEvidence?: Record<string, SkillEvidence | SkillEvidence[]>;
   /** Only read when the opening asks for certifications. Free text, as the
    *  applicant typed it — there is no catalogue for these the way there is
    *  for skills. */
@@ -352,7 +365,7 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
   const evidence = resume.skillEvidence;
   const evidenced = new Set<string>();
   if (evidence) {
-    for (const [name, ev] of Object.entries(evidence)) if (ev?.ref) evidenced.add(skillNorm(name));
+    for (const [name, ev] of Object.entries(evidence)) if (evidenceSources(ev).length) evidenced.add(skillNorm(name));
   }
   /* An ABSENT map means the question was never asked (see SerializedResume),
      so every match counts in full and nothing is reported as unsourced. */

@@ -259,6 +259,9 @@ test('a plain single-column resume is read end to end', async () => {
   assert.equal(res.personal.email, 'juan.delacruz@example.ph');
   assert.match(res.personal.phone, /0917/);
   assert.match(res.personal.linkedin ?? '', /linkedin\.com\/in\/juandelacruz/);
+  // The header holds no portfolio. The only host in it is the one inside the
+  // email address, and that must not be offered as one.
+  assert.equal(res.personal.portfolio, undefined);
 
   // The three fields the ENGINE reads — the only ones that move a score.
   assert.equal(res.education[0].level, 'bachelor', 'education level feeds 25% of the score');
@@ -273,6 +276,15 @@ test('a plain single-column resume is read end to end', async () => {
   assert.equal(res.experience[0].bullets?.length, 2);
   assert.equal(res.template, 'combination');
   assert.ok(res.languages?.some((l) => l.name === 'Filipino' && l.proficiency === 'Native'));
+});
+
+test('a portfolio in the header is still read once the addresses are struck out', async () => {
+  const r = await parseResume(
+    txt('ANA REYES\nana.reyes@gmail.com\ngithub.com/anareyes\n\nSKILLS\nJavaScript\n'),
+    TEXT,
+    'ana.txt',
+  );
+  assert.equal(r.resume!.personal.portfolio, 'github.com/anareyes');
 });
 
 test('a document with no readable text fails rather than returning an empty resume', async () => {

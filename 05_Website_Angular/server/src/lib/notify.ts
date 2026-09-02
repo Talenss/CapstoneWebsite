@@ -34,6 +34,31 @@ const STATUS_COPY: Record<string, { subject: (t: string) => string; heading: str
     heading: 'Someone is reading your application',
     line: (t, c) => `A person at ${c} has started reviewing your application for <b>${t}</b>. No action needed — you’ll hear again when they decide the next step.`,
   },
+  scheduling: {
+    subject: (t) => `Your ${t} application is moving forward`,
+    heading: 'You’re being scheduled',
+    line: (t, c) => `A recruiter at ${c} moved your application for <b>${t}</b> to scheduling. They’ll reach you through the contact details on your resume to arrange the next step.`,
+  },
+  initial_interview: {
+    subject: (t) => `Initial interview — ${t}`,
+    heading: 'You’re up for an initial interview',
+    line: (t, c) => `A recruiter at ${c} has set your application for <b>${t}</b> for an initial interview. Watch the email and phone number on your resume for the details.`,
+  },
+  testing: {
+    subject: (t) => `Assessment stage — ${t}`,
+    heading: 'You’ve reached the assessment stage',
+    line: (t, c) => `Your application for <b>${t}</b> at ${c} has moved to testing. A recruiter will send you what the assessment involves.`,
+  },
+  final_interview: {
+    subject: (t) => `Final interview — ${t}`,
+    heading: 'You’ve reached the final interview',
+    line: (t, c) => `Good news — a recruiter at ${c} moved your application for <b>${t}</b> to the final interview and selection stage. Expect them to make contact soon.`,
+  },
+  offer: {
+    subject: (t) => `A job offer for ${t}`,
+    heading: 'There’s an offer on the table',
+    line: (t, c) => `A recruiter at ${c} marked your application for <b>${t}</b> as a <b>job offer</b>. They’ll be in touch about the details — congratulations.`,
+  },
   shortlisted: {
     subject: (t) => `You’ve been shortlisted for ${t}`,
     heading: 'You made the shortlist',
@@ -142,7 +167,7 @@ export async function notifyNewPostingMatch(
     `
       <h1 style="margin:0 0 10px;font-size:22px">A new opening fits your resume</h1>
       <p style="margin:0;font-size:14.5px;line-height:1.65;color:#4C5566">Hi ${esc(seekerName)},</p>
-      <p style="margin:10px 0 0;font-size:14.5px;line-height:1.65;color:#4C5566">${esc(companyName)} just posted <b>${t}</b>, and your active resume scores <b>${Math.round(score)}%</b> against its stated requirements — ${label}. Same transparent formula as always: skills 50%, education 25%, experience 25%.</p>
+      <p style="margin:10px 0 0;font-size:14.5px;line-height:1.65;color:#4C5566">${esc(companyName)} just posted <b>${t}</b>, and your active resume scores <b>${Math.round(score)}%</b> against its stated requirements — ${label}. The score reflects the skills, education and experience this opening asks for; open it to see the exact breakdown.</p>
       ${btn(`${APP_URL}/browse`, 'See the opening')}
       ${foot}`,
   );

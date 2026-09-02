@@ -100,7 +100,7 @@ export async function prefetchResumeChildren(ids: number[]): Promise<ResumeChild
                   FROM education WHERE resume_id = ANY(?) ORDER BY resume_id, sort_order, education_id`, [ids]),
     query<any>(`SELECT resume_id, position, company, months, description, location, start_date, end_date, is_current, bullets
                   FROM work_experience WHERE resume_id = ANY(?) ORDER BY resume_id, sort_order, experience_id`, [ids]),
-    query<any>(`SELECT rs.resume_id, s.skill_name, rs.added_at, rs.evidence_kind, rs.evidence_ref
+    query<any>(`SELECT rs.resume_id, s.skill_name, rs.added_at, rs.evidence_kind, rs.evidence_ref, rs.evidence_sources
                   FROM resume_skills rs JOIN skills s ON s.skill_id = rs.skill_id
                  WHERE rs.resume_id = ANY(?) ORDER BY rs.resume_id, s.skill_name`, [ids]),
     query<any>(`SELECT resume_id, cert_name, year_taken, issuer, credential_id
@@ -152,8 +152,8 @@ export async function serializeResume(r: ResumeRow, pre?: ResumeChildren): Promi
     ...(e.bullets ? { bullets: String(e.bullets).split('\n').map((b: string) => b.trim()).filter(Boolean) } : {}),
   }));
 
-  const sk = pre ? (pre.skills.get(id) ?? []) : await query<{ skill_name: string; added_at: any; evidence_kind: string | null; evidence_ref: string | null }>(
-    `SELECT s.skill_name, rs.added_at, rs.evidence_kind, rs.evidence_ref FROM resume_skills rs
+  const sk = pre ? (pre.skills.get(id) ?? []) : await query<{ skill_name: string; added_at: any; evidence_kind: string | null; evidence_ref: string | null; evidence_sources: any }>(
+    `SELECT s.skill_name, rs.added_at, rs.evidence_kind, rs.evidence_ref, rs.evidence_sources FROM resume_skills rs
        JOIN skills s ON s.skill_id = rs.skill_id
       WHERE rs.resume_id = ? ORDER BY s.skill_name`,
     [id],
@@ -176,11 +176,19 @@ export async function serializeResume(r: ResumeRow, pre?: ResumeChildren): Promi
 
      This never reaches the printed sheet. resume-print renders `skills`, a
      flat list of strings, and has no idea this map exists. */
-  const skillEvidence: Record<string, { kind: string; ref: string }> = {};
+  const skillEvidence: Record<string, { kind: string; ref: string }[]> = {};
   for (const r2 of sk) {
-    if (r2.evidence_kind && r2.evidence_ref) {
-      skillEvidence[r2.skill_name] = { kind: r2.evidence_kind, ref: r2.evidence_ref };
+    // evidence_sources (the full list) wins; the single evidence_kind/ref
+    // pair is the fallback for rows written before the column existed.
+    let list: { kind: string; ref: string }[] = [];
+    const raw = r2.evidence_sources;
+    const arr = typeof raw === 'string' ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : raw;
+    if (Array.isArray(arr)) {
+      list = arr.filter((x: any) => x && x.kind && x.ref).map((x: any) => ({ kind: String(x.kind), ref: String(x.ref) }));
+    } else if (r2.evidence_kind && r2.evidence_ref) {
+      list = [{ kind: r2.evidence_kind, ref: r2.evidence_ref }];
     }
+    if (list.length) skillEvidence[r2.skill_name] = list;
   }
 
   const ce = pre ? (pre.certifications.get(id) ?? []) : await query<any>(
