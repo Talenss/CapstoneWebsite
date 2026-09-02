@@ -96,6 +96,18 @@
 :root[data-theme="dark"] .badge.slate{border-color:#343B47}
 :root[data-theme="dark"] .badge.wine{border-color:#4A2C31}
 :root[data-theme="dark"] .alert.info{color:var(--accent-deep)}
+/* The dark theme lifts --accent to #E5545A so red TEXT and borders clear 4.5:1
+   against the page. That same lift breaks the filled button, where the red is
+   the background: white on #E5545A is 3.65:1, and the hover (--accent-deep,
+   a pale pink here) fell to 2.48:1 — the label all but disappeared on hover.
+   Filled buttons therefore keep their own deeper reds: 4.83:1 at rest and
+   6.34:1 on hover, both still clearly visible against the dark ground. */
+:root[data-theme="dark"] .btn.primary,
+:root[data-theme="dark"] .skip-link{background:#D13840;border-color:#D13840}
+:root[data-theme="dark"] .btn.primary:hover{background:#B8232A;border-color:#B8232A}
+/* Same story in green: --emerald is lifted for dark text use, which left the
+   filled "Hired" badge at 2.96:1. A deeper fill puts its label back at 4.87:1. */
+:root[data-theme="dark"] .badge.solid{background:#357F52;border-color:#357F52}
 /* the ink CTA blends into a dark page — lift it so it stays a clear button */
 :root[data-theme="dark"] .btn.dark{background:var(--ink-3);border-color:var(--ink-line)}
 :root[data-theme="dark"] .btn.dark:hover{background:#413729}
@@ -378,8 +390,12 @@ table.tbl tbody tr:hover{background:var(--ivory)}
    do the same work: the box still reads as an aside rather than as body text,
    and nothing about it is load-bearing for meaning — every callout on the site
    says in words what it is. */
+/* The colour is a token, not a fixed olive. The old #5F5124 was picked
+   against the light wash and stayed put when the theme flipped, leaving the
+   text at 2.12:1 on the dark --accent-wash. --text tracks the theme and
+   clears 13.6:1 either way. */
 .note{border:1px solid var(--accent-line);background:var(--accent-wash);border-radius:var(--r);
-  padding:13px 16px;font-size:13px;color:#5F5124}
+  padding:13px 16px;font-size:13px;color:var(--text)}
 .note.plain{background:var(--ivory);border-color:var(--rule);color:var(--muted)}
 .empty{text-align:center;padding:60px 26px}
 .empty h2{font-size:27px;margin-bottom:10px}
@@ -463,7 +479,12 @@ table.tbl tbody tr:hover{background:var(--ivory)}
 .footer li a{display:inline-block;padding:5px 0}
 .footer .base a{display:inline-block;padding:5px 0}
 .footer .base{margin-top:38px;padding-top:22px;border-top:1px solid var(--ink-2);display:flex;justify-content:space-between;
-  gap:14px;flex-wrap:wrap;font-size:12px;color:#6C7382}
+  gap:14px;flex-wrap:wrap;font-size:12px;
+  /* #6C7382 sat at 2.74:1 on the footer's --ink ground — under the 4.5:1 AA
+     minimum for 12px text. This clears it at 4.67:1 while staying dimmer
+     than the footer's main #A9B0BE, so the fine print still reads as fine
+     print. --ink is not redefined in dark mode, so this holds in both. */
+  color:#949BA9}
 
 /* ---------- onboarding tour (Objective 4) ---------- */
 /* The spotlight and the card share one identical transition so they always
