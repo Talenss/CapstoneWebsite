@@ -79,7 +79,10 @@
 .cat-head{display:flex;align-items:center;gap:8px;width:100%;padding:6px 2px;border:none;background:none;
   cursor:pointer;font-family:var(--body);font-size:13px;font-weight:600;color:var(--text);text-align:left}
 .cat-head:hover{color:var(--accent)}
-.cat-n{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint);font-weight:400}
+.cat-n{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted);font-weight:400}
+/* --muted, not --faint: at 11px on the panel's tinted surface --faint is
+   4.27:1 in light and 4.41:1 in dark, both under the 4.5 this project holds
+   itself to for small text. --muted clears it either way (4.94 and 6.02). */
 .cat-grp .pool{margin:4px 0 8px}
 
 /* spartan's combobox trigger is a custom element, which the browser lays out
