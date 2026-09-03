@@ -1,3 +1,143 @@
+/* ------------------------------------------------------------
+   FONTS FIRST — and this line must stay first.
+
+   CSS requires @import to precede every other rule in a stylesheet. When the
+   Tailwind block below was added above this line, the browser silently
+   dropped this import: no request to fonts.googleapis.com was made at all
+   and the whole site fell back to Georgia and the system sans. Nothing
+   errored, which is exactly why it has to be pinned here.
+
+   (A bare `@layer a, b;` statement is the one thing allowed before an
+   @import, so the layer order below is still declared ahead of Tailwind's.)
+   ------------------------------------------------------------ */
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=Manrope:wght@400..800&family=JetBrains+Mono:wght@500;600;700&display=swap');
+
+/* ------------------------------------------------------------
+   TAILWIND, DELIBERATELY WITHOUT PREFLIGHT.
+
+   spartan.ng's helm components are written in Tailwind classes, so the
+   utilities have to exist. What must NOT come with them is preflight,
+   Tailwind's own reset: it restyles button, input, h1-h6 and more, and the
+   design system below is built on top of the browser defaults it would
+   overwrite. Importing preflight here would silently undo the contrast
+   ratios and the spacing scale this file documents.
+
+   Tailwind v4 splits its entry points, so theme and utilities can be taken
+   without it. Anything spartan needs from preflight is carried by the
+   component's own classes instead.
+   ------------------------------------------------------------ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "tw-animate-css";
+
+/* ------------------------------------------------------------
+   THEME BRIDGE — spartan.ng's tokens expressed in ours.
+
+   The helm components are written against shadcn's variable names
+   (bg-primary, border-input, bg-popover…). Left undefined they render as
+   default shadcn grey, which is the "untouched component library" look this
+   project deliberately avoids. Mapped here instead onto the design system
+   below, so a spartan control comes out in Clark Outsourcing navy and red
+   and follows light/dark with everything else.
+
+   `@theme inline` matters: the utility resolves to var(--accent) at use
+   time rather than baking a colour in, so flipping the theme flows through.
+
+   ONE COLLISION WORTH KNOWING. shadcn's --accent is not a brand colour, it
+   is the subtle hover fill behind a highlighted menu row. Ours is the brand
+   red. Mapping them onto each other by name would turn every hover bright
+   red, so shadcn's accent is pointed at --stone-2 and only --primary carries
+   our red.
+   ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   SCOPED PREFLIGHT — the parts of Tailwind's reset spartan actually needs,
+   and nothing more.
+
+   Excluding preflight left the design system untouched, which was the point,
+   but it also removed the baseline the helm components are written against:
+   they assume border-box, a zeroed border that utilities then switch on, and
+   buttons that inherit their font instead of the browser's. Without it the
+   combobox trigger renders as a bare unstyled box.
+
+   So the reset is reintroduced INSIDE spartan's subtree only. Everything is
+   wrapped in :where() to keep specificity at zero, so any rule in the design
+   system below still wins on an element that carries both.
+   ------------------------------------------------------------ */
+:where([data-slot], [data-slot] *, [class*="hlm-"], [class*="hlm-"] *) {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: var(--rule);
+}
+:where([data-slot]) button,
+:where([data-slot] *) button,
+:where(button[data-slot]) {
+  appearance: none;
+  background-color: transparent;
+  background-image: none;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+:where([data-slot]) input,
+:where([data-slot] *) input {
+  font: inherit;
+  color: inherit;
+  background-color: transparent;
+}
+:where([data-slot]) svg { display: block; vertical-align: middle; }
+
+/* spartan's trigger button lives inside the component's own template, so a
+   page-scoped rule cannot reach it — Angular's view encapsulation stamps a
+   different attribute on it. Global, and narrowed by the data-slot spartan
+   puts there itself, so it touches nothing else. */
+hlm-combobox-trigger { display: block; width: 100%; }
+button[data-slot="combobox-trigger"] { width: 100%; justify-content: space-between; }
+
+@theme inline {
+  /* surfaces */
+  --color-background: var(--paper);
+  --color-foreground: var(--text);
+  --color-card: var(--paper);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--paper);
+  --color-popover-foreground: var(--text);
+
+  /* the brand action colour, and the only place our red is used */
+  --color-primary: var(--accent);
+  --color-primary-foreground: #FFFFFF;
+
+  /* quiet fills: rows, hovers, disabled states */
+  --color-secondary: var(--stone-2);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--stone-2);
+  --color-muted-foreground: var(--muted);
+  --color-accent: var(--stone-2);          /* shadcn's hover fill, NOT our red */
+  --color-accent-foreground: var(--text);
+
+  /* destructive is wine, kept darker than the accent so it never reads
+     as the primary action — the rule the design system states below */
+  --color-destructive: var(--wine);
+  --color-destructive-foreground: #FFFFFF;
+
+  /* lines and focus */
+  --color-border: var(--rule);
+  --color-input: var(--rule);
+  --color-ring: var(--accent);
+
+  /* 4px, matching --r. Tailwind's default is rounder than this system,
+     which describes itself as "refined, not rounded-SaaS". */
+  --radius: 4px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+
+  /* the body face, so a spartan control is not the only sans on the page */
+  --font-sans: 'Manrope', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
 /* ============================================================
    Linaw PH — Design System v4 "Front Desk"
    ------------------------------------------------------------
@@ -30,7 +170,8 @@
    reads it as a default rather than as a choice. Newsreader carries the same
    optical-size and italic axes, so every heading below still resolves at the
    weights it asks for, 560 included. */
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=Manrope:wght@400..800&family=JetBrains+Mono:wght@500;600;700&display=swap');
+/* The @import itself now sits at the top of this file — see the note there.
+   It must precede every other rule or the browser drops it. */
 
 :root{
   /* chrome — Clark Outsourcing navy */

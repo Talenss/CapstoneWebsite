@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -8,6 +8,7 @@ import { ApiService } from '../../core/api.service';
 import { EduLevel, EmploymentType, Posting, Resume } from '../../core/models';
 import { EDU_LABELS, SKILL_BY_INDUSTRY, SKILL_CATALOGUE, THRESHOLDS, WEIGHTS, scoreLocal, tierColor } from '../../core/engine';
 import { reportInvalidFields } from '../../shared/invalid-fields';
+import { HlmComboboxImports } from '@spartan-ng/helm/combobox';
 
 /** Port of the PHP hr-posting.html — create/edit an opening. The
  *  required-skills / education / experience fields ARE the scoring rule,
@@ -22,7 +23,7 @@ import { reportInvalidFields } from '../../shared/invalid-fields';
   // nothing ever dispatches — the template compiles, the button looks
   // right, and the browser performs a NATIVE submit instead: a GET to
   // /hr-posting? that reloads the page and throws the form away.
-  imports: [FormsModule, RouterLink, Header, Footer],
+  imports: [FormsModule, RouterLink, Header, Footer, ...HlmComboboxImports],
   templateUrl: './hr-posting.html',
   styleUrl: './hr-posting.css',
 })
@@ -161,6 +162,22 @@ export class HrPosting {
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       this.init(params.get('id'));
     });
+
+    // Take the pick, then hand the control back its empty state so the next
+    // search starts clean. Setting skillPick to null re-enters this effect
+    // once and stops at the guard.
+    //
+    // The clear is deferred by a task on purpose. The combobox writes its own
+    // value synchronously when an item is chosen, and this effect runs inside
+    // the same change-detection pass, so clearing here is immediately
+    // overwritten and the trigger keeps showing the last pick. Anything that
+    // lands in a later task works; a plain setTimeout is the least machinery.
+    effect(() => {
+      const picked = this.skillPick();
+      if (!picked) return;
+      this.addSkill(picked);
+      setTimeout(() => this.skillPick.set(null));
+    });
   }
 
   private async init(id: string | null): Promise<void> {
@@ -240,6 +257,51 @@ export class HrPosting {
     this.wEdu.set(Math.round(WEIGHTS.education * 100));
     this.wExp.set(Math.round(WEIGHTS.experience * 100));
     this.wCert.set(0);
+  }
+
+  /** Every skill the catalogue knows, for the combobox to search. The pool
+   *  chips below still show what this company already uses; this is the way
+   *  in to the rest of the catalogue without typing it exactly right. */
+  readonly allCatalogueSkills = SKILL_CATALOGUE.map((s) => s.name).sort((a, b) => a.localeCompare(b));
+
+  /** The combobox is a picker, not a field: taking a value adds the skill and
+   *  clears itself, so it behaves like the chips rather than holding state
+   *  that could disagree with the list underneath. */
+  /** Two-way bound to the combobox, so the control's own value comes back
+   *  here and can be cleared again after the pick has been taken.
+   *
+   *  This control ADDS a skill to the list below; it does not hold one. Left
+   *  set, the trigger keeps showing the last pick as though the posting
+   *  required only that, and the placeholder inviting another search never
+   *  returns. The binding has to be two-way for the clear to land: the
+   *  combobox's value is a model(), so writing null to a signal that is
+   *  already null is not a change and Angular never pushes it back down. */
+  readonly skillPick = signal<string | null>(null);
+
+  // read: ElementRef matters — the ref sits on a component, so without it
+  // viewChild hands back the component instance, which has no nativeElement.
+  private skillTrigger = viewChild('skillTrigger', { read: ElementRef });
+
+  /** The catalogue panel is 288px tall, and the popover flips to sit ABOVE the
+   *  trigger when that will not fit below it. That is ordinary behaviour and
+   *  right in most places, but on this form the space above the field is the
+   *  "The scoring rule" heading and the field's own label, so a flip hides the
+   *  very thing being filled in.
+   *
+   *  The popover's scroll strategy is "reposition", so it re-evaluates its
+   *  position as the page scrolls: making room below the trigger is enough to
+   *  bring the panel back down, without overriding the library's positioning. */
+  onComboState(state: 'open' | 'closed'): void {
+    if (state !== 'open') return;
+    const el = this.skillTrigger()?.nativeElement as HTMLElement | undefined;
+    if (!el) return;
+    const NEEDED = 294;                       // 288px panel + the 6px offset
+    const below = window.innerHeight - el.getBoundingClientRect().bottom;
+    if (below >= NEEDED) return;
+    window.scrollBy({
+      top: NEEDED - below,
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    });
   }
 
   onSkillKeydown(e: KeyboardEvent): void {

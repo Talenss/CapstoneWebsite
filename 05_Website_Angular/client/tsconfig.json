@@ -1,8 +1,19 @@
-/* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
-/* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "paths": {
+      "@spartan-ng/helm/*": ["./src/app/shared/ui/*"],
+      "@spartan-ng/helm/select": ["./src/app/shared/ui/select/src/index.ts"],
+      "@spartan-ng/helm/utils": ["./src/app/shared/ui/utils/src/index.ts"],
+      "@spartan-ng/helm/combobox": ["./src/app/shared/ui/combobox/src/index.ts"],
+      "@spartan-ng/helm/input-group": ["./src/app/shared/ui/input-group/src/index.ts"],
+      "@spartan-ng/helm/button": ["./src/app/shared/ui/button/src/index.ts"],
+      "@spartan-ng/helm/input": ["./src/app/shared/ui/input/src/index.ts"],
+      "@spartan-ng/helm/textarea": ["./src/app/shared/ui/textarea/src/index.ts"],
+      "@spartan-ng/helm/date-picker": ["./src/app/shared/ui/date-picker/src/index.ts"],
+      "@spartan-ng/helm/calendar": ["./src/app/shared/ui/calendar/src/index.ts"],
+      "@spartan-ng/helm/popover": ["./src/app/shared/ui/popover/src/index.ts"]
+    },
     "strict": true,
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
