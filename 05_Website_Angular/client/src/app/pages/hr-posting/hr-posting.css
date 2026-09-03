@@ -67,3 +67,17 @@
   .wtotal { flex-wrap: wrap; }
   .wtotal .tiny { margin-left:0; }
 }
+
+/* ---------- browse the skill catalogue by industry ----------
+   Collapsed by default and one industry at a time: the catalogue is a hundred
+   chips, and all of them on screen at once would bury the field above. */
+.cat-pick{margin-top:12px;border:1px solid var(--rule);border-radius:var(--r);background:var(--stone-2);padding:10px 14px}
+.cat-pick>summary{cursor:pointer;font-weight:600;font-size:13.5px;color:var(--text);list-style:none}
+.cat-pick>summary::-webkit-details-marker{display:none}
+.cat-grp{border-top:1px solid var(--rule-2);padding:6px 0}
+.cat-grp:first-of-type{border-top:none}
+.cat-head{display:flex;align-items:center;gap:8px;width:100%;padding:6px 2px;border:none;background:none;
+  cursor:pointer;font-family:var(--body);font-size:13px;font-weight:600;color:var(--text);text-align:left}
+.cat-head:hover{color:var(--accent)}
+.cat-n{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint);font-weight:400}
+.cat-grp .pool{margin:4px 0 8px}

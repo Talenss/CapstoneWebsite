@@ -6,7 +6,7 @@ import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { EduLevel, EmploymentType, Posting, Resume } from '../../core/models';
-import { EDU_LABELS, THRESHOLDS, WEIGHTS, scoreLocal, tierColor } from '../../core/engine';
+import { EDU_LABELS, SKILL_BY_INDUSTRY, SKILL_CATALOGUE, THRESHOLDS, WEIGHTS, scoreLocal, tierColor } from '../../core/engine';
 import { reportInvalidFields } from '../../shared/invalid-fields';
 
 /** Port of the PHP hr-posting.html — create/edit an opening. The
@@ -110,7 +110,25 @@ export class HrPosting {
   knownResumes = signal<{ resume: Resume; name: string }[]>([]);
 
   deptOptions = computed(() => Array.from(new Set(this.posts().map((p) => p.department).filter(Boolean))).sort());
-  knownSkills = computed(() => Array.from(new Set(this.posts().flatMap((p) => p.skills))).sort());
+  /* The datalist offers the whole catalogue as well as what this company has
+     already used, so a recruiter can type "pay" and be offered Payroll
+     Processing rather than having to remember the exact wording. Matching is
+     on the canonical form, so an entry from either source scores the same. */
+  knownSkills = computed(() => Array.from(new Set([
+    ...this.posts().flatMap((p) => p.skills),
+    ...SKILL_CATALOGUE.map((s) => s.name),
+  ])).sort((a, b) => a.localeCompare(b)));
+
+  /** What this company has used before, which is empty for a first opening. */
+  usedSkills = computed(() => Array.from(new Set(this.posts().flatMap((p) => p.skills))).sort());
+
+  /** The catalogue, grouped, minus anything already offered by usedSkills so
+   *  the same chip is never in two pools at once. */
+  readonly catalogueByIndustry = SKILL_BY_INDUSTRY;
+  industryOpen = signal<string | null>(null);
+  toggleIndustry(name: string): void {
+    this.industryOpen.set(this.industryOpen() === name ? null : name);
+  }
   /** Every skill this company already uses, shown whether or not it is on
    *  this opening. Dropping the chosen ones out of the pool reflowed the
    *  rows under the cursor mid-click; here that would put a skill the
@@ -118,7 +136,7 @@ export class HrPosting {
    *  then ranked against. */
   private requiredSkills = computed(() => new Set(this.skillsVal().map((s) => s.toLowerCase())));
   skillRequired = (s: string): boolean => this.requiredSkills().has(s.toLowerCase());
-  poolSkills = computed(() => this.knownSkills());
+  poolSkills = computed(() => this.usedSkills());
 
   simRows = computed(() => {
     const skills = this.skillsVal();
