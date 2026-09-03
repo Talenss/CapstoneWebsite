@@ -72,6 +72,33 @@
             }
           }
         </div>
+
+        <!-- The catalogue, so a recruiter writing their first opening has
+             something to pick from instead of an empty pool and a blank field.
+             Collapsed by industry: eleven groups open one at a time, which
+             keeps a hundred chips off the screen at once. -->
+        <details class="cat-pick">
+          <summary>Browse common skills by industry</summary>
+          <p class="hint" style="margin:6px 0 8px">These are the skills the system already knows, so wording variations match. Click one to require it.</p>
+          @for (grp of catalogueByIndustry; track grp[0]) {
+            <div class="cat-grp">
+              <button type="button" class="cat-head" (click)="toggleIndustry(grp[0])"
+                      [attr.aria-expanded]="industryOpen() === grp[0]">
+                <span aria-hidden="true">{{ industryOpen() === grp[0] ? '&minus;' : '+' }}</span>
+                {{ grp[0] }} <span class="cat-n">{{ grp[1].length }}</span>
+              </button>
+              @if (industryOpen() === grp[0]) {
+                <div class="pool">
+                  @for (s of grp[1]; track s) {
+                    <button type="button" [class.on]="skillRequired(s)" [attr.aria-pressed]="skillRequired(s)"
+                            [attr.title]="skillRequired(s) ? 'Stop requiring ' + s : 'Require ' + s"
+                            (click)="toggleSkill(s)"><span class="mark" aria-hidden="true">{{ skillRequired(s) ? '&check;' : '+' }}</span>{{ s }}</button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </details>
         <!-- After the pool, not before it: this list grows as skills are added,
              and above the chips it pushed them down mid-click. -->
         <div class="tags">

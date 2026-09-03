@@ -130,40 +130,102 @@ export const EDU_RANK: Record<string, number> = {
    but-different skills, so nothing is credited that wasn't claimed.
    ------------------------------------------------------------ */
 export const SKILL_ALIASES: Record<string, string> = {
-  // tech
-  js: 'javascript', ecmascript: 'javascript',
-  ts: 'typescript',
-  html: 'htmlcss', css: 'htmlcss', htmlandcss: 'htmlcss', html5: 'htmlcss', css3: 'htmlcss',
-  msoffice: 'microsoftoffice', microsoftofficesuite: 'microsoftoffice', officesuite: 'microsoftoffice',
-  msexcel: 'excel', microsoftexcel: 'excel',
-  msword: 'word', microsoftword: 'word',
-  mssql: 'sql', sqlserver: 'sql', mysqldatabase: 'mysql',
-  photoshop: 'adobephotoshop',
-  troubleshoot: 'troubleshooting', technicalsupport: 'troubleshooting', techsupport: 'troubleshooting',
-  networking: 'computernetworking', network: 'computernetworking',
-  // outsourcing / back-office (the pilot partner's world)
-  //
-  // Every entry below is a genuine synonym or abbreviation of the term it maps
-  // to. Deliberately absent: product names folded into categories. "Salesforce"
-  // is not a synonym for "CRM Software", it is one particular CRM — equating
-  // them would credit an applicant with a skill they did not claim, which the
-  // Definition of Terms promises this vocabulary never does.
-  customersupport: 'customerservice', clientservice: 'customerservice',
-  clientsupport: 'customerservice', customercare: 'customerservice', csr: 'customerservice',
+  // BPO
+  listeningskills: 'activelistening',
   crm: 'crmsoftware', crmsystem: 'crmsoftware', crmtools: 'crmsoftware',
-  encoding: 'dataentry', dataencoding: 'dataentry',
-  qb: 'quickbooks', quickbooksonline: 'quickbooks',
-  bookkeeper: 'bookkeeping', bookkeepingsupport: 'bookkeeping',
-  medicalterms: 'medicalterminology',
-  detailoriented: 'attentiontodetail', attentiontodetails: 'attentiontodetail',
-  // general
-  communicationskills: 'communication', oralcommunication: 'communication',
-  teamplayer: 'teamwork', collaboration: 'teamwork',
-  timemanagementskills: 'timemanagement',
-  problemsolvingskills: 'problemsolving',
-  leadershipskills: 'leadership',
+  callmanagement: 'callhandling',
+  livechatsupport: 'chatsupport',
+  conflictmanagement: 'conflictresolution',
+  clientservice: 'customerservice', clientsupport: 'customerservice', csr: 'customerservice', customercare: 'customerservice', customersupport: 'customerservice',
+  emailhandling: 'emailsupport',
   english: 'englishproficiency', englishcommunication: 'englishproficiency',
-  socmed: 'socialmedia', socialmediamanagement: 'socialmedia',
+  inboundcall: 'inboundcalls',
+  outboundcall: 'outboundcalls',
+  qa: 'qualityassurance',
+  typing: 'typingspeed',
+  // Driver
+  packagehandling: 'deliveryhandling',
+  driving: 'professionaldriving',
+  routeoptimization: 'routeplanning',
+  safetyprocedures: 'safetycompliance',
+  // Finance
+  audit: 'auditing',
+  reconciliation: 'bankreconciliation',
+  bookkeeper: 'bookkeeping', bookkeepingsupport: 'bookkeeping',
+  financialreports: 'financialreporting',
+  invoiceprocessing: 'invoicing',
+  payroll: 'payrollprocessing',
+  qb: 'quickbooks', quickbooksonline: 'quickbooks',
+  // General
+  attentiontodetails: 'attentiontodetail', detailoriented: 'attentiontodetail',
+  communicationskills: 'communication', oralcommunication: 'communication',
+  leadershipskills: 'leadership',
+  problemsolvingskills: 'problemsolving',
+  collaboration: 'teamwork', teamplayer: 'teamwork',
+  timemanagementskills: 'timemanagement',
+  // Graphic Design
+  illustrator: 'adobeillustrator',
+  indesign: 'adobeindesign',
+  photoshop: 'adobephotoshop',
+  brandidentity: 'branding',
+  pagelayout: 'layoutdesign',
+  imageediting: 'photoediting',
+  socialmediamanagement: 'socialmedia', socmed: 'socialmedia',
+  // HR
+  benefitsadministration: 'compensationandbenefits',
+  employeerecords: 'hrrecords',
+  laborlaw: 'laborlawcompliance',
+  employeeonboarding: 'onboarding',
+  performanceappraisal: 'performancemanagement',
+  learninganddevelopment: 'traininganddevelopment',
+  // IT Support
+  computerrepair: 'hardwarerepair', pcrepair: 'hardwarerepair',
+  helpdesk: 'helpdesksupport', servicedesk: 'helpdesksupport',
+  network: 'computernetworking', networking: 'computernetworking',
+  remotesupport: 'remotedesktopsupport',
+  softwaresetup: 'softwareinstallation',
+  ticketingsystem: 'ticketingsystems',
+  technicalsupport: 'troubleshooting', techsupport: 'troubleshooting', troubleshoot: 'troubleshooting',
+  // Medical Field
+  bls: 'basiclifesupport',
+  basicfirstaid: 'firstaid',
+  infectionprevention: 'infectioncontrol',
+  patientrecords: 'medicalrecords',
+  medicalterms: 'medicalterminology',
+  patienthandling: 'patientcare',
+  pharmacysupport: 'pharmacyassistance',
+  vitalsigns: 'vitalsignsmonitoring',
+  // Office Management
+  dataencoding: 'dataentry', encoding: 'dataentry',
+  filing: 'filingandrecords', recordsmanagement: 'filingandrecords',
+  inventory: 'inventorymanagement',
+  microsoftofficesuite: 'microsoftoffice', msoffice: 'microsoftoffice', officesuite: 'microsoftoffice',
+  excel: 'microsoftexcel', msexcel: 'microsoftexcel',
+  msword: 'microsoftword', word: 'microsoftword',
+  minutesofmeeting: 'minutetaking',
+  administrativesupport: 'officeadministration', officeadmin: 'officeadministration',
+  organizationalskills: 'organization',
+  suppliesmanagement: 'supplymanagement',
+  travelbooking: 'travelarrangements',
+  // Recruitment
+  applicanttrackingsystem: 'applicanttrackingsystems', ats: 'applicanttrackingsystems',
+  backgroundcheck: 'backgroundchecking',
+  conductinginterviews: 'interviewing',
+  jobadvertising: 'jobposting',
+  talentacquisition: 'recruitment',
+  resumescreening: 'screeningresumes',
+  candidatesourcing: 'sourcingcandidates', sourcing: 'sourcingcandidates',
+  // Web Development
+  angularjs: 'angular',
+  css: 'htmlcss', css3: 'htmlcss', html: 'htmlcss', html5: 'htmlcss', htmlandcss: 'htmlcss',
+  ecmascript: 'javascript', js: 'javascript',
+  mysqldatabase: 'mysql',
+  node: 'nodejs',
+  restapi: 'restapis', restfulapi: 'restapis',
+  reactjs: 'react',
+  responsivedesign: 'responsivewebdesign',
+  mssql: 'sql', sqlserver: 'sql',
+  ts: 'typescript',
 };
 
 /** Normalize a skill to its canonical comparable form: strip case and
