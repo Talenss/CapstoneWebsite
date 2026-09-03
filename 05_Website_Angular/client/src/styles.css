@@ -1,4 +1,18 @@
 /* ------------------------------------------------------------
+   FONTS FIRST — and this line must stay first.
+
+   CSS requires @import to precede every other rule in a stylesheet. When the
+   Tailwind block below was added above this line, the browser silently
+   dropped this import: no request to fonts.googleapis.com was made at all
+   and the whole site fell back to Georgia and the system sans. Nothing
+   errored, which is exactly why it has to be pinned here.
+
+   (A bare `@layer a, b;` statement is the one thing allowed before an
+   @import, so the layer order below is still declared ahead of Tailwind's.)
+   ------------------------------------------------------------ */
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=Manrope:wght@400..800&family=JetBrains+Mono:wght@500;600;700&display=swap');
+
+/* ------------------------------------------------------------
    TAILWIND, DELIBERATELY WITHOUT PREFLIGHT.
 
    spartan.ng's helm components are written in Tailwind classes, so the
@@ -156,7 +170,8 @@ button[data-slot="combobox-trigger"] { width: 100%; justify-content: space-betwe
    reads it as a default rather than as a choice. Newsreader carries the same
    optical-size and italic axes, so every heading below still resolves at the
    weights it asks for, 560 included. */
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=Manrope:wght@400..800&family=JetBrains+Mono:wght@500;600;700&display=swap');
+/* The @import itself now sits at the top of this file — see the note there.
+   It must precede every other rule or the browser drops it. */
 
 :root{
   /* chrome — Clark Outsourcing navy */

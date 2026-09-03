@@ -60,11 +60,12 @@
              search at all once the catalogue passed a hundred skills. Typing
              a skill the catalogue does not carry still works: the plain input
              below takes it on Enter. -->
-        <hlm-combobox class="skill-combo" (valueChange)="onSkillPicked($event)">
-          <hlm-combobox-trigger id="skillInput" aria-label="Search the skill catalogue">
-            <hlm-combobox-value>
-              <hlm-combobox-placeholder>Search {{ allCatalogueSkills.length }} known skills…</hlm-combobox-placeholder>
-            </hlm-combobox-value>
+        <hlm-combobox class="skill-combo" [(value)]="skillPick" (stateChanged)="onComboState($event)">
+          <hlm-combobox-trigger #skillTrigger id="skillInput" aria-label="Search the skill catalogue">
+            <!-- The placeholder is an INPUT here, not projected content:
+                 BrnComboboxValue host-binds [textContent], so anything nested
+                 inside is overwritten and the trigger renders empty. -->
+            <hlm-combobox-value [placeholder]="'Search ' + allCatalogueSkills.length + ' known skills…'" />
           </hlm-combobox-trigger>
           <hlm-combobox-content *hlmComboboxPortal>
             <hlm-combobox-input placeholder="Type to search…" />
