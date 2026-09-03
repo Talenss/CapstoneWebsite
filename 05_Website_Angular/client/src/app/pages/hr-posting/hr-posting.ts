@@ -8,6 +8,7 @@ import { ApiService } from '../../core/api.service';
 import { EduLevel, EmploymentType, Posting, Resume } from '../../core/models';
 import { EDU_LABELS, SKILL_BY_INDUSTRY, SKILL_CATALOGUE, THRESHOLDS, WEIGHTS, scoreLocal, tierColor } from '../../core/engine';
 import { reportInvalidFields } from '../../shared/invalid-fields';
+import { HlmComboboxImports } from '@spartan-ng/helm/combobox';
 
 /** Port of the PHP hr-posting.html — create/edit an opening. The
  *  required-skills / education / experience fields ARE the scoring rule,
@@ -22,7 +23,7 @@ import { reportInvalidFields } from '../../shared/invalid-fields';
   // nothing ever dispatches — the template compiles, the button looks
   // right, and the browser performs a NATIVE submit instead: a GET to
   // /hr-posting? that reloads the page and throws the form away.
-  imports: [FormsModule, RouterLink, Header, Footer],
+  imports: [FormsModule, RouterLink, Header, Footer, ...HlmComboboxImports],
   templateUrl: './hr-posting.html',
   styleUrl: './hr-posting.css',
 })
@@ -240,6 +241,19 @@ export class HrPosting {
     this.wEdu.set(Math.round(WEIGHTS.education * 100));
     this.wExp.set(Math.round(WEIGHTS.experience * 100));
     this.wCert.set(0);
+  }
+
+  /** Every skill the catalogue knows, for the combobox to search. The pool
+   *  chips below still show what this company already uses; this is the way
+   *  in to the rest of the catalogue without typing it exactly right. */
+  readonly allCatalogueSkills = SKILL_CATALOGUE.map((s) => s.name).sort((a, b) => a.localeCompare(b));
+
+  /** The combobox is a picker, not a field: taking a value adds the skill and
+   *  clears itself, so it behaves like the chips rather than holding state
+   *  that could disagree with the list underneath. */
+  onSkillPicked(v: unknown): void {
+    const name = typeof v === 'string' ? v : '';
+    if (name) this.addSkill(name);
   }
 
   onSkillKeydown(e: KeyboardEvent): void {

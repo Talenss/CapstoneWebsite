@@ -55,10 +55,28 @@
 
       <div class="field" [class.invalid]="skillsInvalid()">
         <label for="skillInput">Required skills <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">· {{ wSkills() }}% of the score</span></label>
-        <input type="text" id="skillInput" list="skillOpts" [value]="skillInput()" (input)="setSkillInput($event)" (keydown)="onSkillKeydown($event)" placeholder="Type a skill, then press Enter" autocomplete="off">
-        <datalist id="skillOpts">
-          @for (s of knownSkills(); track s) { <option [value]="s"></option> }
-        </datalist>
+        <!-- A searchable picker over the whole catalogue, replacing a bare
+             datalist that browsers style inconsistently and that offered no
+             search at all once the catalogue passed a hundred skills. Typing
+             a skill the catalogue does not carry still works: the plain input
+             below takes it on Enter. -->
+        <hlm-combobox class="skill-combo" (valueChange)="onSkillPicked($event)">
+          <hlm-combobox-trigger id="skillInput" aria-label="Search the skill catalogue">
+            <hlm-combobox-value>
+              <hlm-combobox-placeholder>Search {{ allCatalogueSkills.length }} known skills…</hlm-combobox-placeholder>
+            </hlm-combobox-value>
+          </hlm-combobox-trigger>
+          <hlm-combobox-content *hlmComboboxPortal>
+            <hlm-combobox-input placeholder="Type to search…" />
+            <div hlmComboboxList>
+              <hlm-combobox-empty>Not in the catalogue. Type it below and press Enter.</hlm-combobox-empty>
+              @for (s of allCatalogueSkills; track s) {
+                <hlm-combobox-item [value]="s">{{ s }}</hlm-combobox-item>
+              }
+            </div>
+          </hlm-combobox-content>
+        </hlm-combobox>
+        <input type="text" [value]="skillInput()" (input)="setSkillInput($event)" (keydown)="onSkillKeydown($event)" placeholder="Or type any other skill, then press Enter" autocomplete="off" style="margin-top:8px">
         <span class="err">Add at least one required skill.</span>
         <p class="hint" style="margin-bottom:6px">Skills already in use across your openings, click to require one here, click again to drop it:</p>
         <div class="pool">

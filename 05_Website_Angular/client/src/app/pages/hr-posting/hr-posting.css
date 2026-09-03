@@ -81,3 +81,10 @@
 .cat-head:hover{color:var(--accent)}
 .cat-n{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint);font-weight:400}
 .cat-grp .pool{margin:4px 0 8px}
+
+/* spartan's combobox trigger is a custom element, which the browser lays out
+   as inline with no width of its own, so the button inside collapsed to the
+   width of its chevron. Nothing to do with Tailwind — a custom element simply
+   has no default display. */
+.skill-combo { display: block; width: 100%; }
+.skill-combo hlm-combobox-trigger { display: block; width: 100%; }
