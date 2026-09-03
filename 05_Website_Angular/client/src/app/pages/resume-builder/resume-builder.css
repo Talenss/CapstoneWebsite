@@ -271,7 +271,11 @@
 .paper.rz-technical .rhead { border-bottom: 1px solid #1a1a1a; padding-bottom: 7px; }
 .paper.rz-technical .p-sec h4 { border-bottom: none; border-left: 3px solid #1a1a1a; padding: 0 0 0 9px; letter-spacing: .14em; }
 
-.p-skills span { display: inline-block; border: 1px solid #B9BDC6; border-radius: 2px; padding: 1px 7px; font-size: 10.5px; margin: 0 4px 4px 0; font-family: Arial, Helvetica, sans-serif; }
+/* No boxes. The printed resume renders skills as one middle-dot separated
+   line, so the preview does the same and shows what actually prints. The
+   spans stay because the recruiter's view highlights matched skills. */
+.p-skills span { display: inline-block; padding: 0 2px; font-size: 10.5px; font-family: Arial, Helvetica, sans-serif; }
+.p-skills span:not(:last-child)::after { content: ' \00B7'; color: #6B7280; margin-left: 4px; }
 .p-empty { color: #A9AEB8; font-style: italic; }
 /* ---- the applicant's own file, previewed under the sheet ----
    Same treatment the recruiter's screen gives it, so what the applicant
