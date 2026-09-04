@@ -567,6 +567,24 @@
                 <input type="text" [value]="inviteLocation()" (input)="setInviteLocation($event)" placeholder="Video call, office address, or meeting link" maxlength="200">
               </label>
             </div>
+
+            <!-- What the applicant will actually get, shown before it is sent.
+                 The recruiter can read the time back in words and open the very
+                 link that goes in the email, so a wrong day or a wrong hour is
+                 caught here rather than by the applicant. -->
+            @if (invitePreview(); as prev) {
+              <div class="cal-preview">
+                <p class="cal-preview-h">The applicant will see</p>
+                <p class="cal-when">📅 {{ prev.when }}</p>
+                @if (inviteLocation().trim()) {
+                  <p class="cal-where-line">Where: {{ inviteLocation().trim() }}</p>
+                }
+                <a class="btn sm" [href]="prev.url" target="_blank" rel="noopener noreferrer">Add to Google Calendar</a>
+                <p class="cal-note">This is the same link the email carries. Opening it here checks
+                  it without sending anything. A calendar file is attached to the email as well, for
+                  Outlook and Apple Calendar.</p>
+              </div>
+            }
           </details>
 
           <div style="display:flex;gap:9px;justify-content:flex-end;margin-top:10px">

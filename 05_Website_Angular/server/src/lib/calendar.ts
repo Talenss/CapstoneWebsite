@@ -45,14 +45,18 @@ function resolve(sch: InterviewSchedule): { start: Date; end: Date; minutes: num
 export function googleCalendarUrl(sch: InterviewSchedule, title: string, details: string): string | null {
   const r = resolve(sch);
   if (!r) return null;
-  const params = new URLSearchParams({
-    action: 'TEMPLATE',
-    text: title,
-    dates: `${stampUtc(r.start)}/${stampUtc(r.end)}`,
-    details,
-  });
+  const params = new URLSearchParams({ action: 'TEMPLATE', text: title, details });
   if (sch.location) params.set('location', sch.location);
-  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+
+  /* `dates` is appended by hand rather than through URLSearchParams, which
+     percent-encodes the separator to `20260910T063000Z%2F20260910T073000Z`.
+     Google's TEMPLATE screen wants a literal slash between the two stamps and
+     does not decode that one: the event opened with the title and details
+     filled in but no date or time, which is precisely "the button doesn't
+     work". The stamps are digits, T and Z only, so nothing here needs
+     escaping. */
+  const dates = `${stampUtc(r.start)}/${stampUtc(r.end)}`;
+  return `https://calendar.google.com/calendar/render?${params.toString()}&dates=${dates}`;
 }
 
 /** A full VCALENDAR document for the interview — the .ics attachment. */
