@@ -11,6 +11,7 @@ import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { labelFor, SelectOption } from '../../shared/select-options';
+import { describeSchedule, googleCalendarUrl } from '../../core/calendar';
 
 /** Port of the PHP hr-applicants.html — the ranked-applicant list
  *  for a single posting (?id=), with a search/filter bar and a dual-resume
@@ -139,6 +140,33 @@ export class HrApplicants {
     return y && m && d ? new Date(y, m - 1, d) : undefined;
   });
   readonly todayDate = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+
+  /** The employer's name, as the invitation email will say it. Looked up the
+   *  same way the dashboard does; the posting carried on this page does not
+   *  include the company object, so without this the preview said "at the
+   *  company" while the email said "at Clark Outsourcing". */
+  private companyName = signal('');
+
+  /** The wording and the link the invite will carry, built from the same code
+   *  the server uses so what the recruiter checks here is what is sent. Null
+   *  until a date and a time are both set, which is also when the email starts
+   *  carrying a calendar at all. */
+  readonly invitePreview = computed(() => {
+    const raw = this.inviteWhen();
+    if (!raw) return null;
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return null;
+    const sch = {
+      startIso: d.toISOString(),
+      durationMinutes: this.inviteDuration(),
+      location: this.inviteLocation().trim() || undefined,
+    };
+    const title = `Interview: ${this.posting()?.title ?? 'your application'} at ${this.companyName() || 'your employer'}`;
+    const details = `Interview for your ${this.posting()?.title ?? ''} application with ${this.companyName() || 'your employer'}.`;
+    const url = googleCalendarUrl(sch, title, details);
+    const when = describeSchedule(sch);
+    return url && when ? { url, when } : null;
+  });
   inviteDuration = signal(60);
   inviteLocation = signal('');
 
@@ -244,7 +272,16 @@ export class HrApplicants {
       if (!id) { this.router.navigateByUrl('/hr-dashboard'); return; }
       this.postingId.set(id);
       this.load(id);
+      void this.loadCompany();
     });
+  }
+
+  private async loadCompany(): Promise<void> {
+    const me = await this.api.auth.me();
+    const cid = me.ok ? me.user?.companyId : null;
+    if (!cid) return;
+    const co = await this.api.companies.get(cid);
+    if (co.ok) this.companyName.set(co.company.name);
   }
 
   private query(pageSize = this.PAGE_SIZE): RankedQuery {

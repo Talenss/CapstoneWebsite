@@ -12,6 +12,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { googleCalendarUrl, buildIcs, describeSchedule } from '../src/lib/calendar';
+import {
+  googleCalendarUrl as clientGoogleCalendarUrl,
+  describeSchedule as clientDescribeSchedule,
+} from '../../client/src/app/core/calendar';
 
 const sched = { startIso: '2026-09-10T06:30:00.000Z', durationMinutes: 45, location: 'Video call' };
 
@@ -65,4 +69,53 @@ test('human description renders in Philippine time', () => {
   assert.ok(txt);
   assert.match(txt!, /2:30/);
   assert.match(txt!, /45 minutes/);
+});
+
+/* ------------------------------------------------------------
+   The bug these two exist for: URLSearchParams percent-encodes the
+   separator in `dates`, giving 20260910T063000Z%2F20260910T073000Z.
+   Google's TEMPLATE screen does not decode that one — the event opened
+   with its title and details filled in and no date or time at all, which
+   is exactly what "the Add to Google Calendar button doesn't work" looks
+   like from the outside. Nothing here asserted the parameter's shape
+   before, which is how it shipped.
+   ------------------------------------------------------------ */
+test('the dates range keeps a literal slash, not %2F', () => {
+  const url = googleCalendarUrl(sched, 'Interview', 'Details');
+  assert.ok(url);
+  assert.ok(!url!.includes('%2F'), 'the start/end separator must not be percent-encoded');
+  assert.match(url!, /[?&]dates=\d{8}T\d{6}Z\/\d{8}T\d{6}Z(&|$)/);
+});
+
+test('the dates range carries the real start and end stamps', () => {
+  const url = googleCalendarUrl({ startIso: '2026-09-10T06:30:00.000Z', durationMinutes: 60 }, 'x', 'y');
+  const dates = new URL(url!).searchParams.get('dates');
+  assert.equal(dates, '20260910T063000Z/20260910T073000Z');
+});
+
+/* The client keeps its own copy so the demo build — which has no server —
+   can still show the recruiter the link before it is sent. Same input must
+   give byte-identical output, or the preview stops being a preview. */
+test('client and server build the same link and the same wording', () => {
+  const cases = [
+    { startIso: '2026-09-10T06:30:00.000Z', durationMinutes: 60, location: 'Berthaphil III, Clark' },
+    { startIso: '2026-12-01T01:00:00.000Z', durationMinutes: 45 },
+    { startIso: '2026-07-04T23:15:00.000Z', durationMinutes: 120, location: 'Video call' },
+    { startIso: '2026-01-15T09:00:00.000Z' },
+  ];
+  for (const sch of cases) {
+    assert.equal(
+      clientGoogleCalendarUrl(sch, 'Interview: Role at Company', 'Details here.'),
+      googleCalendarUrl(sch, 'Interview: Role at Company', 'Details here.'),
+      `link differs for ${sch.startIso}`,
+    );
+    assert.equal(clientDescribeSchedule(sch), describeSchedule(sch), `wording differs for ${sch.startIso}`);
+  }
+});
+
+test('both sides fail closed on the same bad input', () => {
+  assert.equal(clientGoogleCalendarUrl({ startIso: 'nope' }, 'x', 'y'), null);
+  assert.equal(googleCalendarUrl({ startIso: 'nope' }, 'x', 'y'), null);
+  assert.equal(clientDescribeSchedule({ startIso: 'nope' }), null);
+  assert.equal(describeSchedule({ startIso: 'nope' }), null);
 });
