@@ -33,6 +33,37 @@ export class HrApplicants {
   readonly experienceLabel = experienceLabel;
   readonly statusLabels = STATUS_LABELS;
   readonly eduLabels = EDU_LABELS;
+
+  /** The weights actually in force for THIS opening, as whole percentages.
+   *  An opening may rebalance them; when it has not, it inherits the site
+   *  defaults, so the rail shows what was used either way rather than always
+   *  quoting 50/25/25. */
+  private pct(v: number): number { return Math.round(v * 100); }
+  readonly wSkills = computed(() => this.posting()?.weights?.skills ?? this.pct(WEIGHTS.skills));
+  readonly wEdu = computed(() => this.posting()?.weights?.education ?? this.pct(WEIGHTS.education));
+  readonly wExp = computed(() => this.posting()?.weights?.experience ?? this.pct(WEIGHTS.experience));
+
+  /** Where this opening's applicants stand.
+   *
+   *  Counted from a deliberately UNFILTERED fetch, not from rows(): that
+   *  holds the current page of the current filter, so a tally taken from it
+   *  would quietly change as the recruiter typed in the search box and would
+   *  disagree with the total printed beside it. Refreshed whenever a status
+   *  is changed on this page, since that is the one action that moves it. */
+  private tally = signal<{ key: AppStatus; n: number }[]>([]);
+  readonly statusCounts = this.tally.asReadonly();
+
+  private async countStatuses(id: string): Promise<void> {
+    const all = await this.api.applications.ranked(id, { page: 1, pageSize: 0 });
+    if (!all.ok) { this.tally.set([]); return; }
+    const counted = new Map<AppStatus, number>();
+    for (const r of all.rows) counted.set(r.application.status, (counted.get(r.application.status) ?? 0) + 1);
+    // Only stages holding somebody: a column of zeroes says nothing and pushes
+    // the ones that matter off the screen.
+    this.tally.set(
+      this.statusOrder.filter((k) => counted.get(k)).map((k) => ({ key: k, n: counted.get(k) as number })),
+    );
+  }
   readonly weights = WEIGHTS;
   readonly tierColor = tierColor;
   readonly tierLabel = tierLabel;
@@ -236,6 +267,7 @@ export class HrApplicants {
     this.matched.set(res.matched ?? res.rows.length);
     this.pages.set(res.pages ?? 1);
     this.page.set(res.page ?? 1);
+    void this.countStatuses(id);
   }
 
   /** Re-runs the query. Any change to a filter goes back to page one: staying

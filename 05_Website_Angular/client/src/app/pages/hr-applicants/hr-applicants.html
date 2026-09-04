@@ -1,6 +1,8 @@
-<app-header variant="recruiter" />
+<!-- Marked as Dashboard: this page is reached from there and has no menu item
+     of its own, so without it the header answered "where am I" with nothing. -->
+<app-header variant="recruiter" active="dashboard" />
 
-<main id="main" class="container" style="padding-bottom:80px">
+<main id="main" class="container wide" style="padding-bottom:80px">
   <div class="page-head head-row">
     <div>
       <a class="no-print" routerLink="/hr-dashboard" style="font-size:12.5px;color:var(--muted);text-decoration:none">&larr; All openings</a>
@@ -29,6 +31,8 @@
     · printed {{ printedOn }}
   </p>
 
+  <div class="with-rail">
+   <div>
   <div class="bar">
     <input type="search" [value]="q()" (input)="setQuery($event)" placeholder="Search by name or skill" aria-label="Search applicants">
     <hlm-select class="sel" [value]="fStatus()" [itemToString]="fStatusLabel" (valueChange)="onFStatus($any($event))">
@@ -143,6 +147,57 @@
         </div>
       }
     }
+  </div>
+   </div>
+
+   <!-- The rule these numbers came out of, beside the numbers. A recruiter
+        reading a 64% has to scroll to the posting to find out what 64% was
+        measured against; this puts the weights, the cut-offs and the asked-for
+        skills next to the list instead. Nothing here is new information — it
+        is the opening's own settings, shown where they are being applied. -->
+   <aside class="rail-side no-print" aria-label="How this ranking was made">
+     <div class="rail-card">
+       <h3>How this ranking was made</h3>
+       <p class="rail-sub">This opening's own weights. They total 100%.</p>
+       <div class="rail-row"><span>Required skills matched</span><b>{{ wSkills() }}%</b></div>
+       <div class="rail-row"><span>Education level</span><b>{{ wEdu() }}%</b></div>
+       <div class="rail-row"><span>Experience</span><b>{{ wExp() }}%</b></div>
+       <p class="rail-note">A skill the applicant lists but cannot point to anywhere in their
+         resume counts half. Everything else counts in full.</p>
+     </div>
+
+     <div class="rail-card">
+       <h3>Where the lines fall</h3>
+       <p class="rail-sub">The same cut-offs for every applicant.</p>
+       <div class="rail-row"><span class="badge green">Strong match</span><b>80% and up</b></div>
+       <div class="rail-row"><span class="badge amber">Possible match</span><b>50 – 79%</b></div>
+       <div class="rail-row"><span class="badge slate">Related</span><b>Below 50%</b></div>
+       <p class="rail-note">Nobody is removed at any line. A related match still appears on this
+         list and can still be invited.</p>
+     </div>
+
+     @if (posting(); as p) {
+       <div class="rail-card">
+         <h3>What this opening asks for</h3>
+         <p class="rail-sub">Change these and every score on this page changes with them.</p>
+         <ul class="rail-list">
+           @for (sk of p.skills; track sk) { <li>{{ sk }}</li> }
+         </ul>
+         <div class="rail-row" style="margin-top:12px"><span>Minimum education</span><b>{{ eduLabels[p.educationLevel] }}</b></div>
+         <div class="rail-row"><span>Minimum experience</span><b>{{ experienceLabel(p.minExperienceMonths) }}</b></div>
+       </div>
+     }
+
+     @if (statusCounts().length) {
+       <div class="rail-card">
+         <h3>This opening's pipeline</h3>
+         <p class="rail-sub">Where the {{ total() }} applicants stand right now.</p>
+         @for (row of statusCounts(); track row.key) {
+           <div class="rail-row"><span>{{ statusLabels[row.key] }}</span><b>{{ row.n }}</b></div>
+         }
+       </div>
+     }
+   </aside>
   </div>
 </main>
 

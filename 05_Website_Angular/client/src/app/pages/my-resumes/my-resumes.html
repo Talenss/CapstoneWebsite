@@ -1,6 +1,6 @@
 <app-header variant="seeker" active="my-resumes" />
 
-<main id="main" class="container" style="padding-bottom:80px">
+<main id="main" class="container wide" style="padding-bottom:80px">
   <div class="page-head head-row">
     <div>
       <span class="eyebrow">Resume library</span>
@@ -12,6 +12,9 @@
       <a class="btn primary" routerLink="/resume-builder">+ New resume</a>
     </div>
   </div>
+
+  <div class="with-rail">
+   <div>
 
   <div id="wrap">
     @if (!loaded()) {
@@ -78,6 +81,40 @@
         <a class="new" routerLink="/resume-builder"><span>+</span>New resume</a>
       </div>
     }
+  </div>
+   </div>
+
+   <!-- The two things this page's own wording raises and then leaves hanging:
+        what "active" actually decides, and why anyone would keep more than one
+        resume. Both are answered in a sentence, beside the library rather than
+        in a help page nobody opens. -->
+   <aside class="rail-side" aria-label="About your resume library">
+     <div class="rail-card">
+       <h3>Your library</h3>
+       <div class="rail-row"><span>Resumes saved</span><b>{{ resumes().length }}</b></div>
+       <div class="rail-row"><span>Used in applications</span><b>{{ usedTotal() }}</b></div>
+       @if (activeTitle(); as t) {
+         <div class="rail-row"><span>Active</span><b>{{ t }}</b></div>
+       }
+     </div>
+
+     <div class="rail-card">
+       <h3>What “active” decides</h3>
+       <p class="rail-note" style="border-top:none;padding-top:0;margin-top:0">The active resume is
+         the one scored against every opening on your dashboard, and the one attached when you apply.
+         Changing it re-scores everything straight away. A resume already sent with an application is
+         never altered by this — the employer keeps the version you actually sent.</p>
+     </div>
+
+     <div class="rail-card">
+       <h3>Why keep more than one</h3>
+       <p class="rail-sub">Each opening scores what it asks for.</p>
+       <p class="rail-note" style="border-top:none;padding-top:0;margin-top:0">A resume written for
+         a support role and one written for a technical role will score differently against the same
+         two openings, because they lead with different skills. Keeping one per kind of role is
+         usually worth more than one long resume trying to cover everything.</p>
+     </div>
+   </aside>
   </div>
 </main>
 

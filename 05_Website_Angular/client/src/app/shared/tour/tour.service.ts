@@ -124,12 +124,33 @@ export class TourService {
     spot.style.width = Math.max(0, sr - sl) + 'px';
     spot.style.height = Math.max(0, sb - st) + 'px';
 
-    // below the target if it fits, otherwise above; always inside the viewport
+    // Below the target if it fits, then above, then beside it — and never on
+    // top of it. The old last resort clamped the card into the viewport
+    // without checking what it landed on, so a wide short target with little
+    // room either side (the recruiter dashboard's pipeline row, the builder's
+    // step bar) got its explanation placed directly over the thing being
+    // explained. A tour that hides its own subject teaches nothing.
     const ch = card.offsetHeight, cw = card.offsetWidth, pad = 14;
+    const vw = window.innerWidth, vh = window.innerHeight, edge = 12;
     let top = r.bottom + pad;
-    if (top + ch > window.innerHeight - 12) top = r.top - ch - pad;
-    if (top < 12) top = Math.min(window.innerHeight - ch - 12, Math.max(12, r.bottom + pad));
-    const left = Math.min(Math.max(12, r.left), window.innerWidth - cw - 12);
+    let left = Math.min(Math.max(edge, r.left), vw - cw - edge);
+
+    if (top + ch > vh - edge) {
+      const above = r.top - ch - pad;
+      if (above >= edge) {
+        top = above;
+      } else {
+        // No room above or below. Put it to whichever side has more space and
+        // keep it vertically centred on the target.
+        const roomRight = vw - r.right, roomLeft = r.left;
+        top = Math.min(vh - ch - edge, Math.max(edge, r.top + r.height / 2 - ch / 2));
+        left =
+          roomRight >= cw + pad + edge || roomRight >= roomLeft
+            ? Math.min(vw - cw - edge, r.right + pad)
+            : Math.max(edge, r.left - cw - pad);
+      }
+    }
+
     card.style.top = top + 'px';
     card.style.left = left + 'px';
   }

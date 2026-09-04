@@ -1,6 +1,6 @@
 <app-header variant="recruiter" active="dashboard" [showTour]="true" />
 
-<main id="main" class="container" style="padding-bottom:80px">
+<main id="main" class="container wide" style="padding-bottom:80px">
   <div class="page-head head-row">
     <div>
       <span class="eyebrow" id="coName">{{ coLabel() || 'Your company' }}</span>
@@ -104,7 +104,14 @@
             </div>
             <div class="num"><b>{{ p.applicantCount }}</b><span>applied</span></div>
             <div class="acts">
-              <a class="btn primary sm" [routerLink]="['/hr-applicants']" [queryParams]="{ id: p.id }">Review applicants</a>
+              <!-- Filled red only where someone is actually waiting. Seven rows
+                   each carrying the strongest button on the page meant the
+                   button pointed at nothing, and a row with no applicants
+                   asked for attention as loudly as a row with three. -->
+              <a class="btn sm" [class.primary]="p.newCount" [routerLink]="['/hr-applicants']"
+                 [queryParams]="{ id: p.id }">
+                {{ p.applicantCount ? 'Review applicants' : 'No applicants yet' }}
+              </a>
               <a class="btn ghost sm" [routerLink]="['/hr-posting']" [queryParams]="{ id: p.id }">Edit</a>
               <button class="btn ghost sm" type="button" (click)="toggle(p)">{{ p.status === 'open' ? 'Close' : 'Reopen' }}</button>
             </div>
