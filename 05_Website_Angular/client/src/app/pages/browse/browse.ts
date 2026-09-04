@@ -5,9 +5,11 @@ import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { Company, MatchResult, Posting, Resume } from '../../core/models';
-import { EDU_LABELS, WEIGHTS, experienceLabel, missingHint, scoreLocal, tierColor, tierLabel, tierOf, weightsFor } from '../../core/engine';
+import { EDU_LABELS, WEIGHTS, experienceLabel, missingHint, scoreLocal, tierColor, tierLabel, tierOf, weightsFor, normSkill} from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 import { Seo } from '../../core/seo';
+import { HlmSelectImports } from '@spartan-ng/helm/select';
+import { SelectOption } from '../../shared/select-options';
 
 interface BrowseRow {
   posting: Posting;
@@ -25,7 +27,7 @@ type SortKey = 'score' | 'new' | 'az';
 @Component({
   selector: 'app-browse',
   standalone: true,
-  imports: [RouterLink, Header, Footer, FocusTrapDirective],
+  imports: [RouterLink, Header, Footer, FocusTrapDirective, ...HlmSelectImports],
   templateUrl: './browse.html',
   styleUrl: './browse.css',
 })
@@ -103,6 +105,52 @@ export class Browse implements OnInit, OnDestroy {
   });
 
   depts = computed(() => Array.from(new Set(this.postings().map((p) => p.department))).sort());
+
+  /** How the openings on this page fall out against the active resume. Counted
+   *  from every opening, not the filtered view, so the picture does not change
+   *  as the user narrows the list. */
+  readonly spread = computed(() => {
+    const rows = this.rows().filter((r) => r.s);
+    return {
+      total: rows.length,
+      strong: rows.filter((r) => r.s!.tier === 'strong').length,
+      possible: rows.filter((r) => r.s!.tier === 'possible').length,
+      related: rows.filter((r) => r.s!.tier === 'related').length,
+      best: rows.reduce((a, r) => Math.max(a, r.s!.score), 0),
+    };
+  });
+
+  /** The skills these openings ask for that the resume does not carry, most
+   *  asked-for first. This is the most useful thing the page knows and it was
+   *  not being said anywhere: a job seeker can see that four of seven openings
+   *  want a skill they have not listed, which is an afternoon's work away. */
+  readonly gaps = computed(() => {
+    const resume = this.resume();
+    if (!resume) return [];
+    const have = new Set(resume.skills.map(normSkill));
+    const wanted = new Map<string, { label: string; n: number }>();
+    for (const p of this.postings()) {
+      for (const raw of p.skills) {
+        const k = normSkill(raw);
+        if (have.has(k)) continue;
+        const cur = wanted.get(k);
+        if (cur) cur.n += 1;
+        else wanted.set(k, { label: raw, n: 1 });
+      }
+    }
+    return [...wanted.values()].sort((a, b) => b.n - a.n).slice(0, 6);
+  });
+
+  /** A department is its own label; only the empty value needs words. */
+  readonly deptLabel = (v: string): string => v || 'All departments';
+  /** "Best match first" only exists once there is a resume to match against. */
+  readonly sortOptions = computed<readonly SelectOption[]>(() => [
+    ...(this.resume() ? [{ v: 'score', label: 'Best match first' }] : []),
+    { v: 'new', label: 'Newest first' },
+    { v: 'az', label: 'A to Z' },
+  ]);
+  readonly sortLabel = (v: string): string =>
+    this.sortOptions().find((o) => o.v === v)?.label ?? String(v ?? '');
 
   sub = computed(() => {
     if (!this.loaded()) return "Every posting here is a real vacancy, posted by Clark Outsourcing's own HR staff.";

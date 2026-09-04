@@ -1,6 +1,6 @@
 <app-header variant="recruiter" active="dashboard" [showTour]="true" />
 
-<main id="main" class="container" style="padding-bottom:80px">
+<main id="main" class="container wide" style="padding-bottom:80px">
   <div class="page-head head-row">
     <div>
       <span class="eyebrow" id="coName">{{ coLabel() || 'Your company' }}</span>
@@ -42,18 +42,28 @@
       <div class="filters">
         <input type="search" placeholder="Search your openings by title, department, or skill"
                aria-label="Search your openings" [value]="query()" (input)="onQueryInput($event)">
-        <select aria-label="Filter openings by state" [value]="state()" (change)="onStateChange($event)">
-          <option value="">All openings</option>
-          <option value="open">Open and accepting</option>
-          <option value="expired">Deadline passed</option>
-          <option value="closed">Closed</option>
-          <option value="waiting">Has new applicants</option>
-        </select>
-        <select aria-label="Sort openings" [value]="sort()" (change)="onSortChange($event)">
-          <option value="new">Newest first</option>
-          <option value="applicants">Most applicants first</option>
-          <option value="az">A to Z</option>
-        </select>
+        <hlm-select class="sel" [value]="state()" [itemToString]="stateLabel"
+                    (valueChange)="state.set($any($event))">
+          <hlm-select-trigger aria-label="Filter openings by state">
+            <hlm-select-value placeholder="All openings" />
+          </hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (o of stateOptions; track o.v) {
+              <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
+        <hlm-select class="sel" [value]="sort()" [itemToString]="sortLabel"
+                    (valueChange)="sort.set($any($event))">
+          <hlm-select-trigger aria-label="Sort openings">
+            <hlm-select-value />
+          </hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (o of sortOptions; track o.v) {
+              <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
         <span class="count">{{ visiblePostings().length }} of {{ postings().length }} shown</span>
       </div>
     }
@@ -94,7 +104,14 @@
             </div>
             <div class="num"><b>{{ p.applicantCount }}</b><span>applied</span></div>
             <div class="acts">
-              <a class="btn primary sm" [routerLink]="['/hr-applicants']" [queryParams]="{ id: p.id }">Review applicants</a>
+              <!-- Filled red only where someone is actually waiting. Seven rows
+                   each carrying the strongest button on the page meant the
+                   button pointed at nothing, and a row with no applicants
+                   asked for attention as loudly as a row with three. -->
+              <a class="btn sm" [class.primary]="p.newCount" [routerLink]="['/hr-applicants']"
+                 [queryParams]="{ id: p.id }">
+                {{ p.applicantCount ? 'Review applicants' : 'No applicants yet' }}
+              </a>
               <a class="btn ghost sm" [routerLink]="['/hr-posting']" [queryParams]="{ id: p.id }">Edit</a>
               <button class="btn ghost sm" type="button" (click)="toggle(p)">{{ p.status === 'open' ? 'Close' : 'Reopen' }}</button>
             </div>

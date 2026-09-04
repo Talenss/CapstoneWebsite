@@ -1,6 +1,6 @@
 <app-header [variant]="headerVariant()" active="openings" />
 
-<main id="main" class="container" style="padding-bottom:80px">
+<main id="main" class="container wide" style="padding-bottom:80px">
   <div class="page-head">
     <h1>Open positions</h1>
     <p>{{ sub() }}</p>
@@ -16,21 +16,32 @@
     </div>
   }
 
+  <div class="with-rail">
+   <div>
   <div class="filters">
     <input type="search" placeholder="Search by title, department, or skill" aria-label="Search openings" [value]="query()" (input)="onQueryInput($event)">
-    <select aria-label="Filter by department" [value]="dept()" (change)="onDeptChange($event)">
-      <option value="">All departments</option>
-      @for (d of depts(); track d) {
-        <option [value]="d">{{ d }}</option>
-      }
-    </select>
-    <select aria-label="Sort openings" [value]="effectiveSort()" (change)="onSortChange($event)">
-      @if (resume()) {
-        <option value="score">Best match first</option>
-      }
-      <option value="new">Newest first</option>
-      <option value="az">A to Z</option>
-    </select>
+    <hlm-select class="sel" [value]="dept()" [itemToString]="deptLabel" (valueChange)="dept.set($any($event))">
+      <hlm-select-trigger aria-label="Filter by department">
+        <hlm-select-value placeholder="All departments" />
+      </hlm-select-trigger>
+      <hlm-select-content *hlmSelectPortal>
+        <hlm-select-item value="">All departments</hlm-select-item>
+        @for (d of depts(); track d) {
+          <hlm-select-item [value]="d">{{ d }}</hlm-select-item>
+        }
+      </hlm-select-content>
+    </hlm-select>
+    <hlm-select class="sel" [value]="effectiveSort()" [itemToString]="sortLabel"
+                (valueChange)="sort.set($any($event))">
+      <hlm-select-trigger aria-label="Sort openings">
+        <hlm-select-value />
+      </hlm-select-trigger>
+      <hlm-select-content *hlmSelectPortal>
+        @for (o of sortOptions(); track o.v) {
+          <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+        }
+      </hlm-select-content>
+    </hlm-select>
     <span class="count">{{ filteredRows().length }} of {{ rows().length }} shown</span>
   </div>
 
@@ -120,6 +131,61 @@
         }
       </div>
     }
+  </div>
+   </div>
+
+   <!-- Everything here is worked out from the openings already on the page and
+        the reader's own resume. The gap list is the point: a job seeker can see
+        which skill the most openings are asking for that they have not listed,
+        which is a concrete next step rather than a score to feel bad about. -->
+   <aside class="rail-side" aria-label="How you match these openings">
+     @if (resume(); as r) {
+       @if (spread().total) {
+         <div class="rail-card">
+           <h3>How you match</h3>
+           <p class="rail-sub">Across all {{ spread().total }} openings, using “{{ r.title }}”.</p>
+           <div class="rail-row"><span class="badge green">Strong</span><b>{{ spread().strong }}</b></div>
+           <div class="rail-row"><span class="badge amber">Possible</span><b>{{ spread().possible }}</b></div>
+           <div class="rail-row"><span class="badge slate">Related</span><b>{{ spread().related }}</b></div>
+           <div class="rail-row"><span>Your best score</span><b>{{ spread().best }}%</b></div>
+           <p class="rail-note">Every opening stays on the list whatever the number says. A related
+             match can still be applied to.</p>
+         </div>
+       }
+
+       @if (gaps().length) {
+         <div class="rail-card">
+           <h3>Asked for, not on your resume</h3>
+           <p class="rail-sub">Most requested first, across these openings.</p>
+           @for (g of gaps(); track g.label) {
+             <div class="rail-row">
+               <span>{{ g.label }}</span>
+               <b>{{ g.n }} {{ g.n === 1 ? 'opening' : 'openings' }}</b>
+             </div>
+           }
+           <p class="rail-note">Only add one if you can genuinely point to where you used it. A
+             skill with nothing behind it counts half.</p>
+         </div>
+       }
+     } @else {
+       <div class="rail-card">
+         <h3>Build a resume to see your scores</h3>
+         <p class="rail-note" style="border-top:none;padding-top:0;margin-top:0">Every opening below
+           can be scored against your skills, education and experience, and the working is shown in
+           full. Browsing stays open either way.</p>
+         <a class="btn primary sm" routerLink="/resume-builder" style="margin-top:10px">Start my resume</a>
+       </div>
+     }
+
+     <div class="rail-card">
+       <h3>How the number is worked out</h3>
+       <div class="rail-row"><span>Skills the opening asks for</span><b>50%</b></div>
+       <div class="rail-row"><span>Education level</span><b>25%</b></div>
+       <div class="rail-row"><span>Experience</span><b>25%</b></div>
+       <p class="rail-note">An employer can rebalance these for a particular opening, and the
+         opening tells you when it has.</p>
+     </div>
+   </aside>
   </div>
 </main>
 

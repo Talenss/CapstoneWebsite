@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
@@ -22,6 +22,12 @@ export class MyResumes implements OnInit {
   resumes = signal<Resume[]>([]);
   activeId = signal<string | null>(null);
   usedCounts = signal<Record<string, number>>({});
+
+  /** Totals for the rail, from the data the page already holds. */
+  readonly usedTotal = computed(() =>
+    Object.values(this.usedCounts()).reduce((a, n) => a + n, 0));
+  readonly activeTitle = computed(() =>
+    this.resumes().find((r) => r.id === this.activeId())?.title ?? null);
   toastMsg = signal<string | null>(null);
 
   async ngOnInit(): Promise<void> {

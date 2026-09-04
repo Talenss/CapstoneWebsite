@@ -27,6 +27,7 @@ import type { ClassValue } from 'clsx';
       [class]="_computedClass()"
       [attr.data-size]="size()"
       data-slot="select-trigger"
+      [attr.aria-label]="ariaLabel()"
     >
       <ng-content />
       <ng-icon
@@ -48,6 +49,11 @@ export class HlmSelectTrigger {
   );
 
   public readonly buttonId = input<string>(`hlm-select-trigger-${HlmSelectTrigger._id++}`);
+
+  /** Forwarded onto the button. The host element is not the focusable thing,
+   *  so an aria-label written on <hlm-select-trigger> in a page template never
+   *  reaches the control a screen reader actually announces. */
+  public readonly ariaLabel = input<string | null>(null, { alias: 'aria-label' });
 
   public readonly size = input<'default' | 'sm'>('default');
 

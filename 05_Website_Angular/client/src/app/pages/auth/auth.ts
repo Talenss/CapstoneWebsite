@@ -11,6 +11,7 @@ import { passwordOk, PASSWORD_HINT } from '../../core/engine';
 import { reportInvalidFields } from '../../shared/invalid-fields';
 import { PasswordRevealDirective } from '../../shared/password-reveal.directive';
 import { environment } from '../../../environments/environment';
+import { HlmSelectImports } from '@spartan-ng/helm/select';
 
 type Tab = 'login' | 'reg';
 type Role = 'seeker' | 'recruiter';
@@ -31,7 +32,7 @@ const RESEND_SECONDS = 60;
 @Component({
   selector: 'app-auth',
   standalone: true,
-  imports: [FormsModule, OtpInput, RouterLink, Header, PasswordRevealDirective],
+  imports: [FormsModule, OtpInput, RouterLink, Header, PasswordRevealDirective, ...HlmSelectImports],
   templateUrl: './auth.html',
   styleUrl: './auth.css',
 })
@@ -88,6 +89,14 @@ export class Auth implements OnInit, OnDestroy {
   regEmail = '';
   regPassword = '';
   regCompanyId = '';
+
+  readonly companyLabel = (id: string): string =>
+    this.companies().find((c) => c.id === id)?.name ?? '';
+
+  onCompanyPicked(id: string): void {
+    this.regCompanyId = id ?? '';
+    this.recheck();
+  }
   regPosition = '';
   regNote = '';
   regFirstNameInvalid = signal(false);

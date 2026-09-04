@@ -9,6 +9,9 @@ import { EduLevel, EmploymentType, Posting, Resume } from '../../core/models';
 import { EDU_LABELS, SKILL_BY_INDUSTRY, SKILL_CATALOGUE, THRESHOLDS, WEIGHTS, scoreLocal, tierColor } from '../../core/engine';
 import { reportInvalidFields } from '../../shared/invalid-fields';
 import { HlmComboboxImports } from '@spartan-ng/helm/combobox';
+import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
+import { HlmSelectImports } from '@spartan-ng/helm/select';
+import { labelFor, SelectOption } from '../../shared/select-options';
 
 /** Port of the PHP hr-posting.html — create/edit an opening. The
  *  required-skills / education / experience fields ARE the scoring rule,
@@ -23,7 +26,7 @@ import { HlmComboboxImports } from '@spartan-ng/helm/combobox';
   // nothing ever dispatches — the template compiles, the button looks
   // right, and the browser performs a NATIVE submit instead: a GET to
   // /hr-posting? that reloads the page and throws the form away.
-  imports: [FormsModule, RouterLink, Header, Footer, ...HlmComboboxImports],
+  imports: [FormsModule, RouterLink, Header, Footer, ...HlmComboboxImports, ...HlmDatePickerImports, ...HlmSelectImports],
   templateUrl: './hr-posting.html',
   styleUrl: './hr-posting.css',
 })
@@ -225,14 +228,43 @@ export class HrPosting {
 
   setTitle(e: Event): void { this.titleVal.set((e.target as HTMLInputElement).value); }
   setDept(e: Event): void { this.deptVal.set((e.target as HTMLInputElement).value); }
-  setType(e: Event): void { this.typeVal.set((e.target as HTMLSelectElement).value as EmploymentType); }
+  readonly typeOptions: readonly SelectOption<EmploymentType>[] = [
+    { v: 'full-time', label: 'Full time' },
+    { v: 'part-time', label: 'Part time' },
+    { v: 'contract', label: 'Contract' },
+    { v: 'internship', label: 'Internship' },
+  ];
+  readonly typeLabel = labelFor(this.typeOptions);
+  readonly eduLabel = (v: EduLevel): string => this.eduLabels[v] ?? String(v ?? '');
   setDesc(e: Event): void { this.descVal.set((e.target as HTMLTextAreaElement).value); }
-  setEdu(e: Event): void { this.eduVal.set((e.target as HTMLSelectElement).value as EduLevel); }
   setYears(e: Event): void {
     const y = Number((e.target as HTMLInputElement).value) || 0;
     this.monthsVal.set(Math.max(0, Math.round(y * 12)));
   }
-  setDeadline(e: Event): void { this.deadlineVal.set((e.target as HTMLInputElement).value); }
+  /** The deadline is stored as the plain YYYY-MM-DD the API expects, while the
+   *  picker works in Date objects. Both conversions go through local calendar
+   *  parts rather than toISOString(), which would shift the day backwards for
+   *  anyone east of UTC — Manila included, where a deadline set for the 10th
+   *  would be saved as the 9th. */
+  readonly deadlineDate = computed<Date | undefined>(() => {
+    const [y, m, d] = this.deadlineVal().split('-').map(Number);
+    return y && m && d ? new Date(y, m - 1, d) : undefined;
+  });
+  readonly todayDate = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+
+  onDeadlineChange(d: Date | null): void {
+    if (!d) { this.deadlineVal.set(''); return; }
+    const p = (n: number) => String(n).padStart(2, '0');
+    this.deadlineVal.set(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`);
+  }
+
+  clearDeadline(): void { this.deadlineVal.set(''); }
+
+  /** The picker's own default is Date.toDateString, which reads "Wed Sep 23
+   *  2026". Every other date on the site is en-PH short form, so this one is
+   *  too. Declared as a field, not a method, because it is passed as a value. */
+  readonly formatPickedDate = (d: Date): string =>
+    d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
   setSkillInput(e: Event): void { this.skillInput.set((e.target as HTMLInputElement).value); }
 
   private pct(e: Event): number {

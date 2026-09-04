@@ -5,6 +5,7 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { AdminRecruiter, RecruiterRequest, RoutingCompany } from '../../core/models';
 import { environment } from '../../../environments/environment';
+import { HlmSelectImports } from '@spartan-ng/helm/select';
 
 /** The research-team panel behind "recruiter accounts are provisioned,
  *  not self-served": review the requests the auth page's recruiter form
@@ -14,7 +15,7 @@ import { environment } from '../../../environments/environment';
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [Header, Footer],
+  imports: [Header, Footer, ...HlmSelectImports],
   templateUrl: './admin.html',
   styleUrl: './admin.css',
 })
@@ -53,8 +54,14 @@ export class Admin implements OnInit {
     return co.assignments.find((a) => a.department.trim().toLowerCase() === dept.trim().toLowerCase())?.userId ?? '';
   }
 
-  async assign(co: RoutingCompany, dept: string, ev: Event): Promise<void> {
-    const userId = (ev.target as HTMLSelectElement).value || null;
+  /** Each company has its own recruiters, so the code-to-name lookup is
+   *  per company rather than one shared map. */
+  ownerLabel(co: RoutingCompany): (id: string) => string {
+    return (id) => co.recruiters.find((r) => r.id === id)?.name ?? 'All recruiters (unassigned)';
+  }
+
+  async assign(co: RoutingCompany, dept: string, value: string): Promise<void> {
+    const userId = value || null;
     this.errorMsg.set('');
     this.busyDept.set(co.id + '::' + dept);
     const res = await this.api.admin.assignDepartment(co.id, dept, userId);

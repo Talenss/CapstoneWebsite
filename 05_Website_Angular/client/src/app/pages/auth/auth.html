@@ -196,12 +196,17 @@
               <div id="hrOnly">
                 <div class="field" [class.invalid]="regCompanyInvalid()">
                   <label for="rc">Partner company</label>
-                  <select id="rc" [(ngModel)]="regCompanyId" name="rc" (ngModelChange)="recheck()">
-                    <option value="">Choose your company…</option>
-                    @for (c of companies(); track c.id) {
-                      <option [value]="c.id">{{ c.name }}</option>
-                    }
-                  </select>
+                  <hlm-select [value]="regCompanyId" [itemToString]="companyLabel"
+                              (valueChange)="onCompanyPicked($any($event))">
+                    <hlm-select-trigger id="rc">
+                      <hlm-select-value placeholder="Choose your company…" />
+                    </hlm-select-trigger>
+                    <hlm-select-content *hlmSelectPortal>
+                      @for (c of companies(); track c.id) {
+                        <hlm-select-item [value]="c.id">{{ c.name }}</hlm-select-item>
+                      }
+                    </hlm-select-content>
+                  </hlm-select>
                   <span class="err">Choose your partner company.</span>
                   <p class="hint">Company not listed? Companies join as partners through the research team first.</p>
                 </div>

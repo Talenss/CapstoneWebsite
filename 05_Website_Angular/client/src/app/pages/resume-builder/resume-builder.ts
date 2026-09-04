@@ -10,6 +10,7 @@ import { AnalysisService } from '../../core/analysis.service';
 import { TourService } from '../../shared/tour/tour.service';
 import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, WEIGHTS} from '../../core/engine';
 import { Education, EduLevel, EvidenceKind, Experience, Language, Project, Reference, Resume, ResumeDesign, SkillEvidence, Template } from '../../core/models';
+import { HlmSelectImports } from '@spartan-ng/helm/select';
 
 const STEPS = ['Details', 'Education', 'Experience', 'Skills', 'Certifications', 'More sections', 'Finish'];
 
@@ -55,7 +56,7 @@ const esc = (s: unknown): string => String(s ?? '').replace(/[&<>"']/g, (c) => E
 @Component({
   selector: 'app-resume-builder',
   standalone: true,
-  imports: [Header, Footer, NgTemplateOutlet, RouterLink],
+  imports: [Header, Footer, NgTemplateOutlet, RouterLink, ...HlmSelectImports],
   templateUrl: './resume-builder.html',
   styleUrl: './resume-builder.css',
 })
@@ -81,6 +82,9 @@ export class ResumeBuilder implements OnInit {
   private importedSkills: string[] = [];
 
   readonly STEPS = STEPS;
+  readonly eduLevelLabel = (v: string): string =>
+    this.eduLevelOptions.find((o) => o.value === v)?.label ?? String(v ?? '');
+
   readonly eduLevelOptions: { value: EduLevel; label: string }[] = [
     // The starting state of a new entry, and a real answer in its own right.
     // Listed so the applicant can SEE that nothing is being claimed for them.

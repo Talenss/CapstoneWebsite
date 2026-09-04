@@ -99,12 +99,17 @@
                       <tr>
                         <td><b>{{ d }}</b></td>
                         <td>
-                          <select aria-label="Owner for {{ d }}" (change)="assign(co, d, $event)" [disabled]="busyDept() === co.id + '::' + d">
-                            <option value="" [selected]="ownerOf(co, d) === ''">All recruiters (unassigned)</option>
-                            @for (r of co.recruiters; track r.id) {
-                              <option [value]="r.id" [selected]="ownerOf(co, d) === r.id">{{ r.name }}</option>
-                            }
-                          </select>
+                          <hlm-select [value]="ownerOf(co, d)" [itemToString]="ownerLabel(co)"
+                                      [disabled]="busyDept() === co.id + '::' + d"
+                                      (valueChange)="assign(co, d, $any($event))">
+                            <hlm-select-trigger aria-label="Owner for {{ d }}"><hlm-select-value placeholder="All recruiters (unassigned)" /></hlm-select-trigger>
+                            <hlm-select-content *hlmSelectPortal>
+                              <hlm-select-item value="">All recruiters (unassigned)</hlm-select-item>
+                              @for (r of co.recruiters; track r.id) {
+                                <hlm-select-item [value]="r.id">{{ r.name }}</hlm-select-item>
+                              }
+                            </hlm-select-content>
+                          </hlm-select>
                         </td>
                       </tr>
                     }

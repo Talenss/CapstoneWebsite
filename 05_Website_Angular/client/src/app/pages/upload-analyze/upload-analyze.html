@@ -1,12 +1,14 @@
 <app-header variant="seeker" active="builder" />
 
-<main id="main" class="container narrow" style="padding-bottom:80px">
+<main id="main" class="container wide" style="padding-bottom:80px">
   <div class="page-head">
     <span class="eyebrow">Upload &amp; analyze</span>
     <h1>Start from the resume you already have</h1>
     <p>Upload your existing resume and the system reads it for you. It extracts your skills, education, and experience into the guided builder, where <b>you review and correct everything before anything is saved</b>. The same transparent, rule-based formula then scores it against each opening, on the skills, education and experience that opening asks for. Prefer to type it in yourself? <a routerLink="/resume-builder">Use the builder directly</a>.</p>
   </div>
 
+  <div class="with-rail">
+   <div class="rail-main">
   @if (errorMsg()) {
     <div class="alert error show" role="alert">{{ errorMsg() }}</div>
   }
@@ -187,6 +189,53 @@
       <p class="hint" style="margin-top:12px">Your original file comes along too, after you save, it's attached for recruiters to read with their own eyes, exactly as you wrote it.</p>
     </section>
   }
+   </div>
+
+   <!-- What the page is already promising, itemised. This is the one screen
+        where software reads a file the user chose, so the questions a person
+        actually has here — what is taken out of it, what is not, what happens
+        to the file afterwards — belong beside the upload box rather than
+        further down the page or not at all. -->
+   <aside class="rail-side" aria-label="About reading your file">
+     <div class="rail-card">
+       <h3>What gets read</h3>
+       <p class="rail-sub">Pulled into the builder for you to check.</p>
+       <div class="rail-row"><span>Name and contact</span><b>yes</b></div>
+       <div class="rail-row"><span>Education</span><b>yes</b></div>
+       <div class="rail-row"><span>Work and internships</span><b>yes</b></div>
+       <div class="rail-row"><span>Skills</span><b>yes</b></div>
+       <div class="rail-row"><span>Certifications</span><b>yes</b></div>
+       <p class="rail-note">Layout, colours and fonts are not. The builder gives your resume a
+         clean structure that screening software can read, which is the point of doing this.</p>
+     </div>
+
+     <div class="rail-card">
+       <h3>Files it accepts</h3>
+       <div class="rail-row"><span>PDF</span><b>.pdf</b></div>
+       <div class="rail-row"><span>Word</span><b>.docx</b></div>
+       <div class="rail-row"><span>Photo or scan</span><b>.jpg .png</b></div>
+       <div class="rail-row"><span>Largest size</span><b>2 MB</b></div>
+       <p class="rail-note">A photo of a printed resume works. A clear, straight-on picture reads
+         better than one taken at an angle.</p>
+     </div>
+
+     <div class="rail-card">
+       <h3>Why you still check it</h3>
+       <p class="rail-sub">No reader is perfect, including this one.</p>
+       <p class="rail-note" style="border-top:none;padding-top:0;margin-top:0">Two columns, tables
+         and unusual headings are where readers most often go wrong. Nothing is saved and nothing is
+         scored until you have looked at every field and pressed save, so a misread costs you a
+         correction, never an opportunity.</p>
+     </div>
+
+     <div class="rail-card">
+       <h3>Rather type it?</h3>
+       <p class="rail-note" style="border-top:none;padding-top:0;margin-top:0">The guided builder
+         asks the same questions one step at a time, with a tip under every field.</p>
+       <a class="btn ghost sm" routerLink="/resume-builder" style="margin-top:10px">Open the builder</a>
+     </div>
+   </aside>
+  </div>
 </main>
 
 <app-footer />

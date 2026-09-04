@@ -95,6 +95,55 @@
 hlm-combobox-trigger { display: block; width: 100%; }
 button[data-slot="combobox-trigger"] { width: 100%; justify-content: space-between; }
 
+/* Same for the date picker's trigger, and for the same two reasons: a custom
+   element has no display of its own, and the button inside it is in spartan's
+   template, so a page stylesheet cannot reach it through view encapsulation.
+   Without this the control shrink-wraps to its label and sits next to a
+   full-width field looking like a different kind of thing. */
+hlm-date-picker, hlm-date-picker-trigger { display: block; width: 100%; }
+button[data-slot="date-picker-trigger"],
+hlm-date-picker-trigger > button { width: 100%; justify-content: space-between; }
+
+/* Match spartan's triggers to this site's own controls.
+
+   The helm defaults are 36px tall at 14px text; every input, select and
+   textarea in this design system is 10px/12px padding at 13.5px. That is a
+   small difference on its own and an obvious one when a spartan control and a
+   native input sit in the same filter bar, which is exactly where these are
+   used. Aligning them here rather than per page means a control looks the same
+   wherever it appears. */
+button[data-slot="combobox-trigger"],
+button[data-slot="select-trigger"],
+button[data-slot="date-picker-trigger"] {
+  min-height: 40px;
+  padding: 10px 12px;
+  font-family: var(--body);
+  font-size: 13.5px;
+  border-radius: var(--r);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  color: var(--text);
+}
+button[data-slot="combobox-trigger"]:hover,
+button[data-slot="select-trigger"]:hover,
+button[data-slot="date-picker-trigger"]:hover { background: var(--paper); border-color: var(--ink-line); }
+
+/* The panels these open are the same family of surface, so they carry the
+   same radius as the trigger rather than shadcn's larger one. */
+hlm-combobox-content, hlm-select-content, hlm-popover-content { border-radius: var(--r); }
+
+/* Rows in those panels are 20px by default, which is a fine mouse target and
+   a poor finger one — a native <select> hands the phone its own picker, and
+   replacing it means taking on the sizing the OS was doing for us. 36px with
+   a mouse, 44px on a touch screen, which is the usual minimum. */
+hlm-select-item, hlm-combobox-item {
+  display: flex; align-items: center;
+  min-height: 36px; padding-block: 4px;
+}
+@media (pointer: coarse) {
+  hlm-select-item, hlm-combobox-item { min-height: 44px; }
+}
+
 @theme inline {
   /* surfaces */
   --color-background: var(--paper);
@@ -285,6 +334,39 @@ h1,h2,h3{font-family:var(--display);color:var(--text);font-weight:600;line-heigh
 /* ---------- layout ---------- */
 .container{max-width:1180px;margin:0 auto;padding:0 22px;width:100%}
 .container.narrow{max-width:820px}
+/* On a large monitor 1180px left roughly 230px of empty page either side. The
+   cap exists to keep running text readable, so it lifts only where there is a
+   side rail to spend the width on — prose columns inside still set their own
+   measure. */
+@media(min-width:1440px){ .container.wide{max-width:1400px} }
+
+/* ---------- page with a context rail ----------
+   A second column carrying what the page is already about: the rule a score
+   was produced by, what a file is read for, what the active resume is. It is
+   the pattern the posting form already uses. Below 1080px it stops being a
+   column and follows the content, because at that width a rail is just a
+   narrower main. */
+.with-rail{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:28px;align-items:start}
+@media(max-width:1080px){ .with-rail{grid-template-columns:1fr} }
+.rail-side{display:flex;flex-direction:column;gap:16px;position:sticky;top:88px}
+@media(max-width:1080px){ .rail-side{position:static} }
+.rail-card{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r);padding:16px 18px}
+.rail-card > h3{font-family:var(--display);font-size:16px;line-height:1.25;margin:0 0 4px;color:var(--text)}
+/* --text, not --ink. --ink is the brand navy used for chrome and it is the
+   same value in both themes, so on a dark card it came out at 1.33:1. Every
+   other heading in this file already uses --text for exactly this reason. */
+.rail-card > p.rail-sub{font-size:12.5px;color:var(--muted);margin:0 0 12px}
+.rail-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  padding:7px 0;border-top:1px solid var(--rule-2);font-size:13px}
+.rail-row:first-of-type{border-top:none}
+.rail-row b{font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap}
+.rail-row span{color:var(--muted)}
+.rail-note{font-size:12px;color:var(--muted);line-height:1.55;margin:10px 0 0;
+  padding-top:10px;border-top:1px solid var(--rule-2)}
+.rail-list{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:5px}
+.rail-list li{font-size:11.5px;font-family:var(--body);background:var(--stone-2);color:var(--text);
+  border-radius:2px;padding:3px 7px}
+@media print{ .rail-side{display:none} .with-rail{display:block} }
 /* app-root is the ONLY flex child body has. Everything else — the header, the
    main element, the footer — sits inside it, so `main{flex:1}` was being asked
    to grow inside a plain block box and did nothing at all. The page still

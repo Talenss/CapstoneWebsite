@@ -1,6 +1,8 @@
-<app-header variant="recruiter" />
+<!-- Marked as Dashboard: this page is reached from there and has no menu item
+     of its own, so without it the header answered "where am I" with nothing. -->
+<app-header variant="recruiter" active="dashboard" />
 
-<main id="main" class="container" style="padding-bottom:80px">
+<main id="main" class="container wide" style="padding-bottom:80px">
   <div class="page-head head-row">
     <div>
       <a class="no-print" routerLink="/hr-dashboard" style="font-size:12.5px;color:var(--muted);text-decoration:none">&larr; All openings</a>
@@ -29,23 +31,35 @@
     · printed {{ printedOn }}
   </p>
 
+  <div class="with-rail">
+   <div>
   <div class="bar">
     <input type="search" [value]="q()" (input)="setQuery($event)" placeholder="Search by name or skill" aria-label="Search applicants">
-    <select [value]="fStatus()" (change)="setFStatus($event)" aria-label="Filter by status">
-      <option value="">All statuses</option>
-      @for (k of statusOrder; track k) { <option [value]="k">{{ statusLabels[k] }}</option> }
-    </select>
-    <select [value]="fTier()" (change)="setFTier($event)" aria-label="Filter by match tier">
-      <option value="">All match levels</option>
-      <option value="strong">Strong only</option>
-      <option value="possible">Possible only</option>
-      <option value="related">Below threshold</option>
-    </select>
-    <select [value]="fFile()" (change)="setFFile($event)" aria-label="Filter by attached file">
-      <option value="">Any attachment</option>
-      <option value="yes">Has own file</option>
-      <option value="no">System resume only</option>
-    </select>
+    <hlm-select class="sel" [value]="fStatus()" [itemToString]="fStatusLabel" (valueChange)="onFStatus($any($event))">
+      <hlm-select-trigger aria-label="Filter by status"><hlm-select-value placeholder="All statuses" /></hlm-select-trigger>
+      <hlm-select-content *hlmSelectPortal>
+        <hlm-select-item value="">All statuses</hlm-select-item>
+        @for (k of statusOrder; track k) {
+          <hlm-select-item [value]="k">{{ statusLabels[k] }}</hlm-select-item>
+        }
+      </hlm-select-content>
+    </hlm-select>
+    <hlm-select class="sel" [value]="fTier()" [itemToString]="fTierLabel" (valueChange)="onFTier($any($event))">
+      <hlm-select-trigger aria-label="Filter by match tier"><hlm-select-value placeholder="All match levels" /></hlm-select-trigger>
+      <hlm-select-content *hlmSelectPortal>
+        @for (o of tierOptions; track o.v) {
+          <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+        }
+      </hlm-select-content>
+    </hlm-select>
+    <hlm-select class="sel" [value]="fFile()" [itemToString]="fFileLabel" (valueChange)="onFFile($any($event))">
+      <hlm-select-trigger aria-label="Filter by attached file"><hlm-select-value placeholder="Any attachment" /></hlm-select-trigger>
+      <hlm-select-content *hlmSelectPortal>
+        @for (o of fileOptions; track o.v) {
+          <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+        }
+      </hlm-select-content>
+    </hlm-select>
     <span class="n">{{ matched() }} of {{ total() }} shown</span>
     <!-- Both act on the FILTERED rows, so what leaves the screen is exactly
          what is on it. A recruiter who filtered to "strong only" gets the
@@ -133,6 +147,57 @@
         </div>
       }
     }
+  </div>
+   </div>
+
+   <!-- The rule these numbers came out of, beside the numbers. A recruiter
+        reading a 64% has to scroll to the posting to find out what 64% was
+        measured against; this puts the weights, the cut-offs and the asked-for
+        skills next to the list instead. Nothing here is new information — it
+        is the opening's own settings, shown where they are being applied. -->
+   <aside class="rail-side no-print" aria-label="How this ranking was made">
+     <div class="rail-card">
+       <h3>How this ranking was made</h3>
+       <p class="rail-sub">This opening's own weights. They total 100%.</p>
+       <div class="rail-row"><span>Required skills matched</span><b>{{ wSkills() }}%</b></div>
+       <div class="rail-row"><span>Education level</span><b>{{ wEdu() }}%</b></div>
+       <div class="rail-row"><span>Experience</span><b>{{ wExp() }}%</b></div>
+       <p class="rail-note">A skill the applicant lists but cannot point to anywhere in their
+         resume counts half. Everything else counts in full.</p>
+     </div>
+
+     <div class="rail-card">
+       <h3>Where the lines fall</h3>
+       <p class="rail-sub">The same cut-offs for every applicant.</p>
+       <div class="rail-row"><span class="badge green">Strong match</span><b>80% and up</b></div>
+       <div class="rail-row"><span class="badge amber">Possible match</span><b>50 – 79%</b></div>
+       <div class="rail-row"><span class="badge slate">Related</span><b>Below 50%</b></div>
+       <p class="rail-note">Nobody is removed at any line. A related match still appears on this
+         list and can still be invited.</p>
+     </div>
+
+     @if (posting(); as p) {
+       <div class="rail-card">
+         <h3>What this opening asks for</h3>
+         <p class="rail-sub">Change these and every score on this page changes with them.</p>
+         <ul class="rail-list">
+           @for (sk of p.skills; track sk) { <li>{{ sk }}</li> }
+         </ul>
+         <div class="rail-row" style="margin-top:12px"><span>Minimum education</span><b>{{ eduLabels[p.educationLevel] }}</b></div>
+         <div class="rail-row"><span>Minimum experience</span><b>{{ experienceLabel(p.minExperienceMonths) }}</b></div>
+       </div>
+     }
+
+     @if (statusCounts().length) {
+       <div class="rail-card">
+         <h3>This opening's pipeline</h3>
+         <p class="rail-sub">Where the {{ total() }} applicants stand right now.</p>
+         @for (row of statusCounts(); track row.key) {
+           <div class="rail-row"><span>{{ statusLabels[row.key] }}</span><b>{{ row.n }}</b></div>
+         }
+       </div>
+     }
+   </aside>
   </div>
 </main>
 
@@ -470,18 +535,32 @@
             <p class="hint" style="margin:6px 0 10px">Pick a date and time and we'll add an <b>“Add to Google Calendar”</b> button plus a calendar file to the email, so the applicant can save the interview in one click.</p>
             <div class="cal-grid">
               <label>
-                <span>Date &amp; time</span>
-                <input type="datetime-local" [value]="inviteWhen()" (input)="setInviteWhen($event)">
+                <span>Date</span>
+                <span class="date-row">
+                  <hlm-date-picker class="date-pick" [date]="inviteDateObj()" [minDate]="todayDate"
+                                   [formatDate]="formatPickedDate" (dateChange)="onInviteDateChange($event)">
+                    <hlm-date-picker-trigger>Pick a day</hlm-date-picker-trigger>
+                  </hlm-date-picker>
+                  @if (inviteDate()) {
+                    <button type="button" class="date-clear" (click)="clearInviteDate()">Clear</button>
+                  }
+                </span>
+              </label>
+              <label>
+                <span>Time</span>
+                <input type="time" [value]="inviteTime()" (input)="setInviteTime($event)">
               </label>
               <label>
                 <span>Length</span>
-                <select (change)="setInviteDuration($event)">
-                  <option value="30" [selected]="inviteDuration() === 30">30 minutes</option>
-                  <option value="45" [selected]="inviteDuration() === 45">45 minutes</option>
-                  <option value="60" [selected]="inviteDuration() === 60">1 hour</option>
-                  <option value="90" [selected]="inviteDuration() === 90">1½ hours</option>
-                  <option value="120" [selected]="inviteDuration() === 120">2 hours</option>
-                </select>
+                <hlm-select [value]="String(inviteDuration())" [itemToString]="durationLabel"
+                            (valueChange)="inviteDuration.set(+$any($event) || 60)">
+                  <hlm-select-trigger aria-label="Interview length"><hlm-select-value /></hlm-select-trigger>
+                  <hlm-select-content *hlmSelectPortal>
+                    @for (o of durationOptions; track o.v) {
+                      <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+                    }
+                  </hlm-select-content>
+                </hlm-select>
               </label>
               <label class="cal-where">
                 <span>Where <span class="opt">(optional)</span></span>
@@ -583,9 +662,15 @@
       <div class="modal-foot">
         <span style="margin-right:auto;font-size:12.5px;color:var(--muted)">Status changes are recorded against your account.</span>
         <button class="btn ghost" type="button" (click)="openInvite()">✉ Message applicant</button>
-        <select [value]="modalStatus()" (change)="setModalStatus($event)" style="padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px">
-          @for (k of statusOrder; track k) { <option [value]="k">{{ statusLabels[k] }}</option> }
-        </select>
+        <hlm-select class="sel-status" [value]="modalStatus()" [itemToString]="statusLabel"
+                    (valueChange)="onModalStatus($any($event))">
+          <hlm-select-trigger aria-label="Set application status"><hlm-select-value /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (k of statusOrder; track k) {
+              <hlm-select-item [value]="k">{{ statusLabels[k] }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
 
         <!-- Asked for on a rejection only, and answerable with "prefer not to
              say". A recruiter made to choose in order to proceed picks the
@@ -602,12 +687,18 @@
           <label style="font-size:12.5px;color:var(--muted);margin-bottom:-6px">
             Reason, optional. <b>The applicant is shown this</b>, in plainer wording. Your name is not.
           </label>
-          <select [value]="modalReason()" (change)="setModalReason($event)"
-                  aria-label="Reason for not proceeding, optional, and shown to the applicant"
-                  style="padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:var(--body);font-size:13.5px">
-            <option value="">No reason given</option>
-            @for (k of REASONS; track k) { <option [value]="k">{{ REASON_LABELS[k] }}</option> }
-          </select>
+          <hlm-select class="sel-status" [value]="modalReason()" [itemToString]="reasonLabel"
+                      (valueChange)="modalReason.set($any($event))">
+            <hlm-select-trigger aria-label="Reason for not proceeding, optional, and shown to the applicant">
+              <hlm-select-value placeholder="No reason given" />
+            </hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              <hlm-select-item value="">No reason given</hlm-select-item>
+              @for (k of REASONS; track k) {
+                <hlm-select-item [value]="k">{{ REASON_LABELS[k] }}</hlm-select-item>
+              }
+            </hlm-select-content>
+          </hlm-select>
           @if (modalReason(); as k) {
             <p style="font-size:12.5px;color:var(--muted);margin:-4px 0 0;padding-left:10px;border-left:2px solid var(--rule)">
               They will read: “{{ applicantWording(k) }}”

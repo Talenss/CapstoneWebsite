@@ -38,6 +38,7 @@ import type { ClassValue } from 'clsx';
       brnFieldControlDescribedBy
       hlmBtn
       data-slot="combobox-trigger"
+      [attr.aria-label]="ariaLabel()"
       [id]="buttonId()"
       [class]="_computedClass()"
       [variant]="variant()"
@@ -59,6 +60,11 @@ export class HlmComboboxTrigger {
   );
 
   public readonly buttonId = input<string>(`hlm-combobox-trigger-${HlmComboboxTrigger._id++}`);
+
+  /** Forwarded onto the button. The host element is not the focusable
+   *  thing, so an aria-label written on <hlm-combobox-trigger> in a page
+   *  template never reaches the control a screen reader announces. */
+  public readonly ariaLabel = input<string | null>(null, { alias: 'aria-label' });
 
   public readonly variant = input<ButtonVariants['variant']>('outline');
 
