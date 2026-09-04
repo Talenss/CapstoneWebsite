@@ -32,6 +32,7 @@ import { ClassValue } from 'clsx';
   template: `
     <button
       [id]="buttonId()"
+      [attr.aria-label]="ariaLabel()"
       type="button"
       [class]="_computedClass()"
       [disabled]="_disabled()"
@@ -85,6 +86,11 @@ export class HlmDatePickerTrigger implements BrnDatePickerTriggerBase {
 
   /** The id of the button that opens the date picker. */
   public readonly buttonId = input<string>(`hlm-date-picker-${++HlmDatePickerTrigger._nextId}`);
+
+  /** Forwarded onto the button. The host element is not the focusable
+   *  thing, so an aria-label written on <hlm-date-picker-trigger> in a page
+   *  template never reaches the control a screen reader announces. */
+  public readonly ariaLabel = input<string | null>(null, { alias: 'aria-label' });
 
   /** @internal The id of the button that opens the date picker, used for labeling. */
   public readonly triggerId = this.buttonId;

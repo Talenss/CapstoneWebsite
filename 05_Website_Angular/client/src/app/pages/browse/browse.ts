@@ -8,6 +8,8 @@ import { Company, MatchResult, Posting, Resume } from '../../core/models';
 import { EDU_LABELS, WEIGHTS, experienceLabel, missingHint, scoreLocal, tierColor, tierLabel, tierOf, weightsFor } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 import { Seo } from '../../core/seo';
+import { HlmSelectImports } from '@spartan-ng/helm/select';
+import { SelectOption } from '../../shared/select-options';
 
 interface BrowseRow {
   posting: Posting;
@@ -25,7 +27,7 @@ type SortKey = 'score' | 'new' | 'az';
 @Component({
   selector: 'app-browse',
   standalone: true,
-  imports: [RouterLink, Header, Footer, FocusTrapDirective],
+  imports: [RouterLink, Header, Footer, FocusTrapDirective, ...HlmSelectImports],
   templateUrl: './browse.html',
   styleUrl: './browse.css',
 })
@@ -103,6 +105,17 @@ export class Browse implements OnInit, OnDestroy {
   });
 
   depts = computed(() => Array.from(new Set(this.postings().map((p) => p.department))).sort());
+
+  /** A department is its own label; only the empty value needs words. */
+  readonly deptLabel = (v: string): string => v || 'All departments';
+  /** "Best match first" only exists once there is a resume to match against. */
+  readonly sortOptions = computed<readonly SelectOption[]>(() => [
+    ...(this.resume() ? [{ v: 'score', label: 'Best match first' }] : []),
+    { v: 'new', label: 'Newest first' },
+    { v: 'az', label: 'A to Z' },
+  ]);
+  readonly sortLabel = (v: string): string =>
+    this.sortOptions().find((o) => o.v === v)?.label ?? String(v ?? '');
 
   sub = computed(() => {
     if (!this.loaded()) return "Every posting here is a real vacancy, posted by Clark Outsourcing's own HR staff.";

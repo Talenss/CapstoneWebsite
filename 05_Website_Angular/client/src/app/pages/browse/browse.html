@@ -18,19 +18,28 @@
 
   <div class="filters">
     <input type="search" placeholder="Search by title, department, or skill" aria-label="Search openings" [value]="query()" (input)="onQueryInput($event)">
-    <select aria-label="Filter by department" [value]="dept()" (change)="onDeptChange($event)">
-      <option value="">All departments</option>
-      @for (d of depts(); track d) {
-        <option [value]="d">{{ d }}</option>
-      }
-    </select>
-    <select aria-label="Sort openings" [value]="effectiveSort()" (change)="onSortChange($event)">
-      @if (resume()) {
-        <option value="score">Best match first</option>
-      }
-      <option value="new">Newest first</option>
-      <option value="az">A to Z</option>
-    </select>
+    <hlm-select class="sel" [value]="dept()" [itemToString]="deptLabel" (valueChange)="dept.set($any($event))">
+      <hlm-select-trigger aria-label="Filter by department">
+        <hlm-select-value placeholder="All departments" />
+      </hlm-select-trigger>
+      <hlm-select-content *hlmSelectPortal>
+        <hlm-select-item value="">All departments</hlm-select-item>
+        @for (d of depts(); track d) {
+          <hlm-select-item [value]="d">{{ d }}</hlm-select-item>
+        }
+      </hlm-select-content>
+    </hlm-select>
+    <hlm-select class="sel" [value]="effectiveSort()" [itemToString]="sortLabel"
+                (valueChange)="sort.set($any($event))">
+      <hlm-select-trigger aria-label="Sort openings">
+        <hlm-select-value />
+      </hlm-select-trigger>
+      <hlm-select-content *hlmSelectPortal>
+        @for (o of sortOptions(); track o.v) {
+          <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+        }
+      </hlm-select-content>
+    </hlm-select>
     <span class="count">{{ filteredRows().length }} of {{ rows().length }} shown</span>
   </div>
 

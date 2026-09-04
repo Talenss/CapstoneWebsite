@@ -11,11 +11,17 @@
     @if (resumes().length) {
       <div class="picker" id="picker">
         <label for="resumeSel" style="font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Active resume</label>
-        <select id="resumeSel" aria-label="Choose your active resume" [value]="activeId() ?? ''" (change)="onResumeChange($event)">
-          @for (r of resumes(); track r.id) {
-            <option [value]="r.id ?? ''">{{ r.title }}{{ r.ownFile ? ' · file attached' : '' }}</option>
-          }
-        </select>
+        <hlm-select class="sel" [value]="activeId() ?? ''" [itemToString]="resumeLabel"
+                    (valueChange)="pickResume($any($event))">
+          <hlm-select-trigger id="resumeSel" aria-label="Choose your active resume">
+            <hlm-select-value />
+          </hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (r of resumes(); track r.id) {
+              <hlm-select-item [value]="r.id ?? ''">{{ r.title }}{{ r.ownFile ? ' · file attached' : '' }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
         <span class="attached" [hidden]="!activeResumeHasFile()">Own file attached</span>
         <a class="btn ghost sm" routerLink="/resume-builder" [queryParams]="{ id: activeId() }">Edit</a>
       </div>

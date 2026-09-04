@@ -95,6 +95,55 @@
 hlm-combobox-trigger { display: block; width: 100%; }
 button[data-slot="combobox-trigger"] { width: 100%; justify-content: space-between; }
 
+/* Same for the date picker's trigger, and for the same two reasons: a custom
+   element has no display of its own, and the button inside it is in spartan's
+   template, so a page stylesheet cannot reach it through view encapsulation.
+   Without this the control shrink-wraps to its label and sits next to a
+   full-width field looking like a different kind of thing. */
+hlm-date-picker, hlm-date-picker-trigger { display: block; width: 100%; }
+button[data-slot="date-picker-trigger"],
+hlm-date-picker-trigger > button { width: 100%; justify-content: space-between; }
+
+/* Match spartan's triggers to this site's own controls.
+
+   The helm defaults are 36px tall at 14px text; every input, select and
+   textarea in this design system is 10px/12px padding at 13.5px. That is a
+   small difference on its own and an obvious one when a spartan control and a
+   native input sit in the same filter bar, which is exactly where these are
+   used. Aligning them here rather than per page means a control looks the same
+   wherever it appears. */
+button[data-slot="combobox-trigger"],
+button[data-slot="select-trigger"],
+button[data-slot="date-picker-trigger"] {
+  min-height: 40px;
+  padding: 10px 12px;
+  font-family: var(--body);
+  font-size: 13.5px;
+  border-radius: var(--r);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  color: var(--text);
+}
+button[data-slot="combobox-trigger"]:hover,
+button[data-slot="select-trigger"]:hover,
+button[data-slot="date-picker-trigger"]:hover { background: var(--paper); border-color: var(--ink-line); }
+
+/* The panels these open are the same family of surface, so they carry the
+   same radius as the trigger rather than shadcn's larger one. */
+hlm-combobox-content, hlm-select-content, hlm-popover-content { border-radius: var(--r); }
+
+/* Rows in those panels are 20px by default, which is a fine mouse target and
+   a poor finger one — a native <select> hands the phone its own picker, and
+   replacing it means taking on the sizing the OS was doing for us. 36px with
+   a mouse, 44px on a touch screen, which is the usual minimum. */
+hlm-select-item, hlm-combobox-item {
+  display: flex; align-items: center;
+  min-height: 36px; padding-block: 4px;
+}
+@media (pointer: coarse) {
+  hlm-select-item, hlm-combobox-item { min-height: 44px; }
+}
+
 @theme inline {
   /* surfaces */
   --color-background: var(--paper);

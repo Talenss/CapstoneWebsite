@@ -33,12 +33,14 @@
         </div>
         <div class="field">
           <label for="type">Employment type</label>
-          <select id="type" [value]="typeVal()" (change)="setType($event)">
-            <option value="full-time">Full time</option>
-            <option value="part-time">Part time</option>
-            <option value="contract">Contract</option>
-            <option value="internship">Internship</option>
-          </select>
+          <hlm-select [value]="typeVal()" [itemToString]="typeLabel" (valueChange)="typeVal.set($any($event))">
+            <hlm-select-trigger id="type"><hlm-select-value /></hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (o of typeOptions; track o.v) {
+                <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+              }
+            </hlm-select-content>
+          </hlm-select>
         </div>
       </div>
 
@@ -134,9 +136,14 @@
       <div class="row2">
         <div class="field">
           <label for="edu">Minimum education <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">· {{ wEdu() }}%</span></label>
-          <select id="edu" [value]="eduVal()" (change)="setEdu($event)">
-            @for (k of eduKeys; track k) { <option [value]="k">{{ eduLabels[k] }}</option> }
-          </select>
+          <hlm-select [value]="eduVal()" [itemToString]="eduLabel" (valueChange)="eduVal.set($any($event))">
+            <hlm-select-trigger id="edu"><hlm-select-value /></hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (k of eduKeys; track k) {
+                <hlm-select-item [value]="k">{{ eduLabels[k] }}</hlm-select-item>
+              }
+            </hlm-select-content>
+          </hlm-select>
         </div>
         <div class="field">
           <label for="years">Minimum experience <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">· {{ wExp() }}%</span></label>
@@ -147,7 +154,15 @@
 
       <div class="field" style="max-width:280px">
         <label for="deadline">Application deadline <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(optional)</span></label>
-        <input type="date" id="deadline" [min]="todayStr" [value]="deadlineVal()" (input)="setDeadline($event)">
+        <div class="date-row">
+          <hlm-date-picker class="date-pick" [date]="deadlineDate()" [minDate]="todayDate"
+                           [formatDate]="formatPickedDate" (dateChange)="onDeadlineChange($event)">
+            <hlm-date-picker-trigger id="deadline">No deadline</hlm-date-picker-trigger>
+          </hlm-date-picker>
+          @if (deadlineVal()) {
+            <button type="button" class="date-clear" (click)="clearDeadline()">Clear</button>
+          }
+        </div>
         <p class="hint">Past this date the opening stops accepting applications by itself. No need to close it by hand. Leave empty for no deadline.</p>
       </div>
 

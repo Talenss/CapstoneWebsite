@@ -7,6 +7,8 @@ import { SessionService } from '../../core/session.service';
 import { TourService } from '../../shared/tour/tour.service';
 import { HrStats, Posting } from '../../core/models';
 import { STATUS_LABELS, STATUS_ORDER } from '../../core/engine';
+import { HlmSelectImports } from '@spartan-ng/helm/select';
+import { labelFor, SelectOption } from '../../shared/select-options';
 
 /** Port of the PHP hr-dashboard.html — the recruiter's home: a stat
  *  tally, the five-stage pipeline funnel, and the list of their own
@@ -14,7 +16,7 @@ import { STATUS_LABELS, STATUS_ORDER } from '../../core/engine';
 @Component({
   selector: 'app-hr-dashboard',
   standalone: true,
-  imports: [RouterLink, Header, Footer],
+  imports: [RouterLink, Header, Footer, ...HlmSelectImports],
   templateUrl: './hr-dashboard.html',
   styleUrl: './hr-dashboard.css',
 })
@@ -67,8 +69,20 @@ export class HrDashboard implements OnInit {
   });
 
   onQueryInput(e: Event): void { this.query.set((e.target as HTMLInputElement).value); }
-  onStateChange(e: Event): void { this.state.set((e.target as HTMLSelectElement).value as any); }
-  onSortChange(e: Event): void { this.sort.set((e.target as HTMLSelectElement).value as any); }
+  readonly stateOptions: readonly SelectOption[] = [
+    { v: '', label: 'All openings' },
+    { v: 'open', label: 'Open and accepting' },
+    { v: 'expired', label: 'Deadline passed' },
+    { v: 'closed', label: 'Closed' },
+    { v: 'waiting', label: 'Has new applicants' },
+  ];
+  readonly sortOptions: readonly SelectOption[] = [
+    { v: 'new', label: 'Newest first' },
+    { v: 'applicants', label: 'Most applicants first' },
+    { v: 'az', label: 'A to Z' },
+  ];
+  readonly stateLabel = labelFor(this.stateOptions);
+  readonly sortLabel = labelFor(this.sortOptions);
 
   clearFilters(): void {
     this.query.set('');

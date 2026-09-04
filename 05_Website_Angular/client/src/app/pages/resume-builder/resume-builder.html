@@ -138,11 +138,15 @@
                            never empty, it starts at "Not stated yet", and it is
                            the only field on this step the score reads. -->
                       <label [for]="'edu-level-' + $index">Level <span class="opt">counts toward your score</span></label>
-                      <select [id]="'edu-level-' + $index" [value]="e.level" (change)="updateEducation($index, 'level', inputValue($event))">
-                        @for (opt of eduLevelOptions; track opt.value) {
-                          <option [value]="opt.value">{{ opt.label }}</option>
-                        }
-                      </select>
+                      <hlm-select [value]="e.level" [itemToString]="eduLevelLabel"
+                                  (valueChange)="updateEducation($index, 'level', $any($event))">
+                        <hlm-select-trigger [id]="'edu-level-' + $index"><hlm-select-value /></hlm-select-trigger>
+                        <hlm-select-content *hlmSelectPortal>
+                          @for (opt of eduLevelOptions; track opt.value) {
+                            <hlm-select-item [value]="opt.value">{{ opt.label }}</hlm-select-item>
+                          }
+                        </hlm-select-content>
+                      </hlm-select>
                     </div>
                     <div class="field">
                       <label [for]="'edu-year-' + $index">Year graduated <span class="opt">optional</span></label>

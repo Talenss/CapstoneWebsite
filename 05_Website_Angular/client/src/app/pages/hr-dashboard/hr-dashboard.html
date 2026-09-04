@@ -42,18 +42,28 @@
       <div class="filters">
         <input type="search" placeholder="Search your openings by title, department, or skill"
                aria-label="Search your openings" [value]="query()" (input)="onQueryInput($event)">
-        <select aria-label="Filter openings by state" [value]="state()" (change)="onStateChange($event)">
-          <option value="">All openings</option>
-          <option value="open">Open and accepting</option>
-          <option value="expired">Deadline passed</option>
-          <option value="closed">Closed</option>
-          <option value="waiting">Has new applicants</option>
-        </select>
-        <select aria-label="Sort openings" [value]="sort()" (change)="onSortChange($event)">
-          <option value="new">Newest first</option>
-          <option value="applicants">Most applicants first</option>
-          <option value="az">A to Z</option>
-        </select>
+        <hlm-select class="sel" [value]="state()" [itemToString]="stateLabel"
+                    (valueChange)="state.set($any($event))">
+          <hlm-select-trigger aria-label="Filter openings by state">
+            <hlm-select-value placeholder="All openings" />
+          </hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (o of stateOptions; track o.v) {
+              <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
+        <hlm-select class="sel" [value]="sort()" [itemToString]="sortLabel"
+                    (valueChange)="sort.set($any($event))">
+          <hlm-select-trigger aria-label="Sort openings">
+            <hlm-select-value />
+          </hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (o of sortOptions; track o.v) {
+              <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
         <span class="count">{{ visiblePostings().length }} of {{ postings().length }} shown</span>
       </div>
     }

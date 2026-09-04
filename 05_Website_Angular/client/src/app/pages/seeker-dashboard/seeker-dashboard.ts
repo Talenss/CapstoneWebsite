@@ -8,6 +8,7 @@ import { TourService } from '../../shared/tour/tour.service';
 import { AppStatus, Application, Posting, RecommendationItem, Resume, StatusEvent } from '../../core/models';
 import { APPLICANT_REASON_LABELS, EDU_LABELS, missingHint, STATUS_LABELS, THRESHOLDS, WEIGHTS, scoreLocal, statusBadge, tierColor, tierLabel, tierOf } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
+import { HlmSelectImports } from '@spartan-ng/helm/select';
 
 type TierKey = 'strong' | 'possible' | 'related';
 interface Reco { strong: RecommendationItem[]; possible: RecommendationItem[]; related: RecommendationItem[] }
@@ -20,7 +21,7 @@ interface TierConfig { key: TierKey; title: string; badgeClass: string; note: st
 @Component({
   selector: 'app-seeker-dashboard',
   standalone: true,
-  imports: [RouterLink, Header, Footer, FocusTrapDirective],
+  imports: [RouterLink, Header, Footer, FocusTrapDirective, ...HlmSelectImports],
   templateUrl: './seeker-dashboard.html',
   styleUrl: './seeker-dashboard.css',
 })
@@ -74,6 +75,12 @@ export class SeekerDashboard implements OnInit {
   });
 
   activeResume = computed(() => this.resumes().find((r) => r.id === this.activeId()) ?? null);
+
+  /** The trigger shows the resume's title, not its id. */
+  readonly resumeLabel = (id: string): string => {
+    const r = this.resumes().find((x) => (x.id ?? '') === id);
+    return r ? `${r.title}${r.ownFile ? ' · file attached' : ''}` : 'Choose a resume';
+  };
 
   withdrawingId = signal<string | null>(null);
 
@@ -293,8 +300,8 @@ export class SeekerDashboard implements OnInit {
     return t === 'strong' ? 'green' : t === 'possible' ? 'amber' : 'slate';
   }
 
-  async onResumeChange(e: Event): Promise<void> {
-    const id = (e.target as HTMLSelectElement).value;
+  async pickResume(id: string): Promise<void> {
+    if (!id || id === this.activeId()) return;
     await this.api.resumes.setActive(id);
     await this.render();
     this.showToast('Active resume changed, everything re-scored.');

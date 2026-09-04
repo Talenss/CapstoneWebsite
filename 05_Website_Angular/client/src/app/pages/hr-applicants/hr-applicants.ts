@@ -8,6 +8,9 @@ import { ApiService } from '../../core/api.service';
 import { AppStatus, InviteSchedule, Personal, Posting, RankedRow, RejectionReason, Resume, ScreeningNote, SkillEvidence, StatusEvent, Tier, RankedQuery} from '../../core/models';
 import { APPLICANT_REASON_LABELS, EDU_LABELS, EVIDENCE_KIND_LABELS, evidenceSources, experienceLabel, REASON_LABELS, REJECTION_REASONS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
+import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
+import { HlmSelectImports } from '@spartan-ng/helm/select';
+import { labelFor, SelectOption } from '../../shared/select-options';
 
 /** Port of the PHP hr-applicants.html — the ranked-applicant list
  *  for a single posting (?id=), with a search/filter bar and a dual-resume
@@ -16,7 +19,7 @@ import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 @Component({
   selector: 'app-hr-applicants',
   standalone: true,
-  imports: [RouterLink, Header, Footer, FocusTrapDirective],
+  imports: [RouterLink, Header, Footer, FocusTrapDirective, ...HlmDatePickerImports, ...HlmSelectImports],
   templateUrl: './hr-applicants.html',
   styleUrl: './hr-applicants.css',
 })
@@ -88,7 +91,23 @@ export class HrApplicants {
   inviteSending = signal(false);
   // Optional interview time. When inviteWhen is set, the email also carries
   // an "Add to Google Calendar" link and an .ics attachment.
-  inviteWhen = signal('');
+  //
+  // Held as a date and a time separately. A single datetime-local control is
+  // one field in the markup but two unlabelled sub-fields on screen, and its
+  // keyboard behaviour differs across browsers; a calendar for the day and a
+  // plain time box for the hour is the same information said clearly.
+  // inviteWhen recombines them into the value the API already expects.
+  inviteDate = signal('');
+  inviteTime = signal('');
+  readonly inviteWhen = computed(() => {
+    const d = this.inviteDate(), t = this.inviteTime();
+    return d && t ? `${d}T${t}` : '';
+  });
+  readonly inviteDateObj = computed<Date | undefined>(() => {
+    const [y, m, d] = this.inviteDate().split('-').map(Number);
+    return y && m && d ? new Date(y, m - 1, d) : undefined;
+  });
+  readonly todayDate = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
   inviteDuration = signal(60);
   inviteLocation = signal('');
 
@@ -99,7 +118,8 @@ export class HrApplicants {
     this.inviteText.set(
       `Hi ${first},\n\nThank you for applying to ${this.posting()?.title ?? 'our opening'}. We'd like to invite you to an interview. Could you tell us which days and times work for you this coming week?\n\nWe look forward to meeting you.`,
     );
-    this.inviteWhen.set('');
+    this.inviteDate.set('');
+    this.inviteTime.set('');
     this.inviteDuration.set(60);
     this.inviteLocation.set('');
     this.inviteOpen.set(true);
@@ -108,12 +128,20 @@ export class HrApplicants {
   setInviteText(e: Event): void {
     this.inviteText.set((e.target as HTMLTextAreaElement).value);
   }
-  setInviteWhen(e: Event): void {
-    this.inviteWhen.set((e.target as HTMLInputElement).value);
+  onInviteDateChange(d: Date | null): void {
+    if (!d) { this.inviteDate.set(''); return; }
+    const p = (n: number) => String(n).padStart(2, '0');
+    this.inviteDate.set(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`);
   }
-  setInviteDuration(e: Event): void {
-    this.inviteDuration.set(Number((e.target as HTMLSelectElement).value) || 60);
+  setInviteTime(e: Event): void {
+    this.inviteTime.set((e.target as HTMLInputElement).value);
   }
+  clearInviteDate(): void { this.inviteDate.set(''); }
+
+  /** en-PH short form, matching every other date shown on the site, in place
+   *  of the picker's default Date.toDateString ("Wed Sep 23 2026"). */
+  readonly formatPickedDate = (d: Date): string =>
+    d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
   setInviteLocation(e: Event): void {
     this.inviteLocation.set((e.target as HTMLInputElement).value);
   }
@@ -325,11 +353,41 @@ export class HrApplicants {
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => { void this.refilter(); }, 250);
   }
-  setFStatus(e: Event): void { this.fStatus.set((e.target as HTMLSelectElement).value); void this.refilter(); }
-  setFTier(e: Event): void { this.fTier.set((e.target as HTMLSelectElement).value); void this.refilter(); }
-  setFFile(e: Event): void { this.fFile.set((e.target as HTMLSelectElement).value); void this.refilter(); }
-  setModalStatus(e: Event): void { this.modalStatus.set((e.target as HTMLSelectElement).value as AppStatus); }
-  setModalReason(e: Event): void { this.modalReason.set((e.target as HTMLSelectElement).value); }
+  onFStatus(v: string): void { this.fStatus.set(v ?? ''); void this.refilter(); }
+  onFTier(v: string): void { this.fTier.set(v ?? ''); void this.refilter(); }
+  onFFile(v: string): void { this.fFile.set(v ?? ''); void this.refilter(); }
+  onModalStatus(v: AppStatus): void { this.modalStatus.set(v); }
+
+  /** The filter bar, the status control and the interview length all store
+   *  plain codes, so each needs to say how a code reads as words. The labels
+   *  themselves come from the shared maps the rest of the page already uses,
+   *  so nothing is written down twice. */
+  readonly tierOptions: readonly SelectOption[] = [
+    { v: '', label: 'All match levels' },
+    { v: 'strong', label: 'Strong only' },
+    { v: 'possible', label: 'Possible only' },
+    { v: 'related', label: 'Below threshold' },
+  ];
+  readonly fileOptions: readonly SelectOption[] = [
+    { v: '', label: 'Any attachment' },
+    { v: 'yes', label: 'Has own file' },
+    { v: 'no', label: 'System resume only' },
+  ];
+  readonly durationOptions: readonly SelectOption[] = [
+    { v: '30', label: '30 minutes' },
+    { v: '45', label: '45 minutes' },
+    { v: '60', label: '1 hour' },
+    { v: '90', label: '1½ hours' },
+    { v: '120', label: '2 hours' },
+  ];
+  readonly fTierLabel = labelFor(this.tierOptions);
+  readonly fFileLabel = labelFor(this.fileOptions);
+  readonly durationLabel = labelFor(this.durationOptions);
+  readonly fStatusLabel = (v: string): string => (v ? this.statusLabels[v as AppStatus] : 'All statuses');
+  readonly statusLabel = (v: AppStatus): string => this.statusLabels[v] ?? String(v ?? '');
+  readonly reasonLabel = (v: string): string =>
+    v ? (this.REASON_LABELS[v as RejectionReason] ?? v) : 'No reason given';
+  readonly String = String;
 
   /** How far the resume has moved since the application was made, as a signed
    *  string. A method rather than template arithmetic because `liveScore` is

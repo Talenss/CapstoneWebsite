@@ -91,3 +91,12 @@
    has no default display. */
 .skill-combo { display: block; width: 100%; }
 .skill-combo hlm-combobox-trigger { display: block; width: 100%; }
+
+/* The deadline picker, and the button that empties it again. "Optional"
+   in the label is only true if there is a way back to empty: the calendar
+   itself can set a date but not unset one. */
+.date-row{display:flex;align-items:center;gap:8px}
+.date-pick{flex:1;min-width:0}
+.date-clear{flex:none;padding:8px 12px;border:1px solid var(--rule);border-radius:var(--r);
+  background:var(--paper);color:var(--muted);font-family:var(--body);font-size:12.5px;cursor:pointer}
+.date-clear:hover{color:var(--accent);border-color:var(--accent)}
