@@ -148,12 +148,22 @@ router.post('/save', async (req, res) => {
 
   /* Screening questions. Capped in count and length because they are shown to
      every applicant before they can apply: an unbounded list is a wall, and an
-     unbounded prompt is somewhere to paste a whole job description. */
+     unbounded prompt is somewhere to paste a whole job description.
+
+     Folded case-insensitively, the way required skills and certificates are.
+     The same question asked twice is one question, and asking an applicant to
+     type the answer again is a bug however it got there. */
   const questions: string[] = [];
-  for (const q of Array.isArray(P.questions) ? P.questions : []) {
-    const prompt = String(typeof q === 'string' ? q : (q?.prompt ?? '')).trim().slice(0, 300);
-    if (prompt) questions.push(prompt);
-    if (questions.length >= 10) break;
+  {
+    const seen = new Set<string>();
+    for (const q of Array.isArray(P.questions) ? P.questions : []) {
+      const prompt = String(typeof q === 'string' ? q : (q?.prompt ?? '')).trim().slice(0, 300);
+      const key = prompt.toLowerCase();
+      if (!prompt || seen.has(key)) continue;
+      seen.add(key);
+      questions.push(prompt);
+      if (questions.length >= 10) break;
+    }
   }
 
   if (title.length < 2) return fail(res, 'Give the opening a title.');
@@ -273,18 +283,60 @@ router.post('/save', async (req, res) => {
         );
       }
 
-      /* Screening questions are REPLACED wholesale on every save, which
-         deliberately discards the answers already given to a question the
-         recruiter edited or removed (application_answers cascades from
-         question_id). An answer belongs to the wording it was given under:
-         keeping it against changed wording would attribute to an applicant a
-         reply to a question they were never asked. */
-      await tx.exec('DELETE FROM posting_questions WHERE posting_id = ?', [pid]);
+      /* SCREENING QUESTIONS ARE MATCHED BY THEIR WORDING, never replaced
+         wholesale.
+
+         An answer belongs to the wording it was given under, so a question
+         whose text the recruiter CHANGED is a different question and its
+         answers go with it — application_answers cascades from question_id.
+         That much was always intended. What must not happen, and did while
+         this deleted every row and reinserted it, is that an ordinary edit
+         destroys answers to questions nobody touched: fixing a typo in the
+         description, moving the deadline, closing the opening or dragging one
+         question up the list wiped every answer every applicant had given.
+         A recruiter cannot be expected to know that editing a job advert
+         throws away the replies they collected.
+
+         So the rows that still carry the same wording are kept and only
+         renumbered; the ones whose wording is genuinely gone are deleted, and
+         take their own answers with them and nobody else's. */
+      const existingQs = await tx.query<{ question_id: number; prompt: string }>(
+        'SELECT question_id, prompt FROM posting_questions WHERE posting_id = ? ORDER BY sort_order, question_id',
+        [pid],
+      );
+      /* Keyed the same way the payload was folded, so a question re-sent with
+         different capitalisation is recognised as the one already stored
+         rather than treated as a new one — which would drop its answers. */
+      const keepById = new Map<string, number>();
+      for (const row of existingQs) {
+        const key = row.prompt.trim().toLowerCase();
+        if (!keepById.has(key)) keepById.set(key, Number(row.question_id));
+      }
+      const wanted = new Set(questions.map((q) => q.toLowerCase()));
+
+      for (const row of existingQs) {
+        const key = row.prompt.trim().toLowerCase();
+        // Gone from the list, or a duplicate row left by an older save that
+        // did not fold them — either way this row is not the one being kept.
+        if (!wanted.has(key) || keepById.get(key) !== Number(row.question_id)) {
+          await tx.exec('DELETE FROM posting_questions WHERE question_id = ?', [row.question_id]);
+        }
+      }
       for (let i = 0; i < questions.length; i++) {
-        await tx.exec(
-          'INSERT INTO posting_questions (posting_id, prompt, sort_order) VALUES (?,?,?)',
-          [pid, questions[i], i],
-        );
+        const id = keepById.get(questions[i].toLowerCase());
+        if (id !== undefined) {
+          // Same question, possibly moved and possibly recapitalised. Update
+          // rather than delete, so every answer already given to it survives.
+          await tx.exec(
+            'UPDATE posting_questions SET prompt = ?, sort_order = ? WHERE question_id = ?',
+            [questions[i], i, id],
+          );
+        } else {
+          await tx.exec(
+            'INSERT INTO posting_questions (posting_id, prompt, sort_order) VALUES (?,?,?)',
+            [pid, questions[i], i],
+          );
+        }
       }
 
       await tx.exec('DELETE FROM posting_skills WHERE posting_id = ?', [pid]);

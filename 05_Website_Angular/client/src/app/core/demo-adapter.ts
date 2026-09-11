@@ -1004,7 +1004,15 @@ export class DemoAdapter implements ApiAdapter {
          orphan every answer on the opening. */
       {
         const prior = db.postings.find((x) => x.id === posting.id)?.questions ?? [];
-        const byPrompt = new Map(prior.map((q) => [q.prompt, q.id]));
+        /* Keyed case-insensitively, the same fold the payload gets, so a
+           question re-sent with different capitalisation is recognised as the
+           one already stored rather than treated as new -- which would drop
+           its answers. Mirrors routes/postings.ts. */
+        const byPrompt = new Map<string, string>();
+        for (const q of prior) {
+          const k = q.prompt.trim().toLowerCase();
+          if (q.id && !byPrompt.has(k)) byPrompt.set(k, q.id);
+        }
         const seen = new Set<string>();
         const qs: PostingQuestion[] = [];
         for (const q of Array.isArray(posting.questions) ? posting.questions : []) {
@@ -1012,10 +1020,28 @@ export class DemoAdapter implements ApiAdapter {
           const key = prompt.toLowerCase();
           if (!prompt || seen.has(key)) continue;
           seen.add(key);
-          qs.push({ id: byPrompt.get(prompt) ?? uid(), prompt });
+          qs.push({ id: byPrompt.get(key) ?? uid(), prompt });
           if (qs.length >= 10) break;
         }
         posting = { ...posting, questions: qs };
+
+        /* AN ANSWER BELONGS TO THE WORDING IT WAS GIVEN UNDER.
+           A question the recruiter reworded or removed is a different
+           question, and the answers given to the old one go with it -- which
+           on the server is the ON DELETE CASCADE from posting_questions.
+           Demo mode stores the answers on the application itself, so nothing
+           cascades and they have to be dropped here. Without this, demo mode
+           showed a recruiter an answer to a question that is no longer on
+           their opening, attributing to an applicant a reply to something
+           they were never asked. Questions that kept their wording keep their
+           id above, so their answers are untouched. */
+        const live = new Set(qs.map((q) => q.id));
+        for (const app of db.applications) {
+          if (app.postingId !== posting.id || !app.answers?.length) continue;
+          const kept = app.answers.filter((x) => live.has(String(x.questionId)));
+          if (kept.length === app.answers.length) continue;
+          if (kept.length) app.answers = kept; else delete app.answers;
+        }
       }
 
       /* Per-opening weights. The same rules and the same messages as
