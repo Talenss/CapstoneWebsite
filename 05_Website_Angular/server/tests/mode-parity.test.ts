@@ -625,6 +625,14 @@ test('screening questions behave identically in both modes', async () => {
   assert.equal(aRow?.answers?.length, 2, 'api mode lost the answers when the description changed');
   assert.deepEqual(dRow.answers.map((x: any) => x.answer), ['answer 1', 'answer 2']);
   assert.deepEqual(aRow.answers.map((x: any) => x.answer), ['answer 1', 'answer 2']);
+  /* And on the QUESTION, under the same field name. The two modes once
+     disagreed here — demo emitted `prompt` and the server emitted `question` —
+     so the recruiter's panel, which renders `prompt`, showed answers with no
+     question above them in api mode and rendered correctly in demo mode. */
+  assert.deepEqual(dRow.answers.map((x: any) => x.prompt), ['Notice period?', 'Expected salary?'],
+    'demo mode must name the question under `prompt`');
+  assert.deepEqual(aRow.answers.map((x: any) => x.prompt), ['Notice period?', 'Expected salary?'],
+    'api mode must name the question under `prompt`');
 
   // Rewording ONE question drops that answer and only that one, in both.
   const rew = { ...base, questions: [{ prompt: 'Notice period?' }, { prompt: 'What salary are you expecting?' }] };

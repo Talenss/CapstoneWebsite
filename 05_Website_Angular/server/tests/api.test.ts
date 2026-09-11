@@ -1412,10 +1412,16 @@ test('an opening can ask its own questions, and they must be answered to apply',
   const ranked = await hr('applications/ranked', { postingId: posting.id });
   const row = ranked.body.rows.find((r: any) => r.resume?.id === rid);
   assert.ok(row, 'the applicant must be on the list');
-  assert.deepEqual(row.answers.map((a: any) => [a.question, a.answer]), [
+  /* The PROMPT is asserted, not only the answer. The recruiter's panel renders
+     a.prompt above a.answer, so an answer that arrives without its question is
+     a line of text on screen with nothing saying what was asked — which is
+     exactly what shipped when this route emitted `question` instead. */
+  assert.deepEqual(row.answers.map((a: any) => [a.prompt, a.answer]), [
     ['How soon can you start?', 'Two weeks'],
     ['Are you willing to work on site?', 'Yes, three days a week'],
   ], 'each answer arrives beside the question it answers, in the recruiter’s own order');
+  assert.ok(row.answers.every((a: any) => a.questionId),
+    'each answer names the question it belongs to');
 
   // And the answers are not part of the score: nothing about them can move it.
   assert.equal(typeof row.score, 'number');

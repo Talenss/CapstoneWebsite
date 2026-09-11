@@ -212,19 +212,24 @@ router.post('/ranked', async (req, res) => {
      answers: a recruiter reading "3 years" needs to see what was asked. The
      question's own order is preserved, so every applicant's answers appear in
      the order the recruiter wrote them. */
-  const answerRows = await query<{ application_id: number; prompt: string; answer_text: string }>(
-    `SELECT aa.application_id, pq.prompt, aa.answer_text
+  const answerRows = await query<{ application_id: number; question_id: number; prompt: string; answer_text: string }>(
+    `SELECT aa.application_id, pq.question_id, pq.prompt, aa.answer_text
        FROM application_answers aa
        JOIN posting_questions pq ON pq.question_id = aa.question_id
       WHERE aa.application_id = ANY(?)
       ORDER BY aa.application_id, pq.sort_order, pq.question_id`,
     [rows.map((a) => a.application_id)],
   );
-  const answersByApp = new Map<number, { question: string; answer: string }[]>();
+  /* The field is `prompt`, not `question`, because that is what the shared
+     ApplicationAnswer model declares, what demo mode emits and what the
+     recruiter's template renders. Emitting a different name here meant the
+     answers appeared on screen with no question above them — the reader could
+     see "Around 55 words a minute" without being told what was asked. */
+  const answersByApp = new Map<number, { questionId: string; prompt: string; answer: string }[]>();
   for (const row of answerRows) {
     const k = Number(row.application_id);
     const list = answersByApp.get(k) ?? [];
-    list.push({ question: row.prompt, answer: row.answer_text });
+    list.push({ questionId: String(row.question_id), prompt: row.prompt, answer: row.answer_text });
     answersByApp.set(k, list);
   }
 
