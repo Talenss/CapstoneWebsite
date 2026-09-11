@@ -195,33 +195,37 @@
           <div class="weights">
             <div class="wrow">
               <label for="wSkills">Skills</label>
-              <input type="number" id="wSkills" min="10" max="80" step="1" [value]="wSkills()" (input)="setWSkills($event)">
+              <input type="number" id="wSkills" min="10" max="80" [step]="WEIGHT_STEP" [value]="wSkills()" (input)="setWSkills($event)">
               <span class="wpct">%</span>
               <div class="wbar" aria-hidden="true"><i [style.width.%]="wSkills()" style="background:var(--ink-3)"></i></div>
             </div>
             <div class="wrow">
               <label for="wEdu">Education</label>
-              <input type="number" id="wEdu" min="10" max="80" step="1" [value]="wEdu()" (input)="setWEdu($event)">
+              <input type="number" id="wEdu" min="10" max="80" [step]="WEIGHT_STEP" [value]="wEdu()" (input)="setWEdu($event)">
               <span class="wpct">%</span>
               <div class="wbar" aria-hidden="true"><i [style.width.%]="wEdu()" style="background:var(--ink-3)"></i></div>
             </div>
             <div class="wrow">
               <label for="wExp">Experience</label>
-              <input type="number" id="wExp" min="10" max="80" step="1" [value]="wExp()" (input)="setWExp($event)">
+              <input type="number" id="wExp" min="10" max="80" [step]="WEIGHT_STEP" [value]="wExp()" (input)="setWExp($event)">
               <span class="wpct">%</span>
               <div class="wbar" aria-hidden="true"><i [style.width.%]="wExp()" style="background:var(--ink-3)"></i></div>
             </div>
 
-            <div class="wrow">
-              <label for="wCert">Certifications</label>
-              <input type="number" id="wCert" min="0" max="80" step="1" [value]="wCert()" (input)="setWCert($event)">
-              <span class="wpct">%</span>
-              <div class="wbar" aria-hidden="true"><i [style.width.%]="wCert()" style="background:var(--ink-3)"></i></div>
-            </div>
+            @for (row of optionalWeightRows; track row.key) {
+              <div class="wrow">
+                <label [attr.for]="'w-' + row.key">{{ row.label }}</label>
+                <input type="number" [id]="'w-' + row.key" min="0" max="70" [step]="WEIGHT_STEP"
+                       [value]="row.value()" (input)="setWeight(row.set, $event)">
+                <span class="wpct">%</span>
+                <div class="wbar" aria-hidden="true"><i [style.width.%]="row.value()" style="background:var(--ink-3)"></i></div>
+              </div>
+            }
             <p style="margin:2px 0 10px;font-size:12.5px;color:var(--muted)">
-              Certifications start at 0% and can stay there. Unlike the other three, this one may be
-              switched off entirely, because plenty of good applicants hold no certificate. Give it a share
-              only if this role genuinely turns on one, then name the certificates below.
+              These four start at 0% and can stay there. Unlike skills, education and experience, each may be
+              switched off entirely — plenty of good applicants hold no certificate, have no portfolio to show,
+              speak only one working language, or have nobody they can name as a referee yet. Give one a share
+              only if this role genuinely turns on it. Every share moves in steps of {{ WEIGHT_STEP }}%.
             </p>
 
             @if (wCert() > 0) {
@@ -246,6 +250,53 @@
               </div>
             }
 
+            @if (wLang() > 0) {
+              <div class="field" style="margin-bottom:12px">
+                <label for="langInput">Languages this role asks for</label>
+                <input id="langInput" type="text" placeholder="e.g. Filipino, then press Enter"
+                       [value]="langInput()" (input)="langInput.set($any($event.target).value)"
+                       (keydown)="onLangKeydown($event)">
+                @if (langsVal().length) {
+                  <div class="chips" style="margin-top:8px">
+                    @for (l of langsVal(); track l; let i = $index) {
+                      <button type="button" class="chip on" (click)="removeLang(i)"
+                              [attr.aria-label]="'Remove ' + l">{{ l }} ×</button>
+                    }
+                  </div>
+                } @else {
+                  <p style="color:var(--muted);font-size:13px;margin-top:6px">
+                    No languages named. An applicant scores full marks on this {{ wLang() }}% until you name one.
+                    Write each one the way you expect to read it on a resume — they are matched by name.
+                  </p>
+                }
+              </div>
+            }
+
+            @if (wProj() > 0) {
+              <div class="field" style="margin-bottom:12px">
+                <label for="minProjects">Projects this role expects</label>
+                <input id="minProjects" type="number" min="0" max="50" step="1"
+                       [value]="minProjects()" (input)="setMinProjects($event)">
+                <p style="color:var(--muted);font-size:13px;margin-top:6px">
+                  Counted, not read — the same way experience is. An applicant with this many or more scores the
+                  full {{ wProj() }}%; fewer scores that share in proportion.
+                  @if (!minProjects()) { Leave it at 0 and anyone scores full marks, whatever they have listed. }
+                </p>
+              </div>
+            }
+
+            @if (wRef() > 0) {
+              <div class="field" style="margin-bottom:12px">
+                <label for="minReferences">References this role expects</label>
+                <input id="minReferences" type="number" min="0" max="50" step="1"
+                       [value]="minReferences()" (input)="setMinReferences($event)">
+                <p style="color:var(--muted);font-size:13px;margin-top:6px">
+                  Counted the same way. An applicant naming this many or more scores the full {{ wRef() }}%.
+                  @if (!minReferences()) { Leave it at 0 and anyone scores full marks. }
+                </p>
+              </div>
+            }
+
             <div class="wtotal" [class.bad]="!weightsValid()">
               <span>Total</span>
               <b>{{ weightTotal() }}%</b>
@@ -255,6 +306,53 @@
               <p class="werr" role="alert">{{ we }}</p>
             }
           </div>
+        }
+      </div>
+
+      <!-- SCREENING QUESTIONS. Deliberately below the weights and visually
+           outside them: nothing here is scored, and a recruiter who read it as
+           another component would be tuning a number that does not exist. The
+           answers are free text shown beside the applicant for a person to
+           read and weigh, which is the same division of labour the whole
+           system runs on — the software measures what it can state a rule
+           for, and hands everything else to the recruiter. -->
+      <div class="field">
+        <label for="questionInput">Questions every applicant must answer</label>
+        <p class="hint">
+          Optional, and never scored. Ask the one or two things a resume never says — notice period,
+          willingness to work on site, expected salary. An applicant cannot submit until they have answered
+          all of them, so ask only what you will actually read.
+        </p>
+        <input id="questionInput" type="text"
+               placeholder="e.g. How soon can you start? — then press Enter"
+               maxlength="300"
+               [value]="questionInput()" (input)="questionInput.set($any($event.target).value)"
+               (keydown)="onQuestionKeydown($event)"
+               [disabled]="questionsVal().length >= MAX_QUESTIONS">
+
+        @if (questionsVal().length) {
+          <ol class="qlist">
+            @for (q of questionsVal(); track $index; let i = $index; let first = $first; let last = $last) {
+              <li>
+                <span class="qtext">{{ q }}</span>
+                <span class="qbtns">
+                  <button type="button" class="btn ghost tiny" (click)="moveQuestion(i, -1)"
+                          [disabled]="first" [attr.aria-label]="'Move question ' + (i + 1) + ' up'">↑</button>
+                  <button type="button" class="btn ghost tiny" (click)="moveQuestion(i, 1)"
+                          [disabled]="last" [attr.aria-label]="'Move question ' + (i + 1) + ' down'">↓</button>
+                  <button type="button" class="btn ghost tiny" (click)="removeQuestion(i)"
+                          [attr.aria-label]="'Remove question ' + (i + 1)">Remove</button>
+                </span>
+              </li>
+            }
+          </ol>
+          <p style="color:var(--muted);font-size:12.5px;margin-top:6px">
+            {{ questionsVal().length }} of {{ MAX_QUESTIONS }}. Applicants answer them in this order.
+          </p>
+        } @else {
+          <p style="color:var(--muted);font-size:13px;margin-top:6px">
+            No questions yet. Leave it empty and applicants apply with their resume alone.
+          </p>
         }
       </div>
 
@@ -282,6 +380,15 @@
           <div class="r"><span>Experience</span><b>{{ wExp() }}%</b></div>
           @if (wCert() > 0) {
             <div class="r"><span>Certificates held</span><b>{{ wCert() }}%</b></div>
+          }
+          @if (wProj() > 0) {
+            <div class="r"><span>Projects listed</span><b>{{ wProj() }}%</b></div>
+          }
+          @if (wLang() > 0) {
+            <div class="r"><span>Languages spoken</span><b>{{ wLang() }}%</b></div>
+          }
+          @if (wRef() > 0) {
+            <div class="r"><span>References named</span><b>{{ wRef() }}%</b></div>
           }
           <div class="r"><span>Strong match at</span><b>{{ thresholds.strong }}% and up</b></div>
           <div class="r"><span>Below {{ thresholds.related }}%</span><b>Still shown to you</b></div>

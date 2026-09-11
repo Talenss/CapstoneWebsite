@@ -8,7 +8,7 @@
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ApiAdapter } from './adapter';
-import { AdminRecruiter, AnalyzedResume, Application, ApiResult, Company, HrStats, InviteSchedule, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
+import { AdminRecruiter, AnalyzedResume, Application, ApplicationAnswer, ApiResult, Company, HrStats, InviteSchedule, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
 import { MAX_UPLOAD, ALLOWED_MIME } from './engine';
 
 export class HttpAdapter implements ApiAdapter {
@@ -85,7 +85,8 @@ export class HttpAdapter implements ApiAdapter {
   };
 
   applications = {
-    apply: (resumeId: string, postingId: string) => this.call<{ application: Application }>('applications', 'apply', { resumeId, postingId }),
+    apply: (resumeId: string, postingId: string, answers?: ApplicationAnswer[]) =>
+      this.call<{ application: Application }>('applications', 'apply', { resumeId, postingId, answers: answers ?? [] }),
     mine: () => this.call<{ applications: Application[] }>('applications', 'mine'),
     ranked: (postingId: string, opts?: RankedQuery) => this.call<{
       posting: Posting; rows: RankedRow[];

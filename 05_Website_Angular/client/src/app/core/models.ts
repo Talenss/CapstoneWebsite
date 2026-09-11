@@ -261,8 +261,47 @@ export interface Resume {
    *  both via evidenceSources(). */
   skillEvidence?: Record<string, SkillEvidence | SkillEvidence[]>;
   certifications: Certification[];
+  /** Portfolio and certificate URLs for the RECRUITER, never for the page.
+   *  Deliberately not part of `personal`, which is what the fourteen designs
+   *  render: a link here reaches the person screening the application and
+   *  never touches the document, so a long URL cannot disturb the
+   *  parser-safe layout the designs exist to protect. */
+  links?: ResumeLink[];
+  /** Sections the applicant switched off. A hidden section is omitted from
+   *  the document AND from scoring, because both should describe what the
+   *  applicant actually chose to present. Absent means nothing is hidden,
+   *  which is what every resume saved before this existed carries. */
+  hiddenSections?: ResumeSection[];
   ownFile: OwnFile | null;
   updatedAt?: number;
+}
+
+/** A link the recruiter sees and the printed resume never carries. */
+export interface ResumeLink {
+  id?: string;
+  /** What the applicant calls it — "Portfolio", "AWS certificate". Optional;
+   *  the URL alone is shown when it is blank. */
+  label?: string;
+  url: string;
+}
+
+/** The sections an applicant may switch off. `education`, `experience` and
+ *  `skills` are absent on purpose: they are the three the score is always
+ *  built from, and a resume that presents none of them is not a resume. */
+export type ResumeSection =
+  | 'summary' | 'projects' | 'certifications' | 'languages' | 'references' | 'links';
+
+/** One question a recruiter attached to an opening. */
+export interface PostingQuestion {
+  id?: string;
+  prompt: string;
+}
+
+/** One applicant's answer to one of those questions. */
+export interface ApplicationAnswer {
+  questionId: string;
+  prompt?: string;
+  answer: string;
 }
 
 export interface Posting {
@@ -283,11 +322,23 @@ export interface Posting {
    *  or null when it inherits the site defaults. Percentages rather than
    *  fractions all the way to the database, so "must total 100" is an exact
    *  integer check; the engine divides by 100 where it multiplies. */
-  weights?: { skills: number; education: number; experience: number; certifications?: number } | null;
+  weights?: {
+    skills: number; education: number; experience: number;
+    certifications?: number; projects?: number; languages?: number; references?: number;
+  } | null;
   /** Certifications this opening asks for, free text. Scored only when the
    *  recruiter gives the certifications weight a share; absent or empty means
    *  full marks on that component, as an unstated requirement always does. */
   certifications?: string[];
+  /** Languages this opening asks for, matched the same way certifications are. */
+  languages?: string[];
+  /** Minimum counts for the two sections scored the way experience is. 0 or
+   *  absent states no requirement, which scores full marks. */
+  minProjects?: number;
+  minReferences?: number;
+  /** Questions the applicant must answer to apply. Never scored — they exist
+   *  so a recruiter can ask the one or two things a resume never says. */
+  questions?: PostingQuestion[];
   status: 'open' | 'closed';
   createdAt: number;
   company?: Company;
@@ -308,6 +359,10 @@ export interface Application {
    *  number the applicant actually saw, not one recomputed later. */
   scoreSnapshot?: number | null;
   updatedAt?: number;
+  /** What this applicant wrote to the opening's screening questions, in the
+   *  order the recruiter asked them. Never scored — free text a person reads.
+   *  Absent when the opening asked nothing. */
+  answers?: ApplicationAnswer[];
   posting?: Posting | null;
   company?: Company | null;
   resumeTitle?: string | null;
@@ -405,11 +460,23 @@ export interface MatchResult {
   /** The weights this score was computed with, as fractions. Carried on the
    *  result so a breakdown always adds up to the number beside it, see the
    *  same field in server/src/lib/engine.ts. */
-  weights: { skills: number; education: number; experience: number; certifications: number };
+  weights: {
+    skills: number; education: number; experience: number;
+    certifications: number; projects: number; languages: number; references: number;
+  };
   /** Of the certifications the opening asked for, the ones the applicant
    *  lists and the ones they do not. Both empty when none were asked for. */
   matchedCertifications: string[];
   missingCertifications: string[];
+  /** The same pair for languages, matched the same way. */
+  matchedLanguages: string[];
+  missingLanguages: string[];
+  /** Counts beside the minimum the opening asked for. A minimum of 0 means
+   *  none was stated, which the score treats as met in full. */
+  projectCount: number;
+  minProjects: number;
+  referenceCount: number;
+  minReferences: number;
 }
 
 export interface RecommendationItem extends MatchResult {
@@ -459,6 +526,16 @@ export interface RankedRow extends MatchResult {
    *  Context for an interview question and nothing else, it does not affect
    *  the score, the tier, the ordering, or whether the applicant is shown. */
   skillsClaimedOnApplyDay?: string[];
+
+  /** What this applicant wrote to the opening's screening questions, in the
+   *  order the recruiter asked them. Never scored. Absent when the opening
+   *  asked nothing, which is every opening that has not added a question. */
+  answers?: ApplicationAnswer[];
+
+  /** True when the resume row itself has gone but the application has not.
+   *  The row still appears — an application that was received must never
+   *  vanish from the list — with the score recorded when it was made. */
+  resumeUnavailable?: boolean;
 }
 
 export interface HrStats {

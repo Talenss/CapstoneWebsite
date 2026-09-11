@@ -270,6 +270,13 @@
 
 <app-footer />
 
+<!-- The opening's own screening questions, asked before the application is
+     sent. Outside the apply modal so it layers over it. -->
+@if (asking(); as item) {
+  <app-apply-questions [posting]="item.posting" [sending]="applying()"
+                       (answered)="onAnswered($event)" (cancelled)="cancelAsk()" />
+}
+
 <!-- apply -->
 <div class="modal-back" [class.show]="!!current()" (click)="onBackdropClick($event)">
   @if (current(); as item) {

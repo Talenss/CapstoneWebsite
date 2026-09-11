@@ -5,8 +5,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
-import { AppStatus, InviteSchedule, Personal, Posting, RankedRow, RejectionReason, Resume, ScreeningNote, SkillEvidence, StatusEvent, Tier, RankedQuery} from '../../core/models';
-import { APPLICANT_REASON_LABELS, EDU_LABELS, EVIDENCE_KIND_LABELS, evidenceSources, experienceLabel, REASON_LABELS, REJECTION_REASONS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
+import { AppStatus, Education, Experience, InviteSchedule, Personal, Posting, RankedRow, RejectionReason, Resume, ScreeningNote, SkillEvidence, StatusEvent, Tier, RankedQuery} from '../../core/models';
+import { APPLICANT_REASON_LABELS, EDU_LABELS, EDU_RANK, EVIDENCE_KIND_LABELS, evidenceSources, experienceLabel, REASON_LABELS, REJECTION_REASONS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
@@ -387,6 +387,61 @@ export class HrApplicants {
 
   languageLine(r: Resume): string {
     return (r.languages ?? []).map((l) => this.join([l.name, l.proficiency], ', ')).join('  ·  ');
+  }
+
+  /* ============================================================
+     THE BIG THREE, AT A GLANCE.
+
+     What a recruiter actually reads first: what this person does, what they
+     studied, and what they can do. All three are already further down the
+     panel inside the full resume; the point of repeating them at the top is
+     that a screening decision is usually made in the first few seconds, and
+     until now those seconds were spent scrolling a document.
+
+     Nothing here is computed, inferred or extracted. It is the applicant's
+     own most recent entry, shown as they wrote it. The system does not read
+     a title out of prose and decide what somebody's job is.
+     ============================================================ */
+
+  /** The current post if one is marked current, otherwise the most recent
+   *  entry — which is the first, because the builder keeps experience in the
+   *  order the applicant arranged it and asks them to lead with the latest. */
+  currentRole(r: Resume): Experience | null {
+    const list = r.experience ?? [];
+    return list.find((e) => e.current) ?? list[0] ?? null;
+  }
+
+  /** What that post involved, in the applicant's own words. The bullets are
+   *  the richer form where they exist; `description` is the prose fallback
+   *  every older resume carries. Trimmed to a couple of lines by CSS rather
+   *  than cut here, so nothing is lost — the full text is in the pane below. */
+  roleSummary(r: Resume): string {
+    const e = this.currentRole(r);
+    if (!e) return '';
+    const bullets = (e.bullets ?? []).filter(Boolean);
+    return bullets.length ? bullets.join(' · ') : (e.description ?? '').trim();
+  }
+
+  /** Highest qualification by rank, not by position in the list: an applicant
+   *  who typed their bachelor's below their high school should still read as
+   *  a graduate. Ties keep the first, which is their own ordering. */
+  topEducation(r: Resume): Education | null {
+    let best: Education | null = null;
+    for (const e of r.education ?? []) {
+      if (!best || (EDU_RANK[e.level] ?? 0) > (EDU_RANK[best.level] ?? 0)) best = e;
+    }
+    return best;
+  }
+
+  /** Required skills first and marked, then the rest. A recruiter scanning
+   *  this line wants to know what the opening asked for before what else the
+   *  applicant happens to have. */
+  glanceSkills(r: RankedRow): { name: string; required: boolean }[] {
+    const matched = new Set(r.matchedSkills.map((s) => s.toLowerCase()));
+    const all = r.resume.skills ?? [];
+    const required = all.filter((s) => matched.has(s.toLowerCase())).map((name) => ({ name, required: true }));
+    const rest = all.filter((s) => !matched.has(s.toLowerCase())).map((name) => ({ name, required: false }));
+    return [...required, ...rest];
   }
 
   /** The applicant's file, framed for reading.

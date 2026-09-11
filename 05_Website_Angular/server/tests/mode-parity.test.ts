@@ -515,27 +515,30 @@ test('a recruiter setting per-opening weights gets the same answer in both modes
   // And an accepted set must be stored the same way — whole percentages,
   // never a fraction on one side and a percentage on the other.
   const good = { skills: 70, education: 15, experience: 15 };
-  // Certifications come back as 0 rather than absent: the breakdown shown to
-  // an applicant has to add up to the score printed beside it, and a null
-  // fourth term would not.
-  const stored = { ...good, certifications: 0 };
+  // The four optional components come back as 0 rather than absent: the
+  // breakdown shown to an applicant has to add up to the score printed beside
+  // it, and a null term would not. Both modes have to agree on that, because
+  // an opening saved in one and read in the other is the same opening.
+  const stored = { ...good, certifications: 0, projects: 0, languages: 0, references: 0 };
   const d: any = await demo.postings.save({ ...base, weights: good } as any);
   const a: any = await api('postings/save', { posting: { ...base, weights: good } });
   assert.ok(d.ok && a.ok, `both modes must accept ${JSON.stringify(good)}`);
   assert.deepEqual(d.posting.weights, stored, 'demo mode stores whole percentages');
   assert.deepEqual(a.posting.weights, stored, 'api mode stores whole percentages');
 
-  /* And the fourth component itself agrees across the two. This is the pair
+  /* And an optional component itself agrees across the two. This is the pair
      that matters most for it: a recruiter sets a certifications share, and
      the live preview a seeker sees while editing has to equal the number the
-     server stores when they apply. */
+     server stores when they apply. The three the recruiter did not touch
+     still come back as 0 on both sides. */
   const withCerts = { skills: 40, education: 20, experience: 20, certifications: 20 };
+  const certStored = { ...withCerts, projects: 0, languages: 0, references: 0 };
   const certBase = { ...base, certifications: ['CCNA'] };
   const dCert: any = await demo.postings.save({ ...certBase, weights: withCerts } as any);
   const aCert: any = await api('postings/save', { posting: { ...certBase, weights: withCerts } });
   assert.ok(dCert.ok && aCert.ok, 'both modes must accept a four-way split');
-  assert.deepEqual(dCert.posting.weights, withCerts, 'demo mode stores the certifications share');
-  assert.deepEqual(aCert.posting.weights, withCerts, 'api mode stores the certifications share');
+  assert.deepEqual(dCert.posting.weights, certStored, 'demo mode stores the certifications share');
+  assert.deepEqual(aCert.posting.weights, certStored, 'api mode stores the certifications share');
   assert.deepEqual(dCert.posting.certifications, ['CCNA']);
   assert.deepEqual(aCert.posting.certifications, ['CCNA']);
 

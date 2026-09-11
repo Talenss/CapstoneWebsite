@@ -8,8 +8,8 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { AnalysisService } from '../../core/analysis.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, WEIGHTS} from '../../core/engine';
-import { Education, EduLevel, EvidenceKind, Experience, Language, Project, Reference, Resume, ResumeDesign, SkillEvidence, Template } from '../../core/models';
+import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, visibleResume, WEIGHTS} from '../../core/engine';
+import { Education, EduLevel, EvidenceKind, Experience, Language, Project, Reference, Resume, ResumeDesign, ResumeLink, ResumeSection, SkillEvidence, Template } from '../../core/models';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 
 const STEPS = ['Details', 'Education', 'Experience', 'Skills', 'Certifications', 'More sections', 'Finish'];
@@ -138,10 +138,19 @@ export class ResumeBuilder implements OnInit {
   });
   visibleEducation = computed(() => this.resume().education.filter((e) => e.school || e.degree));
   visibleExperience = computed(() => this.resume().experience.filter((e) => e.position || e.company));
-  visibleCertifications = computed(() => this.resume().certifications.filter((c) => c.name));
-  visibleProjects = computed(() => (this.resume().projects ?? []).filter((p) => !!p.name));
-  visibleLanguages = computed(() => (this.resume().languages ?? []).filter((l) => !!l.name));
-  visibleReferences = computed(() => (this.resume().references ?? []).filter((r) => !!r.name));
+  /* A switched-off section is empty HERE too, not only on the saved sheet.
+     The preview beside the form is the applicant's only view of what the
+     recruiter will get; if hiding a section left it standing in the preview,
+     the switch would look broken and they would untick it again. */
+  visibleCertifications = computed(() => this.isHidden('certifications')
+    ? [] : this.resume().certifications.filter((c) => c.name));
+  visibleProjects = computed(() => this.isHidden('projects')
+    ? [] : (this.resume().projects ?? []).filter((p) => !!p.name));
+  visibleLanguages = computed(() => this.isHidden('languages')
+    ? [] : (this.resume().languages ?? []).filter((l) => !!l.name));
+  visibleReferences = computed(() => this.isHidden('references')
+    ? [] : (this.resume().references ?? []).filter((r) => !!r.name));
+  visibleSummary = computed(() => this.isHidden('summary') ? '' : this.resume().personal.summary);
   /** What is already on the resume, lower-cased. The two suggestion pools
    *  consult this to draw a chip's state — never to decide whether the chip
    *  is there at all. Removing chosen chips reflowed the rows under the
@@ -523,6 +532,81 @@ export class ResumeBuilder implements OnInit {
     this.markDirty();
   }
 
+  /* ---------- private links ----------
+     Portfolio and certificate URLs that go to the RECRUITER and never onto
+     the printed sheet. Kept off the document on purpose: a long URL is a line
+     of noise in a layout every design keeps parser-safe, and a link is not
+     something a parser can read anyway. The recruiter sees them beside the
+     resume, where a person can click one. Nothing here is scored. */
+  addLink(): void {
+    this.resume.update((r) => ({ ...r, links: [...(r.links ?? []), { label: '', url: '' } as ResumeLink] }));
+    this.markDirty();
+  }
+  updateLink(i: number, field: 'label' | 'url', v: string): void {
+    this.resume.update((r) => ({ ...r, links: (r.links ?? []).map((l, idx) => (idx === i ? { ...l, [field]: v } : l)) }));
+    this.markDirty();
+  }
+  removeLink(i: number): void {
+    this.resume.update((r) => ({ ...r, links: (r.links ?? []).filter((_, idx) => idx !== i) }));
+    this.markDirty();
+  }
+  moveLink(i: number, d: number): void {
+    this.resume.update((r) => ({ ...r, links: this.reorder(r.links, i, d) }));
+    this.markDirty();
+  }
+
+  /** Only http and https are stored, so a `javascript:` address cannot run in
+   *  the recruiter's browser and a relative path cannot point back at this
+   *  site. Flagged as it is typed rather than dropped silently on save. */
+  linkBad(l: ResumeLink): boolean {
+    const u = String(l.url ?? '').trim();
+    return !!u && !/^https?:\/\/\S+$/i.test(u);
+  }
+
+  /* ---------- sections the applicant switches off ----------
+     A hidden section is left off the printed sheet AND out of the score.
+     Those move together on purpose: a recruiter has to be able to read the
+     match percentage as a statement about the document in front of them, so
+     a section they will never see must not be quietly earning marks. The
+     contents stay stored, so switching one back on restores it untouched.
+
+     Skills, education and experience are not on this list. They are the three
+     components every opening scores, and a sheet without them is not a
+     resume. */
+  readonly hideableSections: { key: ResumeSection; label: string; note: string }[] = [
+    { key: 'summary', label: 'Summary', note: 'The paragraph under your name' },
+    { key: 'projects', label: 'Projects', note: 'Scored when an opening asks for projects' },
+    { key: 'certifications', label: 'Certifications', note: 'Scored when an opening asks for certificates' },
+    { key: 'languages', label: 'Languages', note: 'Scored when an opening asks for languages' },
+    { key: 'references', label: 'References', note: 'Scored when an opening asks for references' },
+    { key: 'links', label: 'Links for the recruiter', note: 'Never on the sheet either way' },
+  ];
+
+  isHidden(k: ResumeSection): boolean { return (this.resume().hiddenSections ?? []).includes(k); }
+
+  toggleSection(k: ResumeSection): void {
+    this.resume.update((r) => {
+      const cur = r.hiddenSections ?? [];
+      const next = cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k];
+      return { ...r, hiddenSections: next };
+    });
+    this.markDirty();
+  }
+
+  /** What a switched-off section actually holds, so the warning can say "3
+   *  projects" rather than leaving the applicant to guess what they hid. */
+  sectionCount(k: ResumeSection): number {
+    const r = this.resume();
+    switch (k) {
+      case 'summary': return r.personal?.summary?.trim() ? 1 : 0;
+      case 'projects': return (r.projects ?? []).length;
+      case 'certifications': return (r.certifications ?? []).length;
+      case 'languages': return (r.languages ?? []).length;
+      case 'references': return (r.references ?? []).length;
+      case 'links': return (r.links ?? []).length;
+    }
+  }
+
   // ---------- certifications ----------
   addCertification(): void {
     this.resume.update((r) => ({ ...r, certifications: [...r.certifications, { name: '', year: '' }] }));
@@ -867,7 +951,12 @@ export class ResumeBuilder implements OnInit {
 
   // ---------- exports ----------
   private plainText(): string {
-    const r = this.resume();
+    /* The exported file is the VISIBLE resume, the same object the print
+       sheet and the recruiter get. A switched-off section that survived into
+       the plain-text copy would be the one route by which the applicant's own
+       decision leaked back out, and the private links are kept off every
+       document by construction. */
+    const r = visibleResume(this.resume());
     const p = r.personal;
     const L: string[] = [];
     L.push(p.fullName || '');
@@ -995,7 +1084,7 @@ export class ResumeBuilder implements OnInit {
     const headline = p.headline ? `<p class="hl">${esc(p.headline)}</p>` : '';
     const contact = esc(this.contactLine()) || 'email · phone · city';
     const links = [p.linkedin, p.portfolio].filter(Boolean).map((x) => esc(x)).join(' · ');
-    const summary = p.summary ? `<div class="p-sec"><h2>Professional Summary</h2><p style="font-size:11.5px">${esc(p.summary)}</p></div>` : '';
+    const summary = this.visibleSummary() ? `<div class="p-sec"><h2>Professional Summary</h2><p style="font-size:11.5px">${esc(this.visibleSummary())}</p></div>` : '';
     const ownFileNote = r.ownFile
       ? `<div class="p-sec"><h2>Attached by the applicant</h2><p style="font-size:11px;color:#5A5F6B">${esc(r.ownFile.name)}, sent to the recruiter alongside this resume. The engine does not read it, it scores what is printed here.</p></div>`
       : '';

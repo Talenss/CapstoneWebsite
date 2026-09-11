@@ -1,0 +1,19 @@
+/* Sits on the same modal chrome the rest of the site uses, so this reads as
+   one more step in applying rather than a different kind of screen. */
+.q { margin-bottom: 18px; }
+.q:last-of-type { margin-bottom: 6px; }
+.q label {
+  display: block; font-size: 14px; font-weight: 600;
+  margin-bottom: 6px; line-height: 1.4; overflow-wrap: anywhere;
+}
+.q .num { color: var(--muted); font-weight: 500; margin-right: 4px; }
+.q textarea {
+  width: 100%; min-height: 76px; resize: vertical; font: inherit; font-size: 14px;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--card); color: var(--ink);
+}
+.q textarea:focus-visible { outline: 2px solid var(--ink-3); outline-offset: 1px; }
+.q textarea.bad { border-color: var(--accent-deep); }
+.q .err { font-size: 12.5px; color: var(--accent-deep); margin-top: 5px; }
+.q .count { font-size: 12px; color: var(--muted); margin-top: 5px; text-align: right; }
+.qnote { font-size: 13px; color: var(--muted); margin-bottom: 16px; }

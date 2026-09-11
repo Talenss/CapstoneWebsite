@@ -313,6 +313,81 @@
             </div>
           </div>
         </div>
+
+        <!-- WHAT THIS PERSON DOES, STUDIED AND CAN DO — the three things a
+             screening decision actually turns on, above the fold instead of
+             several scrolls into the document. Every value here is the
+             applicant's own text, shown as they wrote it: nothing is read out
+             of prose, inferred, or rewritten. The full resume is still the
+             pane below, and this is a summary of it, not a substitute. -->
+        @if (currentRole(r.resume) || topEducation(r.resume) || r.resume.skills.length) {
+          <div class="glance">
+            @if (currentRole(r.resume); as e) {
+              <div class="g-item">
+                <span class="g-k">Most recent role</span>
+                <b class="g-v">{{ e.position }}@if (e.company) { <span class="g-at">at {{ e.company }}</span> }</b>
+                <span class="g-meta">{{ join([dateRange(e) || monthsLabel(e.months), e.location]) }}</span>
+                @if (roleSummary(r.resume); as what) {
+                  <p class="g-desc">{{ what }}</p>
+                }
+              </div>
+            }
+            @if (topEducation(r.resume); as e) {
+              <div class="g-item">
+                <span class="g-k">Highest education</span>
+                <b class="g-v">{{ e.field ? e.degree + ', ' + e.field : e.degree }}</b>
+                <span class="g-meta">{{ join([e.school, e.year]) }}</span>
+                @if (e.honors) { <p class="g-desc">{{ e.honors }}</p> }
+              </div>
+            }
+            @if (r.resume.skills.length) {
+              <div class="g-item wide">
+                <span class="g-k">
+                  Skills
+                  <span class="g-note">{{ r.matchedSkills.length }} of {{ r.totalSkills }} this opening asks for are marked</span>
+                </span>
+                <div class="g-skills">
+                  @for (s of glanceSkills(r); track s.name) {
+                    <span class="g-chip" [class.req]="s.required">{{ s.name }}</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- THE OPENING'S OWN QUESTIONS, in the order they were asked. Free
+             text, never scored, and placed before the resume panes because a
+             recruiter who bothered to ask a question wants the answer in
+             front of them, not below two documents. -->
+        @if (r.answers?.length) {
+          <div class="answers">
+            <h4>Answers to your questions</h4>
+            @for (a of r.answers!; track $index) {
+              <div class="a-item">
+                <b class="a-q">{{ a.prompt }}</b>
+                <p class="a-a">{{ a.answer }}</p>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- LINKS THE APPLICANT SENT TO YOU, deliberately not on their sheet.
+             rel="noopener noreferrer" because these are addresses a stranger
+             supplied: the new tab must not get a handle back on this page,
+             and the applicant's site has no business learning which opening
+             it was opened from. -->
+        @if (r.resume.links?.length) {
+          <div class="answers links">
+            <h4>Links they sent you <span class="a-note">not on their resume</span></h4>
+            @for (l of r.resume.links!; track $index) {
+              <div class="a-item">
+                <a [href]="l.url" target="_blank" rel="noopener noreferrer">{{ l.label || l.url }}</a>
+                @if (l.label) { <span class="a-url">{{ l.url }}</span> }
+              </div>
+            }
+          </div>
+        }
         <div class="dual">
           <section class="pane scored">
             <header>

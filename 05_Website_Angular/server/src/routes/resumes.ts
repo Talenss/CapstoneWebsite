@@ -7,7 +7,7 @@ import { query, queryOne, exec, withTransaction } from '../db';
 import { ResumeRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
 import { requireUser, requireRole } from '../lib/auth';
-import { fetchResume, prefetchResumeChildren, serializeResume, recruiterMayReadResume } from '../lib/serializers';
+import { fetchResume, prefetchResumeChildren, serializeResume, recruiterMayReadResume, parseHiddenSections } from '../lib/serializers';
 import { EDU_RANK, EVIDENCE_KINDS, EvidenceKind, evidenceLabels, skillId, skillNorm } from '../lib/engine';
 import { extractResume } from '../lib/extract';
 import { MAX_UPLOAD, ALLOWED_MIME } from '../config';
@@ -72,6 +72,13 @@ router.post('/save', async (req, res) => {
   const projects = cap<any>(R.projects, 20);
   const languages = cap<any>(R.languages, 20);
   const references = cap<any>(R.references, 10);
+  const links = cap<any>(R.links, 10);
+
+  /* SECTIONS THE APPLICANT SWITCHED OFF. parseHiddenSections keeps only the
+     six names it knows, so education, experience and skills cannot be hidden
+     by a hand-written request -- they are the three components every opening
+     scores and the sheet would be unreadable without them. */
+  const hiddenSections = parseHiddenSections(R.hiddenSections).join(',');
 
   /* WHERE EACH SKILL WAS USED. Accepted only when the kind is one we know and
      the label matches an entry ALREADY ON THIS RESUME — the point of the
@@ -142,19 +149,20 @@ router.post('/save', async (req, res) => {
       if (id) {
         await tx.exec(
           `UPDATE resumes SET title=?, template_type=?, design=?, full_name=?, email=?, phone=?,
-             address=?, summary=?, headline=?, linkedin=?, portfolio=?,
+             address=?, summary=?, headline=?, linkedin=?, portfolio=?, hidden_sections=?,
              evidence_prompted = GREATEST(evidence_prompted, ?) WHERE resume_id=?`,
           [title, template, design, p.fullName ?? '', p.email ?? '', p.phone ?? '', p.address ?? '', p.summary ?? '',
            String(p.headline ?? '').slice(0, 200), String(p.linkedin ?? '').slice(0, 300), String(p.portfolio ?? '').slice(0, 300),
-           evidencePrompted, id],
+           hiddenSections, evidencePrompted, id],
         );
       } else {
         const ins = await tx.exec(
           `INSERT INTO resumes (user_id, title, template_type, design, full_name, email, phone, address, summary,
-             headline, linkedin, portfolio, evidence_prompted) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING resume_id`,
+             headline, linkedin, portfolio, hidden_sections, evidence_prompted)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING resume_id`,
           [u.user_id, title, template, design, p.fullName ?? '', p.email ?? '', p.phone ?? '', p.address ?? '', p.summary ?? '',
            String(p.headline ?? '').slice(0, 200), String(p.linkedin ?? '').slice(0, 300), String(p.portfolio ?? '').slice(0, 300),
-           evidencePrompted],
+           hiddenSections, evidencePrompted],
         );
         id = ins.insertId;
         if (u.active_resume_id === null) {
@@ -189,6 +197,7 @@ router.post('/save', async (req, res) => {
       await tx.exec('DELETE FROM projects WHERE resume_id = ?', [id]);
       await tx.exec('DELETE FROM resume_languages WHERE resume_id = ?', [id]);
       await tx.exec('DELETE FROM resume_references WHERE resume_id = ?', [id]);
+      await tx.exec('DELETE FROM resume_links WHERE resume_id = ?', [id]);
 
       let i = 0;
       for (const e of education) {
@@ -261,6 +270,21 @@ router.post('/save', async (req, res) => {
            String(x.email ?? '').slice(0, 190), String(x.phone ?? '').slice(0, 40), i++],
         );
       }
+      i = 0;
+      for (const x of links) {
+        /* Only http and https are stored. A `javascript:` URL would run in the
+           recruiter's browser the moment they clicked it, and a relative path
+           would point back at this site rather than at the applicant's work.
+           An address that is neither is dropped, the same way a nameless
+           project is -- the builder marks it invalid while it is being typed,
+           so nothing is lost silently here. */
+        const url = String(x.url ?? '').trim().slice(0, 500);
+        if (!/^https?:\/\/\S+$/i.test(url)) continue;
+        await tx.exec(
+          'INSERT INTO resume_links (resume_id, label, url, sort_order) VALUES (?,?,?,?)',
+          [id, String(x.label ?? '').trim().slice(0, 120), url, i++],
+        );
+      }
 
       for (const s of skills) {
         const trimmed = String(s).trim().slice(0, 80);
@@ -326,25 +350,57 @@ router.post('/duplicate', async (req, res) => {
 
   try {
     const newId = await withTransaction(async (tx) => {
-      // the uploaded file is deliberately NOT copied — one file, one resume
+      /* EVERY COLUMN AND EVERY SECTION, not a subset. "Duplicate it and edit
+         the copy" is the answer the delete route gives an applicant whose
+         resume is locked to an application, so a copy that quietly arrived
+         missing its projects or its contact links would lose work at exactly
+         the moment the applicant was told it was safe.
+
+         The uploaded file is the one deliberate exception: one file, one
+         resume, so the copy starts with no attachment. */
       const ins = await tx.exec(
-        `INSERT INTO resumes (user_id, title, template_type, design, full_name, email, phone, address, summary)
-         SELECT user_id, title || ' (copy)', template_type, design, full_name, email, phone, address, summary
+        `INSERT INTO resumes (user_id, title, template_type, design, full_name, email, phone,
+           address, summary, headline, linkedin, portfolio, hidden_sections, evidence_prompted)
+         SELECT user_id, title || ' (copy)', template_type, design, full_name, email, phone,
+           address, summary, headline, linkedin, portfolio, hidden_sections, evidence_prompted
            FROM resumes WHERE resume_id = ? RETURNING resume_id`, [id],
       );
       const nid = ins.insertId;
 
       await tx.exec(
-        `INSERT INTO education (resume_id, school, degree, level, year_grad, sort_order)
-         SELECT ?, school, degree, level, year_grad, sort_order FROM education WHERE resume_id = ?`, [nid, id],
+        `INSERT INTO education (resume_id, school, degree, level, year_grad, field, location, honors, sort_order)
+         SELECT ?, school, degree, level, year_grad, field, location, honors, sort_order
+           FROM education WHERE resume_id = ?`, [nid, id],
       );
       await tx.exec(
-        `INSERT INTO work_experience (resume_id, position, company, months, description, sort_order)
-         SELECT ?, position, company, months, description, sort_order FROM work_experience WHERE resume_id = ?`, [nid, id],
+        `INSERT INTO work_experience (resume_id, position, company, months, description,
+           location, start_date, end_date, is_current, bullets, sort_order)
+         SELECT ?, position, company, months, description,
+           location, start_date, end_date, is_current, bullets, sort_order
+           FROM work_experience WHERE resume_id = ?`, [nid, id],
       );
       await tx.exec(
-        `INSERT INTO certifications (resume_id, cert_name, year_taken, sort_order)
-         SELECT ?, cert_name, year_taken, sort_order FROM certifications WHERE resume_id = ?`, [nid, id],
+        `INSERT INTO certifications (resume_id, cert_name, year_taken, issuer, credential_id, sort_order)
+         SELECT ?, cert_name, year_taken, issuer, credential_id, sort_order
+           FROM certifications WHERE resume_id = ?`, [nid, id],
+      );
+      await tx.exec(
+        `INSERT INTO projects (resume_id, proj_name, proj_role, start_date, end_date, description, link, sort_order)
+         SELECT ?, proj_name, proj_role, start_date, end_date, description, link, sort_order
+           FROM projects WHERE resume_id = ?`, [nid, id],
+      );
+      await tx.exec(
+        `INSERT INTO resume_languages (resume_id, lang_name, proficiency, sort_order)
+         SELECT ?, lang_name, proficiency, sort_order FROM resume_languages WHERE resume_id = ?`, [nid, id],
+      );
+      await tx.exec(
+        `INSERT INTO resume_references (resume_id, ref_name, position, company, email, phone, sort_order)
+         SELECT ?, ref_name, position, company, email, phone, sort_order
+           FROM resume_references WHERE resume_id = ?`, [nid, id],
+      );
+      await tx.exec(
+        `INSERT INTO resume_links (resume_id, label, url, sort_order)
+         SELECT ?, label, url, sort_order FROM resume_links WHERE resume_id = ?`, [nid, id],
       );
       await tx.exec(
         /* The copy carries the sources across. A duplicated resume is the same
@@ -352,8 +408,9 @@ router.post('/duplicate', async (req, res) => {
            copy lower than the original for no reason the applicant could see.
            added_at deliberately does NOT come along: this resume is new, and
            its skills genuinely first appear on it today. */
-        `INSERT INTO resume_skills (resume_id, skill_id, evidence_kind, evidence_ref)
-         SELECT ?, skill_id, evidence_kind, evidence_ref FROM resume_skills WHERE resume_id = ?`, [nid, id],
+        `INSERT INTO resume_skills (resume_id, skill_id, evidence_kind, evidence_ref, evidence_sources)
+         SELECT ?, skill_id, evidence_kind, evidence_ref, evidence_sources
+           FROM resume_skills WHERE resume_id = ?`, [nid, id],
       );
       return nid;
     });

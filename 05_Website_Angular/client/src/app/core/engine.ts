@@ -15,11 +15,30 @@ import { AppStatus, EduLevel, EvidenceKind, MatchResult, Posting, RejectionReaso
    live score a seeker sees stays equal to the score the server stores.
    Without that, editing match_settings would show the seeker one number and
    the recruiter another for the very same application. */
-/** `certifications` is the optional fourth component and sits at 0, so the
- *  site-wide split stays the study's published 50/25/25 across three unless a
- *  recruiter gives certifications a share on their own opening. */
-export const WEIGHTS = { skills: 0.5, education: 0.25, experience: 0.25, certifications: 0 };
+/** Four of the seven components are optional and sit at 0, so the site-wide
+ *  split stays the study's published 50/25/25 across the compulsory three
+ *  unless a recruiter gives one of the others a share on their own opening. */
+export const WEIGHTS = {
+  skills: 0.5, education: 0.25, experience: 0.25,
+  certifications: 0, projects: 0, languages: 0, references: 0,
+};
 export const THRESHOLDS = { strong: 80, related: 50 };
+
+/** The optional components, in interface order. The browser's mirror of
+ *  OPTIONAL_WEIGHTS in server/src/lib/engine.ts and it must stay identical:
+ *  the two validators have to reject and accept exactly the same weight sets,
+ *  or a posting the recruiter could save would score differently in the
+ *  seeker's live preview than on the server. */
+export const OPTIONAL_WEIGHTS = ['certifications', 'projects', 'languages', 'references'] as const;
+/** The three a recruiter may de-emphasise but never switch off. */
+export const CORE_WEIGHTS = ['skills', 'education', 'experience'] as const;
+/** No compulsory component may fall below this share. */
+export const WEIGHT_FLOOR = 10;
+/** Weight controls move in whole steps of this size. A recruiter setting a
+ *  balance by hand is expressing a rough priority, not a calibrated ratio,
+ *  and offering single points invites a precision the judgement does not
+ *  carry — 45/30/25 is a decision, 47/28/25 is a slip of the mouse. */
+export const WEIGHT_STEP = 5;
 
 /** Every accepted value of `resumes.design`. Anything else falls back to
  *  'classic' rather than being rejected, so a resume saved by a newer build
@@ -52,11 +71,13 @@ export function applyMatchSettings(s: {
   if (w) {
     const sk = num(w.skills), ed = num(w.education), ex = num(w.experience);
     // All three or none. A partial set would silently change the total scale.
-    // Certifications are separate: absent means 0, the value they already hold.
+    // The optional four are separate: absent means 0, the value they hold.
     if (sk !== null && ed !== null && ex !== null && sk >= 0 && ed >= 0 && ex >= 0) {
       WEIGHTS.skills = sk; WEIGHTS.education = ed; WEIGHTS.experience = ex;
-      const ce = num(w.certifications);
-      WEIGHTS.certifications = ce !== null && ce >= 0 ? ce : 0;
+      for (const k of OPTIONAL_WEIGHTS) {
+        const v = num((w as Record<string, unknown>)[k]);
+        WEIGHTS[k] = v !== null && v >= 0 ? v : 0;
+      }
     }
   }
   const th = s?.thresholds;
@@ -695,16 +716,24 @@ export function weightsFor(posting: Pick<Posting, 'weights'>): typeof WEIGHTS {
   if (!w) return WEIGHTS;
   const ok = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
   if (!ok(w.skills) || !ok(w.education) || !ok(w.experience)) return WEIGHTS;
-  /* Absent means zero, not invalid — an opening written before certifications
-     were scoreable carries three weights totalling 100 and must keep the score
-     it has always produced. */
-  const cert = w.certifications === undefined || w.certifications === null ? 0 : w.certifications;
-  if (!ok(cert)) return WEIGHTS;
-  if (w.skills + w.education + w.experience + cert !== 100) return WEIGHTS;
+  /* Absent means zero, not invalid — an opening written before a component
+     was scoreable carries only the weights that existed then, and must keep
+     the score it has always produced. */
+  const opt: Record<string, number> = {};
+  for (const k of OPTIONAL_WEIGHTS) {
+    const v = (w as Record<string, unknown>)[k];
+    const n = v === undefined || v === null ? 0 : v;
+    if (!ok(n)) return WEIGHTS;
+    opt[k] = n;
+  }
+  const total = w.skills + w.education + w.experience
+    + OPTIONAL_WEIGHTS.reduce((s, k) => s + opt[k], 0);
+  if (total !== 100) return WEIGHTS;
   // Percentages in, fractions out, the same single conversion the server does.
   return {
-    skills: w.skills / 100, education: w.education / 100,
-    experience: w.experience / 100, certifications: cert / 100,
+    skills: w.skills / 100, education: w.education / 100, experience: w.experience / 100,
+    certifications: opt['certifications'] / 100, projects: opt['projects'] / 100,
+    languages: opt['languages'] / 100, references: opt['references'] / 100,
   };
 }
 
@@ -715,12 +744,52 @@ export function normCert(s: string): string {
   return String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+/* ============================================================
+   SECTIONS THE APPLICANT SWITCHED OFF.
+
+   Mirrors visibleResume() in server/src/lib/serializers.ts and must stay
+   identical: the two are the same rule, and a resume that scored one way in
+   the browser and another on the server would make the published formula
+   untrue of one of them.
+
+   Hiding a section removes it from the printed sheet AND from the score.
+   Those move together on purpose -- a recruiter has to be able to read the
+   number as a statement about the document in front of them, and a section
+   they will never see must not be quietly earning marks toward it.
+   ============================================================ */
+export const RESUME_SECTIONS = ['summary', 'projects', 'certifications', 'languages', 'references', 'links'] as const;
+
+/** A copy of a resume with the switched-off sections removed. Idempotent and
+ *  a no-op when nothing is hidden, so it is safe anywhere. */
+export function visibleResume<T extends { hiddenSections?: readonly string[] }>(resume: T): T {
+  const hidden = resume?.hiddenSections;
+  if (!hidden?.length) return resume;
+  const out: any = { ...resume };
+  // The summary lives inside `personal`, so it is blanked rather than deleted
+  // -- the rest of that object is contact detail and always shows.
+  if (hidden.includes('summary')) out.personal = { ...(out.personal ?? {}), summary: '' };
+  for (const k of ['projects', 'certifications', 'languages', 'references', 'links']) {
+    if (hidden.includes(k)) delete out[k];
+  }
+  return out as T;
+}
+
 export function scoreLocal(
   resume: Pick<Resume, 'skills' | 'education' | 'experience'>
-    & { skillEvidence?: Resume['skillEvidence']; certifications?: { name?: string }[] },
+    & {
+      skillEvidence?: Resume['skillEvidence']; certifications?: { name?: string }[];
+      projects?: unknown[]; languages?: ({ name?: string } | string)[]; references?: unknown[];
+      hiddenSections?: readonly string[];
+    },
   posting: Pick<Posting, 'skills' | 'educationLevel' | 'minExperienceMonths' | 'weights'>
-    & { certifications?: string[] },
+    & { certifications?: string[]; languages?: string[]; minProjects?: number; minReferences?: number },
 ): MatchResult {
+  /* Applied here rather than left to each caller. Every screen that scores --
+     browse, the dashboard, the recruiter's live simulation -- has to agree
+     with the server, and a rule that depends on remembering to call a helper
+     first is a rule that eventually is not applied somewhere. Idempotent, so
+     a resume the server already stripped passes through unchanged. */
+  resume = visibleResume(resume);
   const W = weightsFor(posting);
   const required = posting.skills || [];
   const have = new Set((resume.skills || []).map(normSkill));
@@ -763,8 +832,34 @@ export function scoreLocal(
   }
   const certPart = wantCerts.length ? matchedCerts.length / wantCerts.length : 1;
 
+  /* LANGUAGES — matched by name, exactly as certifications are, because a
+     language is something an opening either names or does not. An opening
+     naming none scores full marks here. */
+  const wantLangs = posting.languages || [];
+  const haveLangs = (resume.languages || [])
+    .map((l) => normCert(typeof l === 'string' ? l : (l?.name ?? ''))).filter(Boolean);
+  const matchedLangs: string[] = [];
+  const missingLangs: string[] = [];
+  for (const want of wantLangs) {
+    const w = normCert(want);
+    (w && haveLangs.some((h) => h.includes(w)) ? matchedLangs : missingLangs).push(want);
+  }
+  const langPart = wantLangs.length ? matchedLangs.length / wantLangs.length : 1;
+
+  /* PROJECTS and REFERENCES — counted against a stated minimum, the way months
+     of experience are, capped at 1 so exceeding a requirement adds nothing. A
+     minimum of zero means the opening stated none, which scores full marks. */
+  const projectCount = (resume.projects || []).length;
+  const minProjects = Math.max(0, Number(posting.minProjects) || 0);
+  const projPart = minProjects <= 0 ? 1 : Math.min(1, projectCount / minProjects);
+
+  const referenceCount = (resume.references || []).length;
+  const minReferences = Math.max(0, Number(posting.minReferences) || 0);
+  const refPart = minReferences <= 0 ? 1 : Math.min(1, referenceCount / minReferences);
+
   const raw = (skillPart * W.skills + eduPart * W.education
-    + expPart * W.experience + certPart * W.certifications) * 100;
+    + expPart * W.experience + certPart * W.certifications
+    + projPart * W.projects + langPart * W.languages + refPart * W.references) * 100;
   const total = Math.floor(raw + 0.5); // half-up, explicitly, must match server rmScore()
 
   return {
@@ -778,6 +873,12 @@ export function scoreLocal(
     seekerMonths: months,
     matchedCertifications: matchedCerts,
     missingCertifications: missingCerts,
+    matchedLanguages: matchedLangs,
+    missingLanguages: missingLangs,
+    projectCount,
+    minProjects,
+    referenceCount,
+    minReferences,
     tier: total >= THRESHOLDS.strong ? 'strong' : total >= THRESHOLDS.related ? 'possible' : 'related',
     weights: W,
   };

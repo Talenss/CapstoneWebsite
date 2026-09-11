@@ -4,7 +4,7 @@ import { query, queryOne, exec, withTransaction } from '../db';
 import { ApplicationRow, ResumeRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
 import { requireRole, requireUser } from '../lib/auth';
-import { fetchResume, fetchPosting, postingExpired, prefetchResumeChildren, serializeResume, serializePosting, serializeApplication, ts } from '../lib/serializers';
+import { fetchResume, fetchPosting, postingExpired, prefetchResumeChildren, serializeResume, serializePosting, serializeApplication, visibleResume, ts } from '../lib/serializers';
 import { rmScore, rmFileScore, cacheScore, getSettings, REJECTION_REASONS } from '../lib/engine';
 import { notifyStatusChange, notifyNewApplication, sendInterviewInvite } from '../lib/notify';
 import { UserRow } from '../types';
@@ -71,8 +71,42 @@ router.post('/apply', async (req, res) => {
   const dup = await queryOne('SELECT 1 FROM applications WHERE seeker_id=? AND posting_id=? LIMIT 1', [u.user_id, pid]);
   if (dup) return fail(res, 'You already applied to this position.');
 
-  // record the score AS IT WAS at the moment of applying
-  const s = await rmScore(await serializeResume(r), await serializePosting(p, false));
+  /* THE RECRUITER'S OWN SCREENING QUESTIONS.
+     Every question on the opening must be answered before the application is
+     accepted -- that is what makes them mandatory, and checking it here is
+     what makes it true rather than a courtesy the apply screen extends. The
+     questions are read from the database, never from the payload: a client
+     that sent an answer for a question the recruiter had deleted, or omitted
+     one it did not feel like showing, would otherwise decide for itself what
+     this opening requires.
+
+     Nothing here is scored. The answers are free text a person reads, and
+     the engine never sees them. */
+  const questions = await query<{ question_id: number; prompt: string }>(
+    'SELECT question_id, prompt FROM posting_questions WHERE posting_id=? ORDER BY sort_order, question_id', [pid],
+  );
+  const sent = new Map<number, string>();
+  const rawAnswers = Array.isArray(req.body?.answers) ? req.body.answers.slice(0, 50) : [];
+  for (const a of rawAnswers) {
+    const qid = Number(a?.questionId);
+    if (Number.isFinite(qid)) sent.set(qid, String(a?.answer ?? '').trim().slice(0, 2000));
+  }
+  const answers: { questionId: number; answer: string }[] = [];
+  for (const q of questions) {
+    const text = sent.get(Number(q.question_id)) ?? '';
+    if (!text) {
+      // Named, not counted. "1 unanswered" leaves the applicant hunting for
+      // which one, and the apply screen may have scrolled past it.
+      return fail(res, `Please answer the question: "${q.prompt}"`);
+    }
+    answers.push({ questionId: Number(q.question_id), answer: text });
+  }
+
+  /* Record the score AS IT WAS at the moment of applying -- on the resume as
+     the recruiter will see it. visibleResume drops the sections the applicant
+     switched off, so a hidden section cannot earn marks toward a number that
+     is meant to describe the sheet arriving on the recruiter's screen. */
+  const s = await rmScore(visibleResume(await serializeResume(r)), await serializePosting(p, false));
 
   // One unit of work. The schema's promise — that every status a row has
   // ever held is attributable to a named human — cannot survive an
@@ -88,6 +122,15 @@ router.post('/apply', async (req, res) => {
         "INSERT INTO application_status_history (application_id, old_status, new_status, changed_by) VALUES (?,NULL,'submitted',?)",
         [ins.insertId, u.user_id],
       );
+      // Inside the same transaction as the application row: an application
+      // that exists without the answers it was required to carry would be one
+      // the recruiter cannot act on and the applicant cannot resubmit.
+      for (const a of answers) {
+        await tx.exec(
+          'INSERT INTO application_answers (application_id, question_id, answer_text) VALUES (?,?,?)',
+          [ins.insertId, a.questionId, a.answer],
+        );
+      }
       return ins.insertId;
     });
   } catch (e: any) {
@@ -163,6 +206,28 @@ router.post('/ranked', async (req, res) => {
   const byId = new Map(resumeRows.map((r) => [r.resume_id, r]));
   const children = await prefetchResumeChildren(resumeRows.map((r) => r.resume_id));
 
+  /* THE SCREENING ANSWERS, in one query for the whole list rather than one
+     per applicant -- the same reason prefetchResumeChildren exists. Joined
+     through posting_questions so each answer arrives beside the question it
+     answers: a recruiter reading "3 years" needs to see what was asked. The
+     question's own order is preserved, so every applicant's answers appear in
+     the order the recruiter wrote them. */
+  const answerRows = await query<{ application_id: number; prompt: string; answer_text: string }>(
+    `SELECT aa.application_id, pq.prompt, aa.answer_text
+       FROM application_answers aa
+       JOIN posting_questions pq ON pq.question_id = aa.question_id
+      WHERE aa.application_id = ANY(?)
+      ORDER BY aa.application_id, pq.sort_order, pq.question_id`,
+    [rows.map((a) => a.application_id)],
+  );
+  const answersByApp = new Map<number, { question: string; answer: string }[]>();
+  for (const row of answerRows) {
+    const k = Number(row.application_id);
+    const list = answersByApp.get(k) ?? [];
+    list.push({ question: row.prompt, answer: row.answer_text });
+    answersByApp.set(k, list);
+  }
+
   const out: any[] = [];
   for (const a of rows) {
     const r = byId.get(a.resume_id) ?? null;
@@ -182,11 +247,14 @@ router.post('/ranked', async (req, res) => {
         resume: null,
         resumeUnavailable: true,
         seeker: { id: String(a.s_id), name: a.s_name, email: a.s_email, role: 'seeker' },
+        ...(answersByApp.has(Number(a.application_id)) ? { answers: answersByApp.get(Number(a.application_id)) } : {}),
       });
       continue;
     }
 
-    const resume = await serializeResume(r, children);
+    // Everything the applicant switched off is removed here, once, so it
+    // reaches neither the score below nor the recruiter's screen.
+    const resume = visibleResume(await serializeResume(r, children));
     const s = await rmScore(resume, posting);
     await cacheScore(a.resume_id, pid, s);
 
@@ -252,6 +320,7 @@ router.post('/ranked', async (req, res) => {
       resume,
       seeker: { id: String(a.s_id), name: a.s_name, email: a.s_email, role: 'seeker' },
       ...(fs ? { fileScore: fs } : {}),
+      ...(answersByApp.has(Number(a.application_id)) ? { answers: answersByApp.get(Number(a.application_id)) } : {}),
     });
   }
 

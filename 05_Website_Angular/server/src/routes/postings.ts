@@ -4,8 +4,8 @@ import { query, queryOne, exec, withTransaction } from '../db';
 import { PostingRow, UserRow, ResumeRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
 import { requireRole, currentUser } from '../lib/auth';
-import { fetchPosting, fetchResume, serializePosting, serializeResume } from '../lib/serializers';
-import { EDU_RANK, skillId, rmScore, getSettings, certNorm } from '../lib/engine';
+import { fetchPosting, fetchResume, serializePosting, serializeResume, visibleResume } from '../lib/serializers';
+import { EDU_RANK, skillId, rmScore, getSettings, certNorm, OPTIONAL_WEIGHTS, WEIGHT_FLOOR } from '../lib/engine';
 import { notifyNewPostingMatch } from '../lib/notify';
 
 const router = asyncRouter();
@@ -49,7 +49,7 @@ async function alertMatchingSeekers(postingId: number): Promise<void> {
     try {
       const r = await fetchResume(s.active_resume_id!);
       if (!r) continue;
-      const score = await rmScore(await serializeResume(r as ResumeRow), posting);
+      const score = await rmScore(visibleResume(await serializeResume(r as ResumeRow)), posting);
       if (score.score < T.related) continue; // below "possible" — no alert
       recipients.push({ email: s.email, name: s.full_name, score: score.score, tier: score.tier });
     } catch (e: any) {
@@ -122,17 +122,38 @@ router.post('/save', async (req, res) => {
   /* Certifications the opening asks for. Deduplicated on the NORMALISED form,
      because "CCNA" and "C.C.N.A." are the same requirement and listing both
      would make the component impossible to score out of. */
-  const certifications: string[] = [];
-  {
+  const freeTextList = (input: unknown, maxLen: number, cap: number): string[] => {
+    const out: string[] = [];
     const seen = new Set<string>();
-    for (const c of Array.isArray(P.certifications) ? P.certifications : []) {
-      const name = String(c).trim().slice(0, 160);
+    for (const c of Array.isArray(input) ? input : []) {
+      const name = String(c).trim().slice(0, maxLen);
       const norm = certNorm(name);
       if (!name || !norm || seen.has(norm)) continue;
       seen.add(norm);
-      certifications.push(name);
-      if (certifications.length >= 20) break;
+      out.push(name);
+      if (out.length >= cap) break;
     }
+    return out;
+  };
+  const certifications = freeTextList(P.certifications, 160, 20);
+  /* Languages are the same shape as certifications and normalised by the same
+     function, because both are free text an opening either names or does not,
+     with no catalogue to intern them into the way skills have. */
+  const languages = freeTextList(P.languages, 80, 20);
+
+  /* Minimum counts for the two sections scored the way experience is. Zero
+     means the opening states no requirement, which scores full marks. */
+  const minProjects = Math.max(0, Math.min(50, Math.trunc(Number(P.minProjects) || 0)));
+  const minReferences = Math.max(0, Math.min(50, Math.trunc(Number(P.minReferences) || 0)));
+
+  /* Screening questions. Capped in count and length because they are shown to
+     every applicant before they can apply: an unbounded list is a wall, and an
+     unbounded prompt is somewhere to paste a whole job description. */
+  const questions: string[] = [];
+  for (const q of Array.isArray(P.questions) ? P.questions : []) {
+    const prompt = String(typeof q === 'string' ? q : (q?.prompt ?? '')).trim().slice(0, 300);
+    if (prompt) questions.push(prompt);
+    if (questions.length >= 10) break;
   }
 
   if (title.length < 2) return fail(res, 'Give the opening a title.');
@@ -153,7 +174,7 @@ router.post('/save', async (req, res) => {
      applicant whose only strength is the zeroed one would be scored on a
      scale that cannot see them at all. The same rule is a CHECK constraint on
      the table, so a bad set cannot arrive by any other route either. */
-  let weights: { skills: number; education: number; experience: number; certifications: number } | null = null;
+  let weights: Record<string, number> | null = null;
   if (P.weights != null) {
     const W = P.weights;
     const pct = (v: unknown): number | null => {
@@ -161,19 +182,26 @@ router.post('/save', async (req, res) => {
       return Number.isFinite(n) && Number.isInteger(n) ? n : null;
     };
     const sk = pct(W.skills), ed = pct(W.education), ex = pct(W.experience);
-    /* Certifications are the one component a recruiter may switch off, and
-       off is the default. Absent means 0, which is what keeps an opening
-       written before this component existed valid without being rewritten. */
-    const ce = W.certifications === undefined || W.certifications === null ? 0 : pct(W.certifications);
-    if (sk === null || ed === null || ex === null || ce === null)
+    if (sk === null || ed === null || ex === null)
       return fail(res, 'The scoring weights must be whole numbers.');
-    if (sk < 10 || ed < 10 || ex < 10)
-      return fail(res, 'Skills, education and experience each have to be at least 10%. Those three cannot be switched off entirely.');
-    if (ce < 0)
-      return fail(res, 'The certifications weight cannot be negative.');
-    if (sk + ed + ex + ce !== 100)
-      return fail(res, `The weights have to add up to 100%. They currently add up to ${sk + ed + ex + ce}%.`);
-    weights = { skills: sk, education: ed, experience: ex, certifications: ce };
+    if (sk < WEIGHT_FLOOR || ed < WEIGHT_FLOOR || ex < WEIGHT_FLOOR)
+      return fail(res, `Skills, education and experience each have to be at least ${WEIGHT_FLOOR}%. Those three cannot be switched off entirely.`);
+    /* The optional components are the ones a recruiter may switch off, and off
+       is the default for every one of them. Absent means 0, which is what
+       keeps an opening written before a component existed valid without
+       being rewritten. */
+    const opt: Record<string, number> = {};
+    for (const k of OPTIONAL_WEIGHTS) {
+      const raw = (W as Record<string, unknown>)[k];
+      const v = raw === undefined || raw === null ? 0 : pct(raw);
+      if (v === null) return fail(res, 'The scoring weights must be whole numbers.');
+      if (v < 0) return fail(res, `The ${k} weight cannot be negative.`);
+      opt[k] = v;
+    }
+    const total = sk + ed + ex + OPTIONAL_WEIGHTS.reduce((s: number, k) => s + opt[k], 0);
+    if (total !== 100)
+      return fail(res, `The weights have to add up to 100%. They currently add up to ${total}%.`);
+    weights = { skills: sk, education: ed, experience: ex, ...opt };
   }
 
   // Optional "apply by" date. Must be today or later when set.
@@ -197,26 +225,29 @@ router.post('/save', async (req, res) => {
       let pid = P.id ? Number(P.id) : 0;
 
       // All of them or all null — never a mix, which the CHECK rejects.
-      const wS = weights ? weights.skills : null;
-      const wE = weights ? weights.education : null;
-      const wX = weights ? weights.experience : null;
-      const wC = weights ? weights.certifications : null;
+      const w = (k: string) => (weights ? weights[k] : null);
+      const wS = w('skills'), wE = w('education'), wX = w('experience');
+      const wC = w('certifications'), wP = w('projects'), wL = w('languages'), wR = w('references');
 
       if (pid) {
         await tx.exec(
           `UPDATE job_postings SET title=?, department=?, employment_type=?, description=?, education_level=?,
-             min_experience_months=?, application_deadline=?, weight_skills=?, weight_education=?, weight_experience=?,
-             weight_certifications=?
+             min_experience_months=?, min_projects=?, min_references=?, application_deadline=?,
+             weight_skills=?, weight_education=?, weight_experience=?,
+             weight_certifications=?, weight_projects=?, weight_languages=?, weight_references=?
            WHERE posting_id=?`,
-          [title, dept, type, desc, edu, months, deadline, wS, wE, wX, wC, pid],
+          [title, dept, type, desc, edu, months, minProjects, minReferences, deadline,
+            wS, wE, wX, wC, wP, wL, wR, pid],
         );
       } else {
         const ins = await tx.exec(
           `INSERT INTO job_postings (company_id, created_by, title, department, employment_type, description,
-             education_level, min_experience_months, application_deadline, weight_skills, weight_education,
-             weight_experience, weight_certifications, status)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'open') RETURNING posting_id`,
-          [u.company_id, u.user_id, title, dept, type, desc, edu, months, deadline, wS, wE, wX, wC],
+             education_level, min_experience_months, min_projects, min_references, application_deadline,
+             weight_skills, weight_education, weight_experience,
+             weight_certifications, weight_projects, weight_languages, weight_references, status)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'open') RETURNING posting_id`,
+          [u.company_id, u.user_id, title, dept, type, desc, edu, months, minProjects, minReferences, deadline,
+            wS, wE, wX, wC, wP, wL, wR],
         );
         pid = ins.insertId;
       }
@@ -230,6 +261,29 @@ router.post('/save', async (req, res) => {
         await tx.exec(
           'INSERT INTO posting_certifications (posting_id, cert_name, cert_norm) VALUES (?,?,?) ON CONFLICT DO NOTHING',
           [pid, c, certNorm(c)],
+        );
+      }
+
+      // Required languages, stored and compared exactly as certifications are.
+      await tx.exec('DELETE FROM posting_languages WHERE posting_id = ?', [pid]);
+      for (const l of languages) {
+        await tx.exec(
+          'INSERT INTO posting_languages (posting_id, lang_name, lang_norm) VALUES (?,?,?) ON CONFLICT DO NOTHING',
+          [pid, l, certNorm(l)],
+        );
+      }
+
+      /* Screening questions are REPLACED wholesale on every save, which
+         deliberately discards the answers already given to a question the
+         recruiter edited or removed (application_answers cascades from
+         question_id). An answer belongs to the wording it was given under:
+         keeping it against changed wording would attribute to an applicant a
+         reply to a question they were never asked. */
+      await tx.exec('DELETE FROM posting_questions WHERE posting_id = ?', [pid]);
+      for (let i = 0; i < questions.length; i++) {
+        await tx.exec(
+          'INSERT INTO posting_questions (posting_id, prompt, sort_order) VALUES (?,?,?)',
+          [pid, questions[i], i],
         );
       }
 

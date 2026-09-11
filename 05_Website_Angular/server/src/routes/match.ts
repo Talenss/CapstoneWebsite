@@ -6,7 +6,7 @@ import { query, queryOne } from '../db';
 import { PostingRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
 import { requireUser, requireRole } from '../lib/auth';
-import { fetchResume, fetchPosting, serializeResume, serializePosting, recruiterMayReadResume } from '../lib/serializers';
+import { fetchResume, fetchPosting, serializeResume, serializePosting, recruiterMayReadResume, visibleResume } from '../lib/serializers';
 import { rmScore, rmFileScore, cacheScore, getSettings } from '../lib/engine';
 
 const router = asyncRouter();
@@ -40,7 +40,10 @@ router.post('/score', async (req, res) => {
     return fail(res, 'You can only score your own resumes.', 403);
   }
 
-  const resume = await serializeResume(r);
+  /* Scored on the visible resume, whoever is asking. An applicant checking
+     their own match has to be shown the number the recruiter will get, not a
+     better one that counts sections they chose to hide. */
+  const resume = visibleResume(await serializeResume(r));
   const posting = await serializePosting(p, false);
   /* Two numbers, same engine. `score` is the resume the applicant typed;
      `fileScore` is their own uploaded document, read by software. Reported
@@ -70,7 +73,7 @@ router.post('/recommendations', async (req, res) => {
 
   const r = await fetchResume(rid);
   if (!r) return ok(res, { resume: null, strong: [], possible: [], related: [] });
-  const resume = await serializeResume(r);
+  const resume = visibleResume(await serializeResume(r));
 
   const appliedRows = await query<{ posting_id: number }>('SELECT posting_id FROM applications WHERE seeker_id = ?', [u.user_id]);
   const applied = appliedRows.map((a) => String(a.posting_id));

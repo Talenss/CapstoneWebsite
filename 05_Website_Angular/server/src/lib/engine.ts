@@ -237,11 +237,34 @@ export function skillNorm(s: string): string {
   return SKILL_ALIASES[base] ?? base;
 }
 
+/** The seven components a score can be built from, as FRACTIONS summing to 1.
+ *
+ *  Only the first three are compulsory. The four after them each default to 0,
+ *  which is what keeps the site-wide split at the study's published 50/25/25
+ *  across three unless a recruiter deliberately gives one of the others a
+ *  share on their own opening — and what lets every opening written before a
+ *  component existed keep producing exactly the score it always has. */
+export interface Weights {
+  skills: number;
+  education: number;
+  experience: number;
+  certifications: number;
+  projects: number;
+  languages: number;
+  references: number;
+}
+
+/** The optional components, in the order the interface presents them. Listing
+ *  them once stops the validator, the defaults and the DB reader from drifting
+ *  apart as the set grows. */
+export const OPTIONAL_WEIGHTS = ['certifications', 'projects', 'languages', 'references'] as const;
+/** The three a recruiter may de-emphasise but never switch off. */
+export const CORE_WEIGHTS = ['skills', 'education', 'experience'] as const;
+/** No component may fall below this share, for the three that are compulsory. */
+export const WEIGHT_FLOOR = 10;
+
 export interface MatchSettings {
-  /** `certifications` is the optional fourth component and defaults to 0, so
-   *  the site-wide split stays the study's published 50/25/25 across three
-   *  unless a recruiter gives certifications a share on their own opening. */
-  weights: { skills: number; education: number; experience: number; certifications: number };
+  weights: Weights;
   thresholds: { strong: number; related: number };
 }
 
@@ -274,6 +297,9 @@ export async function getSettings(): Promise<MatchSettings> {
       education: n(map.weight_education, DEFAULT_SETTINGS.weights.education),
       experience: n(map.weight_experience, DEFAULT_SETTINGS.weights.experience),
       certifications: n(map.weight_certifications, DEFAULT_SETTINGS.weights.certifications),
+      projects: n(map.weight_projects, DEFAULT_SETTINGS.weights.projects),
+      languages: n(map.weight_languages, DEFAULT_SETTINGS.weights.languages),
+      references: n(map.weight_references, DEFAULT_SETTINGS.weights.references),
     },
     thresholds: {
       strong: n(map.threshold_strong, DEFAULT_SETTINGS.thresholds.strong),
@@ -304,6 +330,13 @@ export interface SerializedResume {
    *  applicant typed it — there is no catalogue for these the way there is
    *  for skills. */
   certifications?: { name?: string }[];
+  /** Read only when the opening gives the matching component a share.
+   *  Projects and references are COUNTED against a stated minimum, the way
+   *  months of experience are; languages are MATCHED by name, the way
+   *  certifications are. */
+  projects?: unknown[];
+  languages?: ({ name?: string } | string)[];
+  references?: unknown[];
   [k: string]: any;
 }
 export interface SerializedPosting {
@@ -321,7 +354,17 @@ export interface SerializedPosting {
    *  `certifications` is optional and treated as 0 when missing, which is
    *  what lets an opening written before the fourth component existed keep
    *  summing to 100 without a backfill. */
-  weights?: { skills: number; education: number; experience: number; certifications?: number } | null;
+  weights?: ({ skills: number; education: number; experience: number }
+    & Partial<Record<typeof OPTIONAL_WEIGHTS[number], number>>) | null;
+  /** The languages this opening asks for, free text, matched the way
+   *  certifications are. Empty or absent means it asks for none, which scores
+   *  full marks on that component. */
+  languages?: string[];
+  /** Minimum counts for the two sections scored like experience. 0 or absent
+   *  means the opening states no requirement, which contributes a full
+   *  component rather than a penalty. */
+  minProjects?: number;
+  minReferences?: number;
   [k: string]: any;
 }
 
@@ -349,21 +392,54 @@ export function certNorm(s: string): string {
   return String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-export function weightsFor(cfg: MatchSettings, posting: SerializedPosting): MatchSettings['weights'] {
+/** Fill in any component the caller left out.
+ *
+ *  A settings object can legitimately carry fewer than seven weights: one
+ *  built by hand, or read from a match_settings table written before a
+ *  component existed. Multiplying by an absent weight would produce NaN and
+ *  take the entire score down with it — silently, because NaN compares false
+ *  against every threshold and simply reports as the bottom tier. So every
+ *  optional component reads as 0 when missing, and the three compulsory ones
+ *  fall back to the published defaults. */
+export function fillWeights(w: Partial<Weights> | null | undefined): Weights {
+  const n = (v: unknown, fallback: number): number =>
+    typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : fallback;
+  const d = DEFAULT_SETTINGS.weights;
+  return {
+    skills: n(w?.skills, d.skills),
+    education: n(w?.education, d.education),
+    experience: n(w?.experience, d.experience),
+    certifications: n(w?.certifications, 0),
+    projects: n(w?.projects, 0),
+    languages: n(w?.languages, 0),
+    references: n(w?.references, 0),
+  };
+}
+
+export function weightsFor(cfg: MatchSettings, posting: SerializedPosting): Weights {
   const w = posting.weights;
-  if (!w) return cfg.weights;
+  if (!w) return fillWeights(cfg.weights);
   const ok = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
-  if (!ok(w.skills) || !ok(w.education) || !ok(w.experience)) return cfg.weights;
-  /* Absent means zero, not invalid. An opening written before certifications
-     were scoreable carries three weights totalling 100, and must keep the
-     score it has always produced. */
-  const cert = w.certifications === undefined || w.certifications === null ? 0 : w.certifications;
-  if (!ok(cert)) return cfg.weights;
-  if (w.skills + w.education + w.experience + cert !== 100) return cfg.weights;
+  if (!ok(w.skills) || !ok(w.education) || !ok(w.experience)) return fillWeights(cfg.weights);
+  /* Absent means zero, not invalid. An opening written before a component was
+     scoreable carries only the weights that existed then, and must keep the
+     score it has always produced — which is why every optional component is
+     read through this coalesce rather than required to be present. */
+  const opt: Record<string, number> = {};
+  for (const k of OPTIONAL_WEIGHTS) {
+    const v = (w as Record<string, unknown>)[k];
+    const n = v === undefined || v === null ? 0 : v;
+    if (!ok(n)) return fillWeights(cfg.weights);
+    opt[k] = n;
+  }
+  const total = w.skills + w.education + w.experience
+    + OPTIONAL_WEIGHTS.reduce((s, k) => s + opt[k], 0);
+  if (total !== 100) return fillWeights(cfg.weights);
   // Percentages in, fractions out — the single conversion point in the system.
   return {
-    skills: w.skills / 100, education: w.education / 100,
-    experience: w.experience / 100, certifications: cert / 100,
+    skills: w.skills / 100, education: w.education / 100, experience: w.experience / 100,
+    certifications: opt.certifications / 100, projects: opt.projects / 100,
+    languages: opt.languages / 100, references: opt.references / 100,
   };
 }
 
@@ -390,17 +466,31 @@ export interface MatchResult {
    *  from have to travel together. A screen that fetched the weights
    *  separately could show a breakdown that does not add up to the score
    *  beside it. */
-  weights: { skills: number; education: number; experience: number; certifications: number };
+  weights: Weights;
   /** Of the certifications the opening asked for, the ones the applicant
    *  lists and the ones they do not. Both empty when none were asked for. */
   matchedCertifications: string[];
   missingCertifications: string[];
+  /** Of the languages the opening asked for, the ones the applicant lists and
+   *  the ones they do not. Both empty when none were asked for. */
+  matchedLanguages: string[];
+  missingLanguages: string[];
+  /** How many projects and references the applicant has, beside the minimum
+   *  the opening asked for. A minimum of 0 means none was stated, which the
+   *  score treats as met in full. */
+  projectCount: number;
+  minProjects: number;
+  referenceCount: number;
+  minReferences: number;
 }
 
 /** The defaults used when the match_settings table has no overrides —
  *  the study's published 50/25/25 weights and 80/50 tier thresholds. */
 export const DEFAULT_SETTINGS: MatchSettings = {
-  weights: { skills: 0.5, education: 0.25, experience: 0.25, certifications: 0 },
+  weights: {
+    skills: 0.5, education: 0.25, experience: 0.25,
+    certifications: 0, projects: 0, languages: 0, references: 0,
+  },
   thresholds: { strong: 80, related: 50 },
 };
 
@@ -462,8 +552,37 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
   }
   const certPart = wantCerts.length ? matchedCerts.length / wantCerts.length : 1.0;
 
+  /* LANGUAGES — matched by name, exactly as certifications are, and for the
+     same reason: a language is something an opening either names or does not,
+     with no catalogue to normalise against the way skills have. An opening
+     naming none scores full marks here. */
+  const wantLangs = posting.languages || [];
+  const haveLangs = (resume.languages || [])
+    .map((l) => certNorm(typeof l === 'string' ? l : (l?.name ?? ''))).filter(Boolean);
+  const matchedLangs: string[] = [];
+  const missingLangs: string[] = [];
+  for (const want of wantLangs) {
+    const w = certNorm(want);
+    (w && haveLangs.some((h) => h.includes(w)) ? matchedLangs : missingLangs).push(want);
+  }
+  const langPart = wantLangs.length ? matchedLangs.length / wantLangs.length : 1.0;
+
+  /* PROJECTS and REFERENCES — counted against a stated minimum, the way months
+     of experience are, and capped at 1.0 for the same reason: exceeding a
+     requirement neither adds nor subtracts credit. A minimum of zero means the
+     opening stated none, which contributes a full component rather than a
+     penalty — a requirement nobody set cannot be one the applicant failed. */
+  const projectCount = (resume.projects || []).length;
+  const minProjects = Math.max(0, Number(posting.minProjects) || 0);
+  const projPart = minProjects <= 0 ? 1.0 : Math.min(1.0, projectCount / minProjects);
+
+  const referenceCount = (resume.references || []).length;
+  const minReferences = Math.max(0, Number(posting.minReferences) || 0);
+  const refPart = minReferences <= 0 ? 1.0 : Math.min(1.0, referenceCount / minReferences);
+
   const raw = (skillPart * W.skills + eduPart * W.education
-    + expPart * W.experience + certPart * W.certifications) * 100;
+    + expPart * W.experience + certPart * W.certifications
+    + projPart * W.projects + langPart * W.languages + refPart * W.references) * 100;
   const total = Math.floor(raw + 0.5); // half-up, explicitly — must match assets/api.js score()
 
   return {
@@ -477,6 +596,12 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
     seekerMonths: months,
     matchedCertifications: matchedCerts,
     missingCertifications: missingCerts,
+    matchedLanguages: matchedLangs,
+    missingLanguages: missingLangs,
+    projectCount,
+    minProjects,
+    referenceCount,
+    minReferences,
     tier: total >= T.strong ? 'strong' : total >= T.related ? 'possible' : 'related',
     weights: W,
   };
@@ -497,7 +622,10 @@ export async function rmScore(resume: SerializedResume, posting: SerializedPosti
  *  Returns null when there is nothing to score, which is not the same as
  *  scoring zero and must never be displayed as though it were. */
 export async function rmFileScore(
-  extract: { skills?: string[]; education?: any[]; experience?: any[]; certifications?: any[] } | null | undefined,
+  extract: {
+    skills?: string[]; education?: any[]; experience?: any[]; certifications?: any[];
+    projects?: any[]; languages?: any[]; references?: any[];
+  } | null | undefined,
   posting: SerializedPosting,
 ): Promise<MatchResult | null> {
   if (!extract) return null;
@@ -506,6 +634,9 @@ export async function rmFileScore(
     education: Array.isArray(extract.education) ? extract.education : [],
     experience: Array.isArray(extract.experience) ? extract.experience : [],
     certifications: Array.isArray(extract.certifications) ? extract.certifications : [],
+    projects: Array.isArray(extract.projects) ? extract.projects : [],
+    languages: Array.isArray(extract.languages) ? extract.languages : [],
+    references: Array.isArray(extract.references) ? extract.references : [],
   } as SerializedResume, posting);
 }
 
