@@ -43,6 +43,12 @@ export class HrApplicants {
   readonly wSkills = computed(() => this.posting()?.weights?.skills ?? this.pct(WEIGHTS.skills));
   readonly wEdu = computed(() => this.posting()?.weights?.education ?? this.pct(WEIGHTS.education));
   readonly wExp = computed(() => this.posting()?.weights?.experience ?? this.pct(WEIGHTS.experience));
+  /* The optional four. They default to 0 rather than to a site default,
+     because an opening that never set them does not score them at all. */
+  readonly wCert = computed(() => this.posting()?.weights?.certifications ?? 0);
+  readonly wProj = computed(() => this.posting()?.weights?.projects ?? 0);
+  readonly wLang = computed(() => this.posting()?.weights?.languages ?? 0);
+  readonly wRef = computed(() => this.posting()?.weights?.references ?? 0);
 
   /** Where this opening's applicants stand.
    *

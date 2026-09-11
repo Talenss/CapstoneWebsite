@@ -162,6 +162,21 @@
        <div class="rail-row"><span>Required skills matched</span><b>{{ wSkills() }}%</b></div>
        <div class="rail-row"><span>Education level</span><b>{{ wEdu() }}%</b></div>
        <div class="rail-row"><span>Experience</span><b>{{ wExp() }}%</b></div>
+       <!-- The optional four, each shown only when this opening gives it a
+            share. Without them the card claimed to total 100% while listing
+            three rows that did not, on any opening that scores a fourth. -->
+       @if (wCert() > 0) {
+         <div class="rail-row"><span>Certificates held</span><b>{{ wCert() }}%</b></div>
+       }
+       @if (wProj() > 0) {
+         <div class="rail-row"><span>Projects listed</span><b>{{ wProj() }}%</b></div>
+       }
+       @if (wLang() > 0) {
+         <div class="rail-row"><span>Languages spoken</span><b>{{ wLang() }}%</b></div>
+       }
+       @if (wRef() > 0) {
+         <div class="rail-row"><span>References named</span><b>{{ wRef() }}%</b></div>
+       }
        <p class="rail-note">A skill the applicant lists but cannot point to anywhere in their
          resume counts half. Everything else counts in full.</p>
      </div>
@@ -291,6 +306,24 @@
                 <div class="row">
                   <span><b>Certificates</b><span class="w">{{ r.weights.certifications * 100 }}% of the score</span></span>
                   <b>{{ r.matchedCertifications.length }} of {{ r.matchedCertifications.length + r.missingCertifications.length }}{{ r.missingCertifications.length ? ' · missing ' + r.missingCertifications.join(', ') : '' }}</b>
+                </div>
+              }
+              @if (r.weights.projects > 0) {
+                <div class="row">
+                  <span><b>Projects</b><span class="w">{{ r.weights.projects * 100 }}% of the score</span></span>
+                  <b>{{ r.projectCount }} of {{ r.minProjects }} asked for</b>
+                </div>
+              }
+              @if (r.weights.languages > 0) {
+                <div class="row">
+                  <span><b>Languages</b><span class="w">{{ r.weights.languages * 100 }}% of the score</span></span>
+                  <b>{{ r.matchedLanguages.length }} of {{ r.matchedLanguages.length + r.missingLanguages.length }}{{ r.missingLanguages.length ? ' · missing ' + r.missingLanguages.join(', ') : '' }}</b>
+                </div>
+              }
+              @if (r.weights.references > 0) {
+                <div class="row">
+                  <span><b>References</b><span class="w">{{ r.weights.references * 100 }}% of the score</span></span>
+                  <b>{{ r.referenceCount }} of {{ r.minReferences }} asked for</b>
                 </div>
               }
               <!-- The same posting scored against what software read out of

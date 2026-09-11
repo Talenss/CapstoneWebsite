@@ -321,6 +321,30 @@
             <span><b>Experience</b><span class="w">{{ item.weights.experience * 100 }}% of the score</span></span>
             <b [style.color]="item.expMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ item.seekerMonths }} mo · asks for {{ item.posting.minExperienceMonths || 0 }} mo</b>
           </div>
+          @if (item.weights.certifications > 0) {
+            <div class="row">
+              <span><b>Certificates</b><span class="w">{{ item.weights.certifications * 100 }}% of the score</span></span>
+              <b>{{ item.matchedCertifications.length }} of {{ item.matchedCertifications.length + item.missingCertifications.length }}{{ item.missingCertifications.length ? ' · missing ' + item.missingCertifications.join(', ') : '' }}</b>
+            </div>
+          }
+          @if (item.weights.projects > 0) {
+            <div class="row">
+              <span><b>Projects</b><span class="w">{{ item.weights.projects * 100 }}% of the score</span></span>
+              <b>{{ item.projectCount }} of {{ item.minProjects }} asked for</b>
+            </div>
+          }
+          @if (item.weights.languages > 0) {
+            <div class="row">
+              <span><b>Languages</b><span class="w">{{ item.weights.languages * 100 }}% of the score</span></span>
+              <b>{{ item.matchedLanguages.length }} of {{ item.matchedLanguages.length + item.missingLanguages.length }}{{ item.missingLanguages.length ? ' · missing ' + item.missingLanguages.join(', ') : '' }}</b>
+            </div>
+          }
+          @if (item.weights.references > 0) {
+            <div class="row">
+              <span><b>References</b><span class="w">{{ item.weights.references * 100 }}% of the score</span></span>
+              <b>{{ item.referenceCount }} of {{ item.minReferences }} asked for</b>
+            </div>
+          }
           <div class="row"><span><b>What happens to a low score</b></span><b style="font-weight:500;color:var(--muted)">Nothing automatic. A recruiter still sees you.</b></div>
         </div>
 

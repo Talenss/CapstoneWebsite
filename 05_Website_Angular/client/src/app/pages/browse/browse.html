@@ -260,6 +260,30 @@
               <span><b>Experience</b><span class="w">{{ row.s.weights.experience * 100 }}% of the score</span></span>
               <b [style.color]="row.s.expMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ row.s.seekerMonths }} mo · asks for {{ row.posting.minExperienceMonths || 0 }} mo</b>
             </div>
+            @if (row.s.weights.certifications > 0) {
+              <div class="row">
+                <span><b>Certificates</b><span class="w">{{ row.s.weights.certifications * 100 }}% of the score</span></span>
+                <b>{{ row.s.matchedCertifications.length }} of {{ row.s.matchedCertifications.length + row.s.missingCertifications.length }}{{ row.s.missingCertifications.length ? ' · missing ' + row.s.missingCertifications.join(', ') : '' }}</b>
+              </div>
+            }
+            @if (row.s.weights.projects > 0) {
+              <div class="row">
+                <span><b>Projects</b><span class="w">{{ row.s.weights.projects * 100 }}% of the score</span></span>
+                <b>{{ row.s.projectCount }} of {{ row.s.minProjects }} asked for</b>
+              </div>
+            }
+            @if (row.s.weights.languages > 0) {
+              <div class="row">
+                <span><b>Languages</b><span class="w">{{ row.s.weights.languages * 100 }}% of the score</span></span>
+                <b>{{ row.s.matchedLanguages.length }} of {{ row.s.matchedLanguages.length + row.s.missingLanguages.length }}{{ row.s.missingLanguages.length ? ' · missing ' + row.s.missingLanguages.join(', ') : '' }}</b>
+              </div>
+            }
+            @if (row.s.weights.references > 0) {
+              <div class="row">
+                <span><b>References</b><span class="w">{{ row.s.weights.references * 100 }}% of the score</span></span>
+                <b>{{ row.s.referenceCount }} of {{ row.s.minReferences }} asked for</b>
+              </div>
+            }
             <div class="row"><span><b>If your score is low</b></span><b style="font-weight:500;color:var(--muted)">You still appear on the recruiter’s list.</b></div>
           } @else {
             <div class="row"><span><b>How scoring works</b></span><b style="font-weight:500;color:var(--muted)">Skills {{ postingWeights(row.posting).skills * 100 }}% · education {{ postingWeights(row.posting).education * 100 }}% · experience {{ postingWeights(row.posting).experience * 100 }}%</b></div>
