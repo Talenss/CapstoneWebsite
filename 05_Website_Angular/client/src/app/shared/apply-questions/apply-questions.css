@@ -1,5 +1,14 @@
 /* Sits on the same modal chrome the rest of the site uses, so this reads as
-   one more step in applying rather than a different kind of screen. */
+   one more step in applying rather than a different kind of screen.
+
+   It has to sit ABOVE it, though. The opening's own sheet is a .modal-back at
+   z-index 110 and stays open behind this dialog on purpose, so that cancelling
+   returns the applicant to what they were reading. Both pages render this
+   component before that sheet, and at equal z-index the later element in the
+   document wins — so without the line below this dialog opened BEHIND the
+   sheet, the applicant saw nothing happen, and an opening that asked questions
+   could not be applied to at all. */
+.modal-back { z-index: 120; }
 .q { margin-bottom: 18px; }
 .q:last-of-type { margin-bottom: 6px; }
 .q label {
