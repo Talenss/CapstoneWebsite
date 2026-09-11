@@ -745,7 +745,7 @@ export class ResumeBuilder implements OnInit {
     { id: 'banner', label: 'Banner', note: 'Dark header band', suits: 'Sales, events, customer-facing roles' },
     { id: 'split', label: 'Split', note: 'Name / contact split', suits: 'Administration, coordination' },
     { id: 'bar', label: 'Bar', note: 'Filled headings', suits: 'Retail, operations, logistics' },
-    { id: 'categorized', label: 'Rail', note: 'Left accent rail', suits: 'Any role wanting a little colour' },
+    { id: 'rail', label: 'Rail', note: 'Left accent rail', suits: 'Any role wanting a little colour' },
     // The six added to the ATS set. Names differ from the brief's so they
     // don't collide with the eight above ("Classic" and "Executive" were
     // already taken by a different look).

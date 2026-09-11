@@ -46,7 +46,7 @@ export const WEIGHT_STEP = 5;
  *  ResumeDesign union in models.ts, the whitelist in server routes/resumes.ts,
  *  and the CHECK constraint on the resumes table. */
 export const DESIGNS: string[] = [
-  'classic', 'modern', 'minimal', 'executive', 'banner', 'split', 'bar', 'categorized',
+  'classic', 'modern', 'minimal', 'executive', 'banner', 'split', 'bar', 'rail',
   'traditional', 'clean', 'compact', 'senior', 'graduate', 'technical',
 ];
 

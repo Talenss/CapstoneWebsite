@@ -59,12 +59,11 @@ export class MyResumes implements OnInit {
     return t.charAt(0).toUpperCase() + t.slice(1);
   }
 
-  /** The design's on-screen name. 'categorized' is shown as "Rail" in the
-   *  builder's picker, so it has to read the same here rather than exposing
-   *  the stored value. */
+  /** The design's on-screen name. Every design id is now the lowercase form
+   *  of the name the builder's picker shows, so capitalising it is enough and
+   *  there is no special case left to keep in step. */
   designLabel(d: ResumeDesign | undefined): string {
     if (!d) return 'Classic';
-    if (d === 'categorized') return 'Rail';
     return d.charAt(0).toUpperCase() + d.slice(1);
   }
 

@@ -76,10 +76,10 @@
 /* 7 · Bar — filled heading bands */
 .sheet.rz-bar,.sheet.rz-bar h1{font-family:Arial,Helvetica,sans-serif}
 .sheet.rz-bar h2{background:#F3E9CE;border-bottom:none;padding:4px 10px;color:#1a1a1a;letter-spacing:1.2px}
-/* 8 · Categorized — left accent rail */
-.sheet.rz-categorized,.sheet.rz-categorized h1{font-family:Helvetica,Arial,sans-serif}
-.sheet.rz-categorized{border-left:4px solid #16305C}
-.sheet.rz-categorized h2{color:#16305C;border-bottom:none;letter-spacing:2px}
+/* 8 · Rail — left accent rail */
+.sheet.rz-rail,.sheet.rz-rail h1{font-family:Helvetica,Arial,sans-serif}
+.sheet.rz-rail{border-left:4px solid #16305C}
+.sheet.rz-rail h2{color:#16305C;border-bottom:none;letter-spacing:2px}
 
 /* ---- the six added designs ----
    Distinct at a glance, but only through typeface, heading treatment,

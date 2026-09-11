@@ -188,8 +188,15 @@ export async function runMigrations(): Promise<void> {
   // than assumed. Databases upgraded by the line above have no CHECK at all —
   // DROP ... IF EXISTS makes that case a no-op instead of an error.
   await exec('ALTER TABLE resumes DROP CONSTRAINT IF EXISTS resumes_design_check');
+  // The eighth design was stored as 'categorized' while every screen called it
+  // "Rail". The identifier now matches the name, so rows written under the old
+  // one are carried over. This UPDATE must run AFTER the DROP and BEFORE the
+  // ADD: put the new constraint on first and every pre-existing 'categorized'
+  // row violates it, which fails the migration and, in production, stops the
+  // server from booting at all.
+  await exec(`UPDATE resumes SET design = 'rail' WHERE design = 'categorized'`);
   await exec(`ALTER TABLE resumes ADD CONSTRAINT resumes_design_check CHECK (design IN (
-    'classic','modern','minimal','executive','banner','split','bar','categorized',
+    'classic','modern','minimal','executive','banner','split','bar','rail',
     'traditional','clean','compact','senior','graduate','technical'))`);
 
   // resume_skills.evidence_sources — the full list of places a skill was

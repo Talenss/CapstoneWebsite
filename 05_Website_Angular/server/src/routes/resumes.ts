@@ -55,8 +55,14 @@ router.post('/save', async (req, res) => {
   // union, and the CHECK constraint on resumes.design. An unknown value falls
   // back rather than failing the save, so a resume written by a newer build
   // still saves against an older server.
-  const design = ['classic', 'modern', 'minimal', 'executive', 'banner', 'split', 'bar', 'categorized',
-    'traditional', 'clean', 'compact', 'senior', 'graduate', 'technical'].includes(R.design) ? R.design : 'classic';
+  // 'categorized' was this design's stored id before it was renamed to match
+  // the name every screen shows. It is mapped rather than left to the fallback
+  // below, because a browser still holding the old build would otherwise have
+  // its save silently rewritten to 'classic' — losing the user's choice
+  // without reporting anything.
+  const askedDesign = R.design === 'categorized' ? 'rail' : R.design;
+  const design = ['classic', 'modern', 'minimal', 'executive', 'banner', 'split', 'bar', 'rail',
+    'traditional', 'clean', 'compact', 'senior', 'graduate', 'technical'].includes(askedDesign) ? askedDesign : 'classic';
   const p = R.personal && typeof R.personal === 'object' ? R.personal : {};
 
   // Section arrays are clamped before they reach the transaction. Each skill

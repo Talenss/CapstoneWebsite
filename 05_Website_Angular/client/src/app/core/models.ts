@@ -60,7 +60,7 @@ export type Template = 'chronological' | 'functional' | 'combination';
  *  the Template order, and the builder says so on screen rather than leaving
  *  the Template radio looking as though it still applies. */
 export type ResumeDesign =
-  | 'classic' | 'modern' | 'minimal' | 'executive' | 'banner' | 'split' | 'bar' | 'categorized'
+  | 'classic' | 'modern' | 'minimal' | 'executive' | 'banner' | 'split' | 'bar' | 'rail'
   | 'traditional' | 'clean' | 'compact' | 'senior' | 'graduate' | 'technical';
 export type EmploymentType = 'full-time' | 'part-time' | 'contract' | 'internship';
 /* The application pipeline, aligned to the partner's own eight stages
