@@ -1,0 +1,46 @@
+<div class="modal-back show" (click)="$event.target === $event.currentTarget && cancelled.emit()">
+  <div appFocusTrap class="modal">
+    <button class="close-x" type="button" aria-label="Close" (click)="cancelled.emit()">&times;</button>
+    <div class="modal-head">
+      <h2>A few questions first</h2>
+      <p class="sub">{{ posting().title }}</p>
+    </div>
+    <div class="modal-body">
+      <!-- Said plainly, because an applicant who thinks these are scored will
+           write to a marking scheme that does not exist. -->
+      <p class="qnote">
+        {{ posting().company?.name || 'This employer' }} asks everyone who applies to this opening the same
+        {{ questions().length === 1 ? 'question' : questions().length + ' questions' }}.
+        Your answers go to the recruiter as you write them. They are not scored and they do not change your
+        match percentage.
+      </p>
+
+      @for (q of questions(); track q.id; let i = $index) {
+        <div class="q">
+          <label [attr.for]="'q-' + q.id"><span class="num">{{ i + 1 }}.</span>{{ q.prompt }}</label>
+          <textarea [id]="'q-' + q.id" [attr.maxlength]="MAX_LEN"
+                    [class.bad]="missing(q.id!)"
+                    [attr.aria-invalid]="missing(q.id!) ? 'true' : null"
+                    [attr.aria-describedby]="missing(q.id!) ? 'qe-' + q.id : null"
+                    [value]="valueOf(q.id!)" (input)="set(q.id!, $event)"></textarea>
+          @if (missing(q.id!)) {
+            <p class="err" [id]="'qe-' + q.id">This one still needs an answer.</p>
+          } @else if (valueOf(q.id!).length > MAX_LEN - 200) {
+            <p class="count">{{ MAX_LEN - valueOf(q.id!).length }} characters left</p>
+          }
+        </div>
+      }
+    </div>
+    <div class="modal-foot">
+      @if (tried() && unanswered() > 0) {
+        <span role="alert" style="font-size:13px;color:var(--accent-deep);margin-right:auto">
+          {{ unanswered() }} still unanswered.
+        </span>
+      }
+      <button class="btn ghost" type="button" (click)="cancelled.emit()">Cancel</button>
+      <button class="btn primary" type="button" [disabled]="sending()" (click)="submit()">
+        @if (sending()) { <span class="spinner"></span> Sending… } @else { Send application }
+      </button>
+    </div>
+  </div>
+</div>

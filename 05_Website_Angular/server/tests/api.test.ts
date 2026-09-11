@@ -835,11 +835,16 @@ test('a recruiter can set the scoring weights on their own opening', async () =>
   assert.equal(made.body.ok, true, made.body.error);
   // Whole percentages on the wire, the same units the column stores and the
   // recruiter typed — so "must total 100" stays an exact integer check.
-  assert.deepEqual(made.body.posting.weights, { skills: 70, education: 15, experience: 15, certifications: 0 });
+  // The four optional components the recruiter left alone come back as 0, not
+  // absent: an opening that scores nothing on them is a stated fact, and it is
+  // why openings written before those columns existed still total 100.
+  const seven = { skills: 70, education: 15, experience: 15,
+    certifications: 0, projects: 0, languages: 0, references: 0 };
+  assert.deepEqual(made.body.posting.weights, seven);
 
   // And they survive a round trip rather than only existing in the response.
   const back = await hr('postings/get', { id: made.body.posting.id });
-  assert.deepEqual(back.body.posting.weights, { skills: 70, education: 15, experience: 15, certifications: 0 });
+  assert.deepEqual(back.body.posting.weights, seven);
 });
 
 test('an opening that sets no weights reports none, rather than a copy of the defaults', async () => {
@@ -917,7 +922,8 @@ test('the score a seeker is given uses the opening’s own weights', async () =>
   const fraction = s.matchedSkills.length / 4;
   assert.equal(s.score, Math.floor(fraction * 80 + 10 + 10 + 0.5),
     'the score must be computed on 80/10/10, not the site default');
-  assert.deepEqual(s.weights, { skills: 0.8, education: 0.1, experience: 0.1, certifications: 0 },
+  assert.deepEqual(s.weights, { skills: 0.8, education: 0.1, experience: 0.1,
+    certifications: 0, projects: 0, languages: 0, references: 0 },
     'and it must report the split it used, as fractions');
 });
 
@@ -1323,7 +1329,8 @@ test('a recruiter can put part of the score on certifications, over HTTP', async
   });
   assert.equal(made.body.ok, true, made.body.error);
   assert.deepEqual(made.body.posting.weights,
-    { skills: 40, education: 20, experience: 20, certifications: 20 });
+    { skills: 40, education: 20, experience: 20, certifications: 20,
+      projects: 0, languages: 0, references: 0 });
   assert.deepEqual(made.body.posting.certifications, ['CCNA'],
     'the duplicate is dropped on the normalised form, so the component can be scored out of 1');
 
@@ -1350,4 +1357,256 @@ test('a recruiter can put part of the score on certifications, over HTTP', async
   });
   assert.equal(off.body.ok, false);
   assert.match(String(off.body.error), /at least 10%/);
+});
+
+test('an opening can ask its own questions, and they must be answered to apply', async () => {
+  /* THE RECRUITER'S SCREENING QUESTIONS, end to end. What matters here is
+     that "mandatory" is a rule the SERVER keeps, not a courtesy the apply
+     screen extends: the questions are read from the database, so a client
+     that simply sends no answers is refused rather than obeyed. */
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+
+  const made = await hr('postings/save', {
+    posting: {
+      title: 'Screened Support Role', department: 'Information Technology',
+      employmentType: 'full-time', description: 'A role used to check screening questions.',
+      educationLevel: 'none', minExperienceMonths: 0, skills: ['Communication'],
+      questions: [{ prompt: 'How soon can you start?' }, { prompt: 'Are you willing to work on site?' }],
+    },
+  });
+  assert.equal(made.body.ok, true, made.body.error);
+  const posting = made.body.posting;
+  assert.equal(posting.questions.length, 2);
+  assert.deepEqual(posting.questions.map((q: any) => q.prompt),
+    ['How soon can you start?', 'Are you willing to work on site?'],
+    'the questions come back in the order the recruiter wrote them');
+
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const rid = (await seeker('resumes/list')).body.resumes[0].id;
+
+  // No answers at all.
+  const none = await seeker('applications/apply', { resumeId: rid, postingId: posting.id });
+  assert.equal(none.body.ok, false, 'an unanswered question must stop the application');
+  assert.match(String(none.body.error), /How soon can you start\?/,
+    'the refusal names the question, so the applicant knows which one to go back to');
+
+  // One answered, one blank — still refused, and it names the blank one.
+  const half = await seeker('applications/apply', {
+    resumeId: rid, postingId: posting.id,
+    answers: [{ questionId: posting.questions[0].id, answer: 'Two weeks' },
+              { questionId: posting.questions[1].id, answer: '   ' }],
+  });
+  assert.equal(half.body.ok, false);
+  assert.match(String(half.body.error), /willing to work on site/);
+
+  // Both answered: accepted, and the recruiter reads them beside the resume.
+  const done = await seeker('applications/apply', {
+    resumeId: rid, postingId: posting.id,
+    answers: [{ questionId: posting.questions[0].id, answer: 'Two weeks' },
+              { questionId: posting.questions[1].id, answer: 'Yes, three days a week' }],
+  });
+  assert.equal(done.body.ok, true, done.body.error);
+
+  const ranked = await hr('applications/ranked', { postingId: posting.id });
+  const row = ranked.body.rows.find((r: any) => r.resume?.id === rid);
+  assert.ok(row, 'the applicant must be on the list');
+  assert.deepEqual(row.answers.map((a: any) => [a.question, a.answer]), [
+    ['How soon can you start?', 'Two weeks'],
+    ['Are you willing to work on site?', 'Yes, three days a week'],
+  ], 'each answer arrives beside the question it answers, in the recruiter’s own order');
+
+  // And the answers are not part of the score: nothing about them can move it.
+  assert.equal(typeof row.score, 'number');
+});
+
+test('an opening with no questions still accepts a plain application', async () => {
+  /* The guard above must not become a tax on every other opening. Most
+     openings ask nothing, and applying to one has to stay a single call with
+     no answers in it. */
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const made = await hr('postings/save', {
+    posting: {
+      title: 'Unscreened Role', department: 'Information Technology',
+      employmentType: 'full-time', description: 'A role that asks no questions at all.',
+      educationLevel: 'none', minExperienceMonths: 0, skills: ['Communication'],
+    },
+  });
+  assert.equal(made.body.ok, true, made.body.error);
+  assert.deepEqual(made.body.posting.questions, []);
+
+  const seeker = client();
+  await seeker('auth/login', { email: 'ana@demo.ph', password: 'demo123' });
+  const rid = (await seeker('resumes/list')).body.resumes[0].id;
+  const res = await seeker('applications/apply', { resumeId: rid, postingId: made.body.posting.id });
+  assert.equal(res.body.ok, true, res.body.error);
+});
+
+test('private links reach the recruiter and never the resume the engine scores', async () => {
+  /* The applicant's portfolio and certificate URLs are deliberately kept OFF
+     the document — that is the whole point of the feature — while still
+     reaching the person doing the screening. Two things are checked: they
+     survive the round trip, and they change no score. */
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const before = (await seeker('resumes/list')).body.resumes[0];
+
+  const saved = await seeker('resumes/save', {
+    resume: {
+      ...before,
+      links: [
+        { label: 'Portfolio', url: 'https://example.ph/portfolio' },
+        { label: 'Bad', url: 'javascript:alert(1)' },      // never stored
+        { label: 'Relative', url: '/not-a-real-address' }, // never stored
+      ],
+    },
+  });
+  assert.equal(saved.body.ok, true, saved.body.error);
+  assert.deepEqual(saved.body.resume.links, [{ url: 'https://example.ph/portfolio', label: 'Portfolio' }],
+    'only http(s) addresses are kept — a javascript: URL would run in the recruiter’s browser');
+
+  // The link is not a resume section, so it cannot move a score.
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const pid = (await hr('postings/mine')).body.postings[0].id;
+  const withLink = await seeker('match/score', { resumeId: before.id, postingId: pid });
+  const stripped = await seeker('resumes/save', { resume: { ...before, links: [] } });
+  assert.equal(stripped.body.ok, true);
+  const withoutLink = await seeker('match/score', { resumeId: before.id, postingId: pid });
+  assert.equal(withLink.body.score, withoutLink.body.score,
+    'adding or removing a link must not change the score by a single point');
+});
+
+test('a section the applicant switches off leaves the resume and the score', async () => {
+  /* HIDING IS ONE DECISION WITH TWO CONSEQUENCES. A hidden section is left
+     off the document AND out of the score, so the number a recruiter reads
+     always describes the sheet in front of them. A hidden section that still
+     scored would be marks awarded for something they will never see. */
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const made = await hr('postings/save', {
+    posting: {
+      title: 'Certified Role', department: 'Information Technology',
+      employmentType: 'full-time', description: 'A role that puts part of the score on certificates.',
+      educationLevel: 'none', minExperienceMonths: 0, skills: ['Communication'],
+      certifications: ['CCNA'],
+      weights: { skills: 40, education: 20, experience: 20, certifications: 20 },
+    },
+  });
+  assert.equal(made.body.ok, true, made.body.error);
+  const pid = made.body.posting.id;
+
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const base = (await seeker('resumes/list')).body.resumes[0];
+
+  const shown = await seeker('resumes/save', {
+    resume: { ...base, certifications: [{ name: 'CCNA', year: '2024' }], hiddenSections: [] },
+  });
+  assert.equal(shown.body.ok, true, shown.body.error);
+  const scoredShown = await seeker('match/score', { resumeId: base.id, postingId: pid });
+  assert.equal(scoredShown.body.matchedCertifications.length, 1, 'the certificate counts while it is shown');
+
+  const hidden = await seeker('resumes/save', {
+    resume: { ...base, certifications: [{ name: 'CCNA', year: '2024' }], hiddenSections: ['certifications'] },
+  });
+  assert.equal(hidden.body.ok, true, hidden.body.error);
+  assert.deepEqual(hidden.body.resume.hiddenSections, ['certifications']);
+  assert.equal(hidden.body.resume.certifications.length, 1,
+    'the contents are KEPT — this is a switch, not a delete, and the builder has to be able to show it again');
+
+  const scoredHidden = await seeker('match/score', { resumeId: base.id, postingId: pid });
+  assert.equal(scoredHidden.body.matchedCertifications.length, 0,
+    'a section nobody will see must not earn marks');
+  assert.ok(scoredHidden.body.score < scoredShown.body.score,
+    `hiding a scored section must lower the score, got ${scoredHidden.body.score} vs ${scoredShown.body.score}`);
+
+  // And the recruiter never receives the hidden content at all.
+  const applied = await seeker('applications/apply', { resumeId: base.id, postingId: pid });
+  assert.equal(applied.body.ok, true, applied.body.error);
+  const ranked = await hr('applications/ranked', { postingId: pid });
+  const row = ranked.body.rows.find((r: any) => r.resume?.id === base.id);
+  assert.ok(row, 'the applicant must be on the list');
+  assert.equal(row.resume.certifications, undefined,
+    'the hidden section must not reach the recruiter’s screen, not even unrendered in the payload');
+
+  // Put it back, so the ordering of tests in this file cannot matter.
+  await seeker('resumes/save', { resume: { ...base, hiddenSections: [] } });
+});
+
+test('the three scored components cannot be switched off by a hand-written request', async () => {
+  /* parseHiddenSections keeps only the six names it knows. Education,
+     experience and skills are not among them: they are what every opening
+     scores, and a sheet without them is not a resume. The UI never offers
+     them, and this proves the UI is not the only thing stopping it. */
+  const seeker = client();
+  await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const base = (await seeker('resumes/list')).body.resumes[0];
+
+  const res = await seeker('resumes/save', {
+    resume: { ...base, hiddenSections: ['skills', 'education', 'experience', 'projects', 'nonsense'] },
+  });
+  assert.equal(res.body.ok, true, res.body.error);
+  assert.deepEqual(res.body.resume.hiddenSections, ['projects'],
+    'only the hideable name survives; the three scored ones and the invented one are dropped');
+  assert.ok(res.body.resume.skills.length > 0, 'skills are still on the resume');
+
+  await seeker('resumes/save', { resume: { ...base, hiddenSections: [] } });
+});
+
+test('a recruiter can score projects, languages and references too', async () => {
+  /* The three components added alongside certifications. Languages are
+     matched by name the way certificates are; projects and references are
+     counted against a stated minimum, the way experience is. */
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+
+  const made = await hr('postings/save', {
+    posting: {
+      title: 'Seven Component Role', department: 'Information Technology',
+      employmentType: 'full-time', description: 'A role that scores every section it can.',
+      educationLevel: 'none', minExperienceMonths: 0, skills: ['Communication'],
+      languages: ['Filipino', 'filipino'],   // the second is the same requirement
+      minProjects: 2, minReferences: 1,
+      weights: { skills: 40, education: 10, experience: 10, certifications: 10, projects: 10, languages: 10, references: 10 },
+    },
+  });
+  assert.equal(made.body.ok, true, made.body.error);
+  const p = made.body.posting;
+  assert.deepEqual(p.weights,
+    { skills: 40, education: 10, experience: 10, certifications: 10, projects: 10, languages: 10, references: 10 });
+  assert.deepEqual(p.languages, ['Filipino'], 'the duplicate is folded, so the component can be scored out of 1');
+  assert.equal(p.minProjects, 2);
+  assert.equal(p.minReferences, 1);
+
+  // They survive the round trip rather than only existing in the response.
+  const back = await hr('postings/get', { id: p.id });
+  assert.equal(back.body.posting.minProjects, 2);
+  assert.deepEqual(back.body.posting.languages, ['Filipino']);
+
+  const seeker = client();
+  await seeker('auth/login', { email: 'ana@demo.ph', password: 'demo123' });
+  const base = (await seeker('resumes/list')).body.resumes[0];
+  await seeker('resumes/save', {
+    resume: {
+      ...base,
+      projects: [{ name: 'Barangay records system' }, { name: 'Capstone' }],
+      languages: [{ name: 'Filipino', proficiency: 'Native' }],
+      references: [{ name: 'Engr. Maria Santos' }],
+    },
+  });
+
+  const s = await seeker('match/score', { resumeId: base.id, postingId: p.id });
+  assert.equal(s.body.ok, true, s.body.error);
+  assert.deepEqual(s.body.matchedLanguages, ['Filipino']);
+  assert.deepEqual(s.body.missingLanguages, []);
+  assert.equal(s.body.projectCount, 2);
+  assert.equal(s.body.minProjects, 2);
+  assert.equal(s.body.referenceCount, 1);
+  assert.equal(s.body.minReferences, 1);
+  assert.deepEqual(s.body.weights,
+    { skills: 0.4, education: 0.1, experience: 0.1, certifications: 0.1, projects: 0.1, languages: 0.1, references: 0.1 },
+    'the split it reports is the split it used');
 });

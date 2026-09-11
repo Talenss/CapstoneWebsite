@@ -17,7 +17,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { scoreWith, DEFAULT_SETTINGS, skillNorm, SKILL_ALIASES, EDU_RANK, MatchSettings, UNEVIDENCED_CREDIT, EVIDENCE_KINDS, EvidenceKind, evidenceLabels } from '../src/lib/engine';
+import { scoreWith, DEFAULT_SETTINGS, skillNorm, SKILL_ALIASES, EDU_RANK, MatchSettings, UNEVIDENCED_CREDIT, EVIDENCE_KINDS, EvidenceKind, evidenceLabels, OPTIONAL_WEIGHTS } from '../src/lib/engine';
 import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK, UNEVIDENCED_CREDIT as CLIENT_UNEVIDENCED_CREDIT, evidenceLabels as clientEvidenceLabels, SKILL_CATEGORY, missingHint } from '../../client/src/app/core/engine';
 
 // ---------- helpers ----------
@@ -60,14 +60,18 @@ function score(r: ReturnType<typeof resume>, p: ReturnType<typeof posting>) {
 // ---------- the published constants ----------
 
 test('weights are the published 50/25/25 and sum to 1', () => {
-  /* Certifications are the optional fourth component and sit at 0, so the
-     published split is still 50/25/25 across three and the four still sum to
-     1. That zero is the whole reason adding the component changed no score. */
-  assert.deepEqual(DEFAULT_SETTINGS.weights,
-    { skills: 0.5, education: 0.25, experience: 0.25, certifications: 0 });
+  /* Four of the seven components are optional and sit at 0, so the published
+     split is still 50/25/25 across the compulsory three and all seven still
+     sum to 1. Those zeros are the whole reason adding components changed no
+     score that had already been computed. */
+  assert.deepEqual(DEFAULT_SETTINGS.weights, {
+    skills: 0.5, education: 0.25, experience: 0.25,
+    certifications: 0, projects: 0, languages: 0, references: 0,
+  });
   assert.deepEqual(WEIGHTS, DEFAULT_SETTINGS.weights); // client mirrors server
   const w = DEFAULT_SETTINGS.weights;
-  assert.equal(w.skills + w.education + w.experience + w.certifications, 1);
+  assert.equal(Object.values(w).reduce((a, b) => a + b, 0), 1);
+  for (const k of OPTIONAL_WEIGHTS) assert.equal(w[k], 0, `${k} must default to 0`);
 });
 
 test('tier thresholds are the published 80 (strong) and 50 (related)', () => {
@@ -398,7 +402,10 @@ test('the weights a score was computed with travel with the score', () => {
   // a breakdown has to be able to state the split its own number came from.
   const r = resume(['JavaScript']);
   const custom = score(r, posting(['JavaScript'], 'bachelor', 0, { skills: 60, education: 20, experience: 20 }));
-  assert.deepEqual(custom.weights, { skills: 0.6, education: 0.2, experience: 0.2, certifications: 0 });
+  assert.deepEqual(custom.weights, {
+    skills: 0.6, education: 0.2, experience: 0.2,
+    certifications: 0, projects: 0, languages: 0, references: 0,
+  });
 
   const inherited = score(r, posting(['JavaScript']));
   assert.deepEqual(inherited.weights, DEFAULT_SETTINGS.weights);

@@ -554,6 +554,80 @@
               }
             </div>
             <button class="add" type="button" (click)="addReference()">+ Add reference</button>
+
+            <!-- PRIVATE LINKS. Deliberately the last section on this step and
+                 marked as not-on-the-sheet in the heading itself: an applicant
+                 who believed these were printed would leave their portfolio
+                 off the document thinking it was already there. -->
+            <h3 class="grp">Links for the recruiter <span class="opt">not printed on your resume</span></h3>
+            <p class="hint" style="margin-bottom:12px">
+              Paste a link to your portfolio, your GitHub, a certificate, a demo video, anything you want the
+              person screening you to be able to open. These go to the recruiter's screen and stay
+              <b>off your resume</b> — a long URL is a line of noise on a printed sheet, and software reading
+              the document cannot follow a link anyway. Nothing here changes your score.
+            </p>
+            <div>
+              @for (l of resume().links || []; track $index) {
+                <div class="item">
+                  <div class="tools">
+                    <button class="mv" type="button" [disabled]="$index === 0"
+                            [attr.aria-label]="'Move this link up'" title="Move up"
+                            (click)="moveLink($index, -1)">&uarr;</button>
+                    <button class="mv" type="button" [disabled]="$index === (resume().links || []).length - 1"
+                            [attr.aria-label]="'Move this link down'" title="Move down"
+                            (click)="moveLink($index, 1)">&darr;</button>
+                    <button class="kill" type="button" (click)="removeLink($index)">Remove</button>
+                  </div>
+                  <div class="row2">
+                    <div class="field">
+                      <label [for]="'lnk-label-' + $index">What is it <span class="opt">optional</span></label>
+                      <input type="text" [id]="'lnk-label-' + $index" placeholder="Portfolio"
+                             [value]="l.label || ''" (input)="updateLink($index, 'label', inputValue($event))">
+                    </div>
+                    <div class="field">
+                      <label [for]="'lnk-url-' + $index">Link</label>
+                      <input type="url" [id]="'lnk-url-' + $index" placeholder="https://github.com/yourname"
+                             [value]="l.url" (input)="updateLink($index, 'url', inputValue($event))"
+                             [attr.aria-invalid]="linkBad(l) ? 'true' : null"
+                             [attr.aria-describedby]="linkBad(l) ? 'lnk-err-' + $index : null">
+                      @if (linkBad(l)) {
+                        <p class="hint" [id]="'lnk-err-' + $index" style="color:var(--accent-deep);margin-top:5px">
+                          Start the address with https:// so the recruiter can open it.
+                        </p>
+                      }
+                    </div>
+                  </div>
+                </div>
+              } @empty {
+                <p style="color:var(--muted);font-size:13.5px;margin-bottom:14px">Nothing added yet.</p>
+              }
+            </div>
+            <button class="add" type="button" (click)="addLink()">+ Add link</button>
+
+            <!-- SECTIONS THE APPLICANT SWITCHES OFF. Placed after everything
+                 they could switch off, so the list above is what the
+                 checkboxes refer to. The contents are kept either way — this
+                 is a switch, not a delete, and it says so. -->
+            <h3 class="grp">Sections to leave out</h3>
+            <p class="hint" style="margin-bottom:12px">
+              Untick anything you would rather not show. What you untick is left off your resume
+              <b>and out of your match score</b>, so the percentage always describes the sheet the recruiter
+              is actually holding. Nothing is deleted — tick it again and it comes back exactly as you left it.
+            </p>
+            <div class="secgrid">
+              @for (sec of hideableSections; track sec.key) {
+                <label class="sectoggle" [class.off]="isHidden(sec.key)">
+                  <input type="checkbox" [checked]="!isHidden(sec.key)" (change)="toggleSection(sec.key)">
+                  <span class="sec-main">
+                    <b>{{ sec.label }}</b>
+                    <span class="sec-note">{{ sec.note }}</span>
+                  </span>
+                  @if (isHidden(sec.key) && sectionCount(sec.key)) {
+                    <span class="sec-kept">{{ sectionCount(sec.key) }} kept, not shown</span>
+                  }
+                </label>
+              }
+            </div>
           </section>
         }
 
@@ -670,8 +744,8 @@
               <div class="p-contact">{{ joinMeta([resume().personal.linkedin, resume().personal.portfolio], '  ·  ') }}</div>
             }
           </div>
-          @if (resume().personal.summary) {
-            <div class="p-sec"><h4>Professional Summary</h4><p style="font-size:11.5px">{{ resume().personal.summary }}</p></div>
+          @if (visibleSummary()) {
+            <div class="p-sec"><h4>Professional Summary</h4><p style="font-size:11.5px">{{ visibleSummary() }}</p></div>
           }
 
           <ng-template #eduSection>

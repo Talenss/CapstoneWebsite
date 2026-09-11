@@ -4,9 +4,10 @@ import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
-import { Company, MatchResult, Posting, Resume } from '../../core/models';
+import { ApplicationAnswer, Company, MatchResult, Posting, Resume } from '../../core/models';
 import { EDU_LABELS, WEIGHTS, experienceLabel, missingHint, scoreLocal, tierColor, tierLabel, tierOf, weightsFor, normSkill} from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
+import { ApplyQuestions } from '../../shared/apply-questions/apply-questions';
 import { Seo } from '../../core/seo';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { SelectOption } from '../../shared/select-options';
@@ -27,7 +28,7 @@ type SortKey = 'score' | 'new' | 'az';
 @Component({
   selector: 'app-browse',
   standalone: true,
-  imports: [RouterLink, Header, Footer, FocusTrapDirective, ...HlmSelectImports],
+  imports: [RouterLink, Header, Footer, FocusTrapDirective, ApplyQuestions, ...HlmSelectImports],
   templateUrl: './browse.html',
   styleUrl: './browse.css',
 })
@@ -262,19 +263,46 @@ export class Browse implements OnInit, OnDestroy {
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    // Topmost first. The question dialog opens over the detail one, so a
+    // single Escape that closed the sheet underneath would leave the
+    // questions floating over nothing.
+    if (this.asking()) { this.cancelAsk(); return; }
     if (this.current()) this.closeDetail();
   }
 
-  async applyNow(row: BrowseRow): Promise<void> {
+  /* THE OPENING'S SCREENING QUESTIONS, when it has any. Set to the row being
+     applied to, which is what puts the question dialog on screen; an opening
+     that asks nothing goes straight through as it always did. */
+  asking = signal<BrowseRow | null>(null);
+
+  applyNow(row: BrowseRow): void {
+    const r = this.resume();
+    if (!r || !r.id) return;
+    if ((row.posting.questions ?? []).length) { this.asking.set(row); return; }
+    void this.send(row, []);
+  }
+
+  cancelAsk(): void { this.asking.set(null); }
+
+  onAnswered(answers: ApplicationAnswer[]): void {
+    const row = this.asking();
+    if (row) void this.send(row, answers);
+  }
+
+  private async send(row: BrowseRow, answers: ApplicationAnswer[]): Promise<void> {
     const r = this.resume();
     if (!r || !r.id) return;
     this.applying.set(true);
-    const res = await this.api.applications.apply(r.id, row.posting.id);
+    const res = await this.api.applications.apply(r.id, row.posting.id, answers);
     this.applying.set(false);
     if (!res.ok) {
+      // The dialog stays open on a failure. Closing it would throw away
+      // answers the applicant has just typed, and a rejected application is
+      // exactly when they need them back.
       this.showToast(res.error);
       return;
     }
+    this.asking.set(null);
     this.appliedTo.update((list) => [...list, row.posting.id]);
     const title = row.posting.title;
     this.closeDetail();

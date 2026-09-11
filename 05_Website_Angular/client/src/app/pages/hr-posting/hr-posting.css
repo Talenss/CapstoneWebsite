@@ -100,3 +100,18 @@
 .date-clear{flex:none;padding:8px 12px;border:1px solid var(--rule);border-radius:var(--r);
   background:var(--paper);color:var(--muted);font-family:var(--body);font-size:12.5px;cursor:pointer}
 .date-clear:hover{color:var(--accent);border-color:var(--accent)}
+
+/* The recruiter's own screening questions. Numbered, because the applicant
+   answers them in this order and the reorder buttons only make sense once the
+   position is visible. */
+.qlist { list-style: decimal; margin: 10px 0 0; padding-left: 22px; display: grid; gap: 6px; }
+.qlist li {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card);
+}
+.qtext { flex: 1; font-size: 14px; overflow-wrap: anywhere; }
+.qbtns { display: flex; gap: 4px; flex-shrink: 0; }
+@media (max-width: 520px) {
+  .qlist li { flex-wrap: wrap; }
+  .qbtns { width: 100%; justify-content: flex-end; }
+}

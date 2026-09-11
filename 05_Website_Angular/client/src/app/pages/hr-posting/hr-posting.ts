@@ -6,7 +6,7 @@ import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { EduLevel, EmploymentType, Posting, Resume } from '../../core/models';
-import { EDU_LABELS, SKILL_BY_INDUSTRY, SKILL_CATALOGUE, THRESHOLDS, WEIGHTS, scoreLocal, tierColor } from '../../core/engine';
+import { EDU_LABELS, SKILL_BY_INDUSTRY, SKILL_CATALOGUE, THRESHOLDS, WEIGHTS, WEIGHT_FLOOR, WEIGHT_STEP, scoreLocal, tierColor } from '../../core/engine';
 import { reportInvalidFields } from '../../shared/invalid-fields';
 import { HlmComboboxImports } from '@spartan-ng/helm/combobox';
 import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
@@ -66,39 +66,89 @@ export class HrPosting {
   wSkills = signal(Math.round(WEIGHTS.skills * 100));
   wEdu = signal(Math.round(WEIGHTS.education * 100));
   wExp = signal(Math.round(WEIGHTS.experience * 100));
-  /* Certifications start at nothing, which is the whole design: the study's
-     default split is 50/25/25 across three, and this component exists only
-     for the recruiter who deliberately wants it. */
+  /* THE FOUR OPTIONAL COMPONENTS all start at nothing, which is the whole
+     design: the study's default split is 50/25/25 across three, and these
+     exist only for the recruiter who deliberately wants one of them. An
+     opening that never touches them scores exactly as it did before they
+     were added. */
   wCert = signal(0);
+  wProj = signal(0);
+  wLang = signal(0);
+  wRef = signal(0);
   certsVal = signal<string[]>([]);
   certInput = signal('');
+  langsVal = signal<string[]>([]);
+  langInput = signal('');
+  /* Projects and references are scored the way experience is — a count
+     against a stated minimum — so each needs its requirement as well as its
+     share. 0 means "no minimum", which scores full marks. */
+  minProjects = signal(0);
+  minReferences = signal(0);
 
-  /** The four as the engine will read them, or null when inheriting. */
+  /** All seven as the engine will read them, or null when inheriting. */
   weightPayload = computed(() => (this.customWeights()
-    ? { skills: this.wSkills(), education: this.wEdu(), experience: this.wExp(), certifications: this.wCert() }
+    ? {
+        skills: this.wSkills(), education: this.wEdu(), experience: this.wExp(),
+        certifications: this.wCert(), projects: this.wProj(),
+        languages: this.wLang(), references: this.wRef(),
+      }
     : null));
 
-  weightTotal = computed(() => this.wSkills() + this.wEdu() + this.wExp() + this.wCert());
+  weightTotal = computed(() =>
+    this.wSkills() + this.wEdu() + this.wExp()
+    + this.wCert() + this.wProj() + this.wLang() + this.wRef());
+
   /* The floor is policy, not arithmetic: a recruiter may decide a criterion
      matters less for a role, but switching one off entirely would score an
      applicant whose only strength is that criterion on a scale that cannot
      see them. Mirrored in routes/postings.ts and as a CHECK on the table. */
-  readonly WEIGHT_FLOOR = 10;
-  /* Certifications are exempt from the floor, and only certifications. The
-     other three describe every applicant; a certificate is a thing many
-     perfectly good candidates simply do not hold, so a recruiter has to be
-     able to leave it at nothing — and nothing is where it starts. */
+  readonly WEIGHT_FLOOR = WEIGHT_FLOOR;
+  /* Whole steps of 5. A weight is a judgement about what a role is worth,
+     not a measurement, and 5-point steps say that honestly — 37% skills
+     implies a precision no recruiter has. It also keeps the four optional
+     components arithmetically able to reach 100 alongside the three floors. */
+  readonly WEIGHT_STEP = WEIGHT_STEP;
+
+  /* The three core components are exempt from nothing; the four optional
+     ones are exempt from the floor. Skills, education and experience
+     describe every applicant. A certificate, a portfolio of projects, a
+     second language and a contactable referee are things plenty of perfectly
+     good candidates do not have, so a recruiter has to be able to leave each
+     at nothing — and nothing is where they all start. */
   weightsBelowFloor = computed(() =>
     this.wSkills() < this.WEIGHT_FLOOR || this.wEdu() < this.WEIGHT_FLOOR || this.wExp() < this.WEIGHT_FLOOR);
+  private offStep = computed(() =>
+    [this.wSkills(), this.wEdu(), this.wExp(), this.wCert(), this.wProj(), this.wLang(), this.wRef()]
+      .some((v) => v % this.WEIGHT_STEP !== 0));
   weightsValid = computed(() => !this.customWeights()
-    || (this.weightTotal() === 100 && !this.weightsBelowFloor()));
+    || (this.weightTotal() === 100 && !this.weightsBelowFloor() && !this.offStep()));
   weightError = computed(() => {
     if (!this.customWeights()) return null;
     if (this.weightsBelowFloor()) return `Skills, education and experience each have to be at least ${this.WEIGHT_FLOOR}%, those three cannot be switched off entirely.`;
-    if (this.wCert() < 0) return 'The certifications share cannot be negative.';
-    if (this.weightTotal() !== 100) return `The four have to add up to 100%. They add up to ${this.weightTotal()}%.`;
+    if (this.offStep()) return `Each share moves in steps of ${this.WEIGHT_STEP}%.`;
+    if (this.weightTotal() !== 100) return `The shares have to add up to 100%. They add up to ${this.weightTotal()}%.`;
     return null;
   });
+
+  /* The optional four, driven from one list so the form draws four identical
+     rows instead of four near-identical copies that can drift apart. */
+  readonly optionalWeightRows = [
+    { key: 'certifications', label: 'Certifications', value: this.wCert, set: (n: number) => this.wCert.set(n) },
+    { key: 'projects', label: 'Projects', value: this.wProj, set: (n: number) => this.wProj.set(n) },
+    { key: 'languages', label: 'Languages', value: this.wLang, set: (n: number) => this.wLang.set(n) },
+    { key: 'references', label: 'References', value: this.wRef, set: (n: number) => this.wRef.set(n) },
+  ] as const;
+
+  /* THE RECRUITER'S OWN SCREENING QUESTIONS.
+     Free text, because only the recruiter knows what this opening actually
+     needs to ask. Nothing here is scored and nothing is matched: the answers
+     are shown beside the applicant for a person to read. Every question is
+     mandatory — an applicant cannot submit until all of them are answered —
+     which is why the count is capped and each one is short enough to be read
+     at a glance on the apply screen. */
+  readonly MAX_QUESTIONS = 10;
+  questionsVal = signal<string[]>([]);
+  questionInput = signal('');
   todayStr = new Date().toISOString().slice(0, 10);
 
   titleInvalid = signal(false);
@@ -153,6 +203,8 @@ export class HrPosting {
     const posting = {
       skills, educationLevel: this.eduVal(), minExperienceMonths: this.monthsVal(),
       certifications: this.certsVal(),
+      languages: this.langsVal(),
+      minProjects: this.minProjects(), minReferences: this.minReferences(),
       weights: this.weightsValid() ? this.weightPayload() : null,
     };
     return known
@@ -204,12 +256,19 @@ export class HrPosting {
       this.monthsVal.set(p.minExperienceMonths || 0);
       this.deadlineVal.set(p.deadline || '');
       this.certsVal.set([...(p.certifications ?? [])]);
+      this.langsVal.set([...(p.languages ?? [])]);
+      this.minProjects.set(p.minProjects ?? 0);
+      this.minReferences.set(p.minReferences ?? 0);
+      this.questionsVal.set((p.questions ?? []).map((q) => q.prompt));
       if (p.weights) {
         this.customWeights.set(true);
         this.wSkills.set(p.weights.skills);
         this.wEdu.set(p.weights.education);
         this.wExp.set(p.weights.experience);
         this.wCert.set(p.weights.certifications ?? 0);
+        this.wProj.set(p.weights.projects ?? 0);
+        this.wLang.set(p.weights.languages ?? 0);
+        this.wRef.set(p.weights.references ?? 0);
       }
     }
 
@@ -267,14 +326,29 @@ export class HrPosting {
     d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
   setSkillInput(e: Event): void { this.skillInput.set((e.target as HTMLInputElement).value); }
 
+  /* Snapped to the step here as well as in the input's own `step` attribute.
+     The attribute governs the arrows and the slider; it does not stop a
+     number being typed or pasted straight into the box, and a 37 that reached
+     the payload would be refused by the server with an error the recruiter
+     did not cause. Snapping as it is typed keeps the form and the rule the
+     same rule. */
   private pct(e: Event): number {
-    const n = Math.round(Number((e.target as HTMLInputElement).value));
-    return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 0;
+    const n = Number((e.target as HTMLInputElement).value);
+    if (!Number.isFinite(n)) return 0;
+    const snapped = Math.round(n / WEIGHT_STEP) * WEIGHT_STEP;
+    return Math.min(100, Math.max(0, snapped));
   }
   setWSkills(e: Event): void { this.wSkills.set(this.pct(e)); }
   setWEdu(e: Event): void { this.wEdu.set(this.pct(e)); }
   setWExp(e: Event): void { this.wExp.set(this.pct(e)); }
-  setWCert(e: Event): void { this.wCert.set(this.pct(e)); }
+  setWeight(set: (n: number) => void, e: Event): void { set(this.pct(e)); }
+
+  private count(e: Event): number {
+    const n = Math.round(Number((e.target as HTMLInputElement).value));
+    return Number.isFinite(n) ? Math.min(50, Math.max(0, n)) : 0;
+  }
+  setMinProjects(e: Event): void { this.minProjects.set(this.count(e)); }
+  setMinReferences(e: Event): void { this.minReferences.set(this.count(e)); }
 
   toggleCustomWeights(e: Event): void {
     const on = (e.target as HTMLInputElement).checked;
@@ -289,6 +363,9 @@ export class HrPosting {
     this.wEdu.set(Math.round(WEIGHTS.education * 100));
     this.wExp.set(Math.round(WEIGHTS.experience * 100));
     this.wCert.set(0);
+    this.wProj.set(0);
+    this.wLang.set(0);
+    this.wRef.set(0);
   }
 
   /** Every skill the catalogue knows, for the combobox to search. The pool
@@ -371,6 +448,58 @@ export class HrPosting {
     this.certsVal.update((arr) => arr.filter((_, idx) => idx !== i));
   }
 
+  onLangKeydown(e: KeyboardEvent): void {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); this.addLang(this.langInput()); }
+  }
+
+  /** Free text, like certificates. Matched by name, so "Filipino" on the
+   *  opening and "Filipino" on the resume are the same requirement while
+   *  "Tagalog" is not — which is why the recruiter names the language the
+   *  way they expect to see it written. */
+  addLang(raw: string): void {
+    const l = String(raw).trim().slice(0, 80);
+    if (!l) return;
+    if (this.langsVal().some((x) => x.toLowerCase() === l.toLowerCase())) { this.showToast('Already required.'); return; }
+    this.langsVal.update((arr) => [...arr, l]);
+    this.langInput.set('');
+  }
+
+  removeLang(i: number): void {
+    this.langsVal.update((arr) => arr.filter((_, idx) => idx !== i));
+  }
+
+  onQuestionKeydown(e: KeyboardEvent): void {
+    // Enter only. A comma is ordinary punctuation inside a question, where it
+    // is a separator in a list of skills or certificates.
+    if (e.key === 'Enter') { e.preventDefault(); this.addQuestion(this.questionInput()); }
+  }
+
+  addQuestion(raw: string): void {
+    const q = String(raw).trim().slice(0, 300);
+    if (!q) return;
+    if (this.questionsVal().length >= this.MAX_QUESTIONS) {
+      this.showToast(`${this.MAX_QUESTIONS} questions is the most an opening can ask.`);
+      return;
+    }
+    if (this.questionsVal().some((x) => x.toLowerCase() === q.toLowerCase())) { this.showToast('Already asked.'); return; }
+    this.questionsVal.update((arr) => [...arr, q]);
+    this.questionInput.set('');
+  }
+
+  removeQuestion(i: number): void {
+    this.questionsVal.update((arr) => arr.filter((_, idx) => idx !== i));
+  }
+
+  moveQuestion(i: number, by: number): void {
+    const to = i + by;
+    this.questionsVal.update((arr) => {
+      if (to < 0 || to >= arr.length) return arr;
+      const next = [...arr];
+      [next[i], next[to]] = [next[to], next[i]];
+      return next;
+    });
+  }
+
   /** The pool chips are toggles, so a chip clicked by mistake is undone by
    *  clicking the same chip again. */
   toggleSkill(s: string): void {
@@ -418,6 +547,10 @@ export class HrPosting {
       skills, educationLevel: this.eduVal(),
       minExperienceMonths: Math.max(0, this.monthsVal() || 0),
       certifications: this.certsVal(),
+      languages: this.langsVal(),
+      minProjects: this.minProjects(),
+      minReferences: this.minReferences(),
+      questions: this.questionsVal().map((prompt) => ({ prompt })),
       deadline: this.deadlineVal() || null,
       status: this.postingStatus(),
       weights: this.weightPayload(),

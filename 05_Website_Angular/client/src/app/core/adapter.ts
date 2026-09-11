@@ -5,7 +5,7 @@
    ApiService without caring which mode is active.
    ============================================================ */
 import {
-  AdminRecruiter, AnalyzedResume, ApiResult, Application, Company, HrStats, InviteSchedule, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
+  AdminRecruiter, AnalyzedResume, ApiResult, Application, ApplicationAnswer, Company, HrStats, InviteSchedule, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
 
 export interface ApiAdapter {
   auth: {
@@ -59,7 +59,10 @@ export interface ApiAdapter {
     toggle(id: string): Promise<ApiResult<{ posting: Posting }>>;
   };
   applications: {
-    apply(resumeId: string, postingId: string): Promise<ApiResult<{ application: Application }>>;
+    /** `answers` carries the opening's screening questions, which are
+     *  mandatory when it has any. Optional here only so an opening with no
+     *  questions can be applied to with the same call. */
+    apply(resumeId: string, postingId: string, answers?: ApplicationAnswer[]): Promise<ApiResult<{ application: Application }>>;
     mine(): Promise<ApiResult<{ applications: Application[] }>>;
     ranked(postingId: string, opts?: RankedQuery): Promise<ApiResult<{
       posting: Posting; rows: RankedRow[];

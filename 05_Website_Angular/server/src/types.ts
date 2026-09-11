@@ -63,6 +63,10 @@ export interface ResumeRow {
    *  whether serializeResume emits skillEvidence at all, and so whether a
    *  matched skill with no source is scored at half credit or in full. */
   evidence_prompted: number;
+  /** Comma-separated section keys the applicant switched off, '' for none.
+   *  A hidden section is left off the printed sheet and out of the score;
+   *  see visibleResume() in lib/serializers. */
+  hidden_sections: string;
   created_at: string;
   updated_at: string;
 }
@@ -84,10 +88,17 @@ export interface PostingRow {
   weight_skills: number | null;
   weight_education: number | null;
   weight_experience: number | null;
-  /** The optional fourth component. NULL means 0 — the opening does not score
-   *  certifications — which is what every opening written before this column
-   *  existed carries, and why none of them needed rewriting. */
+  /** The optional components. NULL means 0 — the opening does not score that
+   *  section — which is what every opening written before each column existed
+   *  carries, and why none of them needed rewriting. */
   weight_certifications: number | null;
+  weight_projects: number | null;
+  weight_languages: number | null;
+  weight_references: number | null;
+  /** Minimum counts for the two sections scored the way experience is. 0
+   *  states no requirement, which scores full marks on that component. */
+  min_projects: number;
+  min_references: number;
 }
 
 export interface ApplicationRow {

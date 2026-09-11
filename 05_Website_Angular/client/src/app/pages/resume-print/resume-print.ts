@@ -3,7 +3,7 @@ import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
-import { DESIGN_ORDER } from '../../core/engine';
+import { DESIGN_ORDER, visibleResume } from '../../core/engine';
 import { Resume } from '../../core/models';
 
 type SectionKind = 'education' | 'experience' | 'skills' | 'projects' | 'certifications';
@@ -78,7 +78,13 @@ export class ResumePrint implements OnInit, OnDestroy {
       this.error.set(res.error);
       return;
     }
-    this.resume.set(res.resume);
+    /* THE SHEET IS THE VISIBLE RESUME, never the stored one.
+       A section the applicant switched off must not reach the document, and
+       their private links must never reach it at all — they exist precisely
+       so a URL stays off the printed page. Stripping here rather than in the
+       template means no design, present or future, can print one by accident:
+       the fourteen layouts render whatever object they are handed. */
+    this.resume.set(visibleResume(res.resume));
     /* This becomes the suggested PDF FILENAME when the applicant saves, and
        the recruiter sees that filename on the attachment. It used to carry
        this site's name, so people were sending "Juan Dela Cruz — Linaw

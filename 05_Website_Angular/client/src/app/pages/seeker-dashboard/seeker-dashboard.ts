@@ -5,9 +5,10 @@ import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { AppStatus, Application, Posting, RecommendationItem, Resume, StatusEvent } from '../../core/models';
+import { AppStatus, Application, ApplicationAnswer, Posting, RecommendationItem, Resume, StatusEvent } from '../../core/models';
 import { APPLICANT_REASON_LABELS, EDU_LABELS, missingHint, STATUS_LABELS, THRESHOLDS, WEIGHTS, scoreLocal, statusBadge, tierColor, tierLabel, tierOf } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
+import { ApplyQuestions } from '../../shared/apply-questions/apply-questions';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 
 type TierKey = 'strong' | 'possible' | 'related';
@@ -21,7 +22,7 @@ interface TierConfig { key: TierKey; title: string; badgeClass: string; note: st
 @Component({
   selector: 'app-seeker-dashboard',
   standalone: true,
-  imports: [RouterLink, Header, Footer, FocusTrapDirective, ...HlmSelectImports],
+  imports: [RouterLink, Header, Footer, FocusTrapDirective, ApplyQuestions, ...HlmSelectImports],
   templateUrl: './seeker-dashboard.html',
   styleUrl: './seeker-dashboard.css',
 })
@@ -321,23 +322,44 @@ export class SeekerDashboard implements OnInit {
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    // Topmost first: the question dialog opens over the opening's own sheet.
+    if (this.asking()) { this.cancelAsk(); return; }
     if (this.current()) this.closeApply();
   }
 
-  async applyNow(): Promise<void> {
+  /* THE OPENING'S SCREENING QUESTIONS, when it has any. Same component and
+     same rule as Browse: a question that is mandatory on one screen and
+     skippable on the other is not mandatory. */
+  asking = signal<RecommendationItem | null>(null);
+
+  applyNow(): void {
     const item = this.current();
     if (!item) return;
+    if ((item.posting.questions ?? []).length) { this.asking.set(item); return; }
+    void this.send(item, []);
+  }
+
+  cancelAsk(): void { this.asking.set(null); }
+
+  onAnswered(answers: ApplicationAnswer[]): void {
+    const item = this.asking();
+    if (item) void this.send(item, answers);
+  }
+
+  private async send(item: RecommendationItem, answers: ApplicationAnswer[]): Promise<void> {
     this.applying.set(true);
     const meRes = await this.api.auth.me();
     const activeResumeId = meRes.ok ? meRes.user?.activeResumeId : null;
     const res = activeResumeId
-      ? await this.api.applications.apply(activeResumeId, item.posting.id)
+      ? await this.api.applications.apply(activeResumeId, item.posting.id, answers)
       : ({ ok: false, error: 'No active resume.' } as const);
     this.applying.set(false);
     if (!res.ok) {
+      // The dialog stays open so the answers just typed are not thrown away.
       this.showToast(res.error);
       return;
     }
+    this.asking.set(null);
     const title = item.posting.title;
     this.closeApply();
     await this.render();

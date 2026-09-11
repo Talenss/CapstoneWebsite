@@ -515,27 +515,30 @@ test('a recruiter setting per-opening weights gets the same answer in both modes
   // And an accepted set must be stored the same way — whole percentages,
   // never a fraction on one side and a percentage on the other.
   const good = { skills: 70, education: 15, experience: 15 };
-  // Certifications come back as 0 rather than absent: the breakdown shown to
-  // an applicant has to add up to the score printed beside it, and a null
-  // fourth term would not.
-  const stored = { ...good, certifications: 0 };
+  // The four optional components come back as 0 rather than absent: the
+  // breakdown shown to an applicant has to add up to the score printed beside
+  // it, and a null term would not. Both modes have to agree on that, because
+  // an opening saved in one and read in the other is the same opening.
+  const stored = { ...good, certifications: 0, projects: 0, languages: 0, references: 0 };
   const d: any = await demo.postings.save({ ...base, weights: good } as any);
   const a: any = await api('postings/save', { posting: { ...base, weights: good } });
   assert.ok(d.ok && a.ok, `both modes must accept ${JSON.stringify(good)}`);
   assert.deepEqual(d.posting.weights, stored, 'demo mode stores whole percentages');
   assert.deepEqual(a.posting.weights, stored, 'api mode stores whole percentages');
 
-  /* And the fourth component itself agrees across the two. This is the pair
+  /* And an optional component itself agrees across the two. This is the pair
      that matters most for it: a recruiter sets a certifications share, and
      the live preview a seeker sees while editing has to equal the number the
-     server stores when they apply. */
+     server stores when they apply. The three the recruiter did not touch
+     still come back as 0 on both sides. */
   const withCerts = { skills: 40, education: 20, experience: 20, certifications: 20 };
+  const certStored = { ...withCerts, projects: 0, languages: 0, references: 0 };
   const certBase = { ...base, certifications: ['CCNA'] };
   const dCert: any = await demo.postings.save({ ...certBase, weights: withCerts } as any);
   const aCert: any = await api('postings/save', { posting: { ...certBase, weights: withCerts } });
   assert.ok(dCert.ok && aCert.ok, 'both modes must accept a four-way split');
-  assert.deepEqual(dCert.posting.weights, withCerts, 'demo mode stores the certifications share');
-  assert.deepEqual(aCert.posting.weights, withCerts, 'api mode stores the certifications share');
+  assert.deepEqual(dCert.posting.weights, certStored, 'demo mode stores the certifications share');
+  assert.deepEqual(aCert.posting.weights, certStored, 'api mode stores the certifications share');
   assert.deepEqual(dCert.posting.certifications, ['CCNA']);
   assert.deepEqual(aCert.posting.certifications, ['CCNA']);
 
@@ -546,4 +549,174 @@ test('a recruiter setting per-opening weights gets the same answer in both modes
   assert.ok(d2.ok && a2.ok);
   assert.equal(d2.posting.weights, null);
   assert.equal(a2.posting.weights, null);
+});
+
+test('screening questions behave identically in both modes', async () => {
+  /* The questions are what an applicant must get past to apply at all. A
+     demonstration in which they can be skipped, or in which editing the
+     opening silently destroys the answers already collected, would show the
+     panel a system that does not exist. */
+  await demo.auth.login('hr@demo.ph', 'demo123');
+  await api('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+
+  const base = {
+    title: 'Parity — screening questions', department: 'Information Technology',
+    employmentType: 'full-time' as const, description: 'An opening that asks its applicants two questions.',
+    educationLevel: 'none' as const, minExperienceMonths: 0, skills: ['Communication'],
+  };
+  const asked = [{ prompt: 'Notice period?' }, { prompt: 'Expected salary?' },
+                 { prompt: 'notice PERIOD?' }];   // the third is the first again
+
+  const d: any = await demo.postings.save({ ...base, questions: asked } as any);
+  const a: any = await api('postings/save', { posting: { ...base, questions: asked } });
+  assert.equal(d.ok, true, `demo: ${d.error ?? ''}`);
+  assert.equal(a.ok, true, `api: ${a.error ?? ''}`);
+  assert.deepEqual(d.posting.questions.map((q: any) => q.prompt), ['Notice period?', 'Expected salary?'],
+    'demo mode must fold the duplicate prompt');
+  assert.deepEqual(a.posting.questions.map((q: any) => q.prompt), ['Notice period?', 'Expected salary?'],
+    'api mode must fold the duplicate prompt');
+
+  await demo.auth.login('marco@demo.ph', 'demo123');
+  await api('auth/login', { email: 'marco@demo.ph', password: 'demo123' });
+  // demo mode calls it `mine`; the HTTP route is `resumes/list`. Same list.
+  const dRid = (await demo.resumes.mine() as any).resumes[0].id;
+  const aRid = (await api('resumes/list')).resumes[0].id;
+
+  // Unanswered is refused in both, and both name the question rather than counting.
+  const dNo: any = await demo.applications.apply(dRid, d.posting.id);
+  const aNo: any = await api('applications/apply', { resumeId: aRid, postingId: a.posting.id });
+  assert.equal(dNo.ok, false, 'demo mode accepted an application with no answers');
+  assert.equal(aNo.ok, false, 'api mode accepted an application with no answers');
+  assert.match(String(dNo.error), /Notice period/);
+  assert.match(String(aNo.error), /Notice period/);
+
+  // Blank-but-present is refused in both, so neither can be satisfied with spaces.
+  const blanks = (qs: any[]) => qs.map((q) => ({ questionId: String(q.id), answer: '   ' }));
+  const dBlank: any = await demo.applications.apply(dRid, d.posting.id, blanks(d.posting.questions));
+  const aBlank: any = await api('applications/apply', { resumeId: aRid, postingId: a.posting.id, answers: blanks(a.posting.questions) });
+  assert.equal(dBlank.ok, false, 'demo mode accepted whitespace as an answer');
+  assert.equal(aBlank.ok, false, 'api mode accepted whitespace as an answer');
+
+  // Answered is accepted in both.
+  const real = (qs: any[]) => qs.map((q, i) => ({ questionId: String(q.id), answer: `answer ${i + 1}` }));
+  const dYes: any = await demo.applications.apply(dRid, d.posting.id, real(d.posting.questions));
+  const aYes: any = await api('applications/apply', { resumeId: aRid, postingId: a.posting.id, answers: real(a.posting.questions) });
+  assert.equal(dYes.ok, true, `demo: ${dYes.error ?? ''}`);
+  assert.equal(aYes.ok, true, `api: ${aYes.error ?? ''}`);
+
+  /* AND AN UNRELATED EDIT DESTROYS NOTHING. This is the case that was wrong
+     in api mode: every save deleted the question rows and reinserted them, so
+     rewriting the description threw away every answer already collected.
+     Demo mode kept them, which is precisely why the two had to be compared. */
+  await demo.auth.login('hr@demo.ph', 'demo123');
+  await api('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const keep = { ...base, description: 'A completely rewritten description of the role.',
+                 questions: [{ prompt: 'Notice period?' }, { prompt: 'Expected salary?' }] };
+  const dEd: any = await demo.postings.save({ ...keep, id: d.posting.id } as any);
+  const aEd: any = await api('postings/save', { posting: { ...keep, id: a.posting.id } });
+  assert.equal(dEd.ok, true, `demo: ${dEd.error ?? ''}`);
+  assert.equal(aEd.ok, true, `api: ${aEd.error ?? ''}`);
+
+  const dRank: any = await demo.applications.ranked(d.posting.id);
+  const aRank: any = await api('applications/ranked', { postingId: a.posting.id });
+  const dRow = dRank.rows.find((r: any) => r.resume?.id === dRid);
+  const aRow = aRank.rows.find((r: any) => r.resume?.id === aRid);
+  assert.equal(dRow?.answers?.length, 2, 'demo mode lost the answers when the description changed');
+  assert.equal(aRow?.answers?.length, 2, 'api mode lost the answers when the description changed');
+  assert.deepEqual(dRow.answers.map((x: any) => x.answer), ['answer 1', 'answer 2']);
+  assert.deepEqual(aRow.answers.map((x: any) => x.answer), ['answer 1', 'answer 2']);
+
+  // Rewording ONE question drops that answer and only that one, in both.
+  const rew = { ...base, questions: [{ prompt: 'Notice period?' }, { prompt: 'What salary are you expecting?' }] };
+  await demo.postings.save({ ...rew, id: d.posting.id } as any);
+  await api('postings/save', { posting: { ...rew, id: a.posting.id } });
+  const dRank2: any = await demo.applications.ranked(d.posting.id);
+  const aRank2: any = await api('applications/ranked', { postingId: a.posting.id });
+  const dLeft = dRank2.rows.find((r: any) => r.resume?.id === dRid)?.answers ?? [];
+  const aLeft = aRank2.rows.find((r: any) => r.resume?.id === aRid)?.answers ?? [];
+  assert.equal(dLeft.length, 1, 'demo mode kept an answer to wording nobody was asked');
+  assert.equal(aLeft.length, 1, 'api mode kept an answer to wording nobody was asked');
+  assert.equal(dLeft[0].answer, 'answer 1');
+  assert.equal(aLeft[0].answer, 'answer 1');
+});
+
+test('private links and hidden sections behave identically in both modes', async () => {
+  /* Both features decide what a recruiter is shown. A mode that printed a
+     link the other kept off the sheet, or scored a section the other hid,
+     would make the demonstration a misrepresentation of the live system. */
+  /* NOT liza — the password-policy test above changes her password in both
+     modes, so signing in as her here fails identically on both sides and the
+     comparison would pass while measuring nothing. */
+  const dl: any = await demo.auth.login('ana@demo.ph', 'demo123');
+  const al: any = await api('auth/login', { email: 'ana@demo.ph', password: 'demo123' });
+  assert.equal(dl.ok, true, `demo login: ${dl.error ?? ''}`);
+  assert.equal(al.ok, true, `api login: ${al.error ?? ''}`);
+
+  const payload = (id: any) => ({
+    id, title: 'Parity — links and hidden sections',
+    template: 'chronological', design: 'classic',
+    personal: { fullName: 'Ana Reyes', email: 'ana@demo.ph', phone: '0917 111 1111', address: 'Mabalacat', summary: 'Parity.' },
+    education: [{ school: 'HAU', degree: 'BS IT', level: 'bachelor', year: '2025' }],
+    experience: [{ position: 'Intern', company: 'Clark', months: 6, description: 'x' }],
+    skills: ['Communication'],
+    certifications: [{ name: 'CCNA', year: '2024' }],
+    languages: [{ name: 'Filipino' }],
+    links: [
+      { label: 'Portfolio', url: 'https://example.ph/p' },
+      { label: 'XSS', url: 'javascript:alert(1)' },
+      { label: 'Relative', url: '/local' },
+      { url: 'https://example.ph/bare' },
+    ],
+    hiddenSections: ['certifications', 'skills', 'nonsense'],  // two of these are not hideable
+  });
+
+  const d: any = await demo.resumes.save(payload(null) as any);
+  const a: any = await api('resumes/save', { resume: payload(null) });
+  assert.equal(d.ok, true, `demo: ${d.error ?? ''}`);
+  assert.equal(a.ok, true, `api: ${a.error ?? ''}`);
+
+  const norm = (ls: any[] = []) => ls.map((l) => `${l.label ?? ''}|${l.url}`).sort();
+  assert.deepEqual(norm(d.resume.links), norm(a.resume.links), 'the two modes kept different links');
+  assert.deepEqual(norm(a.resume.links), ['Portfolio|https://example.ph/p', '|https://example.ph/bare'].sort(),
+    'only the http(s) addresses survive — a javascript: URL would run in the recruiter’s browser');
+
+  assert.deepEqual(d.resume.hiddenSections, a.resume.hiddenSections, 'the two modes hid different sections');
+  assert.deepEqual(a.resume.hiddenSections, ['certifications'],
+    'skills cannot be hidden — it is one of the three every opening scores — and an invented name is dropped');
+  assert.ok((a.resume.skills ?? []).length > 0 && (d.resume.skills ?? []).length > 0,
+    'skills are still on the resume in both modes');
+  assert.equal(a.resume.certifications.length, 1, 'api mode keeps the hidden contents for the owner');
+  assert.equal(d.resume.certifications.length, 1, 'demo mode keeps the hidden contents for the owner');
+
+  /* The hidden section leaves the score in both, by the same number of
+     points: an opening that puts a fifth of the score on certificates. */
+  await demo.auth.login('hr@demo.ph', 'demo123');
+  await api('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const opening = {
+    title: 'Parity — certificate weighted', department: 'Information Technology',
+    employmentType: 'full-time' as const, description: 'Puts a fifth of the score on a certificate.',
+    educationLevel: 'none' as const, minExperienceMonths: 0, skills: ['Communication'],
+    certifications: ['CCNA'],
+    weights: { skills: 40, education: 20, experience: 20, certifications: 20 },
+  };
+  const dp: any = await demo.postings.save(opening as any);
+  const ap: any = await api('postings/save', { posting: opening });
+
+  await demo.auth.login('ana@demo.ph', 'demo123');
+  await api('auth/login', { email: 'ana@demo.ph', password: 'demo123' });
+
+  const dHidden: any = await demo.match.score(d.resume.id, dp.posting.id);
+  const aHidden: any = await api('match/score', { resumeId: a.resume.id, postingId: ap.posting.id });
+  assert.equal(dHidden.score, aHidden.score, 'the two modes scored a hidden certificate differently');
+
+  const shown = (r: any) => ({ ...payload(r.id), hiddenSections: [] });
+  await demo.resumes.save(shown(d.resume) as any);
+  await api('resumes/save', { resume: shown(a.resume) });
+  const dShown: any = await demo.match.score(d.resume.id, dp.posting.id);
+  const aShown: any = await api('match/score', { resumeId: a.resume.id, postingId: ap.posting.id });
+  assert.equal(dShown.score, aShown.score, 'the two modes scored a shown certificate differently');
+  assert.ok(dShown.score > dHidden.score,
+    `hiding a scored section must cost points in demo mode, got ${dHidden.score} then ${dShown.score}`);
+  assert.ok(aShown.score > aHidden.score,
+    `hiding a scored section must cost points in api mode, got ${aHidden.score} then ${aShown.score}`);
 });

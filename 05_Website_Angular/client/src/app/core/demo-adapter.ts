@@ -4,8 +4,8 @@
    real departments so all three match tiers actually demonstrate.
    ============================================================ */
 import { ApiAdapter } from './adapter';
-import { AnalyzedResume, ApiResult, AppStatus, Application, Company, EvidenceKind, RejectionReason, HrStats, InviteSchedule, MatchResult, Posting, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User, RankedQuery} from './models';
-import { passwordOk, PASSWORD_HINT, scoreLocal, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert } from './engine';
+import { AnalyzedResume, ApiResult, AppStatus, Application, ApplicationAnswer, Company, EvidenceKind, RejectionReason, HrStats, InviteSchedule, MatchResult, Posting, PostingQuestion, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User, RankedQuery} from './models';
+import { passwordOk, PASSWORD_HINT, scoreLocal, visibleResume, RESUME_SECTIONS, OPTIONAL_WEIGHTS, WEIGHT_FLOOR, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert } from './engine';
 
 const KEY = 'linaw_v3_db';
 
@@ -706,6 +706,25 @@ export class DemoAdapter implements ApiAdapter {
         return row;
       }).filter(Boolean);
 
+      /* PRIVATE LINKS, dropped rather than stored when the address is not one
+         a browser can safely open — the same http/https rule the server
+         applies, so a link that survives in one mode survives in both. */
+      const links = list(resume.links, 10).map((x) => {
+        const url = clamp(x.url, 500).trim();
+        if (!/^https?:\/\/\S+$/i.test(url)) return null;
+        const row: any = { url };
+        put(row, 'label', clamp(x.label, 120).trim());
+        return row;
+      }).filter(Boolean);
+
+      /* SECTIONS THE APPLICANT SWITCHED OFF. Only the six names that can be
+         hidden are kept, so education, experience and skills cannot be
+         switched off by a hand-written payload here any more than they can
+         through the API. */
+      const hiddenSections = (Array.isArray(resume.hiddenSections) ? resume.hiddenSections : [])
+        .map((k) => String(k ?? '').trim().toLowerCase())
+        .filter((k, i, a) => (RESUME_SECTIONS as readonly string[]).includes(k) && a.indexOf(k) === i);
+
       /* WHERE EACH SKILL WAS USED, checked the same way the server checks it
          (routes/resumes.ts): the kind must be known and the label must match
          an entry already on this resume. A link whose entry was renamed or
@@ -772,10 +791,14 @@ export class DemoAdapter implements ApiAdapter {
       } as Resume;
       // Assigned separately so an empty section leaves no key behind on an
       // edit that removed its last entry.
-      delete (resume as any).projects; delete (resume as any).languages; delete (resume as any).references;
+      delete (resume as any).projects; delete (resume as any).languages;
+      delete (resume as any).references; delete (resume as any).links;
+      delete (resume as any).hiddenSections;
       if (projects.length) resume.projects = projects;
       if (languages.length) resume.languages = languages;
       if (references.length) resume.references = references;
+      if (links.length) resume.links = links as any;
+      if (hiddenSections.length) resume.hiddenSections = hiddenSections as any;
       const i = db.resumes.findIndex((r) => r.id === resume.id);
       try {
         if (i >= 0) {
@@ -786,7 +809,7 @@ export class DemoAdapter implements ApiAdapter {
           // also carry a section the user just emptied, so those three keys are
           // taken only from the incoming record, api mode deletes their rows
           // and then returns nothing for them.
-          for (const k of ['projects', 'languages', 'references'] as const) {
+          for (const k of ['projects', 'languages', 'references', 'links', 'hiddenSections'] as const) {
             if ((resume as any)[k]) merged[k] = (resume as any)[k]; else delete merged[k];
           }
           db.resumes[i] = merged;
@@ -950,11 +973,83 @@ export class DemoAdapter implements ApiAdapter {
         posting = { ...posting, certifications: certs };
       }
 
-      /* Per-opening weights. Same three rules as routes/postings.ts, and the
-         same messages: whole numbers, each at least 10%, totalling 100. The
-         demo is what gets demonstrated, so a set the server would reject must
-         be rejected here too, otherwise the walkthrough shows a posting
-         being saved that the real system refuses.
+      /* Languages the opening asks for, matched by name the way certificates
+         are. Deduplicated case-insensitively, as routes/postings.ts does. */
+      {
+        const seen = new Set<string>();
+        const langs: string[] = [];
+        for (const l of Array.isArray(posting.languages) ? posting.languages : []) {
+          const name = String(l).trim().slice(0, 80);
+          const key = name.toLowerCase();
+          if (!name || seen.has(key)) continue;
+          seen.add(key);
+          langs.push(name);
+          if (langs.length >= 20) break;
+        }
+        posting = { ...posting, languages: langs };
+      }
+
+      /* The two counted sections. 0 states no requirement, which scores full
+         marks — the same as the server's columns and their defaults. */
+      const cnt = (v: unknown): number => Math.max(0, Math.min(50, Math.round(Number(v) || 0)));
+      posting = {
+        ...posting,
+        minProjects: cnt(posting.minProjects),
+        minReferences: cnt(posting.minReferences),
+      };
+
+      /* The recruiter's own screening questions. Ids are assigned here and
+         kept stable across a save where the prompt is unchanged, because an
+         answer already recorded points at the id: regenerating them would
+         orphan every answer on the opening. */
+      {
+        const prior = db.postings.find((x) => x.id === posting.id)?.questions ?? [];
+        /* Keyed case-insensitively, the same fold the payload gets, so a
+           question re-sent with different capitalisation is recognised as the
+           one already stored rather than treated as new -- which would drop
+           its answers. Mirrors routes/postings.ts. */
+        const byPrompt = new Map<string, string>();
+        for (const q of prior) {
+          const k = q.prompt.trim().toLowerCase();
+          if (q.id && !byPrompt.has(k)) byPrompt.set(k, q.id);
+        }
+        const seen = new Set<string>();
+        const qs: PostingQuestion[] = [];
+        for (const q of Array.isArray(posting.questions) ? posting.questions : []) {
+          const prompt = String((q as any)?.prompt ?? q ?? '').trim().slice(0, 300);
+          const key = prompt.toLowerCase();
+          if (!prompt || seen.has(key)) continue;
+          seen.add(key);
+          qs.push({ id: byPrompt.get(key) ?? uid(), prompt });
+          if (qs.length >= 10) break;
+        }
+        posting = { ...posting, questions: qs };
+
+        /* AN ANSWER BELONGS TO THE WORDING IT WAS GIVEN UNDER.
+           A question the recruiter reworded or removed is a different
+           question, and the answers given to the old one go with it -- which
+           on the server is the ON DELETE CASCADE from posting_questions.
+           Demo mode stores the answers on the application itself, so nothing
+           cascades and they have to be dropped here. Without this, demo mode
+           showed a recruiter an answer to a question that is no longer on
+           their opening, attributing to an applicant a reply to something
+           they were never asked. Questions that kept their wording keep their
+           id above, so their answers are untouched. */
+        const live = new Set(qs.map((q) => q.id));
+        for (const app of db.applications) {
+          if (app.postingId !== posting.id || !app.answers?.length) continue;
+          const kept = app.answers.filter((x) => live.has(String(x.questionId)));
+          if (kept.length === app.answers.length) continue;
+          if (kept.length) app.answers = kept; else delete app.answers;
+        }
+      }
+
+      /* Per-opening weights. The same rules and the same messages as
+         routes/postings.ts: whole numbers, the three core components each at
+         least 10%, the four optional ones defaulting to 0, the seven
+         totalling 100. The demo is what gets demonstrated, so a set the
+         server would reject has to be rejected here too — otherwise the
+         walkthrough shows a posting being saved that the real system refuses.
          Stored as whole percentages, the same units the server's column uses. */
       if (posting.weights != null) {
         const W: any = posting.weights;
@@ -963,18 +1058,25 @@ export class DemoAdapter implements ApiAdapter {
           return Number.isFinite(n) && Number.isInteger(n) ? n : null;
         };
         const sk = pct(W.skills), ed = pct(W.education), ex = pct(W.experience);
-        // Certifications are the one component that may be switched off, and
-        // off is the default; absent means 0, as on the server.
-        const ce = W.certifications === undefined || W.certifications === null ? 0 : pct(W.certifications);
-        if (sk === null || ed === null || ex === null || ce === null)
+        if (sk === null || ed === null || ex === null)
           return apiFail('The scoring weights must be whole numbers.');
-        if (sk < 10 || ed < 10 || ex < 10)
-          return apiFail('Skills, education and experience each have to be at least 10%, those three cannot be switched off entirely.');
-        if (ce < 0)
-          return apiFail('The certifications weight cannot be negative.');
-        if (sk + ed + ex + ce !== 100)
-          return apiFail(`The weights have to add up to 100%. They currently add up to ${sk + ed + ex + ce}%.`);
-        posting = { ...posting, weights: { skills: sk, education: ed, experience: ex, certifications: ce } };
+        if (sk < WEIGHT_FLOOR || ed < WEIGHT_FLOOR || ex < WEIGHT_FLOOR)
+          return apiFail(`Skills, education and experience each have to be at least ${WEIGHT_FLOOR}%. Those three cannot be switched off entirely.`);
+        // The optional four may all be switched off, and off is the default.
+        // Absent means 0, which is what keeps an opening written before a
+        // component existed valid without being rewritten.
+        const opt: Record<string, number> = {};
+        for (const k of OPTIONAL_WEIGHTS) {
+          const raw = W[k];
+          const v = raw === undefined || raw === null ? 0 : pct(raw);
+          if (v === null) return apiFail('The scoring weights must be whole numbers.');
+          if (v < 0) return apiFail(`The ${k} weight cannot be negative.`);
+          opt[k] = v;
+        }
+        const total = sk + ed + ex + OPTIONAL_WEIGHTS.reduce((n, k) => n + opt[k], 0);
+        if (total !== 100)
+          return apiFail(`The weights have to add up to 100%. They currently add up to ${total}%.`);
+        posting = { ...posting, weights: { skills: sk, education: ed, experience: ex, ...opt } as any };
       } else {
         posting = { ...posting, weights: null };
       }
@@ -1009,7 +1111,7 @@ export class DemoAdapter implements ApiAdapter {
   };
 
   applications = {
-    apply: (resumeId: string, postingId: string) => {
+    apply: (resumeId: string, postingId: string, answers?: ApplicationAnswer[]) => {
       const db = load(); const me = meRow(db);
       if (!me || me.role !== 'seeker') return apiFail('Sign in as a job seeker to apply.');
       const r = db.resumes.find((x) => x.id === resumeId);
@@ -1019,6 +1121,21 @@ export class DemoAdapter implements ApiAdapter {
       if (isExpired(p)) return apiFail('The application deadline for this opening has passed.');
       if (db.applications.some((a) => a.seekerId === me.id && a.postingId === postingId))
         return apiFail('You already applied to this position.');
+
+      /* THE OPENING'S OWN QUESTIONS, checked here the same way the server
+         checks them. Read off the posting rather than off the payload: a
+         caller that simply sent no answers would otherwise decide for itself
+         what this opening requires, and demo mode would accept applications
+         the live site refuses. The message names the question, because a
+         count leaves the applicant hunting for which one. */
+      const asked = p.questions ?? [];
+      const sent = new Map((answers ?? []).map((a) => [String(a.questionId), String(a.answer ?? '').trim()]));
+      const kept: ApplicationAnswer[] = [];
+      for (const q of asked) {
+        const text = sent.get(String(q.id)) ?? '';
+        if (!text) return apiFail(`Please answer the question: "${q.prompt}"`);
+        kept.push({ questionId: String(q.id), prompt: q.prompt, answer: text.slice(0, 2000) });
+      }
       // Record the score AS IT WAS at the moment of applying, like the
       // server's score_snapshot. Without it, demo metrics recomputed every
       // historical score from the CURRENT resume, so a seeker editing their
@@ -1027,7 +1144,11 @@ export class DemoAdapter implements ApiAdapter {
       const app: Application = {
         id: uid(), seekerId: me.id, resumeId, postingId, status: 'submitted',
         appliedAt: Date.now(),
-        scoreSnapshot: r && p ? scoreLocal(r, p).score : null,
+        // Scored on the resume as the recruiter will see it, so a section the
+        // applicant switched off cannot earn marks toward a number that
+        // describes a sheet it is not on.
+        scoreSnapshot: r && p ? scoreLocal(visibleResume(r), p).score : null,
+        ...(kept.length ? { answers: kept } : {}),
       };
       db.applications.push(app);
       db.statusHistory.push({ applicationId: app.id, from: null, to: 'submitted', at: app.appliedAt, by: 'applicant', byUserId: me.id });
@@ -1056,7 +1177,11 @@ export class DemoAdapter implements ApiAdapter {
       const p = db.postings.find((x) => x.id === postingId);
       if (!p || p.companyId !== me.companyId) return apiFail('Opening not found.');
       const rows = db.applications.filter((a) => a.postingId === postingId).map((a) => {
-        const resume = db.resumes.find((r) => r.id === a.resumeId)!;
+        /* The recruiter sees the resume as the applicant chose to present it.
+           Stripping here rather than at the point of display means a hidden
+           section reaches neither the score below nor the screen, the same
+           as the server's visibleResume(). */
+        const resume = visibleResume(db.resumes.find((r) => r.id === a.resumeId)!);
         const seeker = db.users.find((u) => u.id === a.seekerId);
         const live = scoreLocal(resume, p);
 
@@ -1077,6 +1202,9 @@ export class DemoAdapter implements ApiAdapter {
           liveScore: live.score,
           liveTier: live.tier,
           scoreDrifted: a.scoreSnapshot != null && a.scoreSnapshot !== live.score,
+          // What they wrote to this opening's screening questions. Never
+          // scored; shown beside the resume for a person to read.
+          ...(a.answers?.length ? { answers: a.answers } : {}),
         };
       }).sort((x, y) => y.score - x.score || x.application.appliedAt - y.application.appliedAt);
 

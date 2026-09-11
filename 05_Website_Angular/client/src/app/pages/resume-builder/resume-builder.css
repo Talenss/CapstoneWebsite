@@ -296,3 +296,25 @@
 .own-file .of-foot { padding:8px 14px; font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--rule); background: var(--ivory); }
 
 .exports { display: flex; gap:8px; flex-wrap: wrap; margin-top:14px; }
+
+/* Sections the applicant switches off. Ticked means shown, which is the way
+   round people read a checklist of what is on a document — an unticked box
+   next to "Projects" reads as "no projects", and that is what it means. */
+.secgrid { display: grid; gap: 8px; margin: 4px 0 6px; }
+.sectoggle {
+  display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card);
+}
+.sectoggle:hover { border-color: var(--ink-3); }
+.sectoggle input { margin-top: 2px; flex-shrink: 0; }
+.sec-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.sec-main b { font-size: 14px; font-weight: 600; }
+.sec-note { font-size: 12.5px; color: var(--muted); }
+.sectoggle.off .sec-main b { color: var(--muted); text-decoration: line-through; }
+.sec-kept {
+  font-size: 12px; color: var(--muted); white-space: nowrap;
+  align-self: center; flex-shrink: 0;
+}
+@media (max-width: 520px) {
+  .sec-kept { white-space: normal; align-self: flex-start; }
+}

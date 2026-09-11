@@ -74,6 +74,7 @@ export interface ResumeChildren {
   projects: Map<number, any[]>;
   languages: Map<number, any[]>;
   references: Map<number, any[]>;
+  links: Map<number, any[]>;
 }
 
 const bucket = (rows: any[]): Map<number, any[]> => {
@@ -90,12 +91,13 @@ export async function prefetchResumeChildren(ids: number[]): Promise<ResumeChild
   const empty = (): ResumeChildren => ({
     education: new Map(), experience: new Map(), skills: new Map(),
     certifications: new Map(), projects: new Map(), languages: new Map(), references: new Map(),
+    links: new Map(),
   });
   if (!ids.length) return empty();
   /* ORDER BY carries resume_id first so each bucket comes out in exactly the
      order the per-resume query produced, which is what keeps the serialized
      output identical. */
-  const [edu, exp, sk, ce, pj, lg, rf] = await Promise.all([
+  const [edu, exp, sk, ce, pj, lg, rf, ln] = await Promise.all([
     query<any>(`SELECT resume_id, school, degree, level, year_grad, field, location, honors
                   FROM education WHERE resume_id = ANY(?) ORDER BY resume_id, sort_order, education_id`, [ids]),
     query<any>(`SELECT resume_id, position, company, months, description, location, start_date, end_date, is_current, bullets
@@ -111,10 +113,13 @@ export async function prefetchResumeChildren(ids: number[]): Promise<ResumeChild
                   FROM resume_languages WHERE resume_id = ANY(?) ORDER BY resume_id, sort_order, language_id`, [ids]),
     query<any>(`SELECT resume_id, ref_name, position, company, email, phone
                   FROM resume_references WHERE resume_id = ANY(?) ORDER BY resume_id, sort_order, reference_id`, [ids]),
+    query<any>(`SELECT resume_id, label, url
+                  FROM resume_links WHERE resume_id = ANY(?) ORDER BY resume_id, sort_order, link_id`, [ids]),
   ]);
   return {
     education: bucket(edu), experience: bucket(exp), skills: bucket(sk),
     certifications: bucket(ce), projects: bucket(pj), languages: bucket(lg), references: bucket(rf),
+    links: bucket(ln),
   };
 }
 
@@ -234,6 +239,15 @@ export async function serializeResume(r: ResumeRow, pre?: ResumeChildren): Promi
     ...(x.phone ? { phone: x.phone } : {}),
   }));
 
+  /* PRIVATE LINKS. Portfolio and certificate URLs that reach the recruiter's
+     screen and never the printed sheet -- see the resume_links comment in the
+     schema for why they are kept off the document. Nothing scores them: they
+     are evidence a human reads, not a component with a weight. */
+  const ln = pre ? (pre.links.get(id) ?? []) : await query<any>(
+    `SELECT label, url FROM resume_links
+      WHERE resume_id=? ORDER BY sort_order, link_id`, [id]);
+  const links = ln.map((x) => ({ url: x.url, ...(x.label ? { label: x.label } : {}) }));
+
   // The uploaded file: metadata only. The bytes are served by /api/file,
   // which checks who is asking. There is no public URL to this document.
   /* The uploaded file: metadata, plus what was read out of it.
@@ -257,6 +271,8 @@ export async function serializeResume(r: ResumeRow, pre?: ResumeChildren): Promi
           : {}),
       }
     : null;
+
+  const hiddenSections = parseHiddenSections((r as any).hidden_sections);
 
   return {
     id: String(id),
@@ -283,8 +299,61 @@ export async function serializeResume(r: ResumeRow, pre?: ResumeChildren): Promi
     ...(projects.length ? { projects } : {}),
     ...(languages.length ? { languages } : {}),
     ...(references.length ? { references } : {}),
+    ...(links.length ? { links } : {}),
+    /* The applicant's own switches, carried so the builder can show a hidden
+       section as hidden rather than as missing. visibleResume() below is what
+       actually removes the content, and every recruiter-facing and scoring
+       path runs the resume through it first. */
+    ...(hiddenSections.length ? { hiddenSections } : {}),
     updatedAt: ts(r.updated_at),
   };
+}
+
+/* ============================================================
+   SECTIONS THE APPLICANT SWITCHED OFF.
+
+   The full resume is what the builder edits, so serializeResume returns
+   hidden sections intact -- otherwise switching one off would look, on the
+   next page load, like the contents had been deleted. Everyone else sees the
+   resume through visibleResume(): the recruiter's applicant view, and every
+   path that scores.
+
+   Hiding removes a section from the printed sheet AND from the score. Those
+   move together on purpose. A recruiter has to be able to read the number as
+   a statement about the document in front of them, and a section they will
+   never see must not be quietly earning marks toward it.
+   ============================================================ */
+export const RESUME_SECTIONS = ['summary', 'projects', 'certifications', 'languages', 'references', 'links'] as const;
+export type ResumeSection = typeof RESUME_SECTIONS[number];
+
+/** Accepts either the stored comma-separated string or a list from the wire.
+ *  Unknown names are dropped, so the three scored components can never be
+ *  switched off by a hand-written request. */
+export function parseHiddenSections(raw: unknown): ResumeSection[] {
+  const parts = Array.isArray(raw) ? raw : String(raw ?? '').split(',');
+  const out: ResumeSection[] = [];
+  for (const p of parts) {
+    const k = String(p ?? '').trim().toLowerCase();
+    if ((RESUME_SECTIONS as readonly string[]).includes(k) && !out.includes(k as ResumeSection)) {
+      out.push(k as ResumeSection);
+    }
+  }
+  return out;
+}
+
+/** A copy of a serialized resume with the switched-off sections removed.
+ *  Works on a shallow clone, so the caller's object is untouched. */
+export function visibleResume(resume: any): any {
+  const hidden: string[] = Array.isArray(resume?.hiddenSections) ? resume.hiddenSections : [];
+  if (!hidden.length) return resume;
+  const out = { ...resume };
+  // The summary lives inside `personal`, so it is blanked rather than deleted
+  // -- the rest of that object is contact detail and always shows.
+  if (hidden.includes('summary')) out.personal = { ...(out.personal ?? {}), summary: null };
+  for (const k of ['projects', 'certifications', 'languages', 'references', 'links']) {
+    if (hidden.includes(k)) delete out[k];
+  }
+  return out;
 }
 
 /** True when the posting's optional "apply by" date is in the past
@@ -302,6 +371,17 @@ export async function serializePosting(p: PostingRow, withCompany = true): Promi
   );
   const ct = await query<{ cert_name: string }>(
     'SELECT cert_name FROM posting_certifications WHERE posting_id=? ORDER BY cert_name',
+    [p.posting_id],
+  );
+  const lg = await query<{ lang_name: string }>(
+    'SELECT lang_name FROM posting_languages WHERE posting_id=? ORDER BY lang_name',
+    [p.posting_id],
+  );
+  /* Ordered by the recruiter's own arrangement, not by id: the questions are
+     shown to the applicant in the order they were written, and sort_order is
+     what carries that. */
+  const qs = await query<{ question_id: number; prompt: string }>(
+    'SELECT question_id, prompt FROM posting_questions WHERE posting_id=? ORDER BY sort_order, question_id',
     [p.posting_id],
   );
 
@@ -330,8 +410,15 @@ export async function serializePosting(p: PostingRow, withCompany = true): Promi
          its fourth as null would make the published breakdown fail to add up
          to the score printed beside it. */
       certifications: p.weight_certifications == null ? 0 : Number(p.weight_certifications),
+      projects: p.weight_projects == null ? 0 : Number(p.weight_projects),
+      languages: p.weight_languages == null ? 0 : Number(p.weight_languages),
+      references: p.weight_references == null ? 0 : Number(p.weight_references),
     },
     certifications: ct.map((r) => r.cert_name),
+    languages: lg.map((r) => r.lang_name),
+    minProjects: Number(p.min_projects ?? 0),
+    minReferences: Number(p.min_references ?? 0),
+    questions: qs.map((r) => ({ id: String(r.question_id), prompt: r.prompt })),
     deadline: p.application_deadline || null,
     // past-deadline postings stop accepting applications without anyone
     // having to remember to close them (see postingExpired)
