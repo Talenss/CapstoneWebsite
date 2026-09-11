@@ -18,7 +18,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { scoreWith, DEFAULT_SETTINGS, skillNorm, SKILL_ALIASES, EDU_RANK, MatchSettings, UNEVIDENCED_CREDIT, EVIDENCE_KINDS, EvidenceKind, evidenceLabels, OPTIONAL_WEIGHTS } from '../src/lib/engine';
-import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK, UNEVIDENCED_CREDIT as CLIENT_UNEVIDENCED_CREDIT, evidenceLabels as clientEvidenceLabels, SKILL_CATEGORY, missingHint } from '../../client/src/app/core/engine';
+import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK, UNEVIDENCED_CREDIT as CLIENT_UNEVIDENCED_CREDIT, evidenceLabels as clientEvidenceLabels, SKILL_CATEGORY, SKILL_CATALOGUE, missingHint } from '../../client/src/app/core/engine';
 
 // ---------- helpers ----------
 
@@ -820,6 +820,63 @@ test('the skill categories the applicant hint uses match the seeded catalogue', 
   for (const norm of Object.keys(SKILL_CATEGORY)) {
     assert.ok(rows.some(([, n]) => n === norm),
       `SKILL_CATEGORY carries "${norm}", which no row in the seeded catalogue has`);
+  }
+});
+
+test('the pickable catalogue matches the seeded one, name for name', () => {
+  /* SKILL_CATALOGUE is what a recruiter picks from when writing their first
+     opening, and its own comment says an engine test fails if it disagrees
+     with db/linaw_ph.sql. Until this test existed that claim was not true.
+
+     It matters more than a tidiness check. A name here that no seeded row
+     carries becomes a requirement that can never be matched: the recruiter
+     picks it, the applicant cannot claim it, and the opening scores everyone
+     short a skill with nothing anyone can do about it. */
+  const sql = readFileSync(join(__dirname, '..', '..', 'db', 'linaw_ph.sql'), 'utf8');
+  const block = /INSERT INTO skills \(skill_name, skill_norm, category\) VALUES([\s\S]*?);/.exec(sql);
+  const rows = [...block![1].matchAll(/\('([^']+)','([a-z0-9]+)','([a-z]+)'\)/g)]
+    .map(([, name, norm, category]) => ({ name: name.replace(/''/g, "'"), norm, category }));
+
+  assert.equal(SKILL_CATALOGUE.length, rows.length,
+    `the catalogue offers ${SKILL_CATALOGUE.length} skills, the seed has ${rows.length}`);
+
+  const seeded = new Map(rows.map((r) => [r.norm, r]));
+  for (const s of SKILL_CATALOGUE) {
+    const row = seeded.get(normSkill(s.name));
+    assert.ok(row, `the catalogue offers "${s.name}", which no seeded row carries`);
+    assert.equal(row!.name, s.name,
+      `the catalogue spells it "${s.name}", the seed spells it "${row!.name}"`);
+    assert.equal(row!.category, s.category,
+      `"${s.name}" is ${s.category} in the catalogue and ${row!.category} in the seed`);
+  }
+  for (const r of rows) {
+    assert.ok(SKILL_CATALOGUE.some((s) => normSkill(s.name) === r.norm),
+      `the seed carries "${r.name}", which the catalogue never offers`);
+  }
+});
+
+test('no catalogue skill is folded onto a DIFFERENT skill by the alias table', () => {
+  /* An alias that rewrites one catalogue skill into another is silently
+     destructive: the row a recruiter picked can never be the row an applicant
+     matches. Adding "Technical Support" to the catalogue would have done
+     exactly that — the table already folds it onto Troubleshooting.
+
+     Folding a name onto its OWN row is normal and intended. "Networking" is
+     seeded under the norm `computernetworking`, and the alias exists so a
+     resume that says either word lands on that one row. So the rule is not
+     "no catalogue name is an alias key" — it is that resolving a catalogue
+     name must reach the row that name was seeded as. */
+  const sql = readFileSync(join(__dirname, '..', '..', 'db', 'linaw_ph.sql'), 'utf8');
+  const block = /INSERT INTO skills \(skill_name, skill_norm, category\) VALUES([\s\S]*?);/.exec(sql);
+  const byName = new Map([...block![1].matchAll(/\('([^']+)','([a-z0-9]+)','[a-z]+'\)/g)]
+    .map(([, name, norm]) => [name.replace(/''/g, "'"), norm]));
+
+  for (const s of SKILL_CATALOGUE) {
+    const seededNorm = byName.get(s.name);
+    assert.ok(seededNorm, `"${s.name}" is offered but never seeded`);
+    assert.equal(normSkill(s.name), seededNorm,
+      `picking "${s.name}" resolves to "${normSkill(s.name)}", but it is seeded as "${seededNorm}" — ` +
+      'the alias table is folding it onto a different skill');
   }
 });
 
