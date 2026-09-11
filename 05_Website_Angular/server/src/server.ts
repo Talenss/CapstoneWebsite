@@ -192,6 +192,17 @@ runMigrations().then(
         console.error(`that is why the target above reads ${DB_HOST}:${DB_PORT}, which is this container itself.`);
         console.error('Set DATABASE_URL (Supabase -> Project Settings -> Database -> Session pooler),');
         console.error('along with the other values render.yaml marks `sync: false`.');
+      } else if (/violated by some row|check constraint/i.test(String(why))) {
+        /* Not a connection problem at all, and saying so sent at least one
+           reader hunting through Supabase credentials while the real cause
+           was sitting in the data. A CHECK that existing rows fail is almost
+           always a migration writing an OUT OF DATE version of a constraint
+           over a newer one — look for two places creating the same constraint
+           name, and keep the newest. */
+        console.error('The database is reachable. A CHECK constraint could not be applied because rows');
+        console.error('already in the table do not satisfy it — so this is a schema/data disagreement,');
+        console.error('not a credentials problem. Find every migration creating that constraint name:');
+        console.error('if two of them do, the one that runs last wins, and it may be the older rule.');
       } else {
         console.error('The database is unreachable or the connecting role cannot alter the schema.');
       }

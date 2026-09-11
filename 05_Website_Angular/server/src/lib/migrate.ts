@@ -348,15 +348,29 @@ export async function runMigrations(): Promise<void> {
      opening that gave certifications a share was refused by the database
      while passing the route's own validation. */
   await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_certifications SMALLINT');
+  /* The other three optional components are declared HERE, beside
+     certifications, for the reason the paragraph above gives: the constraint
+     below counts them, so they must exist before it is written, and the
+     constraint has exactly one owner. Declaring them further down and
+     re-creating the constraint there is the very mistake described above —
+     and it was made a second time. The later block reinstated a four-component
+     rule over this seven-component one, so every opening that weighted
+     projects, languages or references was rejected by the database. That
+     happens during startup, which meant the server refused to boot. */
+  await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_projects SMALLINT');
+  await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_languages SMALLINT');
+  await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_references SMALLINT');
   await exec('ALTER TABLE job_postings DROP CONSTRAINT IF EXISTS posting_weights_complete');
   await exec(`ALTER TABLE job_postings ADD CONSTRAINT posting_weights_complete CHECK (
     (weight_skills IS NULL AND weight_education IS NULL AND weight_experience IS NULL)
     OR (
       weight_skills IS NOT NULL AND weight_education IS NOT NULL AND weight_experience IS NOT NULL
       AND weight_skills + weight_education + weight_experience
-          + COALESCE(weight_certifications, 0) = 100
+          + COALESCE(weight_certifications, 0) + COALESCE(weight_projects, 0)
+          + COALESCE(weight_languages, 0) + COALESCE(weight_references, 0) = 100
       AND weight_skills >= 10 AND weight_education >= 10 AND weight_experience >= 10
-      AND COALESCE(weight_certifications, 0) >= 0
+      AND COALESCE(weight_certifications, 0) >= 0 AND COALESCE(weight_projects, 0) >= 0
+      AND COALESCE(weight_languages, 0) >= 0 AND COALESCE(weight_references, 0) >= 0
     )
   )`);
 
@@ -560,24 +574,12 @@ export async function runMigrations(): Promise<void> {
      gives one of the new sections a share while the route happily accepted
      it. That failure has already happened once with certifications — see the
      comment above that block. */
-  await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_projects SMALLINT');
-  await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_languages SMALLINT');
-  await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_references SMALLINT');
+  /* The weight columns and the constraint that counts them belong to the
+     weight_* block much further up, which owns them outright. Only the two
+     minimum-count columns are added here, because nothing above references
+     them. */
   await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS min_projects INT NOT NULL DEFAULT 0');
   await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS min_references INT NOT NULL DEFAULT 0');
-  await exec('ALTER TABLE job_postings DROP CONSTRAINT IF EXISTS posting_weights_complete');
-  await exec(`ALTER TABLE job_postings ADD CONSTRAINT posting_weights_complete CHECK (
-    (weight_skills IS NULL AND weight_education IS NULL AND weight_experience IS NULL)
-    OR (
-      weight_skills IS NOT NULL AND weight_education IS NOT NULL AND weight_experience IS NOT NULL
-      AND weight_skills + weight_education + weight_experience
-          + COALESCE(weight_certifications, 0) + COALESCE(weight_projects, 0)
-          + COALESCE(weight_languages, 0) + COALESCE(weight_references, 0) = 100
-      AND weight_skills >= 10 AND weight_education >= 10 AND weight_experience >= 10
-      AND COALESCE(weight_certifications, 0) >= 0 AND COALESCE(weight_projects, 0) >= 0
-      AND COALESCE(weight_languages, 0) >= 0 AND COALESCE(weight_references, 0) >= 0
-    )
-  )`);
 
   /* The languages an opening asks for. Free text and normalised the same way
      certifications are, because there is no catalogue of language names to
