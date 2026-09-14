@@ -288,14 +288,18 @@
           } @else {
             <div class="row"><span><b>How scoring works</b></span><b style="font-weight:500;color:var(--muted)">Skills {{ postingWeights(row.posting).skills * 100 }}% · education {{ postingWeights(row.posting).education * 100 }}% · experience {{ postingWeights(row.posting).experience * 100 }}%</b></div>
           }
-          <!-- What the role asks for, stated plainly and WITHOUT marking which
-               ones this applicant has. Shown to everyone, because a job advert
-               that will not say what it requires is not usable, a person has
-               to be able to judge whether a role suits them. What is missing
-               here is the comparison: the applicant can read the requirements
-               and check themselves, and the system does not do the diff for
-               them and hand over the difference as a list. -->
-          <div class="row"><span><b>Skills asked for</b><span class="w">the role's requirements, unmarked</span></span><b style="font-weight:500">{{ row.posting.skills.join(', ') }}</b></div>
+          <!-- What the role asks for, listed ONLY when there is no resume to
+               score against. With a resume the breakdown above already says how
+               many requirements are unmet and of what kind, and printing the
+               full list beside that count hands over the difference: three
+               requirements listed against "one matched" names the missing two
+               by elimination. That is the diff this design refuses to compute,
+               so the list is withheld exactly when it would complete it.
+               Without a resume it is a plain job advert and must state its
+               requirements, which is the same rule the card above follows. -->
+          @if (!row.s) {
+            <div class="row"><span><b>Skills asked for</b><span class="w">the role's requirements</span></span><b style="font-weight:500">{{ row.posting.skills.join(', ') }}</b></div>
+          }
         </div>
       </div>
       <!-- One way out, not two. The close-x above is the standard placement and
