@@ -627,6 +627,7 @@ INSERT INTO match_settings (setting_key, setting_value, note) VALUES
 -- If a later version ever does call Supabase from the browser, add
 -- policies then — per table, per role, deliberately.
 -- ============================================================
+ALTER TABLE application_answers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE application_notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE application_status_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE applications ENABLE ROW LEVEL SECURITY;
@@ -638,10 +639,14 @@ ALTER TABLE email_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_postings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE posting_certifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE posting_languages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE posting_questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE posting_skills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recruiter_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE resume_languages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE resume_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE resume_references ENABLE ROW LEVEL SECURITY;
 ALTER TABLE resume_skills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE resumes ENABLE ROW LEVEL SECURITY;

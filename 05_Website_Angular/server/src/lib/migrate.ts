@@ -19,16 +19,36 @@ import { ensureEmailCodesTable } from './email-codes';
    No policies: RLS with none denies everything, which is the right answer
    for tables only this server should ever read.
 
-   Two tables are handled here rather than in db/linaw_ph.sql because
-   they are created at runtime — user_sessions by connect-pg-simple on first
-   boot, email_codes by ensureEmailCodesTable above — so the schema file
-   never sees them. The rest are covered there. This is also the path by
-   which a database imported before RLS was added catches up. */
+   This ASKS THE DATABASE which tables exist rather than working from a list
+   written here, and that is the point. The previous version named two
+   runtime tables and trusted db/linaw_ph.sql for the rest; when the
+   screening-question and certification feature added five tables, nothing
+   added them to the schema file's block, and they reached production
+   "Unrestricted" — application_answers and resume_links among them, which
+   hold what applicants typed. A list that must be updated by hand is a list
+   that drifts, and the drift is silent because nothing fails. Enumerating
+   pg_tables cannot drift: a table that exists is covered, including the two
+   created at runtime (user_sessions by connect-pg-simple, email_codes by
+   ensureEmailCodesTable above) that the schema file never sees.
+
+   This is also the path by which an ALREADY DEPLOYED database catches up,
+   which is the only path that matters for one that is already running:
+   re-running the schema file is not an option once there is data in it. */
 async function ensureRowLevelSecurity(): Promise<void> {
-  const runtimeTables = ['user_sessions', 'email_codes'];
-  for (const t of runtimeTables) {
+  let tables: string[];
+  try {
+    const rows = await query<{ tablename: string }>(
+      `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`,
+    );
+    tables = rows.map((r) => r.tablename);
+  } catch (e: any) {
+    console.warn('Could not list public tables for RLS:', e?.message || e);
+    return;
+  }
+  for (const t of tables) {
     try {
-      await exec(`ALTER TABLE IF EXISTS ${t} ENABLE ROW LEVEL SECURITY`);
+      /* Already-enabled is a no-op, so this is safe to run on every boot. */
+      await exec(`ALTER TABLE IF EXISTS "${t}" ENABLE ROW LEVEL SECURITY`);
     } catch (e: any) {
       /* Not fatal. A local Postgres has no REST API in front of it, so the
          protection is irrelevant there, and refusing to boot over it would
