@@ -58,6 +58,29 @@ async function ensureRowLevelSecurity(): Promise<void> {
   }
 }
 
+/* set_updated_at() is created by db/linaw_ph.sql without a pinned
+   search_path, so every database built before that was fixed still carries
+   the mutable form — and, as with RLS above, re-running the schema file is
+   not an option once there is data in it. Pinning it here is what reaches
+   those.
+
+   The function is SECURITY INVOKER and its body resolves nothing but
+   now(), a pg_catalog built-in that is searched implicitly whatever this is
+   set to, so there is no privilege path to close and nothing to break. It
+   is pinned because a function whose name resolution follows the caller's
+   search_path is a shape worth not having, and because Supabase's advisor
+   reports the unpinned form as a security finding. */
+async function ensureFunctionSearchPath(): Promise<void> {
+  try {
+    await exec(`ALTER FUNCTION public.set_updated_at() SET search_path = ''`);
+  } catch (e: any) {
+    /* Non-fatal for the same reason as RLS: a hardening step must not be
+       able to stop the server booting. A local Postgres without the
+       function at all lands here harmlessly. */
+    console.warn('Could not pin search_path on set_updated_at:', e?.message || e);
+  }
+}
+
 /** Split one stored name into its two parts, for the backfill below.
  *
  *  The last whitespace-separated token is the surname and everything before
@@ -168,6 +191,7 @@ async function splitUserNames(): Promise<void> {
 export async function runMigrations(): Promise<void> {
   await ensureEmailCodesTable();
   await ensureRowLevelSecurity();
+  await ensureFunctionSearchPath();
   await splitUserNames();
 
   // users.email_notifications — the per-user opt-out for application emails

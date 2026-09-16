@@ -46,12 +46,22 @@ DROP FUNCTION IF EXISTS set_updated_at() CASCADE;
 -- updated_at auto-touch (Postgres has no MySQL-style
 -- "ON UPDATE CURRENT_TIMESTAMP"; a trigger does the same job).
 -- ------------------------------------------------------------
-CREATE FUNCTION set_updated_at() RETURNS trigger AS $$
+-- search_path is PINNED rather than inherited from the caller. A function
+-- that resolves its names through whatever search_path the session happens
+-- to carry can be pointed at a different now() by anyone able to create a
+-- schema earlier in that path. Empty is the right value here because the
+-- body resolves nothing but built-ins, and pg_catalog is searched
+-- implicitly whatever this is set to — proven by the trigger still firing.
+-- Supabase's advisor flags the unpinned form as "role mutable search_path".
+CREATE FUNCTION set_updated_at() RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path = ''
+AS $$
 BEGIN
   NEW.updated_at = now();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- ------------------------------------------------------------
 -- Companies
