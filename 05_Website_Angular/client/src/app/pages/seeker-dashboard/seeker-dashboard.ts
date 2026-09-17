@@ -100,33 +100,24 @@ export class SeekerDashboard implements OnInit {
   historyEvents = signal<StatusEvent[]>([]);
   historyError = signal('');
 
-  /** The application the open panel belongs to, so the panel can name it —
-   *  it sits below the table rather than inside the row, so "which one is
-   *  this?" has to be answered in the panel itself. */
-  historyOpenApp = computed(() => this.applications().find((a) => a.id === this.openHistoryId()) ?? null);
-
-  /** Bring the panel into view after it opens.
+  /** Nudge the panel into view only if opening it pushed it past the fold.
    *
-   *  The panel is rendered below the whole table, not inside the row, and
-   *  deliberately so — inside, it was a colspan cell that scrolled off the
-   *  left edge on a phone (see the comment above it in the template). The
-   *  cost of that fix only shows on a long list: an applicant with a dozen
-   *  applications clicks History on the top row and the panel opens several
-   *  hundred pixels below the fold, so nothing appears to happen at all. The
-   *  click was working the whole time; its result was simply off-screen.
-   *
-   *  Measured rather than guessed: with two applications the panel lands
-   *  inside the viewport, with twelve it opens at y=1229 in an 800px window.
+   *  The panel now opens directly under its own row, so the row the person
+   *  just clicked is by definition already on screen and there is nothing to
+   *  scroll to in the ordinary case. What can still happen is that the panel
+   *  opens on the LAST visible row and its lower half falls below the fold.
+   *  'nearest' covers exactly that and does nothing otherwise, so the page
+   *  does not jump under someone who could already see what they opened.
    *
    *  rAF twice rather than a timeout: the first frame is where Angular
-   *  flushes the signal change that renders the panel, the second is after
-   *  the browser has laid it out, which is when it can be scrolled to. This
-   *  only ever runs from a click, so the browser APIs are always present. */
+   *  flushes the signal change that renders the row, the second is after the
+   *  browser has laid it out, which is the earliest point it can be scrolled
+   *  to. This only ever runs from a click, so the browser APIs are present. */
   private revealHistoryPanel(id: string): void {
     if (typeof requestAnimationFrame !== 'function') return;
     requestAnimationFrame(() => requestAnimationFrame(() => {
       document.getElementById('hist-' + id)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }));
   }
 

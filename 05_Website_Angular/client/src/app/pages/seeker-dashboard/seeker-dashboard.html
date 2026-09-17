@@ -203,62 +203,73 @@
                   }
                 </td>
               </tr>
+
+              <!-- The timeline belongs DIRECTLY UNDER THE ROW IT DESCRIBES.
+                   It sat below the whole table for a while, which fixed a
+                   phone bug and introduced a worse one: on a list of a dozen
+                   applications, opening the top row put its history several
+                   hundred pixels below the fold, so History looked broken.
+
+                   The phone bug it was avoiding is real and still handled.
+                   On a narrow screen .wrap-x scrolls horizontally, and a
+                   colspan cell is as wide as the whole table, so its content
+                   used to sit at the table's left edge and disappear off the
+                   side. .hist-inline is sticky to the left of the scroll
+                   viewport instead, so it stays put whatever the table does
+                   behind it. Both problems, rather than one at a time. -->
+              @if (openHistoryId() === a.id) {
+                <tr class="hist-row">
+                  <td colspan="7">
+                    <div class="hist-inline" [attr.id]="'hist-' + a.id">
+                      <h3>History · {{ a.posting ? a.posting.title : 'this application' }}</h3>
+                      @if (historyLoading()) {
+                        <div class="loading"><span class="spinner"></span> Loading history…</div>
+                      } @else if (historyError()) {
+                        <p class="hist-empty">{{ historyError() }}</p>
+                      } @else if (!historyEvents().length) {
+                        <p class="hist-empty">No changes recorded yet.</p>
+                      } @else {
+                        <ol class="timeline">
+                          @for (e of historyEvents(); track $index) {
+                            <li>
+                              <span class="dot" [class.first]="e.from === null"></span>
+                              <div>
+                                <!-- The space before .who is a real text node,
+                                     not just the CSS margin: without it a screen
+                                     reader runs "…under review" into "by the
+                                     hiring team". -->
+                                <b>{{ historyLabel(e) }}</b>
+                                @if (historyBy(e); as who) { <span class="who">&#32;{{ who }}</span> }
+                                <span class="when">{{ historyMoment(e.at) }}@if (historyGap($index); as gap) { · {{ gap }} }</span>
+                                <!-- WHY, when the employer recorded one. This is
+                                     the line the whole study is about: the stated
+                                     problem is applicants who apply and hear
+                                     nothing back, so a system that records the
+                                     reason and then keeps it from the one person
+                                     whose plans depend on it would be arguing
+                                     against itself. The employer's name is here;
+                                     the individual's is not. -->
+                                @if (e.reason) {
+                                  <span class="why">{{ reasonText(e) }}</span>
+                                }
+                              </div>
+                            </li>
+                          }
+                        </ol>
+                        <p class="hist-foot">
+                          Every line here was written when the change was made. The
+                          system never moves an application on its own, and nothing
+                          is ever removed from this record.
+                        </p>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
             }
           </tbody>
         </table>
       </div>
-
-      <!-- The timeline lives OUTSIDE .wrap-x on purpose. Inside the table it
-           was a colspan row, so on a phone, where the table scrolls
-           horizontally. Its content sat at the table's left edge and was
-           pushed off-screen: the applicant tapped History and got a blank
-           band. Out here it is always the width of the card, on every
-           viewport, and the table can scroll independently behind it. -->
-      @if (openHistoryId(); as openId) {
-        <div class="hist-panel" [attr.id]="'hist-' + openId">
-          @if (historyOpenApp(); as a) {
-            <h3>History · {{ a.posting ? a.posting.title : 'this application' }}</h3>
-          }
-          @if (historyLoading()) {
-            <div class="loading"><span class="spinner"></span> Loading history…</div>
-          } @else if (historyError()) {
-            <p class="hist-empty">{{ historyError() }}</p>
-          } @else if (!historyEvents().length) {
-            <p class="hist-empty">No changes recorded yet.</p>
-          } @else {
-            <ol class="timeline">
-              @for (e of historyEvents(); track $index) {
-                <li>
-                  <span class="dot" [class.first]="e.from === null"></span>
-                  <div>
-                    <!-- The space before .who is a real text node, not just
-                         the CSS margin: without it a screen reader runs
-                         "…under review" into "by the hiring team". -->
-                    <b>{{ historyLabel(e) }}</b>
-                    @if (historyBy(e); as who) { <span class="who">&#32;{{ who }}</span> }
-                    <span class="when">{{ historyMoment(e.at) }}@if (historyGap($index); as gap) { · {{ gap }} }</span>
-                    <!-- WHY, when the employer recorded one. This is the line
-                         the whole study is about: the stated problem is
-                         applicants who apply and hear nothing back, so a
-                         system that records the reason and then keeps it from
-                         the one person whose plans depend on it would be
-                         arguing against itself. The employer's name is here;
-                         the individual's is not. -->
-                    @if (e.reason) {
-                      <span class="why">{{ reasonText(e) }}</span>
-                    }
-                  </div>
-                </li>
-              }
-            </ol>
-            <p class="hist-foot">
-              Every line here was written when the change was made. The system
-              never moves an application on its own, and nothing is ever removed
-              from this record.
-            </p>
-          }
-        </div>
-      }
       @if (!applications().length) {
         <p id="noApps" style="padding:32px;text-align:center;color:var(--muted);font-size:14px">
           Nothing here yet. Apply to a match above and you'll be able to follow it from Submitted through to Hired.

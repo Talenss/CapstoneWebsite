@@ -47,8 +47,24 @@
 /* Applicant's own audit trail — the recorded status changes for one
    application, expanded from its row. The rows were always written; this
    is the first place the person they are about can read them. */
-.hist-panel{background:var(--ivory);padding:16px 18px 18px;border-top:1px solid var(--rule-2)}
-.hist-panel h3{font-family:var(--display);font-size:16px;margin:0 0 12px;color:var(--text)}
+/* The expanded row itself. The cell carries no padding of its own so the
+   panel inside can own the full width of the row it belongs to. */
+.hist-row > td{padding:0;background:var(--ivory);border-top:1px solid var(--rule-2)}
+
+/* STICKY TO THE LEFT OF THE SCROLL VIEWPORT, which is the whole reason this
+   can live inside the table again. A colspan cell is as wide as the TABLE,
+   not as wide as the screen, so on a phone — where .wrap-x scrolls
+   horizontally — the panel's text used to start at the table's left edge and
+   sit off-screen until you scrolled sideways to find it. Sticking it to the
+   scroll container's left edge pins it in view at every scroll position,
+   while the columns move behind it as usual.
+
+   The width is capped to the viewport for the same reason: without it the
+   div would inherit the cell's full table width and the text would run out
+   past the right-hand side of the screen. */
+.hist-inline{position:sticky;left:0;width:min(100%,100vw);box-sizing:border-box;
+  padding:16px 18px 18px}
+.hist-inline h3{font-family:var(--display);font-size:16px;margin:0 0 12px;color:var(--text)}
 .timeline{list-style:none;margin:0;padding:0 0 0 4px}
 .timeline li{display:flex;gap:12px;padding:0 0 14px;position:relative}
 .timeline li:last-child{padding-bottom:0}
@@ -69,7 +85,7 @@
 .hist-empty{font-size:13px;color:var(--muted);margin:0}
 .hist-foot{font-size:12px;color:var(--muted);margin:12px 0 0;padding-top:10px;
   border-top:1px solid var(--rule-2);line-height:1.6}
-@media print{ .hist-panel{display:none} }
+@media print{ .hist-row{display:none} }
 
 /* Replaces the struck-through requirement the applicant does not have. Quiet
    on purpose: a note that something is unmatched, not a checklist to work
