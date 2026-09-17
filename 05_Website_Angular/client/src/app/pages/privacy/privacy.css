@@ -1,8 +1,64 @@
-article{max-width:60ch;margin-bottom:80px}
-article h2{font-size:25px;margin:36px 0 10px}
+/* The notice used to sit in a 60ch column with the right half of a desktop
+   screen empty beside it. It now spans the page and splits in two once there
+   is room, so the width pays for a contents list that stays visible instead
+   of going unused. The reading column is still capped — a privacy notice set
+   the full width of a 1400px monitor is a worse read, not a better one. */
+article{max-width:none;margin-bottom:80px}
+.cols{display:block}
+.body{max-width:76ch}
+@media (min-width:1000px){
+  .cols{display:grid;grid-template-columns:225px minmax(0,1fr);gap:56px;align-items:start}
+  /* Pinned, so the section list is reachable from anywhere in a long page
+     rather than only from the top. */
+  .toc{position:sticky;top:90px;margin:0}
+}
+article h2{font-size:25px;margin:40px 0 10px;scroll-margin-top:90px}
 article h2:first-of-type{margin-top:0}
+/* Subheadings inside a section — smaller than h2 and tied to the text under
+   them, so a long section reads as parts rather than as one wall. */
+article h3{font-size:16px;margin:22px 0 6px;color:var(--text)}
 article p{font-size:14.5px;line-height:1.75;margin-bottom:12px}
 article ul{list-style:none;margin:0 0 16px}
 article li{position:relative;padding:8px 0 8px 22px;font-size:14.5px;line-height:1.65}
 article li::before{content:"\2014";position:absolute;left:0;color:var(--accent);font-weight:700}
-.stamp{font-size:12.5px;color:var(--muted);border-left:2px solid var(--accent);padding-left:14px;margin-bottom:32px}
+.stamp{font-size:12.5px;color:var(--muted);border-left:2px solid var(--accent);padding-left:14px;
+  margin-bottom:32px;max-width:76ch}
+
+/* The first sentence of a section, set a little larger so the answer is
+   readable before the qualifications underneath it. */
+.lead{font-size:15.5px;color:var(--text);margin-bottom:10px}
+
+/* A softer aside: true, worth stating, but not what the section is for. */
+.aside{font-size:13px;color:var(--muted);line-height:1.7}
+
+/* THE GUARANTEES. These are the lines someone opens a privacy notice to
+   find, and in a run of even paragraphs they were indistinguishable from
+   the qualifications around them. Given the accent ground so they can be
+   found by scanning rather than by reading the section through. */
+.key{background:var(--accent-wash);border-left:3px solid var(--accent);
+  padding:12px 14px;margin:14px 0 16px;border-radius:0 var(--radius) var(--radius) 0;
+  font-size:14.5px;line-height:1.7}
+
+/* The summary box. Every claim in it is stated again in full further down —
+   it is an index of the guarantees, not a substitute for them. */
+.glance{background:var(--stone-2);border:1px solid var(--rule);border-radius:var(--radius-lg);
+  padding:18px 24px 8px;margin:0 0 30px}
+/* Two columns of guarantees once there is width for them, so the summary
+   stays one glance rather than becoming a list to scroll. */
+@media (min-width:1000px){
+  .glance ul{display:grid;grid-template-columns:1fr 1fr;gap:0 32px}
+}
+.glance-h{font-size:17px;margin:0 0 8px;scroll-margin-top:90px}
+.glance ul{margin-bottom:10px}
+.glance li{padding:6px 0 6px 22px;font-size:14px}
+
+/* Contents. The numbers come from the <ol>, so the em-dash the rest of the
+   page puts before every list item is removed here — with both, each line
+   carried two markers. */
+.toc{border:1px solid var(--rule);border-radius:var(--radius-lg);padding:16px 20px;margin:0 0 36px}
+.toc-h{font-size:15px;margin:0 0 8px;scroll-margin-top:90px}
+.toc ol{margin:0;padding-left:20px}
+.toc li{padding:5px 0;font-size:14px}
+.toc li::before{content:none}
+.toc a{color:var(--text);text-decoration:none;border-bottom:1px solid var(--rule)}
+.toc a:hover{color:var(--accent);border-bottom-color:var(--accent)}

@@ -17,4 +17,22 @@ import { WEIGHTS } from '../../core/engine';
 })
 export class Privacy {
   readonly WEIGHTS = WEIGHTS;
+
+  /** Scroll the contents list to a section, WITHOUT letting the browser
+   *  follow the href.
+   *
+   *  index.html carries <base href="/">, and a bare fragment resolves
+   *  against the base rather than against the current URL. So a plain
+   *  <a href="#rights"> on /privacy navigates to /#rights — the home page —
+   *  and the notice the reader was part-way through is gone. Measured, not
+   *  assumed: clicking one left the URL at /#rights with no <article> in the
+   *  document at all.
+   *
+   *  The href stays exactly as it is, so the link still reads as a link,
+   *  still announces its target, and still works for open-in-new-tab. Only
+   *  the default navigation is replaced, by the scroll it was meant to do. */
+  jump(event: Event, id: string): void {
+    event.preventDefault();
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
