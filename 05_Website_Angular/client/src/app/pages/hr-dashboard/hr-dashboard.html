@@ -22,6 +22,78 @@
   <section id="pipeSection">
     <h2 style="font-size:24px;margin-bottom:2px">The pipeline</h2>
     <p style="color:var(--muted);font-size:13.5px">Everyone who applied is somewhere in here. The system moves nobody, you do.</p>
+
+    <!-- The first three narrow BOTH the pipeline and the openings below, so
+         the two never answer different questions on one screen. The last two
+         are about applications and narrow the pipeline alone. -->
+    <div class="scope" id="scope">
+      @if (staff().length > 1) {
+        <label>
+          <span>Whose openings</span>
+          <hlm-select class="sel" [value]="fStaff()" [itemToString]="staffLabelFn()"
+                      (valueChange)="setStaff($any($event))">
+            <hlm-select-trigger><hlm-select-value placeholder="Everyone at the company" /></hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (o of staffOptions(); track o.v) {
+                <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+              }
+            </hlm-select-content>
+          </hlm-select>
+        </label>
+      }
+      <label>
+        <span>Department</span>
+        <hlm-select class="sel" [value]="fDept()" [itemToString]="deptLabelFn()"
+                    (valueChange)="setDept($any($event))">
+          <hlm-select-trigger><hlm-select-value placeholder="All departments" /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (o of deptOptions(); track o.v) {
+              <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
+      </label>
+      <label>
+        <span>Opening</span>
+        <hlm-select class="sel" [value]="fPosting()" [itemToString]="postingLabelFn()"
+                    (valueChange)="setPosting($any($event))">
+          <hlm-select-trigger><hlm-select-value placeholder="All openings" /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (o of postingOptions(); track o.v) {
+              <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
+      </label>
+      <label>
+        <span>Applied from</span>
+        <input type="date" [value]="fFrom()" (change)="onDateInput('from', $event)"
+               aria-label="Applied on or after">
+      </label>
+      <label>
+        <span>to</span>
+        <input type="date" [value]="fTo()" (change)="onDateInput('to', $event)"
+               aria-label="Applied on or before">
+      </label>
+      <label class="grow">
+        <span>Applicant</span>
+        <input type="search" placeholder="Name or email" [value]="fApplicant()"
+               (input)="onApplicantInput($event)" aria-label="Filter by applicant name or email">
+      </label>
+      @if (anyFilter()) {
+        <button class="btn ghost sm" type="button" (click)="clearScope()">Clear filters</button>
+      }
+    </div>
+
+    <!-- Said plainly, because a filtered count that looks like a total is the
+         one way this feature could mislead rather than help. -->
+    @if (anyFilter()) {
+      <p class="scope-note">
+        Counts below are for the filtered set only, not the whole company.
+        @if (statsLoading()) { <span class="w">Updating…</span> }
+      </p>
+    }
+
     <div class="pipe" id="pipe">
       @if (stats(); as s) {
         @for (k of statusOrder; track k) {

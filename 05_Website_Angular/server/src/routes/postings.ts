@@ -74,7 +74,21 @@ async function alertMatchingSeekers(postingId: number): Promise<void> {
 router.post('/mine', async (req, res) => {
   const u = await requireRole(req, res, 'recruiter');
   if (!u) return;
-  const rows = await query<PostingRow>('SELECT * FROM job_postings WHERE company_id = ? ORDER BY created_at DESC, posting_id DESC', [u.company_id]);
+  /* The colleague this opening's applications route to, joined here so the
+     dashboard can filter by them. It comes from the DEPARTMENT ASSIGNMENT
+     rather than from created_by: routing is what decides whose desk a new
+     application lands on, and that is the question a recruiter narrowing to
+     a name is asking. A department nobody owns joins to null, which reads as
+     "unassigned" and is a real answer rather than a gap. */
+  const rows = await query<PostingRow & { owner_id: number | null; owner_name: string | null }>(
+    `SELECT jp.*, du.user_id AS owner_id, du.full_name AS owner_name
+       FROM job_postings jp
+       LEFT JOIN department_assignments da
+              ON da.company_id = jp.company_id AND da.department = jp.department
+       LEFT JOIN users du ON du.user_id = da.user_id
+      WHERE jp.company_id = ?
+      ORDER BY jp.created_at DESC, jp.posting_id DESC`, [u.company_id],
+  );
 
   const out = [];
   for (const p of rows) {
@@ -84,6 +98,8 @@ router.post('/mine', async (req, res) => {
     );
     row.applicantCount = Number(n?.total ?? 0);
     row.newCount = Number(n?.fresh ?? 0);
+    row.ownerId = p.owner_id == null ? null : String(p.owner_id);
+    row.ownerName = p.owner_name ?? null;
     out.push(row);
   }
   ok(res, { postings: out });

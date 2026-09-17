@@ -344,6 +344,11 @@ export interface Posting {
   company?: Company;
   applicantCount?: number;
   newCount?: number;
+  /** The colleague this opening's applications route to, from the company's
+   *  department assignments. Null when the department has no owner, which is
+   *  filterable in its own right — an unowned department is worth finding. */
+  ownerId?: string | null;
+  ownerName?: string | null;
 }
 
 export interface Application {
@@ -544,6 +549,18 @@ export interface HrStats {
   totalApplicants: number;
   needsReview: number;
   byStatus: Record<AppStatus, number>;
+}
+
+/** What the recruiter dashboard can narrow its counters by. All optional:
+ *  an empty object is the whole company, which is what the page opens on.
+ *  Dates are plain YYYY-MM-DD and read as inclusive of both endpoints. */
+export interface HrStatsFilters {
+  postingId?: string;
+  staffId?: string;
+  department?: string;
+  applicant?: string;
+  from?: string;
+  to?: string;
 }
 
 /** What the AI analysis of an uploaded resume returns: the same structured

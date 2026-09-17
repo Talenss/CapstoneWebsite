@@ -8,7 +8,7 @@
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ApiAdapter } from './adapter';
-import { AdminRecruiter, AnalyzedResume, Application, ApplicationAnswer, ApiResult, Company, HrStats, InviteSchedule, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
+import { AdminRecruiter, AnalyzedResume, Application, ApplicationAnswer, ApiResult, Company, HrStats, HrStatsFilters, InviteSchedule, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
 import { MAX_UPLOAD, ALLOWED_MIME } from './engine';
 
 export class HttpAdapter implements ApiAdapter {
@@ -119,7 +119,10 @@ export class HttpAdapter implements ApiAdapter {
     recommendations: () => this.call<{ resume: Resume | null; strong: RecommendationItem[]; possible: RecommendationItem[]; related: RecommendationItem[] }>('match', 'recommendations'),
   };
 
-  stats = { hr: () => this.call<{ stats: HrStats }>('stats', 'hr') };
+  stats = {
+    hr: (filters: HrStatsFilters = {}) => this.call<{ stats: HrStats }>('stats', 'hr', filters),
+    hrStaff: () => this.call<{ staff: { id: string; name: string }[] }>('stats', 'hr-staff'),
+  };
 
   admin = {
     requests: () => this.call<{ requests: RecruiterRequest[] }>('admin', 'requests'),

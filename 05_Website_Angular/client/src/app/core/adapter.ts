@@ -5,7 +5,7 @@
    ApiService without caring which mode is active.
    ============================================================ */
 import {
-  AdminRecruiter, AnalyzedResume, ApiResult, Application, ApplicationAnswer, Company, HrStats, InviteSchedule, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
+  AdminRecruiter, AnalyzedResume, ApiResult, Application, ApplicationAnswer, Company, HrStats, HrStatsFilters, InviteSchedule, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
 
 export interface ApiAdapter {
   auth: {
@@ -116,7 +116,12 @@ export interface ApiAdapter {
     recommendations(): Promise<ApiResult<{ resume: Resume | null; strong: RecommendationItem[]; possible: RecommendationItem[]; related: RecommendationItem[]; openCount?: number }>>;
   };
   stats: {
-    hr(): Promise<ApiResult<{ stats: HrStats }>>;
+    /** The recruiter dashboard's counters. Every filter is optional and is
+     *  applied by the server, because the pipeline counts rows this page
+     *  never loads. Omitting all of them returns the whole company. */
+    hr(filters?: HrStatsFilters): Promise<ApiResult<{ stats: HrStats }>>;
+    /** The company's own recruiters, for the "whose pipeline" picker. */
+    hrStaff(): Promise<ApiResult<{ staff: { id: string; name: string }[] }>>;
   };
   admin: {
     /** All recruiter-access requests, pending first. Admin only. */

@@ -4,7 +4,7 @@
    real departments so all three match tiers actually demonstrate.
    ============================================================ */
 import { ApiAdapter } from './adapter';
-import { AnalyzedResume, ApiResult, AppStatus, Application, ApplicationAnswer, Company, EvidenceKind, RejectionReason, HrStats, InviteSchedule, MatchResult, Posting, PostingQuestion, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User, RankedQuery} from './models';
+import { AnalyzedResume, ApiResult, AppStatus, Application, ApplicationAnswer, Company, EvidenceKind, RejectionReason, HrStats, HrStatsFilters, InviteSchedule, MatchResult, Posting, PostingQuestion, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User, RankedQuery} from './models';
 import { passwordOk, PASSWORD_HINT, scoreLocal, visibleResume, RESUME_SECTIONS, OPTIONAL_WEIGHTS, WEIGHT_FLOOR, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert } from './engine';
 
 const KEY = 'linaw_v3_db';
@@ -920,6 +920,17 @@ export class DemoAdapter implements ApiAdapter {
             company: db.companies.find((c) => c.id === p.companyId),
             applicantCount: db.applications.filter((a) => a.postingId === p.id).length,
             newCount: db.applications.filter((a) => a.postingId === p.id && a.status === 'submitted').length,
+            // Same source as the server's: the department assignment, not
+            // whoever typed the posting in. Null when nobody owns it.
+            ...(() => {
+              const d = (db.deptAssignments || []).find(
+                (x) => x.companyId === p.companyId && x.department === p.department);
+              const o = d ? db.users.find((u) => u.id === d.userId) : null;
+              return {
+                ownerId: o ? o.id : null,
+                ownerName: o ? (o.firstName + ' ' + (o.lastName || '')).trim() : null,
+              };
+            })(),
           }))
           .sort((a, b) => b.createdAt - a.createdAt),
       });
@@ -1510,12 +1521,45 @@ export class DemoAdapter implements ApiAdapter {
   };
 
   stats = {
-    hr: () => {
+    /* Mirrors routes/stats.ts filter for filter, including which filters
+       reach which number: the two posting counters are narrowed only by the
+       filters that describe an OPENING, so typing an applicant's name never
+       changes how many vacancies the company has posted. */
+    hr: (filters: HrStatsFilters = {}) => {
       const db = load(); const me = meRow(db);
       if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
-      const mine = db.postings.filter((p) => p.companyId === me.companyId);
+
+      const owns = (department: string, staffId: string): boolean =>
+        (db.deptAssignments || []).some(
+          (d) => d.companyId === me.companyId && d.department === department && d.userId === staffId);
+
+      const mine = db.postings.filter((p) => {
+        if (p.companyId !== me.companyId) return false;
+        if (filters.postingId && p.id !== filters.postingId) return false;
+        if (filters.department && p.department !== filters.department) return false;
+        if (filters.staffId && !owns(p.department, filters.staffId)) return false;
+        return true;
+      });
+
       const ids = mine.map((p) => p.id);
-      const apps = db.applications.filter((a) => ids.indexOf(a.postingId) !== -1);
+      // Inclusive of both endpoints, so "to" spans the whole day the
+      // recruiter picked rather than stopping at its first instant.
+      const from = filters.from ? Date.parse(filters.from + 'T00:00:00Z') : null;
+      const to = filters.to ? Date.parse(filters.to + 'T00:00:00Z') + 86400000 : null;
+      const who = (filters.applicant || '').trim().toLowerCase();
+
+      const apps = db.applications.filter((a) => {
+        if (ids.indexOf(a.postingId) === -1) return false;
+        if (from !== null && !Number.isNaN(from) && a.appliedAt < from) return false;
+        if (to !== null && !Number.isNaN(to) && a.appliedAt >= to) return false;
+        if (who) {
+          const u = db.users.find((x) => x.id === a.seekerId);
+          const hay = ((u?.firstName || '') + ' ' + (u?.lastName || '') + ' ' + (u?.email || '')).toLowerCase();
+          if (!hay.includes(who)) return false;
+        }
+        return true;
+      });
+
       const byStatus: any = {}; ALL_STATUSES.forEach((s) => byStatus[s] = apps.filter((a) => a.status === s).length);
       return apiOk({
         stats: {
@@ -1526,6 +1570,15 @@ export class DemoAdapter implements ApiAdapter {
           byStatus,
         } as HrStats,
       });
+    },
+    hrStaff: () => {
+      const db = load(); const me = meRow(db);
+      if (!me || me.role !== 'recruiter') return apiFail('Recruiter access only.');
+      const staff = db.users
+        .filter((u) => u.role === 'recruiter' && u.companyId === me.companyId)
+        .map((u) => ({ id: u.id, name: (u.firstName + ' ' + (u.lastName || '')).trim() }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      return apiOk({ staff });
     },
   };
 
