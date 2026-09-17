@@ -50,10 +50,13 @@ export class HrDashboard implements OnInit {
      "40 applied" over a list filtered to one colleague, where the 40 counted
      the whole company, was the misreading worth designing out.
 
-     The other two, an opening and an applicant's name, narrow the pipeline
-     only. Neither means anything for a list OF openings: picking one opening
-     would leave a list of one, and an applicant is not a property of a
-     vacancy. The openings list keeps its own search for that job. */
+     An opening narrows both as well, for the same reason: leaving every row
+     in place while the counters moved read as a control doing nothing.
+
+     The applicant box is the one exception, and stays pipeline-only — a
+     person's name is not a property of a vacancy, so there is no sensible
+     way for it to narrow a list OF vacancies. The openings list keeps its
+     own search box for finding a role by name. */
   fStaff = signal('');
   fDept = signal('');
   fFrom = signal('');
@@ -85,7 +88,14 @@ export class HrDashboard implements OnInit {
     const from = this.fFrom() ? Date.parse(this.fFrom() + 'T00:00:00') : NaN;
     const to = this.fTo() ? Date.parse(this.fTo() + 'T00:00:00') + 86400000 : NaN;
 
+    const only = this.fPosting();
+
     let out = this.postings().filter((p) => {
+      // Picking one opening narrows this list to it as well. It was left out
+      // at first on the reasoning that a list of one is not worth filtering
+      // to — but the effect was a control that changed the counters and left
+      // every row in place, which reads as a control that does nothing.
+      if (only && p.id !== only) return false;
       if (staff && (p.ownerId ?? '') !== staff) return false;
       if (dept && p.department !== dept) return false;
       if (!Number.isNaN(from) && p.createdAt < from) return false;
@@ -125,10 +135,19 @@ export class HrDashboard implements OnInit {
   readonly stateLabel = labelFor(this.stateOptions);
   readonly sortLabel = labelFor(this.sortOptions);
 
+  /** The "nothing matches that" button, which has to clear EVERYTHING.
+   *
+   *  It used to reset only this list's own search, state and sort, from when
+   *  those were the only filters on the page. Once the scope bar above could
+   *  empty the list too, the button became a button that visibly did nothing
+   *  in exactly the case it exists for: the openings are hidden by a
+   *  department or a date, you press the one control offered, and the empty
+   *  state stays. Whatever emptied the list is what this has to undo. */
   clearFilters(): void {
     this.query.set('');
     this.state.set('');
     this.sort.set('new');
+    this.clearScope();
   }
 
   /** Every narrowing control off, both lists back to the whole company. */
@@ -147,10 +166,28 @@ export class HrDashboard implements OnInit {
     { v: '', label: 'All departments' },
     ...this.departments().map((d) => ({ v: d, label: d })),
   ]);
-  readonly postingOptions = computed<readonly SelectOption[]>(() => [
-    { v: '', label: 'All openings' },
-    ...this.postings().map((p) => ({ v: p.id, label: p.title })),
-  ]);
+  /** Openings, labelled so that two of them can be told apart.
+   *
+   *  A company reposts the same role, so "IT Support" is routinely three
+   *  separate openings in different departments. Listed by title alone they
+   *  were three identical lines: picking one filtered correctly and looked
+   *  broken, because nothing on screen said which one had been picked. The
+   *  department is appended ONLY where a title is shared, so the common case
+   *  stays short and the ambiguous case stops being ambiguous. */
+  readonly postingOptions = computed<readonly SelectOption[]>(() => {
+    const posts = this.postings();
+    const seen = new Map<string, number>();
+    for (const p of posts) seen.set(p.title, (seen.get(p.title) ?? 0) + 1);
+    return [
+      { v: '', label: 'All openings' },
+      ...posts.map((p) => ({
+        v: p.id,
+        label: (seen.get(p.title) ?? 0) > 1 && p.department
+          ? `${p.title} · ${p.department}`
+          : p.title,
+      })),
+    ];
+  });
   readonly staffLabelFn = computed(() => labelFor(this.staffOptions()));
   readonly deptLabelFn = computed(() => labelFor(this.deptOptions()));
   readonly postingLabelFn = computed(() => labelFor(this.postingOptions()));
