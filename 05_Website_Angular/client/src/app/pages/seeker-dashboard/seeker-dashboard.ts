@@ -105,12 +105,38 @@ export class SeekerDashboard implements OnInit {
    *  this?" has to be answered in the panel itself. */
   historyOpenApp = computed(() => this.applications().find((a) => a.id === this.openHistoryId()) ?? null);
 
+  /** Bring the panel into view after it opens.
+   *
+   *  The panel is rendered below the whole table, not inside the row, and
+   *  deliberately so — inside, it was a colspan cell that scrolled off the
+   *  left edge on a phone (see the comment above it in the template). The
+   *  cost of that fix only shows on a long list: an applicant with a dozen
+   *  applications clicks History on the top row and the panel opens several
+   *  hundred pixels below the fold, so nothing appears to happen at all. The
+   *  click was working the whole time; its result was simply off-screen.
+   *
+   *  Measured rather than guessed: with two applications the panel lands
+   *  inside the viewport, with twelve it opens at y=1229 in an 800px window.
+   *
+   *  rAF twice rather than a timeout: the first frame is where Angular
+   *  flushes the signal change that renders the panel, the second is after
+   *  the browser has laid it out, which is when it can be scrolled to. This
+   *  only ever runs from a click, so the browser APIs are always present. */
+  private revealHistoryPanel(id: string): void {
+    if (typeof requestAnimationFrame !== 'function') return;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      document.getElementById('hist-' + id)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }));
+  }
+
   async toggleHistory(a: Application): Promise<void> {
     if (this.openHistoryId() === a.id) { this.openHistoryId.set(null); return; }
     this.openHistoryId.set(a.id);
     this.historyEvents.set([]);
     this.historyError.set('');
     this.historyLoading.set(true);
+    this.revealHistoryPanel(a.id);
     const res = await this.api.applications.history(a.id);
     this.historyLoading.set(false);
     // Another row may have been opened while this was in flight.
