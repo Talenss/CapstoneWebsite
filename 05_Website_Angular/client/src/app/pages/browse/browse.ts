@@ -5,7 +5,7 @@ import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { ApplicationAnswer, Company, MatchResult, Posting, Resume } from '../../core/models';
-import { EDU_LABELS, WEIGHTS, experienceLabel, missingHint, scoreLocal, tierColor, tierLabel, tierOf, weightsFor, normSkill} from '../../core/engine';
+import { EDU_LABELS, SKILL_CATEGORY, WEIGHTS, experienceLabel, missingHint, scoreLocal, tierColor, tierLabel, tierOf, weightsFor, normSkill} from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 import { ApplyQuestions } from '../../shared/apply-questions/apply-questions';
 import { Seo } from '../../core/seo';
@@ -121,25 +121,35 @@ export class Browse implements OnInit, OnDestroy {
     };
   });
 
-  /** The skills these openings ask for that the resume does not carry, most
-   *  asked-for first. This is the most useful thing the page knows and it was
-   *  not being said anywhere: a job seeker can see that four of seven openings
-   *  want a skill they have not listed, which is an afternoon's work away. */
-  readonly gaps = computed(() => {
+  /** How many skills these openings ask for that the resume does not carry,
+   *  as a COUNT AND A KIND — never as a list of names.
+   *
+   *  This used to name them, ranked by how many openings wanted each. That is
+   *  the one thing this design refuses to do, and ranking made it worse rather
+   *  than better: a named list sorted by demand is not an explanation, it is a
+   *  prioritised list of words to paste into a resume, which is precisely the
+   *  substitution missingHint() exists to prevent (see core/engine.ts). The
+   *  per-opening breakdown had already been reduced to a count and a kind; this
+   *  rail was still handing over the whole answer for every opening at once.
+   *
+   *  The openings themselves still state their requirements, as any job advert
+   *  must. What is withheld is the system doing the comparison and ranking the
+   *  result. A seeker who holds a skill can still find it in the posting. */
+  readonly gapSummary = computed<{ total: number; tech: number; soft: number } | null>(() => {
     const resume = this.resume();
-    if (!resume) return [];
+    if (!resume) return null;
     const have = new Set(resume.skills.map(normSkill));
-    const wanted = new Map<string, { label: string; n: number }>();
+    const missing = new Set<string>();
     for (const p of this.postings()) {
       for (const raw of p.skills) {
         const k = normSkill(raw);
-        if (have.has(k)) continue;
-        const cur = wanted.get(k);
-        if (cur) cur.n += 1;
-        else wanted.set(k, { label: raw, n: 1 });
+        if (!have.has(k)) missing.add(k);
       }
     }
-    return [...wanted.values()].sort((a, b) => b.n - a.n).slice(0, 6);
+    if (!missing.size) return null;
+    let tech = 0, soft = 0;
+    for (const k of missing) (SKILL_CATEGORY[k] === 'soft' ? soft++ : tech++);
+    return { total: missing.size, tech, soft };
   });
 
   /** A department is its own label; only the empty value needs words. */

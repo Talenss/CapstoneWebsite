@@ -153,18 +153,24 @@
          </div>
        }
 
-       @if (gaps().length) {
+       <!-- A COUNT AND A KIND, never the names. This card used to list the
+            missing skills ranked by how many openings wanted each, which is a
+            prioritised list of words to paste rather than an explanation. The
+            openings still state their own requirements; what is withheld is
+            the system doing the comparison for you. -->
+       @if (gapSummary(); as g) {
          <div class="rail-card">
-           <h3>Asked for, not on your resume</h3>
-           <p class="rail-sub">Most requested first, across these openings.</p>
-           @for (g of gaps(); track g.label) {
-             <div class="rail-row">
-               <span>{{ g.label }}</span>
-               <b>{{ g.n }} {{ g.n === 1 ? 'opening' : 'openings' }}</b>
-             </div>
+           <h3>What these openings ask for</h3>
+           <p class="rail-sub">Measured against “{{ r.title }}”.</p>
+           <div class="rail-row"><span>Not on your resume</span><b>{{ g.total }}</b></div>
+           @if (g.tech) {
+             <div class="rail-row"><span>Technical</span><b>{{ g.tech }}</b></div>
            }
-           <p class="rail-note">Only add one if you can genuinely point to where you used it. A
-             skill with nothing behind it counts half.</p>
+           @if (g.soft) {
+             <div class="rail-row"><span>Workplace</span><b>{{ g.soft }}</b></div>
+           }
+           <p class="rail-note">Each opening lists what it asks for. Only add a skill if you can
+             genuinely point to where you used it — a skill with nothing behind it counts half.</p>
          </div>
        }
      } @else {
