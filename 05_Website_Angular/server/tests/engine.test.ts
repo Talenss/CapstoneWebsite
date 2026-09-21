@@ -31,7 +31,7 @@ const resume = (skills: string[], eduLevels: string[] = ['bachelor'], monthsList
 
 const posting = (
   skills: string[], educationLevel = 'bachelor', minExperienceMonths = 0,
-  weights?: { skills: number; education: number; experience: number; certifications?: number } | null,
+  weights?: { skills: number; education: number; experience: number; certifications?: number; relevance?: number } | null,
   certifications?: string[],
 ) => ({
   id: 'p-test',
@@ -60,13 +60,15 @@ function score(r: ReturnType<typeof resume>, p: ReturnType<typeof posting>) {
 // ---------- the published constants ----------
 
 test('weights are the published 50/25/25 and sum to 1', () => {
-  /* Four of the seven components are optional and sit at 0, so the published
-     split is still 50/25/25 across the compulsory three and all seven still
+  /* Five of the eight components are optional and sit at 0, so the published
+     split is still 50/25/25 across the compulsory three and all eight still
      sum to 1. Those zeros are the whole reason adding components changed no
-     score that had already been computed. */
+     score that had already been computed — including relevance, added after
+     the evaluation, which is why this assertion is written out in full rather
+     than summed. */
   assert.deepEqual(DEFAULT_SETTINGS.weights, {
     skills: 0.5, education: 0.25, experience: 0.25,
-    certifications: 0, projects: 0, languages: 0, references: 0,
+    certifications: 0, projects: 0, languages: 0, references: 0, relevance: 0,
   });
   assert.deepEqual(WEIGHTS, DEFAULT_SETTINGS.weights); // client mirrors server
   const w = DEFAULT_SETTINGS.weights;
@@ -404,7 +406,7 @@ test('the weights a score was computed with travel with the score', () => {
   const custom = score(r, posting(['JavaScript'], 'bachelor', 0, { skills: 60, education: 20, experience: 20 }));
   assert.deepEqual(custom.weights, {
     skills: 0.6, education: 0.2, experience: 0.2,
-    certifications: 0, projects: 0, languages: 0, references: 0,
+    certifications: 0, projects: 0, languages: 0, references: 0, relevance: 0,
   });
 
   const inherited = score(r, posting(['JavaScript']));
@@ -957,4 +959,82 @@ test('a weight set that ignores certifications still has to total 100', () => {
   const bad = score(resume(['JavaScript'], ['bachelor'], [12]),
     posting(['JavaScript'], 'bachelor', 0, { skills: 60, education: 20, experience: 20, certifications: 20 }));
   assert.deepEqual(bad.weights, DEFAULT_SETTINGS.weights);
+});
+
+// ---------- relevant experience (the optional eighth component) ----------
+
+/* Added AFTER the evaluation, which is why the first test here is the one
+   that matters most: at the default weight the component must change no
+   score that had already been computed, or the ratings 56 respondents gave
+   would describe a system that no longer exists. */
+
+test('at the default weight, relevant experience changes nothing', () => {
+  const r: any = resume(['JavaScript'], ['bachelor'], [24]);
+  r.experience = [{ months: 24, position: 'Cashier', description: 'Handled payments' }];
+  const before = score(r, posting(['JavaScript'], 'bachelor', 12));
+  // Entirely irrelevant experience, and the score is still the months-only one.
+  assert.equal(before.score, 100, 'the default must score exactly as it did before the component existed');
+});
+
+test('relevance counts only months from a job whose words match a required skill', () => {
+  const w = { skills: 40, education: 10, experience: 10, relevance: 40 };
+  const r: any = resume(['JavaScript'], ['bachelor'], [24]);
+  r.experience = [
+    { months: 12, position: 'Cashier', description: 'Handled payments at the counter' },
+    { months: 12, position: 'Junior Developer', description: 'Built pages with JavaScript' },
+  ];
+  const s = score(r, posting(['JavaScript'], 'bachelor', 24, w as any));
+  assert.equal(s.relevantMonths, 12, 'only the developer role mentions a required skill');
+  assert.equal(s.seekerMonths, 24, 'the months component still counts every job');
+});
+
+test('a job mentioning nothing required contributes no relevant months', () => {
+  const w = { skills: 40, education: 10, experience: 10, relevance: 40 };
+  const r: any = resume(['JavaScript'], ['bachelor'], [24]);
+  r.experience = [{ months: 24, position: 'Cashier', description: 'Handled payments' }];
+  const s = score(r, posting(['JavaScript'], 'bachelor', 24, w as any));
+  assert.equal(s.relevantMonths, 0);
+  assert.ok(s.score < 100, 'weighting relevance must cost an applicant with none of it');
+});
+
+test('relevance reads the synonym table, not just the exact spelling', () => {
+  const w = { skills: 40, education: 10, experience: 10, relevance: 40 };
+  const r: any = resume(['Microsoft Office'], ['bachelor'], [12]);
+  r.experience = [{ months: 12, position: 'Admin Assistant', description: 'Daily reporting in MS Office' }];
+  const s = score(r, posting(['Microsoft Office'], 'bachelor', 12, w as any));
+  assert.equal(s.relevantMonths, 12, '"MS Office" in the description must satisfy "Microsoft Office"');
+});
+
+test('relevance matches whole words, never substrings', () => {
+  // "git" lives inside "digital" and "legitimate". A substring test would
+  // credit a marketing assistant with version control.
+  const w = { skills: 40, education: 10, experience: 10, relevance: 40 };
+  const r: any = resume(['Git'], ['bachelor'], [12]);
+  r.experience = [{ months: 12, position: 'Marketing Assistant', description: 'Ran digital campaigns' }];
+  const s = score(r, posting(['Git'], 'bachelor', 12, w as any));
+  assert.equal(s.relevantMonths, 0, '"digital" must not match "Git"');
+});
+
+test('relevance finds a multi-word skill inside a sentence', () => {
+  const w = { skills: 40, education: 10, experience: 10, relevance: 40 };
+  const r: any = resume(['Customer Service'], ['bachelor'], [12]);
+  r.experience = [{ months: 12, position: 'Agent', description: 'Provided customer service to clients daily' }];
+  const s = score(r, posting(['Customer Service'], 'bachelor', 12, w as any));
+  assert.equal(s.relevantMonths, 12);
+});
+
+test('an opening stating no experience requirement scores relevance in full', () => {
+  const w = { skills: 40, education: 10, experience: 10, relevance: 40 };
+  const r: any = resume(['JavaScript'], ['bachelor'], [0]);
+  r.experience = [];
+  const s = score(r, posting(['JavaScript'], 'bachelor', 0, w as any));
+  assert.equal(s.score, 100, 'a requirement nobody stated cannot be one the applicant failed');
+});
+
+test('relevance reads the bullets as well as the description', () => {
+  const w = { skills: 40, education: 10, experience: 10, relevance: 40 };
+  const r: any = resume(['JavaScript'], ['bachelor'], [12]);
+  r.experience = [{ months: 12, position: 'Intern', description: '', bullets: ['Wrote JavaScript for internal tools'] }];
+  const s = score(r, posting(['JavaScript'], 'bachelor', 12, w as any));
+  assert.equal(s.relevantMonths, 12);
 });

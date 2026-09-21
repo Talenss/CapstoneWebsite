@@ -299,6 +299,29 @@ export function skillNorm(s: string): string {
   return SKILL_ALIASES[base] ?? base;
 }
 
+/** Does this job's own words mention any of the skills the opening asks for?
+ *  The browser's mirror of jobMentionsAny() in client/src/app/core/engine.ts
+ *  and it must stay identical — the two implementations score the same
+ *  application and parity asserts they agree.
+ *
+ *  Words, not substrings: a plain indexOf would find "git" inside "digital".
+ *  Runs of one to four consecutive words are put through skillNorm(), so
+ *  multi-word skills are found and the ONE alias table decides synonyms. A
+ *  skill the vocabulary does not know simply fails to match, costing credit
+ *  rather than awarding it wrongly. */
+export function jobMentionsAny(text: string, skills: readonly string[]): boolean {
+  if (!text || !skills.length) return false;
+  const wanted = new Set(skills.map(skillNorm).filter(Boolean));
+  if (!wanted.size) return false;
+  const words = String(text).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  for (let i = 0; i < words.length; i++) {
+    for (let n = 1; n <= 4 && i + n <= words.length; n++) {
+      if (wanted.has(skillNorm(words.slice(i, i + n).join(' ')))) return true;
+    }
+  }
+  return false;
+}
+
 /** The seven components a score can be built from, as FRACTIONS summing to 1.
  *
  *  Only the first three are compulsory. The four after them each default to 0,
@@ -314,12 +337,15 @@ export interface Weights {
   projects: number;
   languages: number;
   references: number;
+  /** Months counted only from a job whose own words mention a required
+   *  skill. Zero unless a recruiter deliberately gives it a share. */
+  relevance: number;
 }
 
 /** The optional components, in the order the interface presents them. Listing
  *  them once stops the validator, the defaults and the DB reader from drifting
  *  apart as the set grows. */
-export const OPTIONAL_WEIGHTS = ['certifications', 'projects', 'languages', 'references'] as const;
+export const OPTIONAL_WEIGHTS = ['certifications', 'projects', 'languages', 'references', 'relevance'] as const;
 /** The three a recruiter may de-emphasise but never switch off. */
 export const CORE_WEIGHTS = ['skills', 'education', 'experience'] as const;
 /** No component may fall below this share, for the three that are compulsory. */
@@ -362,6 +388,7 @@ export async function getSettings(): Promise<MatchSettings> {
       projects: n(map.weight_projects, DEFAULT_SETTINGS.weights.projects),
       languages: n(map.weight_languages, DEFAULT_SETTINGS.weights.languages),
       references: n(map.weight_references, DEFAULT_SETTINGS.weights.references),
+      relevance: n(map.weight_relevance, DEFAULT_SETTINGS.weights.relevance),
     },
     thresholds: {
       strong: n(map.threshold_strong, DEFAULT_SETTINGS.thresholds.strong),
@@ -472,6 +499,7 @@ export function fillWeights(w: Partial<Weights> | null | undefined): Weights {
     education: n(w?.education, d.education),
     experience: n(w?.experience, d.experience),
     certifications: n(w?.certifications, 0),
+    relevance: n(w?.relevance, 0),
     projects: n(w?.projects, 0),
     languages: n(w?.languages, 0),
     references: n(w?.references, 0),
@@ -502,6 +530,7 @@ export function weightsFor(cfg: MatchSettings, posting: SerializedPosting): Weig
     skills: w.skills / 100, education: w.education / 100, experience: w.experience / 100,
     certifications: opt.certifications / 100, projects: opt.projects / 100,
     languages: opt.languages / 100, references: opt.references / 100,
+    relevance: opt.relevance / 100,
   };
 }
 
@@ -518,6 +547,8 @@ export interface MatchResult {
   eduMeets: boolean;
   expMeets: boolean;
   seekerMonths: number;
+  /** Months from jobs whose own words mention a required skill. */
+  relevantMonths: number;
   tier: 'strong' | 'possible' | 'related';
   /** The weights this score was actually computed with, as fractions.
    *
@@ -551,7 +582,7 @@ export interface MatchResult {
 export const DEFAULT_SETTINGS: MatchSettings = {
   weights: {
     skills: 0.5, education: 0.25, experience: 0.25,
-    certifications: 0, projects: 0, languages: 0, references: 0,
+    certifications: 0, projects: 0, languages: 0, references: 0, relevance: 0,
   },
   thresholds: { strong: 80, related: 50 },
 };
@@ -642,9 +673,29 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
   const minReferences = Math.max(0, Number(posting.minReferences) || 0);
   const refPart = minReferences <= 0 ? 1.0 : Math.min(1.0, referenceCount / minReferences);
 
+  /* RELEVANT EXPERIENCE — the optional eighth component, mirroring
+     client/src/app/core/engine.ts. Months counted only from a job whose own
+     title, description or bullets mention a skill this opening asks for.
+
+     ZERO BY DEFAULT, and that is load-bearing rather than tidy: at the
+     default weight it contributes nothing, so the score is bit-for-bit the
+     one every respondent in the evaluation rated. A recruiter who wants
+     relevance counted switches it on for their own opening. */
+  const relevantMonths = (resume.experience || []).reduce((t: number, e: any) => {
+    const text = [e?.position, e?.description, ...(Array.isArray(e?.bullets) ? e.bullets : [])]
+      .filter(Boolean).join(' ');
+    return jobMentionsAny(text, required) ? t + (Number(e?.months) || 0) : t;
+  }, 0);
+  /* Measured against the SAME requirement as the months above, so the two
+     components differ only in which months they are willing to count. An
+     opening stating no requirement scores full marks, the rule every other
+     component follows. */
+  const relPart = reqMonths <= 0 ? 1.0 : Math.min(1.0, relevantMonths / reqMonths);
+
   const raw = (skillPart * W.skills + eduPart * W.education
     + expPart * W.experience + certPart * W.certifications
-    + projPart * W.projects + langPart * W.languages + refPart * W.references) * 100;
+    + projPart * W.projects + langPart * W.languages + refPart * W.references
+    + relPart * W.relevance) * 100;
   const total = Math.floor(raw + 0.5); // half-up, explicitly — must match assets/api.js score()
 
   return {
@@ -656,6 +707,7 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
     eduMeets: eduPart >= 1.0,
     expMeets: expPart >= 1.0,
     seekerMonths: months,
+    relevantMonths,
     matchedCertifications: matchedCerts,
     missingCertifications: missingCerts,
     matchedLanguages: matchedLangs,

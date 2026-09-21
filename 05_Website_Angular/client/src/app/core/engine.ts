@@ -20,7 +20,7 @@ import { AppStatus, EduLevel, EvidenceKind, MatchResult, Posting, RejectionReaso
  *  unless a recruiter gives one of the others a share on their own opening. */
 export const WEIGHTS = {
   skills: 0.5, education: 0.25, experience: 0.25,
-  certifications: 0, projects: 0, languages: 0, references: 0,
+  certifications: 0, projects: 0, languages: 0, references: 0, relevance: 0,
 };
 export const THRESHOLDS = { strong: 80, related: 50 };
 
@@ -29,7 +29,7 @@ export const THRESHOLDS = { strong: 80, related: 50 };
  *  the two validators have to reject and accept exactly the same weight sets,
  *  or a posting the recruiter could save would score differently in the
  *  seeker's live preview than on the server. */
-export const OPTIONAL_WEIGHTS = ['certifications', 'projects', 'languages', 'references'] as const;
+export const OPTIONAL_WEIGHTS = ['certifications', 'projects', 'languages', 'references', 'relevance'] as const;
 /** The three a recruiter may de-emphasise but never switch off. */
 export const CORE_WEIGHTS = ['skills', 'education', 'experience'] as const;
 /** No compulsory component may fall below this share. */
@@ -1034,6 +1034,40 @@ export function missingHint(missing: string[]): string {
   return `${n} ${n === 1 ? 'skill' : 'skills'} this role asks for ${n === 1 ? 'is' : 'are'} not on your resume, ${kinds}`;
 }
 
+/** Does this job's own words mention any of the skills the opening asks for?
+ *
+ *  Used only by the optional relevant-experience component. The text is split
+ *  into words and read as runs of one to four consecutive words, each run put
+ *  through normSkill() and compared against the opening's own required
+ *  skills. That gives three properties worth having:
+ *
+ *    WORD BOUNDARIES. A plain substring test would find "git" inside
+ *    "digital" and "legitimate", crediting a receptionist with version
+ *    control. Runs are whole words, so it cannot.
+ *
+ *    MULTI-WORD SKILLS. "Customer Service" is two words in a sentence and one
+ *    skill in the catalogue. Runs up to four words long find it.
+ *
+ *    THE SAME SYNONYMS AS EVERYWHERE ELSE. Each run goes through normSkill(),
+ *    so a description saying "MS Office" satisfies an opening asking for
+ *    "Microsoft Office" — the one alias table, not a second set of rules.
+ *
+ *  A skill the vocabulary does not know simply fails to match, which costs
+ *  the applicant credit and never awards it wrongly. That is the same
+ *  direction every other near-miss in this engine errs in. */
+export function jobMentionsAny(text: string, skills: readonly string[]): boolean {
+  if (!text || !skills.length) return false;
+  const wanted = new Set(skills.map(normSkill).filter(Boolean));
+  if (!wanted.size) return false;
+  const words = String(text).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  for (let i = 0; i < words.length; i++) {
+    for (let n = 1; n <= 4 && i + n <= words.length; n++) {
+      if (wanted.has(normSkill(words.slice(i, i + n).join(' ')))) return true;
+    }
+  }
+  return false;
+}
+
 /** Normalize a skill to its canonical comparable form: strip case and
  *  punctuation, then fold known synonyms together. Used for BOTH sides
  *  of every comparison, so a resume and a posting that mean the same
@@ -1078,6 +1112,7 @@ export function weightsFor(posting: Pick<Posting, 'weights'>): typeof WEIGHTS {
     skills: w.skills / 100, education: w.education / 100, experience: w.experience / 100,
     certifications: opt['certifications'] / 100, projects: opt['projects'] / 100,
     languages: opt['languages'] / 100, references: opt['references'] / 100,
+    relevance: opt['relevance'] / 100,
   };
 }
 
@@ -1201,9 +1236,41 @@ export function scoreLocal(
   const minReferences = Math.max(0, Number(posting.minReferences) || 0);
   const refPart = minReferences <= 0 ? 1 : Math.min(1, referenceCount / minReferences);
 
+  /* RELEVANT EXPERIENCE — the optional eighth component.
+   *
+   * The experience component above counts months and nothing else: a year
+   * behind a counter and a year at a help desk are the same number to it.
+   * Four of the ten HR respondents said so independently, and the panel asked
+   * for the job's title and description to be read rather than only its
+   * length. This is that, kept separate from the months so the recruiter
+   * decides how much it is worth.
+   *
+   * ZERO BY DEFAULT, like every optional component. That is deliberate and
+   * load-bearing: at the default weight this contributes nothing and the
+   * score is bit-for-bit the one every respondent in the evaluation rated.
+   * A recruiter who wants relevance counted switches it on for their own
+   * opening.
+   *
+   * Relevance is decided by THE SKILLS THE OPENING ALREADY ASKS FOR, read out
+   * of the job's own title, description and bullets. No new vocabulary and no
+   * similarity guessing: the same normSkill() the skills component uses, so a
+   * recruiter can predict it and an applicant can be told why. */
+  const relevantMonths = (resume.experience || []).reduce((t, e) => {
+    const text = [e?.position, e?.description, ...(Array.isArray((e as any)?.bullets) ? (e as any).bullets : [])]
+      .filter(Boolean).join(' ');
+    return jobMentionsAny(text, required) ? t + (Number(e?.months) || 0) : t;
+  }, 0);
+  /* Measured against the SAME requirement the months are measured against, so
+     the two components answer the same question and differ only in which
+     months they are willing to count. An opening stating no requirement scores
+     full marks here too — a requirement nobody set cannot be one the applicant
+     failed, which is the rule every other component follows. */
+  const relPart = reqMonths <= 0 ? 1 : Math.min(1, relevantMonths / reqMonths);
+
   const raw = (skillPart * W.skills + eduPart * W.education
     + expPart * W.experience + certPart * W.certifications
-    + projPart * W.projects + langPart * W.languages + refPart * W.references) * 100;
+    + projPart * W.projects + langPart * W.languages + refPart * W.references
+    + relPart * W.relevance) * 100;
   const total = Math.floor(raw + 0.5); // half-up, explicitly, must match server rmScore()
 
   return {
@@ -1215,6 +1282,7 @@ export function scoreLocal(
     eduMeets: eduPart >= 1,
     expMeets: expPart >= 1,
     seekerMonths: months,
+    relevantMonths,
     matchedCertifications: matchedCerts,
     missingCertifications: missingCerts,
     matchedLanguages: matchedLangs,

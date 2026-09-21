@@ -75,6 +75,7 @@ export class HrPosting {
   wProj = signal(0);
   wLang = signal(0);
   wRef = signal(0);
+  wRelv = signal(0);
   certsVal = signal<string[]>([]);
   certInput = signal('');
   langsVal = signal<string[]>([]);
@@ -91,12 +92,13 @@ export class HrPosting {
         skills: this.wSkills(), education: this.wEdu(), experience: this.wExp(),
         certifications: this.wCert(), projects: this.wProj(),
         languages: this.wLang(), references: this.wRef(),
+        relevance: this.wRelv(),
       }
     : null));
 
   weightTotal = computed(() =>
     this.wSkills() + this.wEdu() + this.wExp()
-    + this.wCert() + this.wProj() + this.wLang() + this.wRef());
+    + this.wCert() + this.wProj() + this.wLang() + this.wRef() + this.wRelv());
 
   /* The floor is policy, not arithmetic: a recruiter may decide a criterion
      matters less for a role, but switching one off entirely would score an
@@ -118,7 +120,7 @@ export class HrPosting {
   weightsBelowFloor = computed(() =>
     this.wSkills() < this.WEIGHT_FLOOR || this.wEdu() < this.WEIGHT_FLOOR || this.wExp() < this.WEIGHT_FLOOR);
   private offStep = computed(() =>
-    [this.wSkills(), this.wEdu(), this.wExp(), this.wCert(), this.wProj(), this.wLang(), this.wRef()]
+    [this.wSkills(), this.wEdu(), this.wExp(), this.wCert(), this.wProj(), this.wLang(), this.wRef(), this.wRelv()]
       .some((v) => v % this.WEIGHT_STEP !== 0));
   weightsValid = computed(() => !this.customWeights()
     || (this.weightTotal() === 100 && !this.weightsBelowFloor() && !this.offStep()));
@@ -137,6 +139,12 @@ export class HrPosting {
     { key: 'projects', label: 'Projects', value: this.wProj, set: (n: number) => this.wProj.set(n) },
     { key: 'languages', label: 'Languages', value: this.wLang, set: (n: number) => this.wLang.set(n) },
     { key: 'references', label: 'References', value: this.wRef, set: (n: number) => this.wRef.set(n) },
+    /* Relevant experience reads the job's OWN words. It sits with the optional
+       components rather than beside "Experience" because it is a second,
+       stricter reading of the same months, not a replacement for them: leave
+       it at zero and the opening scores exactly as it did before the
+       component existed. */
+    { key: 'relevance', label: 'Relevant experience', value: this.wRelv, set: (n: number) => this.wRelv.set(n) },
   ] as const;
 
   /* THE RECRUITER'S OWN SCREENING QUESTIONS.
@@ -269,6 +277,7 @@ export class HrPosting {
         this.wProj.set(p.weights.projects ?? 0);
         this.wLang.set(p.weights.languages ?? 0);
         this.wRef.set(p.weights.references ?? 0);
+        this.wRelv.set((p.weights as any).relevance ?? 0);
       }
     }
 
@@ -366,6 +375,7 @@ export class HrPosting {
     this.wProj.set(0);
     this.wLang.set(0);
     this.wRef.set(0);
+    this.wRelv.set(0);
   }
 
   /** Every skill the catalogue knows, for the combobox to search. The pool

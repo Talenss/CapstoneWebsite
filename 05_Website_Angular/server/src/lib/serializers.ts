@@ -413,6 +413,7 @@ export async function serializePosting(p: PostingRow, withCompany = true): Promi
       projects: p.weight_projects == null ? 0 : Number(p.weight_projects),
       languages: p.weight_languages == null ? 0 : Number(p.weight_languages),
       references: p.weight_references == null ? 0 : Number(p.weight_references),
+      relevance: p.weight_relevance == null ? 0 : Number(p.weight_relevance),
     },
     certifications: ct.map((r) => r.cert_name),
     languages: lg.map((r) => r.lang_name),

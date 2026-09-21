@@ -468,7 +468,14 @@ export interface MatchResult {
   weights: {
     skills: number; education: number; experience: number;
     certifications: number; projects: number; languages: number; references: number;
+    /** The optional relevant-experience share. Zero unless a recruiter set it. */
+    relevance: number;
   };
+  /** Months of experience that came from a job whose own title, description
+   *  or bullets mention a skill this opening asks for. Reported beside
+   *  seekerMonths so a recruiter can see the total and the relevant part
+   *  separately, whether or not the component carries any weight. */
+  relevantMonths: number;
   /** Of the certifications the opening asked for, the ones the applicant
    *  lists and the ones they do not. Both empty when none were asked for. */
   matchedCertifications: string[];
