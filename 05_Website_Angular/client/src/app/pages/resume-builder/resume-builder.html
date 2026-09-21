@@ -46,9 +46,17 @@
                  optional". This step said nothing, which is why the tagged and
                  untagged fields below could not be told apart at a glance. -->
             <p class="sub">This is the header of your resume. Your name, a short summary and one way to reach you are what the resume needs before it can be scored, anything marked <b>optional</b> can be left blank. Keep the summary to two or three plain sentences: what you studied, what you've done, what you're looking for.</p>
-            <div class="field">
+            <!-- `.invalid` on the WRAPPER, which is what styles.css keys on:
+                 it reddens the input and is the only thing that reveals the
+                 `.err` below it (`.field .err` is display:none otherwise). -->
+            <div class="field" [class.invalid]="titleClash()">
               <label for="rtitle">Name this resume <span class="opt">optional &middot; only you see this</span></label>
-              <input type="text" id="rtitle" placeholder="e.g. IT, fresh graduate" [value]="resume().title" (input)="setTitle(inputValue($event))">
+              <input type="text" id="rtitle" placeholder="e.g. IT, fresh graduate" [value]="resume().title" (input)="setTitle(inputValue($event))"
+                     [attr.aria-invalid]="titleClash() ? 'true' : null">
+              <!-- Said while it is being typed rather than only on save: the
+                   title is how you pick the right resume when you apply, and
+                   two with the same name cannot be told apart. -->
+              <span class="err">You already have a resume with this name. Give this one a different title so you can tell them apart when you apply.</span>
             </div>
             <div class="row2">
               <div class="field">
@@ -263,7 +271,7 @@
               <label for="skillInput">Add a skill</label>
               <input type="text" id="skillInput" list="skillOpts" placeholder="Type any skill, then press Enter" autocomplete="off" (keydown)="onSkillKeydown($event)" (change)="onSkillChange($event)">
               <datalist id="skillOpts">
-                @for (s of poolAll(); track s) {
+                @for (s of skillOptions(); track s) {
                   <option [value]="s"></option>
                 }
               </datalist>

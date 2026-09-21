@@ -58,6 +58,13 @@ before(async () => {
     cwd: path.join(__dirname, '..'),
     env: { ...process.env, PORT: String(PORT), NODE_ENV: 'development', DEBUG: 'false',
       DATABASE_URL: `postgresql://${PG.user}:${PG.pass}@${PG.host}:${PG.port}/${DB}`,
+      /* config.ts turns SSL ON whenever a DATABASE_URL is set, which is right
+         for Supabase and wrong for the throwaway local database this suite
+         creates: a stock Postgres answers "the server does not support SSL
+         connections", the migration is skipped, and every test here fails in
+         the before() hook rather than on anything it asserts. api.test.ts and
+         mode-parity.test.ts already pass DB_SSL:'false' for the same reason. */
+      DB_SSL: 'false',
       SESSION_SECRET: 'x'.repeat(40) },
     stdio: 'ignore',
   });

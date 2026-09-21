@@ -8,7 +8,7 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { AnalysisService } from '../../core/analysis.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, visibleResume, WEIGHTS, DEGREE_CATALOGUE } from '../../core/engine';
+import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, visibleResume, WEIGHTS, DEGREE_CATALOGUE, SKILL_CATALOGUE } from '../../core/engine';
 import { Education, EduLevel, EvidenceKind, Experience, Language, Project, Reference, Resume, ResumeDesign, ResumeLink, ResumeSection, SkillEvidence, Template } from '../../core/models';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 
@@ -122,6 +122,34 @@ export class ResumeBuilder implements OnInit {
   saving = signal(false);
   savedFlag = signal(false);
   formError = signal<string | null>(null);
+
+  /** Every OTHER resume this applicant owns, id and title. Loaded once so the
+   *  title field can say "taken" while it is being typed rather than after a
+   *  round trip. The server is what actually enforces it. */
+  private otherTitles = signal<{ id: string | null; title: string }[]>([]);
+
+  /** True while the title matches another of this applicant's resumes. Excluded
+   *  by id, so a saved resume never clashes with itself. */
+  titleClash = computed(() => {
+    const r = this.resume();
+    const t = r.title.trim().toLowerCase();
+    if (!t) return false;
+    return this.otherTitles().some((o) => o.id !== r.id && o.title.trim().toLowerCase() === t);
+  });
+
+  /** `base`, or the first of "base 2", "base 3" ... that is free. Used for
+   *  every title the builder writes on the applicant's behalf: "My resume" is
+   *  the default for a NEW resume, so without this a second resume would open
+   *  already clashing and refuse to save with an error the applicant did not
+   *  cause. */
+  private freeTitle(base: string): string {
+    const taken = new Set(this.otherTitles().map((o) => o.title.trim().toLowerCase()));
+    if (!taken.has(base.trim().toLowerCase())) return base;
+    for (let n = 2; ; n++) {
+      const candidate = `${base} ${n}`;
+      if (!taken.has(candidate.toLowerCase())) return candidate;
+    }
+  }
   toastMsg = signal<string | null>(null);
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -169,6 +197,26 @@ export class ResumeBuilder implements OnInit {
   otherSuggestions = computed(() => {
     const demanded = new Set(this.poolAll().map((s) => s.toLowerCase()));
     return OTHER_SKILLS.filter((s) => !demanded.has(s.toLowerCase()));
+  });
+
+  /** What the type-ahead offers. The two pools above are what we SUGGEST —
+   *  they stay small on purpose. This is what we RECOGNISE, and it is the
+   *  whole catalogue, so someone who already knows they have "Phlebotomy"
+   *  can type three letters and take the spelling the scorer expects instead
+   *  of guessing at it. Offering a skill here is not a hint that it is worth
+   *  claiming: the list is alphabetical and every entry is equally inert
+   *  until a posting asks for it. Typing something outside the catalogue is
+   *  still allowed — the input is free text and always was. */
+  skillOptions = computed(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const s of [...SKILL_CATALOGUE.map((c) => c.name), ...this.poolAll(), ...OTHER_SKILLS]) {
+      const key = s.trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      out.push(s.trim());
+    }
+    return out.sort((a, b) => a.localeCompare(b));
   });
 
   /** Every skill in demand is now on the resume. Said as a note beside the
@@ -266,6 +314,10 @@ export class ResumeBuilder implements OnInit {
     const fromAnalysis = this.route.snapshot.queryParamMap.get('from') === 'analysis';
     const pending = fromAnalysis && !id ? this.analysis.take() : null;
 
+    // Before the branch below, because two of its three arms choose a title.
+    const mine = await this.api.resumes.mine();
+    if (mine.ok) this.otherTitles.set(mine.resumes.map((r) => ({ id: r.id, title: r.title || '' })));
+
     if (id) {
       const res = await this.api.resumes.get(id);
       if (!res.ok) {
@@ -279,7 +331,7 @@ export class ResumeBuilder implements OnInit {
       const d = pending.data;
       this.resume.set({
         ...blankResume(),
-        title: d.title || 'Uploaded resume',
+        title: this.freeTitle(d.title || 'Uploaded resume'),
         template: d.template || 'chronological',
         design: d.design || 'classic',
         personal: {
@@ -311,7 +363,7 @@ export class ResumeBuilder implements OnInit {
           : 'We filled this in from your uploaded resume, review each step before saving.',
       );
     } else {
-      this.resume.update((r) => ({ ...r, title: 'My resume', personal: { ...r.personal, fullName: user.name, email: user.email } }));
+      this.resume.update((r) => ({ ...r, title: this.freeTitle('My resume'), personal: { ...r.personal, fullName: user.name, email: user.email } }));
     }
     if (welcome) this.showToast('Account created. Let’s build your resume.');
 
@@ -806,8 +858,22 @@ export class ResumeBuilder implements OnInit {
 
     let r = this.resume();
     if (!r.title.trim()) {
-      r = { ...r, title: 'Untitled resume' };
+      r = { ...r, title: this.freeTitle('Untitled resume') };
       this.resume.set(r);
+    }
+
+    /* TITLES MUST BE UNIQUE PER APPLICANT. The title is the only thing that
+       tells two of your resumes apart — on the dashboard, in the picker when
+       you apply, and against the application a recruiter receives. Two called
+       the same thing means choosing blind, and a wrong choice is invisible
+       afterwards.
+
+       routes/resumes.ts is where this binds; this copy exists so the applicant
+       lands on the field instead of reading an error after a round trip. */
+    if (this.titleClash()) {
+      this.formError.set(`You already have a resume called “${r.title.trim()}”. Give this one a different title — it is how you tell them apart when you apply.`);
+      this.goTo(0);
+      return false;
     }
     if (!r.personal.fullName.trim()) {
       this.formError.set('Add your name before saving, it’s the first line of the resume.');

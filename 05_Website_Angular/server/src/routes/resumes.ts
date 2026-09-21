@@ -175,6 +175,27 @@ router.post('/save', async (req, res) => {
     if (!own || own.user_id !== u.user_id) return fail(res, 'You can only edit your own resumes.', 403);
   }
 
+  /* ONE TITLE PER APPLICANT. The title is the only thing that tells two of
+     an applicant's resumes apart: it is what the dashboard lists, what the
+     "which resume?" picker on an application shows, and what a recruiter
+     sees named against a submission. Two resumes both called "My resume"
+     leave the applicant picking blind at the one moment it matters, and a
+     wrong pick is not visible afterwards — the application simply carries
+     the other document.
+
+     Scoped to the owner, not global: two different people may of course both
+     call theirs "My resume". Compared case-insensitively on the trimmed,
+     already-truncated title, so "My Resume" does not slip past "my resume",
+     and `<> ?` excludes the row being edited so re-saving under its own
+     title is not mistaken for a collision. */
+  const clash = await queryOne<{ resume_id: number }>(
+    'SELECT resume_id FROM resumes WHERE user_id = ? AND LOWER(title) = LOWER(?) AND resume_id <> ?',
+    [u.user_id, title, R.id ? Number(R.id) : 0],
+  );
+  if (clash) {
+    return fail(res, `You already have a resume called “${title}”. Give this one a different title — it is how you tell them apart when you apply.`);
+  }
+
   try {
     const savedId = await withTransaction(async (tx) => {
       let id = R.id ? Number(R.id) : 0;
@@ -381,6 +402,25 @@ router.post('/duplicate', async (req, res) => {
   const r = await fetchResume(id);
   if (!r || r.user_id !== u.user_id) return fail(res, 'Resume not found.');
 
+  /* The copy needs a title no other resume of this applicant holds, or it
+     would create exactly the collision /save now refuses — and the applicant
+     could not then save the copy at all without first renaming it. Walks
+     "(copy)", "(copy 2)", "(copy 3)" ... until one is free, matching
+     case-insensitively because that is how the guard compares. Truncated to
+     the column's 120 from the LEFT of the base name, so the suffix that makes
+     it unique is never the part that gets cut off. */
+  const taken = new Set(
+    (await query<{ title: string }>('SELECT title FROM resumes WHERE user_id = ?', [u.user_id]))
+      .map((row) => row.title.trim().toLowerCase()),
+  );
+  const copyTitle = ((): string => {
+    for (let n = 1; ; n++) {
+      const suffix = n === 1 ? ' (copy)' : ` (copy ${n})`;
+      const candidate = (r.title.trim().slice(0, 120 - suffix.length) + suffix).slice(0, 120);
+      if (!taken.has(candidate.toLowerCase())) return candidate;
+    }
+  })();
+
   try {
     const newId = await withTransaction(async (tx) => {
       /* EVERY COLUMN AND EVERY SECTION, not a subset. "Duplicate it and edit
@@ -394,9 +434,9 @@ router.post('/duplicate', async (req, res) => {
       const ins = await tx.exec(
         `INSERT INTO resumes (user_id, title, template_type, design, full_name, email, phone,
            address, summary, headline, linkedin, portfolio, hidden_sections, evidence_prompted)
-         SELECT user_id, title || ' (copy)', template_type, design, full_name, email, phone,
+         SELECT user_id, ?, template_type, design, full_name, email, phone,
            address, summary, headline, linkedin, portfolio, hidden_sections, evidence_prompted
-           FROM resumes WHERE resume_id = ? RETURNING resume_id`, [id],
+           FROM resumes WHERE resume_id = ? RETURNING resume_id`, [copyTitle, id],
       );
       const nid = ins.insertId;
 

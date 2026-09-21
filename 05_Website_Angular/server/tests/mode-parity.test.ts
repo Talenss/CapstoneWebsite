@@ -184,6 +184,71 @@ test('ownership rules are enforced in both modes', async () => {
     demo.applications.history('a999999'), api('applications/history', { id: 999999 }));
 });
 
+test('a resume title already taken is refused in both modes', async () => {
+  /* The title is the ONLY thing that tells two of an applicant's resumes
+     apart — on the dashboard, in the picker when they apply, and against the
+     application a recruiter receives. Two called the same thing means the
+     applicant chooses blind, and a wrong choice is invisible afterwards: the
+     application simply carries the other document.
+
+     Demo mode is what gets demonstrated, so a rule the server holds and the
+     demo does not would make the demonstration a misrepresentation. */
+  await demo.auth.login('marco@demo.ph', 'demo123');
+  await api('auth/login', { email: 'marco@demo.ph', password: 'demo123' });
+
+  const dR: any = await demo.resumes.mine();
+  const aR: any = await api('resumes/list');
+  const taken = dR.resumes[0].title;
+  assert.ok(taken, 'the seeded applicant must already own a titled resume');
+  assert.ok(aR.resumes.some((r: any) => r.title === taken), 'both modes must seed the same title');
+
+  const draft = (title: string) => ({
+    title,
+    template: 'chronological', design: 'classic',
+    personal: { fullName: 'Marco Dizon', email: 'marco@demo.ph', phone: '0917', address: '', summary: 'A summary of two plain sentences.' },
+    education: [{ school: 'HAU', degree: 'BS Information Technology', level: 'bachelor', year: '2025' }],
+    experience: [], skills: ['Customer Service'], certifications: [],
+  });
+
+  await agree('a NEW resume under a title this applicant already holds',
+    demo.resumes.save(draft(taken) as any), api('resumes/save', { resume: draft(taken) }));
+
+  // Case must not be an escape hatch: "My Resume" and "my resume" are the
+  // same name to the person reading the list.
+  await agree('the same title in a different case',
+    demo.resumes.save(draft(taken.toUpperCase()) as any), api('resumes/save', { resume: draft(taken.toUpperCase()) }));
+
+  // ...and a free title is still accepted, or the rule would read as a pass
+  // simply by refusing everything.
+  const free = 'Parity draft ' + Date.now();
+  await agree('a title nobody holds',
+    demo.resumes.save(draft(free) as any), api('resumes/save', { resume: draft(free) }));
+});
+
+test('duplicating twice gives each copy a title of its own, in both modes', async () => {
+  /* Without this the second copy would collide with the first and could not
+     be saved at all — the rule above would have made "Duplicate" a button
+     that produces an unsaveable resume. */
+  await demo.auth.login('liza@demo.ph', 'demo123');
+  await api('auth/login', { email: 'liza@demo.ph', password: 'demo123' });
+
+  const dR: any = await demo.resumes.mine();
+  const aR: any = await api('resumes/list');
+  const dId = dR.resumes[0].id;
+  const aId = aR.resumes.find((r: any) => r.title === dR.resumes[0].title)?.id ?? aR.resumes[0].id;
+
+  const dTitles: string[] = [];
+  const aTitles: string[] = [];
+  for (let i = 0; i < 3; i++) {
+    dTitles.push(((await demo.resumes.duplicate(dId)) as any).resume.title);
+    aTitles.push(((await api('resumes/duplicate', { id: aId })) as any).resume.title);
+  }
+  assert.deepEqual(dTitles, aTitles, 'the two modes name the copies differently');
+  assert.equal(new Set(dTitles).size, 3, `copies reused a title: ${dTitles.join(' | ')}`);
+  assert.ok(dTitles[0].endsWith('(copy)'), `first copy should end "(copy)", got ${dTitles[0]}`);
+  assert.ok(dTitles[1].endsWith('(copy 2)'), `second copy should end "(copy 2)", got ${dTitles[1]}`);
+});
+
 test('the same résumé scores identically against every seeded opening', async () => {
   // The study's central claim is the number itself. Agreeing to accept while
   // disagreeing about the score would be the worst of the possible failures.

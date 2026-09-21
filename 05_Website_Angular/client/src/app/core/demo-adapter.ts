@@ -815,6 +815,18 @@ export class DemoAdapter implements ApiAdapter {
       if (links.length) resume.links = links as any;
       if (hiddenSections.length) resume.hiddenSections = hiddenSections as any;
       const i = db.resumes.findIndex((r) => r.id === resume.id);
+
+      /* ONE TITLE PER APPLICANT — the same rule and the same wording as
+         routes/resumes.ts, checked against the title AFTER trimming and
+         truncation so the two modes compare the same string. Scoped to this
+         user, case-insensitive, and skipping the record being edited. */
+      const clash = db.resumes.some(
+        (r) => r.userId === me.id && r.id !== resume.id &&
+          (r.title || '').trim().toLowerCase() === resume.title.toLowerCase());
+      if (clash) {
+        return apiFail(`You already have a resume called \u201C${resume.title}\u201D. Give this one a different title \u2014 it is how you tell them apart when you apply.`);
+      }
+
       try {
         if (i >= 0) {
           if (db.resumes[i].userId !== me.id) return apiFail('You can only edit your own resumes.');
@@ -857,7 +869,16 @@ export class DemoAdapter implements ApiAdapter {
       const src = db.resumes.find((x) => x.id === id);
       if (!me || !src || src.userId !== me.id) return apiFail('Resume not found.');
       const copy: Resume = JSON.parse(JSON.stringify(src));
-      copy.id = uid(); copy.title = src.title + ' (copy)'; copy.updatedAt = Date.now(); copy.ownFile = null;
+      /* A free title, exactly as routes/resumes.ts picks one: without this the
+         second copy would collide with the first and could never be saved. */
+      const taken = new Set(db.resumes.filter((r) => r.userId === me.id).map((r) => (r.title || '').trim().toLowerCase()));
+      let copyTitle = '';
+      for (let n = 1; ; n++) {
+        const suffix = n === 1 ? ' (copy)' : ` (copy ${n})`;
+        copyTitle = ((src.title || '').trim().slice(0, 120 - suffix.length) + suffix).slice(0, 120);
+        if (!taken.has(copyTitle.toLowerCase())) break;
+      }
+      copy.id = uid(); copy.title = copyTitle; copy.updatedAt = Date.now(); copy.ownFile = null;
       db.resumes.push(copy);
       try { persist(db); } catch (e: any) { return apiFail(e.message); }
       return apiOk({ resume: copy });
