@@ -812,6 +812,34 @@ export class ResumeBuilder implements OnInit {
       return false;
     }
 
+    /* EDUCATION AND SKILLS CANNOT BE SKIPPED. They are two of the three
+       components every opening scores, so a resume saved without them reaches
+       a recruiter looking complete while carrying nothing for two thirds of
+       the weighting — and the applicant is never told, because from their side
+       nothing failed.
+
+       Checked against CONTENT rather than the existence of a row: opening the
+       education step and typing nothing leaves an entry object behind, and
+       counting it would let the rule be satisfied by a row nobody filled in.
+
+       The same rule is enforced in routes/resumes.ts, which is where it
+       actually binds. This copy exists so the applicant lands on the step
+       that needs them instead of reading an error after a round trip. */
+    const hasEducation = (r.education || []).some(
+      (e) => (e.school || '').trim() !== '' || (e.degree || '').trim() !== '');
+    if (!hasEducation) {
+      this.formError.set('Add at least one education entry before saving. Openings score education, so a resume without it cannot be matched fairly.');
+      this.goTo(STEPS.indexOf('Education'));
+      return false;
+    }
+
+    const hasSkills = (r.skills || []).some((s) => String(s || '').trim() !== '');
+    if (!hasSkills) {
+      this.formError.set('Add at least one skill before saving. Skills carry the largest share of every match score.');
+      this.goTo(STEPS.indexOf('Skills'));
+      return false;
+    }
+
     /* Emitted only once the question has been put. An empty map is not the
        same as no map: empty means asked and no sources given, which is half
        credit; absent means never asked, which is full. */

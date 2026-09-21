@@ -80,6 +80,33 @@ router.post('/save', async (req, res) => {
   const references = cap<any>(R.references, 10);
   const links = cap<any>(R.links, 10);
 
+  /* EDUCATION AND SKILLS CANNOT BE SKIPPED.
+   *
+   * They are two of the three components every opening scores, so a resume
+   * saved without them is one the engine can only ever score on experience —
+   * it reaches a recruiter looking complete while carrying nothing for two
+   * thirds of the weighting. The applicant is not told why, because from
+   * their side nothing failed; the resume simply saved.
+   *
+   * Enforced HERE rather than only in the builder, because the builder is the
+   * browser's copy of the rule and the browser is not where a rule lives. The
+   * builder checks it too, so the applicant is stopped on the step that needs
+   * them rather than by a message after a round trip.
+   *
+   * CONTENT, not the existence of a row. An entry object with every field
+   * blank is what an applicant leaves behind by opening a section and typing
+   * nothing, and counting it would let the rule be satisfied by a row nobody
+   * filled in. Either school or degree is enough to show the entry is real. */
+  const hasEducation = education.some(
+    (e: any) => String(e?.school ?? '').trim() !== '' || String(e?.degree ?? '').trim() !== '');
+  const hasSkills = skills.some((s: any) => String(s ?? '').trim() !== '');
+  if (!hasEducation) {
+    return fail(res, 'Add at least one education entry before saving — openings score education, and a resume without it cannot be matched fairly.');
+  }
+  if (!hasSkills) {
+    return fail(res, 'Add at least one skill before saving — skills carry the largest share of every match score.');
+  }
+
   /* SECTIONS THE APPLICANT SWITCHED OFF. parseHiddenSections keeps only the
      six names it knows, so education, experience and skills cannot be hidden
      by a hand-written request -- they are the three components every opening

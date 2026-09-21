@@ -498,6 +498,77 @@ test('a recruiter cannot score a resume never submitted to their company', async
   }
 });
 
+// ---------- education and skills cannot be skipped ----------
+
+test('a resume with no education is refused', async () => {
+  const api = client();
+  await api('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const { body } = await api('resumes/save', {
+    resume: {
+      title: 'No education', personal: { fullName: 'Test Person', email: 't@t.ph' },
+      education: [], experience: [], certifications: [], skills: ['Communication'],
+    },
+  });
+  assert.equal(body.ok, false, 'education is one of the three scored components; it cannot be empty');
+  assert.match(body.error, /education/i);
+});
+
+test('a resume with no skills is refused', async () => {
+  const api = client();
+  await api('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const { body } = await api('resumes/save', {
+    resume: {
+      title: 'No skills', personal: { fullName: 'Test Person', email: 't@t.ph' },
+      education: [{ school: 'Holy Angel University', degree: 'BSIT', level: 'bachelor' }],
+      experience: [], certifications: [], skills: [],
+    },
+  });
+  assert.equal(body.ok, false, 'skills carry the largest weight; they cannot be empty');
+  assert.match(body.error, /skill/i);
+});
+
+test('a blank education row does not satisfy the requirement', async () => {
+  // Opening the education step and typing nothing leaves an entry object
+  // behind. Counting it would let the rule be met by a row nobody filled in.
+  const api = client();
+  await api('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const { body } = await api('resumes/save', {
+    resume: {
+      title: 'Blank row', personal: { fullName: 'Test Person', email: 't@t.ph' },
+      education: [{ school: '  ', degree: '', level: 'bachelor' }],
+      experience: [], certifications: [], skills: ['Communication'],
+    },
+  });
+  assert.equal(body.ok, false, 'an entry with no school and no degree is not an education entry');
+});
+
+test('a whitespace-only skill does not satisfy the requirement', async () => {
+  const api = client();
+  await api('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const { body } = await api('resumes/save', {
+    resume: {
+      title: 'Blank skill', personal: { fullName: 'Test Person', email: 't@t.ph' },
+      education: [{ school: 'Holy Angel University', degree: 'BSIT', level: 'bachelor' }],
+      experience: [], certifications: [], skills: ['   '],
+    },
+  });
+  assert.equal(body.ok, false);
+});
+
+test('a resume carrying both still saves', async () => {
+  const api = client();
+  await api('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  const { body } = await api('resumes/save', {
+    resume: {
+      title: 'Complete', personal: { fullName: 'Test Person', email: 't@t.ph' },
+      education: [{ school: 'Holy Angel University', degree: 'BSIT', level: 'bachelor' }],
+      experience: [], certifications: [], skills: ['Communication', 'Teamwork'],
+    },
+  });
+  assert.equal(body.ok, true, 'the rule must not block a resume that has both');
+  assert.equal(body.resume.skills.length, 2);
+});
+
 // ---------- input bounds ----------
 
 test('resume sections are clamped instead of accepted unbounded', async () => {
@@ -510,7 +581,10 @@ test('resume sections are clamped instead of accepted unbounded', async () => {
     resume: {
       title: 'x'.repeat(400),
       personal: {},
-      education: [], experience: [], certifications: [],
+      // Education is required on save, so this carries a real entry. The
+      // clamping this test is about is unaffected by it.
+      education: [{ school: 'Holy Angel University', degree: 'BSIT', level: 'bachelor' }],
+      experience: [], certifications: [],
       skills: Array.from({ length: 3000 }, (_, i) => `bulkskill${i}`),
     },
   });

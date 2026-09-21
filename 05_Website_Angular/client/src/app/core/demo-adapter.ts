@@ -627,6 +627,21 @@ export class DemoAdapter implements ApiAdapter {
       // invalid design persisted in demo while the server coerced it.
       if (!me || me.role !== 'seeker') return apiFail('You are not signed in.');
       const list = (v: unknown, n: number): any[] => (Array.isArray(v) ? v : []).slice(0, n);
+
+      /* Education and skills cannot be skipped — the same rule, and the same
+         wording, as routes/resumes.ts. Content rather than the existence of a
+         row, so a blank entry left behind by opening a section does not
+         satisfy it. Mode parity asserts the two modes refuse the same saves. */
+      const hasEducation = list(resume.education, 20).some(
+        (e: any) => String(e?.school ?? '').trim() !== '' || String(e?.degree ?? '').trim() !== '');
+      const hasSkills = list(resume.skills, 100).some((s: any) => String(s ?? '').trim() !== '');
+      if (!hasEducation) {
+        return apiFail('Add at least one education entry before saving — openings score education, and a resume without it cannot be matched fairly.');
+      }
+      if (!hasSkills) {
+        return apiFail('Add at least one skill before saving — skills carry the largest share of every match score.');
+      }
+
       const p: any = resume.personal || {};
 
       const personal: any = {
