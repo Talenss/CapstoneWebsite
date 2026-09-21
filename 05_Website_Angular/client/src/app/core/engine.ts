@@ -1184,6 +1184,50 @@ export function educationFields(text: string): Set<string> {
   return out;
 }
 
+/** WHAT A RECRUITER MAY ASK FOR, as the field-of-study picker offers it.
+ *
+ *  The value of every entry is a tag EDU_FIELD_VOCAB already produces — an
+ *  engine test asserts the two agree, so a field can never be offered that no
+ *  degree can satisfy, nor a degree placed in a field nobody can ask for.
+ *  The labels are the recruiter's words; the tags are the engine's. */
+export const EDU_FIELD_OPTIONS: readonly { value: string; label: string }[] = [
+  { value: 'it', label: 'Information technology and computing' },
+  { value: 'engineering', label: 'Engineering' },
+  { value: 'healthcare', label: 'Healthcare and allied health' },
+  { value: 'finance', label: 'Finance, accounting and economics' },
+  { value: 'business', label: 'Business and management' },
+  { value: 'admin', label: 'Office administration' },
+  { value: 'marketing', label: 'Marketing, advertising and design' },
+  { value: 'communication', label: 'Communication and media' },
+  { value: 'hr', label: 'Human resources and psychology' },
+  { value: 'education', label: 'Education and teaching' },
+  { value: 'hospitality', label: 'Hospitality and tourism' },
+  { value: 'logistics', label: 'Logistics and supply chain' },
+  { value: 'security', label: 'Criminology and security' },
+];
+
+/** The two choices that are not a field. Stored in the same column, because
+ *  to the engine they are answers to the same question. */
+export const EDU_FIELD_ANY = 'any';
+export const EDU_FIELD_FROM_DEPARTMENT = '';
+
+/** WHICH FIELDS THIS OPENING ACCEPTS. One place, so the client, the server
+ *  and the recruiter's own preview cannot disagree about it.
+ *
+ *  An EMPTY SET means "accepts anything", which is what both `any` and an
+ *  unplaceable department come to — a requirement nobody stated cannot be one
+ *  the applicant failed, the rule every other component follows.
+ *
+ *  A posting saved before this picker existed has no stored choice, and falls
+ *  back to reading the department exactly as it did then. That fallback is
+ *  what keeps every already-published opening scoring the same. */
+export function acceptedFields(posting: any): Set<string> {
+  const chosen = String(posting?.educationField ?? '').trim().toLowerCase();
+  if (chosen === EDU_FIELD_ANY) return new Set<string>();
+  if (chosen && EDU_FIELD_OPTIONS.some((o) => o.value === chosen)) return new Set([chosen]);
+  return educationFields(String(posting?.department || ''));
+}
+
 /** Normalize a skill to its canonical comparable form: strip case and
  *  punctuation, then fold known synonyms together. Used for BOTH sides
  *  of every comparison, so a resume and a posting that mean the same
@@ -1384,18 +1428,21 @@ export function scoreLocal(
   const relPart = reqMonths <= 0 ? 1 : Math.min(1, relevantMonths / reqMonths);
 
   /* FIELD OF STUDY — the optional ninth component.
-     What the degree is ABOUT, matched against the department the opening is
-     already filed under. Zero by default, like every optional component, so
-     an opening that ignores it scores exactly as it did before this existed.
+     What the degree is ABOUT, matched against what the opening accepts. Zero
+     by default, like every optional component, so an opening that ignores it
+     scores exactly as it did before this existed.
 
-     A department the vocabulary cannot place scores FULL MARKS rather than
-     nothing: a requirement nobody stated cannot be one the applicant failed,
-     and that is the honest answer for a support role where any degree does. */
-  const deptFields = educationFields(String((posting as any).department || ''));
+     The recruiter PICKS the field (see acceptedFields): one of the thirteen,
+     or "any field", or — the default, and what every opening saved before the
+     picker existed does — read it from the department. An opening that
+     accepts anything scores FULL MARKS rather than nothing: a requirement
+     nobody stated cannot be one the applicant failed, and that is the honest
+     answer for a support role where any degree does. */
+  const wantedFields = acceptedFields(posting);
   const seekerFields = educationFields(
     (resume.education || []).map((e: any) => `${e?.degree || ''} ${e?.field || ''}`).join(' '));
-  const fieldMeets = deptFields.size === 0
-    || [...seekerFields].some((f) => deptFields.has(f));
+  const fieldMeets = wantedFields.size === 0
+    || [...seekerFields].some((f) => wantedFields.has(f));
   const fieldPart = fieldMeets ? 1 : 0;
 
   const raw = (skillPart * W.skills + eduPart * W.education

@@ -6,7 +6,7 @@ import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { EduLevel, EmploymentType, Posting, Resume } from '../../core/models';
-import { EDU_LABELS, SKILL_BY_INDUSTRY, SKILL_CATALOGUE, THRESHOLDS, WEIGHTS, WEIGHT_FLOOR, WEIGHT_STEP, scoreLocal, tierColor } from '../../core/engine';
+import { EDU_FIELD_OPTIONS, EDU_LABELS, SKILL_BY_INDUSTRY, SKILL_CATALOGUE, THRESHOLDS, WEIGHTS, WEIGHT_FLOOR, WEIGHT_STEP, scoreLocal, tierColor } from '../../core/engine';
 import { reportInvalidFields } from '../../shared/invalid-fields';
 import { HlmComboboxImports } from '@spartan-ng/helm/combobox';
 import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
@@ -50,6 +50,10 @@ export class HrPosting {
   descVal = signal('');
   skillsVal = signal<string[]>([]);
   eduVal = signal<EduLevel>('bachelor');
+  /** WHICH FIELD OF STUDY this opening accepts. '' is not "unset" — it is the
+   *  third real answer, "read it from the department", and it is the default
+   *  so that adding this picker changed no existing opening. */
+  fieldVal = signal<string>('');
   monthsVal = signal(0); // canonical unit — the engine and API speak months
   /** The recruiter enters YEARS (partner states requirements in years); the
    *  field shows this and stores months underneath. Whole and half years are
@@ -216,7 +220,13 @@ export class HrPosting {
        screen and the recruiter cannot see what the change does to the very
        ranking they are tuning. */
     const posting = {
-      skills, educationLevel: this.eduVal(), minExperienceMonths: this.monthsVal(),
+      skills, educationLevel: this.eduVal(),
+      /* Carried into the PREVIEW too, not just the save. Without it the
+         ranking on screen would answer a different question from the one the
+         recruiter is editing, which is the whole point of the preview. */
+      educationField: this.fieldVal() || null,
+      department: this.deptVal(),
+      minExperienceMonths: this.monthsVal(),
       certifications: this.certsVal(),
       languages: this.langsVal(),
       minProjects: this.minProjects(), minReferences: this.minReferences(),
@@ -268,6 +278,7 @@ export class HrPosting {
       this.descVal.set(p.description);
       this.skillsVal.set([...p.skills]);
       this.eduVal.set(p.educationLevel);
+      this.fieldVal.set(p.educationField || '');
       this.monthsVal.set(p.minExperienceMonths || 0);
       this.deadlineVal.set(p.deadline || '');
       this.certsVal.set([...(p.certifications ?? [])]);
@@ -312,6 +323,18 @@ export class HrPosting {
   ];
   readonly typeLabel = labelFor(this.typeOptions);
   readonly eduLabel = (v: EduLevel): string => this.eduLabels[v] ?? String(v ?? '');
+
+  /* The thirteen fields, plus the two answers that are not a field. "Match
+     the department" leads because it is the default and the one most openings
+     want; "Any field" is second because it is the other whole-population
+     answer. The thirteen follow in the engine's own order. */
+  readonly fieldOptions: readonly { v: string; label: string }[] = [
+    { v: '', label: 'Match the department' },
+    { v: 'any', label: 'Any field of study' },
+    ...EDU_FIELD_OPTIONS.map((o) => ({ v: o.value, label: o.label })),
+  ];
+  readonly fieldLabel = (v: string): string =>
+    this.fieldOptions.find((o) => o.v === (v ?? ''))?.label ?? 'Match the department';
   setDesc(e: Event): void { this.descVal.set((e.target as HTMLTextAreaElement).value); }
   setYears(e: Event): void {
     const y = Number((e.target as HTMLInputElement).value) || 0;
@@ -564,6 +587,7 @@ export class HrPosting {
     const payload: Partial<Posting> = {
       title, department, employmentType: this.typeVal(), description,
       skills, educationLevel: this.eduVal(),
+      educationField: this.fieldVal() || null,
       minExperienceMonths: Math.max(0, this.monthsVal() || 0),
       certifications: this.certsVal(),
       languages: this.langsVal(),

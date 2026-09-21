@@ -300,6 +300,15 @@ export async function runMigrations(): Promise<void> {
   // the posting stops accepting applications (lazy auto-close, no cron)
   await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS application_deadline DATE');
 
+  /* job_postings.education_field — which field of study the opening accepts.
+     NULLABLE ON PURPOSE, and deliberately NOT given a default: NULL is a
+     meaningful third answer ("read it from the department"), which is what
+     every opening written before this column existed holds and what keeps
+     each of them scoring exactly as it did. A DEFAULT of 'any' would silently
+     rewrite that answer for every row in the table. Not a weight column, so
+     it stays out of the block that owns posting_weights_complete. */
+  await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS education_field VARCHAR(32)');
+
   // saved_jobs — a seeker's bookmarked openings
   await exec(`CREATE TABLE IF NOT EXISTS saved_jobs (
     user_id     INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,

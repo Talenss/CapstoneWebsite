@@ -313,6 +313,13 @@ export interface Posting {
   description: string;
   skills: string[];
   educationLevel: EduLevel;
+  /** WHICH FIELD OF STUDY this opening accepts, as one of the tags in
+   *  EDU_FIELD_OPTIONS, or 'any' for every field. Absent means the choice was
+   *  never made and the engine reads the department instead — which is what
+   *  every opening published before the picker existed does, and why adding
+   *  it moved no score. Only ever consulted when the recruiter gives the
+   *  field-of-study component a weight; at the default of 0 it is inert. */
+  educationField?: string | null;
   minExperienceMonths: number;
   /** Optional "apply by" date (YYYY-MM-DD). Past it, the posting stops
    *  accepting applications without anyone closing it by hand. */

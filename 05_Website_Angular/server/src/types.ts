@@ -80,6 +80,10 @@ export interface PostingRow {
   employment_type: 'full-time' | 'part-time' | 'contract' | 'internship';
   description: string | null;
   education_level: string;
+  /** The field of study the opening accepts: an EDU_FIELD_OPTIONS tag, 'any',
+   *  or NULL for "read it from the department", which is every opening
+   *  written before the column existed. */
+  education_field: string | null;
   min_experience_months: number;
   application_deadline: string | null;
   status: 'open' | 'closed';

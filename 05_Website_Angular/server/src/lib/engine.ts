@@ -377,6 +377,39 @@ export function educationFields(text: string): Set<string> {
   return out;
 }
 
+/** MIRRORED 1:1 in client/src/app/core/engine.ts. The recruiter's picker
+ *  reads the client copy; this one scores with it, and a parity test asserts
+ *  the two lists are the same, in the same order. */
+export const EDU_FIELD_OPTIONS: readonly { value: string; label: string }[] = [
+  { value: 'it', label: 'Information technology and computing' },
+  { value: 'engineering', label: 'Engineering' },
+  { value: 'healthcare', label: 'Healthcare and allied health' },
+  { value: 'finance', label: 'Finance, accounting and economics' },
+  { value: 'business', label: 'Business and management' },
+  { value: 'admin', label: 'Office administration' },
+  { value: 'marketing', label: 'Marketing, advertising and design' },
+  { value: 'communication', label: 'Communication and media' },
+  { value: 'hr', label: 'Human resources and psychology' },
+  { value: 'education', label: 'Education and teaching' },
+  { value: 'hospitality', label: 'Hospitality and tourism' },
+  { value: 'logistics', label: 'Logistics and supply chain' },
+  { value: 'security', label: 'Criminology and security' },
+];
+
+export const EDU_FIELD_ANY = 'any';
+
+/** WHICH FIELDS THIS OPENING ACCEPTS — the mirror of acceptedFields() in the
+ *  client engine, and it must stay identical: the live score an applicant is
+ *  shown while editing has to equal the one the recruiter's list ranks them
+ *  by. An EMPTY SET accepts anything. A posting with no stored choice reads
+ *  its department, exactly as every opening did before the picker existed. */
+export function acceptedFields(posting: any): Set<string> {
+  const chosen = String(posting?.educationField ?? '').trim().toLowerCase();
+  if (chosen === EDU_FIELD_ANY) return new Set<string>();
+  if (chosen && EDU_FIELD_OPTIONS.some((o) => o.value === chosen)) return new Set([chosen]);
+  return educationFields(String(posting?.department || ''));
+}
+
 /** Normalize a skill to its canonical comparable form: strip case and
  *  punctuation, then fold known synonyms together. Used for BOTH sides
  *  of every comparison, and for the canonical `skills.skill_norm` row,
@@ -795,11 +828,11 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
      A department the vocabulary cannot place scores FULL MARKS rather than
      nothing: a requirement nobody stated cannot be one the applicant failed,
      and that is the honest answer for a support role where any degree does. */
-  const deptFields = educationFields(String((posting as any).department || ''));
+  const wantedFields = acceptedFields(posting);
   const seekerFields = educationFields(
     (resume.education || []).map((e: any) => `${e?.degree || ''} ${e?.field || ''}`).join(' '));
-  const fieldMeets = deptFields.size === 0
-    || [...seekerFields].some((f) => deptFields.has(f));
+  const fieldMeets = wantedFields.size === 0
+    || [...seekerFields].some((f) => wantedFields.has(f));
   const fieldPart = fieldMeets ? 1 : 0;
 
   const raw = (skillPart * W.skills + eduPart * W.education

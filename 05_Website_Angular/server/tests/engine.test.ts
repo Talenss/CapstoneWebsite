@@ -17,8 +17,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { scoreWith, DEFAULT_SETTINGS, skillNorm, SKILL_ALIASES, EDU_RANK, MatchSettings, UNEVIDENCED_CREDIT, EVIDENCE_KINDS, EvidenceKind, evidenceLabels, OPTIONAL_WEIGHTS } from '../src/lib/engine';
-import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK, UNEVIDENCED_CREDIT as CLIENT_UNEVIDENCED_CREDIT, evidenceLabels as clientEvidenceLabels, SKILL_CATEGORY, SKILL_CATALOGUE, missingHint } from '../../client/src/app/core/engine';
+import { scoreWith, DEFAULT_SETTINGS, skillNorm, SKILL_ALIASES, EDU_RANK, MatchSettings, UNEVIDENCED_CREDIT, EVIDENCE_KINDS, EvidenceKind, evidenceLabels, OPTIONAL_WEIGHTS, EDU_FIELD_OPTIONS as SERVER_EDU_FIELD_OPTIONS } from '../src/lib/engine';
+import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK, UNEVIDENCED_CREDIT as CLIENT_UNEVIDENCED_CREDIT, evidenceLabels as clientEvidenceLabels, SKILL_CATEGORY, SKILL_CATALOGUE, missingHint, EDU_FIELD_OPTIONS, EDU_FIELD_VOCAB } from '../../client/src/app/core/engine';
 
 // ---------- helpers ----------
 
@@ -34,12 +34,14 @@ const posting = (
   weights?: { skills: number; education: number; experience: number; certifications?: number; relevance?: number; field?: number } | null,
   certifications?: string[],
   department?: string,
+  educationField?: string,
 ) => ({
   id: 'p-test',
   skills,
   educationLevel,
   minExperienceMonths,
   ...(department !== undefined ? { department } : {}),
+  ...(educationField !== undefined ? { educationField } : {}),
   ...(weights !== undefined ? { weights } : {}),
   ...(certifications !== undefined ? { certifications } : {}),
 });
@@ -1086,6 +1088,72 @@ test('a degree typed by hand is placed by the vocabulary, not a lookup', () => {
   r.education = [{ level: 'bachelor', degree: 'Bachelor of Science major in Computer Science' }];
   const s = score(r, posting(['JavaScript'], 'bachelor', 0, w as any, undefined, 'Information Technology'));
   assert.equal(s.fieldMeets, true, 'the words are read; the whole string is not looked up');
+});
+
+test('the field picker offers exactly the fields the vocabulary can produce', () => {
+  /* THE GUARD THAT MATTERS on this feature. If the picker offered a field no
+     degree can be placed in, a recruiter could pick it and every applicant
+     would score zero on the component with nothing they could do about it.
+     If the vocabulary produced a tag the picker never offers, a degree would
+     be filed under something nobody can ask for. Both are silent. */
+  const fromVocab = new Set(Object.values(EDU_FIELD_VOCAB));
+  const offered = new Set(EDU_FIELD_OPTIONS.map((o) => o.value));
+  assert.deepEqual([...offered].sort(), [...fromVocab].sort(),
+    'EDU_FIELD_OPTIONS and EDU_FIELD_VOCAB name different fields');
+  assert.equal(offered.size, EDU_FIELD_OPTIONS.length, 'the picker lists a field twice');
+  for (const o of EDU_FIELD_OPTIONS) assert.ok(o.label.trim().length > 2, `${o.value} has no label`);
+});
+
+test('the two engines offer the same field list, in the same order', () => {
+  // The recruiter's picker reads the client copy; the server scores with its
+  // own. A divergence would let an opening be saved asking for a field the
+  // scorer does not recognise, which falls back to the department silently.
+  assert.deepEqual(EDU_FIELD_OPTIONS, SERVER_EDU_FIELD_OPTIONS);
+});
+
+test('a recruiter can require a field of study that is not the department', () => {
+  const w = { skills: 40, education: 10, experience: 10, field: 40 };
+  const r: any = resume(['JavaScript'], ['bachelor'], [12]);
+  r.education = [{ level: 'bachelor', degree: 'BS Nursing' }];
+  // Department says IT; the recruiter has asked for healthcare instead.
+  const chosen = score(r, posting(['JavaScript'], 'bachelor', 0, w as any, undefined, 'Information Technology', 'healthcare'));
+  assert.equal(chosen.fieldMeets, true, 'the PICKED field wins over the department');
+  const fromDept = score(r, posting(['JavaScript'], 'bachelor', 0, w as any, undefined, 'Information Technology'));
+  assert.equal(fromDept.fieldMeets, false, 'with no pick it still reads the department');
+});
+
+test('"any field" accepts every graduate', () => {
+  const w = { skills: 40, education: 10, experience: 10, field: 40 };
+  for (const degree of ['BS Nursing', 'BS Criminology', 'BS Information Technology', 'Bachelor of Fine Arts']) {
+    const r: any = resume(['JavaScript'], ['bachelor'], [12]);
+    r.education = [{ level: 'bachelor', degree }];
+    const s = score(r, posting(['JavaScript'], 'bachelor', 0, w as any, undefined, 'Information Technology', 'any'));
+    assert.equal(s.fieldMeets, true, `${degree} should be accepted when the opening takes any field`);
+  }
+});
+
+test('an unrecognised field falls back to the department, it does not reject everyone', () => {
+  /* A posting written by a newer build, or a value corrupted in transit,
+     must not silently score every applicant zero on the component. */
+  const w = { skills: 40, education: 10, experience: 10, field: 40 };
+  const r: any = resume(['JavaScript'], ['bachelor'], [12]);
+  r.education = [{ level: 'bachelor', degree: 'BS Computer Science' }];
+  const s = score(r, posting(['JavaScript'], 'bachelor', 0, w as any, undefined, 'Information Technology', 'underwater-basket-weaving'));
+  assert.equal(s.fieldMeets, true, 'fell back to the department, which this degree matches');
+});
+
+test('the field picker changes nothing while its weight is zero', () => {
+  /* The evaluation-integrity guarantee, asserted rather than assumed: every
+     respondent rated a system whose openings had no stored field, and the
+     component is off by default. Picking one must not move a score until a
+     recruiter gives the component a weight. */
+  const r: any = resume(['JavaScript'], ['bachelor'], [12]);
+  r.education = [{ level: 'bachelor', degree: 'BS Nursing' }];
+  const base = score(r, posting(['JavaScript'], 'bachelor', 0, null, undefined, 'Information Technology'));
+  for (const f of ['any', 'healthcare', 'it', '']) {
+    const s = score(r, posting(['JavaScript'], 'bachelor', 0, null, undefined, 'Information Technology', f));
+    assert.equal(s.score, base.score, `picking "${f}" moved the score at weight 0`);
+  }
 });
 
 test('field matching reads whole words, so "IT" is not found inside another word', () => {

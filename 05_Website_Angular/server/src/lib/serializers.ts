@@ -394,6 +394,10 @@ export async function serializePosting(p: PostingRow, withCompany = true): Promi
     description: p.description,
     skills: st.map((r) => r.skill_name),
     educationLevel: p.education_level,
+    /* Only when it was actually chosen. An absent key is what tells the
+       engine to fall back to reading the department, so emitting '' here
+       would be a different answer, not a tidier one. */
+    ...((p as any).education_field ? { educationField: (p as any).education_field } : {}),
     minExperienceMonths: Number(p.min_experience_months),
     /* WHOLE PERCENTAGES, the same units the column stores and the recruiter
        types — so "must total 100" is an exact integer check rather than a

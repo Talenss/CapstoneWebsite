@@ -361,6 +361,14 @@ CREATE TABLE job_postings (
   employment_type TEXT NOT NULL DEFAULT 'full-time' CHECK (employment_type IN ('full-time','part-time','contract','internship')),
   description     TEXT,
   education_level TEXT NOT NULL DEFAULT 'bachelor' CHECK (education_level IN ('none','highschool','vocational','associate','college_level','bachelor','master')),
+  -- Which field of study the opening accepts: one of the thirteen tags the
+  -- engine's EDU_FIELD_VOCAB produces, or 'any' for every field. NULL is a
+  -- third, meaningful answer — "read it from the department" — and is both
+  -- the default and what every opening written before this column existed
+  -- holds, which is why adding it moved no score. Left unconstrained by a
+  -- CHECK on purpose: the tag list lives in the engine, and a CHECK here
+  -- would have to be migrated in lockstep with it.
+  education_field VARCHAR(32),
   min_experience_months INT NOT NULL DEFAULT 0,
   -- Counts for the two sections scored the way experience is. 0 means the
   -- opening states no requirement, which contributes a full component rather

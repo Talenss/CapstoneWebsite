@@ -5,7 +5,7 @@
    ============================================================ */
 import { ApiAdapter } from './adapter';
 import { AnalyzedResume, ApiResult, AppStatus, Application, ApplicationAnswer, Company, EvidenceKind, RejectionReason, HrStats, HrStatsFilters, InviteSchedule, MatchResult, Posting, PostingQuestion, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User, RankedQuery} from './models';
-import { passwordOk, PASSWORD_HINT, scoreLocal, visibleResume, RESUME_SECTIONS, OPTIONAL_WEIGHTS, WEIGHT_FLOOR, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert } from './engine';
+import { passwordOk, PASSWORD_HINT, scoreLocal, visibleResume, RESUME_SECTIONS, OPTIONAL_WEIGHTS, WEIGHT_FLOOR, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert, EDU_FIELD_OPTIONS, EDU_FIELD_ANY } from './engine';
 
 const KEY = 'linaw_v3_db';
 
@@ -993,6 +993,14 @@ export class DemoAdapter implements ApiAdapter {
       if (dept === '') return apiFail('Which department is this for?');
       if (desc.length < 10) return apiFail('Describe the role in a sentence or two.');
       if (!skills.length) return apiFail("Add at least one required skill. There is nothing to match an applicant against without one.");
+      /* FIELD OF STUDY, the same three answers routes/postings.ts accepts: a
+         tag, 'any', or the key ABSENT for "read it from the department".
+         Absent rather than null, because the key's presence is what the
+         engine reads — storing a null would be a different answer. */
+      const rawField = String((posting as any).educationField ?? '').trim().toLowerCase();
+      const eduField = rawField === EDU_FIELD_ANY ? EDU_FIELD_ANY
+        : EDU_FIELD_OPTIONS.some((o) => o.value === rawField) ? rawField : null;
+
       posting = {
         ...posting, title, department: dept, description: desc, skills,
         educationLevel: (EDU_RANK as any)[posting.educationLevel as string] !== undefined
@@ -1001,6 +1009,8 @@ export class DemoAdapter implements ApiAdapter {
           .includes(posting.employmentType as string) ? posting.employmentType : 'full-time',
         minExperienceMonths: Math.max(0, Number(posting.minExperienceMonths) || 0),
       };
+      if (eduField) (posting as any).educationField = eduField;
+      else delete (posting as any).educationField;
 
       /* Certifications the opening asks for, deduplicated on the NORMALISED
          form, matching routes/postings.ts — "CCNA" and "C.C.N.A." are one

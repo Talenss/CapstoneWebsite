@@ -152,6 +152,34 @@
         </div>
       </div>
 
+      <div class="field" style="max-width:420px">
+        <label for="eduField">Field of study <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">· {{ wField() }}%</span></label>
+        <hlm-select [value]="fieldVal()" [itemToString]="fieldLabel" (valueChange)="fieldVal.set($any($event))">
+          <!-- w-full so the trigger fills the field rather than shrinking to
+               the selected text. The panel takes its width from the trigger
+               (--brn-select-width), and at the natural ~200px these labels
+               wrapped onto two lines. -->
+          <hlm-select-trigger id="eduField" class="w-full"><hlm-select-value placeholder="Match the department" /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (o of fieldOptions; track o.v) {
+              <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
+        <!-- Says what the setting DOES at its current weight, because at the
+             default of 0% it does nothing at all, and a control that silently
+             changes no score is worse than one that says so. -->
+        @if (wField() === 0) {
+          <p class="hint">What the applicant's degree is about. This is worth <b>0%</b> right now, so it changes nobody's score — give “Field of study” a weight below to make it count.</p>
+        } @else if (fieldVal() === '') {
+          <p class="hint">Read from the department above (“{{ deptVal() || 'no department yet' }}”). A department naming no field the system knows accepts every graduate.</p>
+        } @else if (fieldVal() === 'any') {
+          <p class="hint">Every graduate scores full marks here, whatever they studied. Pick this for a role any degree can do.</p>
+        } @else {
+          <p class="hint">Only graduates of <b>{{ fieldLabel(fieldVal()) }}</b> score this component. Everyone else scores zero on it, but still keeps every other component.</p>
+        }
+      </div>
+
       <div class="field" style="max-width:280px">
         <label for="deadline">Application deadline <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(optional)</span></label>
         <div class="date-row">

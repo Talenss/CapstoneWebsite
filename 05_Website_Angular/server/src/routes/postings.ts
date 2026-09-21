@@ -5,7 +5,7 @@ import { PostingRow, UserRow, ResumeRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
 import { requireRole, currentUser } from '../lib/auth';
 import { fetchPosting, fetchResume, serializePosting, serializeResume, visibleResume } from '../lib/serializers';
-import { EDU_RANK, skillId, rmScore, getSettings, certNorm, OPTIONAL_WEIGHTS, WEIGHT_FLOOR } from '../lib/engine';
+import { EDU_RANK, skillId, rmScore, getSettings, certNorm, OPTIONAL_WEIGHTS, WEIGHT_FLOOR, EDU_FIELD_OPTIONS, EDU_FIELD_ANY } from '../lib/engine';
 import { notifyNewPostingMatch } from '../lib/notify';
 
 const router = asyncRouter();
@@ -188,6 +188,16 @@ router.post('/save', async (req, res) => {
   if (!skills.length) return fail(res, "Add at least one required skill. There is nothing to match an applicant against without one.");
 
   const edu = Object.keys(EDU_RANK).includes(P.educationLevel) ? P.educationLevel : 'bachelor';
+  /* FIELD OF STUDY. Three answers share one column: a tag from the catalogue,
+     'any' for every field, and NULL for "read it from the department" — the
+     last being both the default and what every opening saved before the
+     picker existed holds. An unrecognised value falls back to NULL rather
+     than failing the save, the same rule `design` follows on a resume, so a
+     posting written by a newer build still saves against an older server. */
+  const rawField = String(P.educationField ?? '').trim().toLowerCase();
+  const eduField = rawField === EDU_FIELD_ANY ? EDU_FIELD_ANY
+    : EDU_FIELD_OPTIONS.some((o) => o.value === rawField) ? rawField
+    : null;
   const type = ['full-time', 'part-time', 'contract', 'internship'].includes(P.employmentType) ? P.employmentType : 'full-time';
   const months = Math.max(0, Number(P.minExperienceMonths) || 0);
 
@@ -259,21 +269,22 @@ router.post('/save', async (req, res) => {
       if (pid) {
         await tx.exec(
           `UPDATE job_postings SET title=?, department=?, employment_type=?, description=?, education_level=?,
+             education_field=?,
              min_experience_months=?, min_projects=?, min_references=?, application_deadline=?,
              weight_skills=?, weight_education=?, weight_experience=?,
              weight_certifications=?, weight_projects=?, weight_languages=?, weight_references=?, weight_relevance=?, weight_field=?
            WHERE posting_id=?`,
-          [title, dept, type, desc, edu, months, minProjects, minReferences, deadline,
+          [title, dept, type, desc, edu, eduField, months, minProjects, minReferences, deadline,
             wS, wE, wX, wC, wP, wL, wR, wV, wF, pid],
         );
       } else {
         const ins = await tx.exec(
           `INSERT INTO job_postings (company_id, created_by, title, department, employment_type, description,
-             education_level, min_experience_months, min_projects, min_references, application_deadline,
+             education_level, education_field, min_experience_months, min_projects, min_references, application_deadline,
              weight_skills, weight_education, weight_experience,
              weight_certifications, weight_projects, weight_languages, weight_references, weight_relevance, weight_field, status)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'open') RETURNING posting_id`,
-          [u.company_id, u.user_id, title, dept, type, desc, edu, months, minProjects, minReferences, deadline,
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'open') RETURNING posting_id`,
+          [u.company_id, u.user_id, title, dept, type, desc, edu, eduField, months, minProjects, minReferences, deadline,
             wS, wE, wX, wC, wP, wL, wR, wV, wF],
         );
         pid = ins.insertId;
