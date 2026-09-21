@@ -130,7 +130,12 @@
                          what a recruiter actually reads, and an entry appears
                          on the resume when it has a school OR a degree. -->
                     <label [for]="'edu-degree-' + $index">Degree or strand <span class="opt">optional &middot; a recruiter reads it</span></label>
-                    <input type="text" [id]="'edu-degree-' + $index" placeholder="BS Information Technology" [value]="e.degree" (input)="updateEducation($index, 'degree', inputValue($event))">
+                    <input type="text" [id]="'edu-degree-' + $index" list="degreeOpts" autocomplete="off" placeholder="BS Information Technology" [value]="e.degree" (input)="updateEducation($index, 'degree', inputValue($event))">
+                    <datalist id="degreeOpts">
+                      @for (d of DEGREE_CATALOGUE; track d) {
+                        <option [value]="d"></option>
+                      }
+                    </datalist>
                   </div>
                   <div class="row2">
                     <div class="field">

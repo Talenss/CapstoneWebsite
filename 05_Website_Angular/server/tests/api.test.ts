@@ -913,7 +913,7 @@ test('a recruiter can set the scoring weights on their own opening', async () =>
   // absent: an opening that scores nothing on them is a stated fact, and it is
   // why openings written before those columns existed still total 100.
   const seven = { skills: 70, education: 15, experience: 15,
-    certifications: 0, projects: 0, languages: 0, references: 0, relevance: 0 };
+    certifications: 0, projects: 0, languages: 0, references: 0, relevance: 0, field: 0 };
   assert.deepEqual(made.body.posting.weights, seven);
 
   // And they survive a round trip rather than only existing in the response.
@@ -997,7 +997,7 @@ test('the score a seeker is given uses the opening’s own weights', async () =>
   assert.equal(s.score, Math.floor(fraction * 80 + 10 + 10 + 0.5),
     'the score must be computed on 80/10/10, not the site default');
   assert.deepEqual(s.weights, { skills: 0.8, education: 0.1, experience: 0.1,
-    certifications: 0, projects: 0, languages: 0, references: 0, relevance: 0 },
+    certifications: 0, projects: 0, languages: 0, references: 0, relevance: 0, field: 0 },
     'and it must report the split it used, as fractions');
 });
 
@@ -1404,7 +1404,7 @@ test('a recruiter can put part of the score on certifications, over HTTP', async
   assert.equal(made.body.ok, true, made.body.error);
   assert.deepEqual(made.body.posting.weights,
     { skills: 40, education: 20, experience: 20, certifications: 20,
-      projects: 0, languages: 0, references: 0, relevance: 0 });
+      projects: 0, languages: 0, references: 0, relevance: 0, field: 0 });
   assert.deepEqual(made.body.posting.certifications, ['CCNA'],
     'the duplicate is dropped on the normalised form, so the component can be scored out of 1');
 
@@ -1656,7 +1656,7 @@ test('a recruiter can score projects, languages and references too', async () =>
   assert.equal(made.body.ok, true, made.body.error);
   const p = made.body.posting;
   assert.deepEqual(p.weights,
-    { skills: 40, education: 10, experience: 10, certifications: 10, projects: 10, languages: 10, references: 10, relevance: 0 });
+    { skills: 40, education: 10, experience: 10, certifications: 10, projects: 10, languages: 10, references: 10, relevance: 0, field: 0 });
   assert.deepEqual(p.languages, ['Filipino'], 'the duplicate is folded, so the component can be scored out of 1');
   assert.equal(p.minProjects, 2);
   assert.equal(p.minReferences, 1);
@@ -1687,6 +1687,6 @@ test('a recruiter can score projects, languages and references too', async () =>
   assert.equal(s.body.referenceCount, 1);
   assert.equal(s.body.minReferences, 1);
   assert.deepEqual(s.body.weights,
-    { skills: 0.4, education: 0.1, experience: 0.1, certifications: 0.1, projects: 0.1, languages: 0.1, references: 0.1, relevance: 0 },
+    { skills: 0.4, education: 0.1, experience: 0.1, certifications: 0.1, projects: 0.1, languages: 0.1, references: 0.1, relevance: 0, field: 0 },
     'the split it reports is the split it used');
 });

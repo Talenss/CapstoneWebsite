@@ -470,12 +470,18 @@ export interface MatchResult {
     certifications: number; projects: number; languages: number; references: number;
     /** The optional relevant-experience share. Zero unless a recruiter set it. */
     relevance: number;
+    /** The optional field-of-study share. Zero unless a recruiter set it. */
+    field: number;
   };
   /** Months of experience that came from a job whose own title, description
    *  or bullets mention a skill this opening asks for. Reported beside
    *  seekerMonths so a recruiter can see the total and the relevant part
    *  separately, whether or not the component carries any weight. */
   relevantMonths: number;
+  /** Whether the degree's field matches the opening's department. True when
+   *  the department names no field the vocabulary knows, since an unstated
+   *  requirement is never one the applicant failed. */
+  fieldMeets: boolean;
   /** Of the certifications the opening asked for, the ones the applicant
    *  lists and the ones they do not. Both empty when none were asked for. */
   matchedCertifications: string[];

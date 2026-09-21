@@ -412,6 +412,7 @@ export async function runMigrations(): Promise<void> {
   await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_languages SMALLINT');
   await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_references SMALLINT');
   await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_relevance SMALLINT');
+  await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS weight_field SMALLINT');
   await exec('ALTER TABLE job_postings DROP CONSTRAINT IF EXISTS posting_weights_complete');
   await exec(`ALTER TABLE job_postings ADD CONSTRAINT posting_weights_complete CHECK (
     (weight_skills IS NULL AND weight_education IS NULL AND weight_experience IS NULL)
@@ -420,11 +421,11 @@ export async function runMigrations(): Promise<void> {
       AND weight_skills + weight_education + weight_experience
           + COALESCE(weight_certifications, 0) + COALESCE(weight_projects, 0)
           + COALESCE(weight_languages, 0) + COALESCE(weight_references, 0)
-          + COALESCE(weight_relevance, 0) = 100
+          + COALESCE(weight_relevance, 0) + COALESCE(weight_field, 0) = 100
       AND weight_skills >= 10 AND weight_education >= 10 AND weight_experience >= 10
       AND COALESCE(weight_certifications, 0) >= 0 AND COALESCE(weight_projects, 0) >= 0
       AND COALESCE(weight_languages, 0) >= 0 AND COALESCE(weight_references, 0) >= 0
-      AND COALESCE(weight_relevance, 0) >= 0
+      AND COALESCE(weight_relevance, 0) >= 0 AND COALESCE(weight_field, 0) >= 0
     )
   )`);
 

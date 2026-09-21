@@ -76,6 +76,7 @@ export class HrPosting {
   wLang = signal(0);
   wRef = signal(0);
   wRelv = signal(0);
+  wField = signal(0);
   certsVal = signal<string[]>([]);
   certInput = signal('');
   langsVal = signal<string[]>([]);
@@ -92,13 +93,13 @@ export class HrPosting {
         skills: this.wSkills(), education: this.wEdu(), experience: this.wExp(),
         certifications: this.wCert(), projects: this.wProj(),
         languages: this.wLang(), references: this.wRef(),
-        relevance: this.wRelv(),
+        relevance: this.wRelv(), field: this.wField(),
       }
     : null));
 
   weightTotal = computed(() =>
     this.wSkills() + this.wEdu() + this.wExp()
-    + this.wCert() + this.wProj() + this.wLang() + this.wRef() + this.wRelv());
+    + this.wCert() + this.wProj() + this.wLang() + this.wRef() + this.wRelv() + this.wField());
 
   /* The floor is policy, not arithmetic: a recruiter may decide a criterion
      matters less for a role, but switching one off entirely would score an
@@ -120,7 +121,7 @@ export class HrPosting {
   weightsBelowFloor = computed(() =>
     this.wSkills() < this.WEIGHT_FLOOR || this.wEdu() < this.WEIGHT_FLOOR || this.wExp() < this.WEIGHT_FLOOR);
   private offStep = computed(() =>
-    [this.wSkills(), this.wEdu(), this.wExp(), this.wCert(), this.wProj(), this.wLang(), this.wRef(), this.wRelv()]
+    [this.wSkills(), this.wEdu(), this.wExp(), this.wCert(), this.wProj(), this.wLang(), this.wRef(), this.wRelv(), this.wField()]
       .some((v) => v % this.WEIGHT_STEP !== 0));
   weightsValid = computed(() => !this.customWeights()
     || (this.weightTotal() === 100 && !this.weightsBelowFloor() && !this.offStep()));
@@ -145,6 +146,12 @@ export class HrPosting {
        it at zero and the opening scores exactly as it did before the
        component existed. */
     { key: 'relevance', label: 'Relevant experience', value: this.wRelv, set: (n: number) => this.wRelv.set(n) },
+    /* Field of study reads the degree's subject against THIS opening's own
+       department, so it needs nothing new from the recruiter beyond the share
+       they give it. A department the vocabulary cannot place scores full
+       marks, so switching this on never penalises an applicant for a
+       requirement the opening did not really state. */
+    { key: 'field', label: 'Field of study', value: this.wField, set: (n: number) => this.wField.set(n) },
   ] as const;
 
   /* THE RECRUITER'S OWN SCREENING QUESTIONS.
@@ -278,6 +285,7 @@ export class HrPosting {
         this.wLang.set(p.weights.languages ?? 0);
         this.wRef.set(p.weights.references ?? 0);
         this.wRelv.set((p.weights as any).relevance ?? 0);
+        this.wField.set((p.weights as any).field ?? 0);
       }
     }
 
@@ -376,6 +384,7 @@ export class HrPosting {
     this.wLang.set(0);
     this.wRef.set(0);
     this.wRelv.set(0);
+    this.wField.set(0);
   }
 
   /** Every skill the catalogue knows, for the combobox to search. The pool

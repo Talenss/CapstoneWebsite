@@ -96,6 +96,7 @@ export interface PostingRow {
   weight_languages: number | null;
   weight_references: number | null;
   weight_relevance: number | null;
+  weight_field: number | null;
   /** Minimum counts for the two sections scored the way experience is. 0
    *  states no requirement, which scores full marks on that component. */
   min_projects: number;

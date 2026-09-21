@@ -290,6 +290,93 @@ export const SKILL_ALIASES: Record<string, string> = {
   warehousing: 'warehouseoperations',
 };
 
+/* ------------------------------------------------------------
+   FIELD OF STUDY — what a degree is ABOUT, not what level it is.
+
+   The education component scores a level against a level: a bachelor's in
+   nursing and a bachelor's in IT are the same number to it. The manuscript
+   says so and gives the reason — a posting records a required LEVEL and has
+   no field for a required COURSE, so scoring the field would have meant
+   inventing a requirement the recruiter never set.
+
+   The opening's DEPARTMENT is that missing requirement. It is already typed
+   on every posting, so nothing new is asked of the recruiter: a degree is
+   read for what it is about, the department is read the same way, and the
+   two are compared.
+
+   BOTH SIDES GO THROUGH THE SAME VOCABULARY, which is the only reason this
+   is defensible. A one-directional list would let the two drift into
+   answering different questions.
+
+   A department this vocabulary cannot place scores FULL MARKS. That is the
+   rule every other component follows — a requirement nobody stated cannot be
+   one the applicant failed — and it is the honest answer for a BPO opening,
+   where in practice almost any degree is accepted.
+   ------------------------------------------------------------ */
+export const EDU_FIELD_VOCAB: Record<string, string> = {
+  // information technology
+  informationtechnology: 'it', computerscience: 'it', computerengineering: 'it',
+  informationsystems: 'it', softwareengineering: 'it', computerstudies: 'it',
+  it: 'it', ict: 'it', cs: 'it', datascience: 'it', informationtech: 'it',
+  // healthcare
+  nursing: 'healthcare', pharmacy: 'healthcare', medicaltechnology: 'healthcare',
+  medtech: 'healthcare', midwifery: 'healthcare', radiologictechnology: 'healthcare',
+  physicaltherapy: 'healthcare', medicine: 'healthcare', caregiving: 'healthcare',
+  nutrition: 'healthcare', dentistry: 'healthcare', healthcare: 'healthcare',
+  // finance and accounting
+  accountancy: 'finance', accounting: 'finance', accountingtechnology: 'finance',
+  bankingandfinance: 'finance', financialmanagement: 'finance', finance: 'finance',
+  internalauditing: 'finance', economics: 'finance',
+  // business and administration
+  businessadministration: 'business', businessmanagement: 'business',
+  entrepreneurship: 'business', officeadministration: 'admin',
+  administration: 'admin', officemanagement: 'admin', businessstudies: 'business',
+  // marketing
+  marketingmanagement: 'marketing', marketing: 'marketing', advertising: 'marketing',
+  digitalmarketing: 'marketing', multimediaarts: 'marketing', graphicdesign: 'marketing',
+  // education
+  elementaryeducation: 'education', secondaryeducation: 'education',
+  education: 'education', teaching: 'education',
+  // engineering and trades
+  civilengineering: 'engineering', mechanicalengineering: 'engineering',
+  electricalengineering: 'engineering', industrialengineering: 'engineering',
+  electronicsengineering: 'engineering', engineering: 'engineering',
+  // hospitality and tourism
+  hotelandrestaurantmanagement: 'hospitality', hospitalitymanagement: 'hospitality',
+  tourism: 'hospitality', tourismmanagement: 'hospitality', culinaryarts: 'hospitality',
+  hrm: 'hospitality',
+  // human resources
+  humanresource: 'hr', humanresources: 'hr', humanresourcemanagement: 'hr',
+  psychology: 'hr', industrialpsychology: 'hr',
+  // communication
+  masscommunication: 'communication', communication: 'communication',
+  journalism: 'communication', broadcasting: 'communication', englishlanguage: 'communication',
+  // security
+  criminology: 'security', criminaljustice: 'security',
+  // logistics
+  supplychainmanagement: 'logistics', logistics: 'logistics', customsadministration: 'logistics',
+};
+
+/** Which fields does this text belong to? Used for BOTH a degree and an
+ *  opening's department, so the two are read by one set of rules.
+ *
+ *  Words, not substrings, and runs of up to four words, for the same reasons
+ *  jobMentionsAny() takes that shape: "it" must not be found inside
+ *  "hospitality", and "Information Technology" is two words in a sentence and
+ *  one field here. A text naming several fields resolves to several — "HR and
+ *  Marketing" is a real department — and a match needs only one in common. */
+export function educationFields(text: string): Set<string> {
+  const out = new Set<string>();
+  const words = String(text || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  for (let i = 0; i < words.length; i++) {
+    for (let n = 1; n <= 4 && i + n <= words.length; n++) {
+      const hit = EDU_FIELD_VOCAB[words.slice(i, i + n).join('')];
+      if (hit) out.add(hit);
+    }
+  }
+  return out;
+}
+
 /** Normalize a skill to its canonical comparable form: strip case and
  *  punctuation, then fold known synonyms together. Used for BOTH sides
  *  of every comparison, and for the canonical `skills.skill_norm` row,
@@ -340,12 +427,14 @@ export interface Weights {
   /** Months counted only from a job whose own words mention a required
    *  skill. Zero unless a recruiter deliberately gives it a share. */
   relevance: number;
+  /** Whether the degree's field matches the opening's department. */
+  field: number;
 }
 
 /** The optional components, in the order the interface presents them. Listing
  *  them once stops the validator, the defaults and the DB reader from drifting
  *  apart as the set grows. */
-export const OPTIONAL_WEIGHTS = ['certifications', 'projects', 'languages', 'references', 'relevance'] as const;
+export const OPTIONAL_WEIGHTS = ['certifications', 'projects', 'languages', 'references', 'relevance', 'field'] as const;
 /** The three a recruiter may de-emphasise but never switch off. */
 export const CORE_WEIGHTS = ['skills', 'education', 'experience'] as const;
 /** No component may fall below this share, for the three that are compulsory. */
@@ -389,6 +478,7 @@ export async function getSettings(): Promise<MatchSettings> {
       languages: n(map.weight_languages, DEFAULT_SETTINGS.weights.languages),
       references: n(map.weight_references, DEFAULT_SETTINGS.weights.references),
       relevance: n(map.weight_relevance, DEFAULT_SETTINGS.weights.relevance),
+      field: n(map.weight_field, DEFAULT_SETTINGS.weights.field),
     },
     thresholds: {
       strong: n(map.threshold_strong, DEFAULT_SETTINGS.thresholds.strong),
@@ -500,6 +590,7 @@ export function fillWeights(w: Partial<Weights> | null | undefined): Weights {
     experience: n(w?.experience, d.experience),
     certifications: n(w?.certifications, 0),
     relevance: n(w?.relevance, 0),
+    field: n(w?.field, 0),
     projects: n(w?.projects, 0),
     languages: n(w?.languages, 0),
     references: n(w?.references, 0),
@@ -531,6 +622,7 @@ export function weightsFor(cfg: MatchSettings, posting: SerializedPosting): Weig
     certifications: opt.certifications / 100, projects: opt.projects / 100,
     languages: opt.languages / 100, references: opt.references / 100,
     relevance: opt.relevance / 100,
+    field: opt.field / 100,
   };
 }
 
@@ -549,6 +641,9 @@ export interface MatchResult {
   seekerMonths: number;
   /** Months from jobs whose own words mention a required skill. */
   relevantMonths: number;
+  /** Did the degree's field match the opening's department? True when the
+   *  department names no field this vocabulary knows. */
+  fieldMeets: boolean;
   tier: 'strong' | 'possible' | 'related';
   /** The weights this score was actually computed with, as fractions.
    *
@@ -582,7 +677,7 @@ export interface MatchResult {
 export const DEFAULT_SETTINGS: MatchSettings = {
   weights: {
     skills: 0.5, education: 0.25, experience: 0.25,
-    certifications: 0, projects: 0, languages: 0, references: 0, relevance: 0,
+    certifications: 0, projects: 0, languages: 0, references: 0, relevance: 0, field: 0,
   },
   thresholds: { strong: 80, related: 50 },
 };
@@ -692,10 +787,25 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
      component follows. */
   const relPart = reqMonths <= 0 ? 1.0 : Math.min(1.0, relevantMonths / reqMonths);
 
+  /* FIELD OF STUDY — the optional ninth component.
+     What the degree is ABOUT, matched against the department the opening is
+     already filed under. Zero by default, like every optional component, so
+     an opening that ignores it scores exactly as it did before this existed.
+
+     A department the vocabulary cannot place scores FULL MARKS rather than
+     nothing: a requirement nobody stated cannot be one the applicant failed,
+     and that is the honest answer for a support role where any degree does. */
+  const deptFields = educationFields(String((posting as any).department || ''));
+  const seekerFields = educationFields(
+    (resume.education || []).map((e: any) => `${e?.degree || ''} ${e?.field || ''}`).join(' '));
+  const fieldMeets = deptFields.size === 0
+    || [...seekerFields].some((f) => deptFields.has(f));
+  const fieldPart = fieldMeets ? 1 : 0;
+
   const raw = (skillPart * W.skills + eduPart * W.education
     + expPart * W.experience + certPart * W.certifications
     + projPart * W.projects + langPart * W.languages + refPart * W.references
-    + relPart * W.relevance) * 100;
+    + relPart * W.relevance + fieldPart * W.field) * 100;
   const total = Math.floor(raw + 0.5); // half-up, explicitly — must match assets/api.js score()
 
   return {
@@ -708,6 +818,7 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
     expMeets: expPart >= 1.0,
     seekerMonths: months,
     relevantMonths,
+    fieldMeets,
     matchedCertifications: matchedCerts,
     missingCertifications: missingCerts,
     matchedLanguages: matchedLangs,

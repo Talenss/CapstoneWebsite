@@ -414,6 +414,7 @@ export async function serializePosting(p: PostingRow, withCompany = true): Promi
       languages: p.weight_languages == null ? 0 : Number(p.weight_languages),
       references: p.weight_references == null ? 0 : Number(p.weight_references),
       relevance: p.weight_relevance == null ? 0 : Number(p.weight_relevance),
+      field: p.weight_field == null ? 0 : Number(p.weight_field),
     },
     certifications: ct.map((r) => r.cert_name),
     languages: lg.map((r) => r.lang_name),

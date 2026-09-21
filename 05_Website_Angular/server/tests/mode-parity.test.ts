@@ -519,7 +519,7 @@ test('a recruiter setting per-opening weights gets the same answer in both modes
   // breakdown shown to an applicant has to add up to the score printed beside
   // it, and a null term would not. Both modes have to agree on that, because
   // an opening saved in one and read in the other is the same opening.
-  const stored = { ...good, certifications: 0, projects: 0, languages: 0, references: 0, relevance: 0 };
+  const stored = { ...good, certifications: 0, projects: 0, languages: 0, references: 0, relevance: 0, field: 0 };
   const d: any = await demo.postings.save({ ...base, weights: good } as any);
   const a: any = await api('postings/save', { posting: { ...base, weights: good } });
   assert.ok(d.ok && a.ok, `both modes must accept ${JSON.stringify(good)}`);
@@ -532,7 +532,7 @@ test('a recruiter setting per-opening weights gets the same answer in both modes
      server stores when they apply. The three the recruiter did not touch
      still come back as 0 on both sides. */
   const withCerts = { skills: 40, education: 20, experience: 20, certifications: 20 };
-  const certStored = { ...withCerts, projects: 0, languages: 0, references: 0, relevance: 0 };
+  const certStored = { ...withCerts, projects: 0, languages: 0, references: 0, relevance: 0, field: 0 };
   const certBase = { ...base, certifications: ['CCNA'] };
   const dCert: any = await demo.postings.save({ ...certBase, weights: withCerts } as any);
   const aCert: any = await api('postings/save', { posting: { ...certBase, weights: withCerts } });

@@ -31,13 +31,15 @@ const resume = (skills: string[], eduLevels: string[] = ['bachelor'], monthsList
 
 const posting = (
   skills: string[], educationLevel = 'bachelor', minExperienceMonths = 0,
-  weights?: { skills: number; education: number; experience: number; certifications?: number; relevance?: number } | null,
+  weights?: { skills: number; education: number; experience: number; certifications?: number; relevance?: number; field?: number } | null,
   certifications?: string[],
+  department?: string,
 ) => ({
   id: 'p-test',
   skills,
   educationLevel,
   minExperienceMonths,
+  ...(department !== undefined ? { department } : {}),
   ...(weights !== undefined ? { weights } : {}),
   ...(certifications !== undefined ? { certifications } : {}),
 });
@@ -60,15 +62,15 @@ function score(r: ReturnType<typeof resume>, p: ReturnType<typeof posting>) {
 // ---------- the published constants ----------
 
 test('weights are the published 50/25/25 and sum to 1', () => {
-  /* Five of the eight components are optional and sit at 0, so the published
-     split is still 50/25/25 across the compulsory three and all eight still
+  /* Six of the nine components are optional and sit at 0, so the published
+     split is still 50/25/25 across the compulsory three and all nine still
      sum to 1. Those zeros are the whole reason adding components changed no
      score that had already been computed — including relevance, added after
      the evaluation, which is why this assertion is written out in full rather
      than summed. */
   assert.deepEqual(DEFAULT_SETTINGS.weights, {
     skills: 0.5, education: 0.25, experience: 0.25,
-    certifications: 0, projects: 0, languages: 0, references: 0, relevance: 0,
+    certifications: 0, projects: 0, languages: 0, references: 0, relevance: 0, field: 0,
   });
   assert.deepEqual(WEIGHTS, DEFAULT_SETTINGS.weights); // client mirrors server
   const w = DEFAULT_SETTINGS.weights;
@@ -406,7 +408,7 @@ test('the weights a score was computed with travel with the score', () => {
   const custom = score(r, posting(['JavaScript'], 'bachelor', 0, { skills: 60, education: 20, experience: 20 }));
   assert.deepEqual(custom.weights, {
     skills: 0.6, education: 0.2, experience: 0.2,
-    certifications: 0, projects: 0, languages: 0, references: 0, relevance: 0,
+    certifications: 0, projects: 0, languages: 0, references: 0, relevance: 0, field: 0,
   });
 
   const inherited = score(r, posting(['JavaScript']));
@@ -1037,4 +1039,67 @@ test('relevance reads the bullets as well as the description', () => {
   r.experience = [{ months: 12, position: 'Intern', description: '', bullets: ['Wrote JavaScript for internal tools'] }];
   const s = score(r, posting(['JavaScript'], 'bachelor', 12, w as any));
   assert.equal(s.relevantMonths, 12);
+});
+
+// ---------- field of study (the optional ninth component) ----------
+
+test('at the default weight, field of study changes nothing', () => {
+  const r: any = resume(['JavaScript'], ['bachelor'], [12]);
+  r.education = [{ level: 'bachelor', degree: 'BS Nursing' }];
+  const s = score(r, posting(['JavaScript'], 'bachelor', 0, undefined, undefined, 'Information Technology'));
+  assert.equal(s.score, 100, 'a mismatched degree must cost nothing until a recruiter weights it');
+});
+
+test('a degree in the department\'s field scores it', () => {
+  const w = { skills: 40, education: 10, experience: 10, field: 40 };
+  const r: any = resume(['JavaScript'], ['bachelor'], [12]);
+  r.education = [{ level: 'bachelor', degree: 'BS Information Technology' }];
+  const s = score(r, posting(['JavaScript'], 'bachelor', 0, w as any, undefined, 'Information Technology'));
+  assert.equal(s.fieldMeets, true);
+  assert.equal(s.score, 100);
+});
+
+test('a degree outside the department\'s field loses that share', () => {
+  const w = { skills: 40, education: 10, experience: 10, field: 40 };
+  const r: any = resume(['JavaScript'], ['bachelor'], [12]);
+  r.education = [{ level: 'bachelor', degree: 'BS Nursing' }];
+  const s = score(r, posting(['JavaScript'], 'bachelor', 0, w as any, undefined, 'Information Technology'));
+  assert.equal(s.fieldMeets, false);
+  assert.equal(s.score, 60, 'everything but the 40 it cannot claim');
+});
+
+test('a department the vocabulary cannot place scores full marks', () => {
+  // A support role takes any degree in practice. Refusing to guess is the
+  // same rule every other component follows for an unstated requirement.
+  const w = { skills: 40, education: 10, experience: 10, field: 40 };
+  const r: any = resume(['JavaScript'], ['bachelor'], [12]);
+  r.education = [{ level: 'bachelor', degree: 'BS Nursing' }];
+  const s = score(r, posting(['JavaScript'], 'bachelor', 0, w as any, undefined, 'Customer Support'));
+  assert.equal(s.fieldMeets, true);
+  assert.equal(s.score, 100);
+});
+
+test('a degree typed by hand is placed by the vocabulary, not a lookup', () => {
+  const w = { skills: 40, education: 10, experience: 10, field: 40 };
+  const r: any = resume(['JavaScript'], ['bachelor'], [12]);
+  // Not in DEGREE_CATALOGUE, and deliberately worded differently.
+  r.education = [{ level: 'bachelor', degree: 'Bachelor of Science major in Computer Science' }];
+  const s = score(r, posting(['JavaScript'], 'bachelor', 0, w as any, undefined, 'Information Technology'));
+  assert.equal(s.fieldMeets, true, 'the words are read; the whole string is not looked up');
+});
+
+test('field matching reads whole words, so "IT" is not found inside another word', () => {
+  const w = { skills: 40, education: 10, experience: 10, field: 40 };
+  const r: any = resume(['JavaScript'], ['bachelor'], [12]);
+  r.education = [{ level: 'bachelor', degree: 'BS Hospitality Management' }];
+  const s = score(r, posting(['JavaScript'], 'bachelor', 0, w as any, undefined, 'Information Technology'));
+  assert.equal(s.fieldMeets, false, '"hospitality" contains "it" but is not an IT degree');
+});
+
+test('a department naming two fields matches either', () => {
+  const w = { skills: 40, education: 10, experience: 10, field: 40 };
+  const r: any = resume(['Communication'], ['bachelor'], [12]);
+  r.education = [{ level: 'bachelor', degree: 'BS Marketing Management' }];
+  const s = score(r, posting(['Communication'], 'bachelor', 0, w as any, undefined, 'HR and Marketing'));
+  assert.equal(s.fieldMeets, true);
 });

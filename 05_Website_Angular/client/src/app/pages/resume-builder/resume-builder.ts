@@ -8,7 +8,7 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { AnalysisService } from '../../core/analysis.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, visibleResume, WEIGHTS} from '../../core/engine';
+import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, visibleResume, WEIGHTS, DEGREE_CATALOGUE } from '../../core/engine';
 import { Education, EduLevel, EvidenceKind, Experience, Language, Project, Reference, Resume, ResumeDesign, ResumeLink, ResumeSection, SkillEvidence, Template } from '../../core/models';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 
@@ -82,6 +82,9 @@ export class ResumeBuilder implements OnInit {
   private importedSkills: string[] = [];
 
   readonly STEPS = STEPS;
+  /** Autocomplete for the degree field. A shortcut, not a closed list:
+   *  anything typed by hand is still placed by the field vocabulary. */
+  readonly DEGREE_CATALOGUE = DEGREE_CATALOGUE;
   readonly eduLevelLabel = (v: string): string =>
     this.eduLevelOptions.find((o) => o.value === v)?.label ?? String(v ?? '');
 

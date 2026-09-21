@@ -254,27 +254,27 @@ router.post('/save', async (req, res) => {
       const w = (k: string) => (weights ? weights[k] : null);
       const wS = w('skills'), wE = w('education'), wX = w('experience');
       const wC = w('certifications'), wP = w('projects'), wL = w('languages'), wR = w('references');
-      const wV = w('relevance');
+      const wV = w('relevance'), wF = w('field');
 
       if (pid) {
         await tx.exec(
           `UPDATE job_postings SET title=?, department=?, employment_type=?, description=?, education_level=?,
              min_experience_months=?, min_projects=?, min_references=?, application_deadline=?,
              weight_skills=?, weight_education=?, weight_experience=?,
-             weight_certifications=?, weight_projects=?, weight_languages=?, weight_references=?, weight_relevance=?
+             weight_certifications=?, weight_projects=?, weight_languages=?, weight_references=?, weight_relevance=?, weight_field=?
            WHERE posting_id=?`,
           [title, dept, type, desc, edu, months, minProjects, minReferences, deadline,
-            wS, wE, wX, wC, wP, wL, wR, wV, pid],
+            wS, wE, wX, wC, wP, wL, wR, wV, wF, pid],
         );
       } else {
         const ins = await tx.exec(
           `INSERT INTO job_postings (company_id, created_by, title, department, employment_type, description,
              education_level, min_experience_months, min_projects, min_references, application_deadline,
              weight_skills, weight_education, weight_experience,
-             weight_certifications, weight_projects, weight_languages, weight_references, weight_relevance, status)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'open') RETURNING posting_id`,
+             weight_certifications, weight_projects, weight_languages, weight_references, weight_relevance, weight_field, status)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'open') RETURNING posting_id`,
           [u.company_id, u.user_id, title, dept, type, desc, edu, months, minProjects, minReferences, deadline,
-            wS, wE, wX, wC, wP, wL, wR, wV],
+            wS, wE, wX, wC, wP, wL, wR, wV, wF],
         );
         pid = ins.insertId;
       }
