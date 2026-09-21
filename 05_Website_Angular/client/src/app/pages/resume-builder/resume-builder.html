@@ -117,6 +117,16 @@
                  actually needed. Stating the rule is what makes the tags
                  below mean anything. -->
             <p class="sub">The level you pick here counts toward every compatibility score, so choose the one that matches the diploma you actually hold. A new entry starts at <b>Not stated yet</b>, which counts as nothing. The system never assumes a qualification for you. An entry needs the <b>school</b> filled in before your resume can be scored; anything marked <b>optional</b> can be left blank, though a recruiter reads all of it.</p>
+            <!-- ONCE for the step, not once per entry. This used to sit beside
+                 the degree input inside the @for, which gave every education
+                 row its own element carrying id="degreeOpts": duplicate ids
+                 are invalid HTML, and the 49 options were rebuilt for each
+                 row. Every degree input points at this one by name. -->
+            <datalist id="degreeOpts">
+              @for (d of DEGREE_CATALOGUE; track d) {
+                <option [value]="d"></option>
+              }
+            </datalist>
             <div>
               @for (e of resume().education; track $index) {
                 <div class="item">
@@ -139,11 +149,6 @@
                          on the resume when it has a school OR a degree. -->
                     <label [for]="'edu-degree-' + $index">Degree or strand <span class="opt">optional &middot; a recruiter reads it</span></label>
                     <input type="text" [id]="'edu-degree-' + $index" list="degreeOpts" autocomplete="off" placeholder="BS Information Technology" [value]="e.degree" (input)="updateEducation($index, 'degree', inputValue($event))">
-                    <datalist id="degreeOpts">
-                      @for (d of DEGREE_CATALOGUE; track d) {
-                        <option [value]="d"></option>
-                      }
-                    </datalist>
                   </div>
                   <div class="row2">
                     <div class="field">
