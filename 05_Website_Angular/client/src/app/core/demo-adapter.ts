@@ -230,11 +230,15 @@ function seed(): Db {
         skills: ['Medical Terminology', 'Customer Service', 'Scheduling', 'English Proficiency'], educationLevel: 'bachelor', minExperienceMonths: 12, status: 'open', createdAt: Date.now() - D * 2 },
     ] as unknown as Posting[],
     applications: [
-      { id: 'a1', seekerId: 'u3', resumeId: 'r2', postingId: 'p1', status: 'initial_interview', appliedAt: Date.now() - D * 3, scoreSnapshot: 82 },
-      { id: 'a2', seekerId: 'u4', resumeId: 'r3', postingId: 'p1', status: 'submitted', appliedAt: Date.now() - D * 2, scoreSnapshot: 64 },
-      { id: 'a3', seekerId: 'u4', resumeId: 'r3', postingId: 'p3', status: 'shortlisted', appliedAt: Date.now() - D * 4, scoreSnapshot: 91 },
-      { id: 'a4', seekerId: 'u5', resumeId: 'r4', postingId: 'p5', status: 'scheduling', appliedAt: Date.now() - D * 3, scoreSnapshot: 47 },
-      { id: 'a5', seekerId: 'u5', resumeId: 'r4', postingId: 'p6', status: 'submitted', appliedAt: Date.now() - D * 1, scoreSnapshot: 73 },
+      // scoreSnapshot = what the engine gives the seeded resume against the
+      // seeded opening, since nobody has edited them since applying. The same
+      // five numbers as db/linaw_ph.sql; mode-parity.test.ts fails if either
+      // seed falls behind the engine again.
+      { id: 'a1', seekerId: 'u3', resumeId: 'r2', postingId: 'p1', status: 'initial_interview', appliedAt: Date.now() - D * 3, scoreSnapshot: 81 },
+      { id: 'a2', seekerId: 'u4', resumeId: 'r3', postingId: 'p1', status: 'submitted', appliedAt: Date.now() - D * 2, scoreSnapshot: 44 },
+      { id: 'a3', seekerId: 'u4', resumeId: 'r3', postingId: 'p3', status: 'shortlisted', appliedAt: Date.now() - D * 4, scoreSnapshot: 94 },
+      { id: 'a4', seekerId: 'u5', resumeId: 'r4', postingId: 'p5', status: 'scheduling', appliedAt: Date.now() - D * 3, scoreSnapshot: 44 },
+      { id: 'a5', seekerId: 'u5', resumeId: 'r4', postingId: 'p6', status: 'submitted', appliedAt: Date.now() - D * 1, scoreSnapshot: 42 },
     ] as unknown as Application[],
     recruiterRequests: [
       // A sample pending request, so the admin panel has something to demonstrate.

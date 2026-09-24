@@ -17,16 +17,20 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { scoreWith, DEFAULT_SETTINGS, skillNorm, SKILL_ALIASES, EDU_RANK, MatchSettings, UNEVIDENCED_CREDIT, EVIDENCE_KINDS, EvidenceKind, evidenceLabels, OPTIONAL_WEIGHTS, EDU_FIELD_OPTIONS as SERVER_EDU_FIELD_OPTIONS } from '../src/lib/engine';
-import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK, UNEVIDENCED_CREDIT as CLIENT_UNEVIDENCED_CREDIT, evidenceLabels as clientEvidenceLabels, SKILL_CATEGORY, SKILL_CATALOGUE, missingHint, EDU_FIELD_OPTIONS, EDU_FIELD_VOCAB } from '../../client/src/app/core/engine';
+import { scoreWith, DEFAULT_SETTINGS, skillNorm, SKILL_ALIASES, EDU_RANK, MatchSettings, UNEVIDENCED_CREDIT, EVIDENCE_KINDS, EvidenceKind, evidenceLabels, OPTIONAL_WEIGHTS, EDU_FIELD_OPTIONS as SERVER_EDU_FIELD_OPTIONS, titleWords, UNRELATED_CREDIT } from '../src/lib/engine';
+import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK, UNEVIDENCED_CREDIT as CLIENT_UNEVIDENCED_CREDIT, evidenceLabels as clientEvidenceLabels, SKILL_CATEGORY, SKILL_CATALOGUE, missingHint, EDU_FIELD_OPTIONS, EDU_FIELD_VOCAB, titleWords as clientTitleWords, UNRELATED_CREDIT as CLIENT_UNRELATED_CREDIT } from '../../client/src/app/core/engine';
 
 // ---------- helpers ----------
 
+/* The fixture's jobs are titled like the fixture's opening ("Test role"), so
+   they count as RELEVANT and every test below that is about arithmetic —
+   proportional shares, summing, tier boundaries — keeps testing arithmetic.
+   Tests about relevance build their own experience and say so. */
 const resume = (skills: string[], eduLevels: string[] = ['bachelor'], monthsList: number[] = [12]) => ({
   id: 'r-test',
   skills,
   education: eduLevels.map((level) => ({ level })),
-  experience: monthsList.map((months) => ({ months })),
+  experience: monthsList.map((months) => ({ months, position: 'Test role' })),
 });
 
 const posting = (
@@ -37,6 +41,7 @@ const posting = (
   educationField?: string,
 ) => ({
   id: 'p-test',
+  title: 'Test role',
   skills,
   educationLevel,
   minExperienceMonths,
@@ -967,17 +972,68 @@ test('a weight set that ignores certifications still has to total 100', () => {
 
 // ---------- relevant experience (the optional eighth component) ----------
 
-/* Added AFTER the evaluation, which is why the first test here is the one
-   that matters most: at the default weight the component must change no
-   score that had already been computed, or the ratings 56 respondents gave
-   would describe a system that no longer exists. */
+/* RELEVANCE, the panel's revision. Added after the evaluation and ON BY
+   DEFAULT: a month relevant to the opening counts in full, any other month at
+   UNRELATED_CREDIT. The manuscript discloses that the ISO 25010 ratings were
+   given to the system before this change. */
 
-test('at the default weight, relevant experience changes nothing', () => {
+test('unrelated experience counts half toward the requirement', () => {
   const r: any = resume(['JavaScript'], ['bachelor'], [24]);
   r.experience = [{ months: 24, position: 'Cashier', description: 'Handled payments' }];
-  const before = score(r, posting(['JavaScript'], 'bachelor', 12));
-  // Entirely irrelevant experience, and the score is still the months-only one.
-  assert.equal(before.score, 100, 'the default must score exactly as it did before the component existed');
+  const s = score(r, posting(['JavaScript'], 'bachelor', 24));
+  assert.equal(s.relevantMonths, 0);
+  assert.equal(s.creditedMonths, 12, '24 unrelated months are credited as 12');
+  assert.equal(s.expMeets, false);
+  // 50 skills + 25 education + (12/24)×25 experience = 87.5 → 88
+  assert.equal(s.score, 88);
+});
+
+test('related experience counts in full', () => {
+  const r: any = resume(['JavaScript'], ['bachelor'], [24]);
+  r.experience = [{ months: 24, position: 'Developer', description: 'Built pages with JavaScript' }];
+  const s = score(r, posting(['JavaScript'], 'bachelor', 24));
+  assert.equal(s.relevantMonths, 24);
+  assert.equal(s.creditedMonths, 24);
+  assert.equal(s.score, 100);
+});
+
+test('a mix is credited job by job', () => {
+  const r: any = resume(['JavaScript'], ['bachelor'], [24]);
+  r.experience = [
+    { months: 12, position: 'Cashier', description: 'Handled payments' },
+    { months: 6, position: 'Developer', description: 'Wrote JavaScript' },
+  ];
+  const s = score(r, posting(['JavaScript'], 'bachelor', 12));
+  assert.equal(s.seekerMonths, 18);
+  assert.equal(s.relevantMonths, 6);
+  assert.equal(s.creditedMonths, 12, '6 in full + 12 at half');
+  assert.equal(s.expMeets, true);
+});
+
+test('a job title sharing a subject word with the opening is relevant', () => {
+  // The panel asked for the job TITLE to be read, not only the description.
+  const r: any = resume(['Git'], ['bachelor'], [6]);
+  r.experience = [{ months: 6, position: 'Web Development Intern', description: 'Assisted the team' }];
+  const s = score(r, { ...posting(['Git'], 'bachelor', 6), title: 'Junior Web Developer' });
+  assert.equal(s.relevantMonths, 6, '"web" is in both titles');
+});
+
+test('seniority and employment words never make a job relevant', () => {
+  const r: any = resume(['Git'], ['bachelor'], [6]);
+  r.experience = [
+    { months: 3, position: 'Sales Intern', description: 'Sold phones' },
+    { months: 3, position: 'Store Manager', description: 'Ran the shop floor' },
+  ];
+  const s = score(r, { ...posting(['Git'], 'bachelor', 6), title: 'IT Support Intern / Social Media Manager' });
+  assert.equal(s.relevantMonths, 0, '"Intern" and "Manager" say nothing about what the job was');
+});
+
+test('title words are read the same way by both engines', () => {
+  for (const t of ['Junior Web Developer', 'IT Support Intern', 'Customer Service Representative',
+    'Part-time Sales Associate II', 'Social Media Manager', '', 'HR & Admin Officer']) {
+    assert.deepEqual([...clientTitleWords(t)].sort(), [...titleWords(t)].sort(), t);
+  }
+  assert.equal(UNRELATED_CREDIT, CLIENT_UNRELATED_CREDIT);
 });
 
 test('relevance counts only months from a job whose words match a required skill', () => {
@@ -1045,11 +1101,41 @@ test('relevance reads the bullets as well as the description', () => {
 
 // ---------- field of study (the optional ninth component) ----------
 
-test('at the default weight, field of study changes nothing', () => {
+test('a degree in another field counts half toward education', () => {
   const r: any = resume(['JavaScript'], ['bachelor'], [12]);
   r.education = [{ level: 'bachelor', degree: 'BS Nursing' }];
   const s = score(r, posting(['JavaScript'], 'bachelor', 0, undefined, undefined, 'Information Technology'));
-  assert.equal(s.score, 100, 'a mismatched degree must cost nothing until a recruiter weights it');
+  assert.equal(s.eduLevelMeets, true, 'the LEVEL is right');
+  assert.equal(s.eduFieldRelated, false, 'the field is not');
+  assert.equal(s.eduMeets, false);
+  // 50 skills + (1 × 0.5)×25 education + 25 experience = 87.5 → 88
+  assert.equal(s.score, 88);
+});
+
+test('a degree in the field counts in full', () => {
+  const r: any = resume(['JavaScript'], ['bachelor'], [12]);
+  r.education = [{ level: 'bachelor', degree: 'BS Information Technology' }];
+  const s = score(r, posting(['JavaScript'], 'bachelor', 0, undefined, undefined, 'Information Technology'));
+  assert.equal(s.eduFieldRelated, true);
+  assert.equal(s.score, 100);
+});
+
+test('field relevance does not apply when the opening asks for no college', () => {
+  const r: any = resume(['JavaScript'], ['bachelor'], [12]);
+  r.education = [{ level: 'bachelor', degree: 'BS Nursing' }];
+  const s = score(r, posting(['JavaScript'], 'highschool', 0, undefined, undefined, 'Information Technology'));
+  assert.equal(s.eduFieldRelated, null, 'a high-school requirement has no field to be relevant to');
+  assert.equal(s.score, 100);
+});
+
+test('an applicant without college is not halved on top of the level', () => {
+  // The level already scores the missing degree down; halving it again for
+  // "the wrong field" would count one gap twice.
+  const r: any = resume(['JavaScript'], ['highschool'], [12]);
+  const s = score(r, posting(['JavaScript'], 'bachelor', 0, undefined, undefined, 'Information Technology'));
+  assert.equal(s.eduFieldRelated, null);
+  // 50 + (1/4)×25 + 25 = 81.25 → 81
+  assert.equal(s.score, 81);
 });
 
 test('a degree in the department\'s field scores it', () => {
@@ -1067,7 +1153,8 @@ test('a degree outside the department\'s field loses that share', () => {
   r.education = [{ level: 'bachelor', degree: 'BS Nursing' }];
   const s = score(r, posting(['JavaScript'], 'bachelor', 0, w as any, undefined, 'Information Technology'));
   assert.equal(s.fieldMeets, false);
-  assert.equal(s.score, 60, 'everything but the 40 it cannot claim');
+  // 40 skills + 10×0.5 education (other field) + 10 experience + 0 field = 55
+  assert.equal(s.score, 55, 'the 40 it cannot claim, and half the education share');
 });
 
 test('a department the vocabulary cannot place scores full marks', () => {
@@ -1142,18 +1229,16 @@ test('an unrecognised field falls back to the department, it does not reject eve
   assert.equal(s.fieldMeets, true, 'fell back to the department, which this degree matches');
 });
 
-test('the field picker changes nothing while its weight is zero', () => {
-  /* The evaluation-integrity guarantee, asserted rather than assumed: every
-     respondent rated a system whose openings had no stored field, and the
-     component is off by default. Picking one must not move a score until a
-     recruiter gives the component a weight. */
+test('the field picker decides whose degree counts in full, even at weight 0', () => {
+  /* Relevance is inside the education component now, so the picker matters
+     with the optional slider at 0. A nursing graduate on an IT opening: */
   const r: any = resume(['JavaScript'], ['bachelor'], [12]);
   r.education = [{ level: 'bachelor', degree: 'BS Nursing' }];
-  const base = score(r, posting(['JavaScript'], 'bachelor', 0, null, undefined, 'Information Technology'));
-  for (const f of ['any', 'healthcare', 'it', '']) {
-    const s = score(r, posting(['JavaScript'], 'bachelor', 0, null, undefined, 'Information Technology', f));
-    assert.equal(s.score, base.score, `picking "${f}" moved the score at weight 0`);
-  }
+  const at = (f?: string) => score(r, posting(['JavaScript'], 'bachelor', 0, null, undefined, 'Information Technology', f)).score;
+  assert.equal(at(), 88, 'match the department: IT, so nursing counts half');
+  assert.equal(at('it'), 88, 'IT picked explicitly: the same');
+  assert.equal(at('healthcare'), 100, 'healthcare picked: nursing counts in full');
+  assert.equal(at('any'), 100, 'any field: nobody is halved');
 });
 
 test('field matching reads whole words, so "IT" is not found inside another word', () => {

@@ -259,12 +259,12 @@
               </div>
             }
             <div class="row">
-              <span><b>Education</b><span class="w">{{ row.s.weights.education * 100 }}% of the score</span></span>
-              <b [style.color]="row.s.eduMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ row.s.eduMeets ? 'Meets' : 'Below' }} {{ EDU_LABELS[row.posting.educationLevel] }}</b>
+              <span><b>Education</b><span class="w">{{ row.s.weights.education * 100 }}% of the score · a degree in another field counts half</span></span>
+              <b [style.color]="row.s.eduMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ row.s.eduMeets ? 'Meets ' + EDU_LABELS[row.posting.educationLevel] : (row.s.eduLevelMeets && row.s.eduFieldRelated === false ? EDU_LABELS[row.posting.educationLevel] + ', other field · counts half' : 'Below ' + EDU_LABELS[row.posting.educationLevel]) }}</b>
             </div>
             <div class="row">
-              <span><b>Experience</b><span class="w">{{ row.s.weights.experience * 100 }}% of the score</span></span>
-              <b [style.color]="row.s.expMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ row.s.seekerMonths }} mo · asks for {{ row.posting.minExperienceMonths || 0 }} mo</b>
+              <span><b>Experience</b><span class="w">{{ row.s.weights.experience * 100 }}% of the score · unrelated months count half</span></span>
+              <b [style.color]="row.s.expMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ row.s.seekerMonths }} mo{{ row.s.seekerMonths && row.posting.minExperienceMonths ? ', ' + row.s.relevantMonths + ' related' : '' }} · asks for {{ row.posting.minExperienceMonths || 0 }} mo</b>
             </div>
             @if (row.s.weights.certifications > 0) {
               <div class="row">

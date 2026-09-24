@@ -53,7 +53,7 @@
 
       <hr style="border:0;border-top:1px solid var(--rule);margin:26px 0">
       <h2 style="font-size:21px;margin-bottom:4px">The scoring rule</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:20px">These three fields, and only these three, decide how every applicant is scored.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:20px">Skills, education and experience decide how every applicant is scored. The <b>job title</b> above and the <b>field of study</b> below decide which experience and which degrees count in full; anything unrelated still counts, at half.</p>
 
       <div class="field" [class.invalid]="skillsInvalid()">
         <label for="skillInput">Required skills <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">· {{ wSkills() }}% of the score</span></label>
@@ -153,7 +153,7 @@
       </div>
 
       <div class="field" style="max-width:420px">
-        <label for="eduField">Field of study <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">· {{ wField() }}%</span></label>
+        <label for="eduField">Field of study <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">· part of education</span></label>
         <hlm-select [value]="fieldVal()" [itemToString]="fieldLabel" (valueChange)="fieldVal.set($any($event))">
           <!-- w-full so the trigger fills the field rather than shrinking to
                the selected text. The panel takes its width from the trigger
@@ -166,17 +166,17 @@
             }
           </hlm-select-content>
         </hlm-select>
-        <!-- Says what the setting DOES at its current weight, because at the
-             default of 0% it does nothing at all, and a control that silently
-             changes no score is worse than one that says so. -->
-        @if (wField() === 0) {
-          <p class="hint">What the applicant's degree is about. This is worth <b>0%</b> right now, so it changes nobody's score — give “Field of study” a weight below to make it count.</p>
-        } @else if (fieldVal() === '') {
-          <p class="hint">Read from the department above (“{{ deptVal() || 'no department yet' }}”). A department naming no field the system knows accepts every graduate.</p>
+        <!-- Says what the choice DOES to the education score, because since
+             the panel's revision it acts on every opening, slider or not. -->
+        @if (fieldVal() === '') {
+          <p class="hint">Read from the department above (“{{ deptVal() || 'no department yet' }}”). A degree in that field counts in full toward education; a degree in another field counts half. A department naming no field the system knows accepts every degree.</p>
         } @else if (fieldVal() === 'any') {
-          <p class="hint">Every graduate scores full marks here, whatever they studied. Pick this for a role any degree can do.</p>
+          <p class="hint">Every degree counts in full toward education, whatever the field. Pick this for a role any degree can do.</p>
         } @else {
-          <p class="hint">Only graduates of <b>{{ fieldLabel(fieldVal()) }}</b> score this component. Everyone else scores zero on it, but still keeps every other component.</p>
+          <p class="hint">A degree in <b>{{ fieldLabel(fieldVal()) }}</b> counts in full toward education; a degree in any other field counts half.</p>
+        }
+        @if (wField() > 0) {
+          <p class="hint">The “Field of study” weight below adds <b>{{ wField() }}%</b> on top of that, all or nothing.</p>
         }
       </div>
 
@@ -404,8 +404,8 @@
         </p>
         <div class="weights">
           <div class="r"><span>Required skills matched</span><b>{{ wSkills() }}%</b></div>
-          <div class="r"><span>Education level</span><b>{{ wEdu() }}%</b></div>
-          <div class="r"><span>Experience</span><b>{{ wExp() }}%</b></div>
+          <div class="r"><span>Education (level and field)</span><b>{{ wEdu() }}%</b></div>
+          <div class="r"><span>Experience (related months)</span><b>{{ wExp() }}%</b></div>
           @if (wCert() > 0) {
             <div class="r"><span>Certificates held</span><b>{{ wCert() }}%</b></div>
           }
@@ -418,6 +418,13 @@
           @if (wRef() > 0) {
             <div class="r"><span>References named</span><b>{{ wRef() }}%</b></div>
           }
+          @if (wRelv() > 0) {
+            <div class="r"><span>Relevant experience, extra</span><b>{{ wRelv() }}%</b></div>
+          }
+          @if (wField() > 0) {
+            <div class="r"><span>Field of study, extra</span><b>{{ wField() }}%</b></div>
+          }
+          <div class="r"><span>Unrelated job or other-field degree</span><b>Counts half</b></div>
           <div class="r"><span>Strong match at</span><b>{{ thresholds.strong }}% and up</b></div>
           <div class="r"><span>Below {{ thresholds.related }}%</span><b>Still shown to you</b></div>
         </div>
@@ -435,7 +442,7 @@
             @for (row of simRows(); track row.name) {
               <div class="r">
                 <span class="score-ring sm" [style.--p]="row.score" [style.--c]="tierColor(row.score)"><b>{{ row.score }}</b></span>
-                <span class="who">{{ row.name }}<span>{{ row.matchedSkills.length }} of {{ row.totalSkills }} skills{{ row.eduMeets ? '' : ' · education below' }}{{ row.expMeets ? '' : ' · experience below' }}</span></span>
+                <span class="who">{{ row.name }}<span>{{ row.matchedSkills.length }} of {{ row.totalSkills }} skills{{ row.eduMeets ? '' : (row.eduLevelMeets && row.eduFieldRelated === false ? ' · degree in another field' : ' · education below') }}{{ row.expMeets ? '' : ' · experience below' }}</span></span>
               </div>
             }
           }

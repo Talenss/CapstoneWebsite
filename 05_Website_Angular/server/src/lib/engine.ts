@@ -442,6 +442,44 @@ export function jobMentionsAny(text: string, skills: readonly string[]): boolean
   return false;
 }
 
+/** What unrelated counts for beside related: a month of unrelated work counts
+ *  half a month, a degree in another field half a degree. Deliberately the
+ *  same number as UNEVIDENCED_CREDIT. Mirrored 1:1 in client engine.ts, with
+ *  the reasoning. */
+export const UNRELATED_CREDIT = 0.5;
+
+/* Seniority and employment words — never what a job was ABOUT. Mirrored 1:1
+   in client engine.ts; a parity test runs both through the same titles. */
+const ROLE_WORDS = new Set([
+  'intern', 'interns', 'internship', 'ojt', 'trainee', 'apprentice',
+  'assistant', 'asst', 'associate', 'junior', 'jr', 'senior', 'sr',
+  'staff', 'officer', 'specialist', 'agent', 'representative', 'rep',
+  'clerk', 'worker', 'employee', 'volunteer', 'student', 'lead', 'head',
+  'manager', 'supervisor', 'coordinator', 'executive', 'member', 'crew',
+  'helper', 'aide', 'part', 'full', 'time', 'parttime', 'fulltime',
+  'contract', 'contractual', 'temporary', 'seasonal', 'freelance', 'freelancer',
+  'and', 'of', 'the', 'for', 'in', 'at', 'to', 'a', 'an', 'on', 'with',
+  'i', 'ii', 'iii', 'iv',
+]);
+
+export function titleWords(text: string): Set<string> {
+  return new Set(String(text || '').toLowerCase().split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 2 && !ROLE_WORDS.has(w)));
+}
+
+/** Is this job relevant to this opening? It mentions a skill the opening asks
+ *  for, OR its title shares a subject word with the opening's title. Mirrored
+ *  1:1 in client engine.ts, where the reasoning is written out. */
+export function experienceRelevant(e: any, posting: any, required: readonly string[]): boolean {
+  const text = [e?.position, e?.description, ...(Array.isArray(e?.bullets) ? e.bullets : [])]
+    .filter(Boolean).join(' ');
+  if (jobMentionsAny(text, required)) return true;
+  const want = titleWords(String(posting?.title || ''));
+  if (!want.size) return false;
+  for (const w of titleWords(String(e?.position || ''))) if (want.has(w)) return true;
+  return false;
+}
+
 /** The seven components a score can be built from, as FRACTIONS summing to 1.
  *
  *  Only the first three are compulsory. The four after them each default to 0,
@@ -672,8 +710,17 @@ export interface MatchResult {
   eduMeets: boolean;
   expMeets: boolean;
   seekerMonths: number;
-  /** Months from jobs whose own words mention a required skill. */
+  /** Months from jobs relevant to this opening (see experienceRelevant). */
   relevantMonths: number;
+  /** Relevant months in full plus every other month at UNRELATED_CREDIT —
+   *  the figure the experience component actually divides. */
+  creditedMonths: number;
+  /** Does the LEVEL alone meet the opening's? eduMeets can be false while this
+   *  is true: the right level in another field. */
+  eduLevelMeets: boolean;
+  /** Is the degree in a field the opening accepts? Null when field relevance
+   *  does not apply (no college asked for, none held, or any field accepted). */
+  eduFieldRelated: boolean | null;
   /** Did the degree's field match the opening's department? True when the
    *  department names no field this vocabulary knows. */
   fieldMeets: boolean;
@@ -746,15 +793,30 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
   const credited = matched.length - unevidenced.length * (1 - UNEVIDENCED_CREDIT);
   const skillPart = required.length ? credited / required.length : 1.0;
 
+  /* EDUCATION = LEVEL × RELEVANCE, EXPERIENCE = CREDITED MONTHS ÷ ASKED.
+     The panel's revision; the reasoning is written out once, in the client
+     engine, and the arithmetic here must stay identical to it. */
   let seekerEdu = 0;
   for (const e of resume.education || []) seekerEdu = Math.max(seekerEdu, EDU_RANK[e.level] ?? 0);
   const reqEdu = EDU_RANK[posting.educationLevel] ?? 0;
-  const eduPart = reqEdu === 0 ? 1.0 : Math.min(1.0, seekerEdu / reqEdu);
+  const levelPart = reqEdu === 0 ? 1.0 : Math.min(1.0, seekerEdu / reqEdu);
+
+  const wantedFields = acceptedFields(posting);
+  const seekerFields = educationFields(
+    (resume.education || []).map((e: any) => `${e?.degree || ''} ${e?.field || ''}`).join(' '));
+  const fieldMeets = wantedFields.size === 0
+    || [...seekerFields].some((f) => wantedFields.has(f));
+  const fieldApplies = reqEdu >= EDU_RANK['associate'] && seekerEdu >= EDU_RANK['associate'] && wantedFields.size > 0;
+  const eduFieldRelated: boolean | null = fieldApplies ? fieldMeets : null;
+  const eduPart = levelPart * (eduFieldRelated === false ? UNRELATED_CREDIT : 1);
 
   let months = 0;
   for (const e of resume.experience || []) months += Number(e.months) || 0;
   const reqMonths = Number(posting.minExperienceMonths) || 0;
-  const expPart = reqMonths <= 0 ? 1.0 : Math.min(1.0, months / reqMonths);
+  const relevantMonths = (resume.experience || []).reduce(
+    (t: number, e: any) => (experienceRelevant(e, posting, required) ? t + (Number(e?.months) || 0) : t), 0);
+  const creditedMonths = relevantMonths + (months - relevantMonths) * UNRELATED_CREDIT;
+  const expPart = reqMonths <= 0 ? 1.0 : Math.min(1.0, creditedMonths / reqMonths);
 
   /* CERTIFICATIONS — the optional fourth component. An opening that asks for
      none scores full marks here, exactly as an unstated education or months
@@ -801,38 +863,14 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
   const minReferences = Math.max(0, Number(posting.minReferences) || 0);
   const refPart = minReferences <= 0 ? 1.0 : Math.min(1.0, referenceCount / minReferences);
 
-  /* RELEVANT EXPERIENCE — the optional eighth component, mirroring
-     client/src/app/core/engine.ts. Months counted only from a job whose own
-     title, description or bullets mention a skill this opening asks for.
-
-     ZERO BY DEFAULT, and that is load-bearing rather than tidy: at the
-     default weight it contributes nothing, so the score is bit-for-bit the
-     one every respondent in the evaluation rated. A recruiter who wants
-     relevance counted switches it on for their own opening. */
-  const relevantMonths = (resume.experience || []).reduce((t: number, e: any) => {
-    const text = [e?.position, e?.description, ...(Array.isArray(e?.bullets) ? e.bullets : [])]
-      .filter(Boolean).join(' ');
-    return jobMentionsAny(text, required) ? t + (Number(e?.months) || 0) : t;
-  }, 0);
-  /* Measured against the SAME requirement as the months above, so the two
-     components differ only in which months they are willing to count. An
-     opening stating no requirement scores full marks, the rule every other
-     component follows. */
+  /* RELEVANT EXPERIENCE — the optional eighth component: extra weight on
+     relevant months alone, on top of the relevance already inside the
+     experience component. Zero unless a recruiter gives it a share. */
   const relPart = reqMonths <= 0 ? 1.0 : Math.min(1.0, relevantMonths / reqMonths);
 
-  /* FIELD OF STUDY — the optional ninth component.
-     What the degree is ABOUT, matched against the department the opening is
-     already filed under. Zero by default, like every optional component, so
-     an opening that ignores it scores exactly as it did before this existed.
-
-     A department the vocabulary cannot place scores FULL MARKS rather than
-     nothing: a requirement nobody stated cannot be one the applicant failed,
-     and that is the honest answer for a support role where any degree does. */
-  const wantedFields = acceptedFields(posting);
-  const seekerFields = educationFields(
-    (resume.education || []).map((e: any) => `${e?.degree || ''} ${e?.field || ''}`).join(' '));
-  const fieldMeets = wantedFields.size === 0
-    || [...seekerFields].some((f) => wantedFields.has(f));
+  /* FIELD OF STUDY — the optional ninth component: extra weight on the field
+     alone, all or nothing, on top of the relevance already inside the
+     education component. Zero unless a recruiter gives it a share. */
   const fieldPart = fieldMeets ? 1 : 0;
 
   const raw = (skillPart * W.skills + eduPart * W.education
@@ -851,6 +889,9 @@ export function scoreWith(cfg: MatchSettings, resume: SerializedResume, posting:
     expMeets: expPart >= 1.0,
     seekerMonths: months,
     relevantMonths,
+    creditedMonths,
+    eduLevelMeets: levelPart >= 1.0,
+    eduFieldRelated,
     fieldMeets,
     matchedCertifications: matchedCerts,
     missingCertifications: missingCerts,

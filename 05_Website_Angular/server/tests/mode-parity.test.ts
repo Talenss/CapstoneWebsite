@@ -152,6 +152,32 @@ test('the harness is really signed in on both sides', async () => {
   assert.ok(aMine.applications.length > 0, 'sql seed should give this seeker applications');
 });
 
+test('no seeded application starts out flagged as drifted, in either mode', async () => {
+  /* The seeded snapshots were once typed by hand, fell behind the engine,
+     and put a "score drifted" warning on nearly every applicant in the demo
+     — the recruiter's recorded number disagreeing with the live one on
+     resumes nobody had touched. Run FIRST, before any test here edits a
+     resume, so a drift can only come from the seed itself. */
+  await demo.auth.login('hr@demo.ph', 'demo123');
+  await api('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  for (const [label, list, ranked] of [
+    ['demo', () => demo.postings.mine(), (id: string) => demo.applications.ranked(id)],
+    ['api', () => api('postings/mine'), (id: string) => api('applications/ranked', { postingId: id })],
+  ] as const) {
+    const ps: any = await (list as any)();
+    let seen = 0;
+    for (const p of ps.postings) {
+      const r: any = await (ranked as any)(p.id);
+      for (const row of r.rows || []) {
+        seen++;
+        assert.equal(row.scoreDrifted, false,
+          `${label}: ${row.resume?.title} @ ${p.title} is stored as ${row.score} but scores ${row.liveScore}`);
+      }
+    }
+    assert.ok(seen >= 5, `${label}: expected the five seeded applications, saw ${seen}`);
+  }
+});
+
 test('authentication is refused and accepted identically', async () => {
   await agree('wrong password',
     demo.auth.login('marco@demo.ph', 'nope'),

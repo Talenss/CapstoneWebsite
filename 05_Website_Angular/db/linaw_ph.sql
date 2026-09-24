@@ -1140,12 +1140,19 @@ INSERT INTO department_assignments (company_id, department, user_id) VALUES
 -- information request) so the demo shows more than one point on it: one
 -- applicant at an initial interview, one at scheduling, one shortlisted after
 -- testing, and two freshly applied.
+--
+-- score_snapshot is the score AT THE MOMENT OF APPLYING, and nobody has
+-- edited these resumes since — so each must equal what the engine gives the
+-- seeded resume against the seeded opening. They were once hand-typed, fell
+-- behind the engine, and put a "score drifted" warning on nearly every
+-- applicant in the demo. mode-parity.test.ts now fails if they disagree with
+-- the engine again, and the demo seed in demo-adapter.ts carries the same five.
 INSERT INTO applications (application_id, seeker_id, resume_id, posting_id, status, score_snapshot, applied_at) VALUES
- (1, 3, 2, 1, 'initial_interview', 88, now() - INTERVAL '3 days'),
- (2, 4, 3, 1, 'submitted',         63, now() - INTERVAL '2 days'),
- (3, 4, 3, 3, 'shortlisted',       75, now() - INTERVAL '4 days'),
- (4, 5, 4, 5, 'scheduling',        75, now() - INTERVAL '3 days'),
- (5, 5, 4, 6, 'submitted',         50, now() - INTERVAL '1 day');
+ (1, 3, 2, 1, 'initial_interview', 81, now() - INTERVAL '3 days'),
+ (2, 4, 3, 1, 'submitted',         44, now() - INTERVAL '2 days'),
+ (3, 4, 3, 3, 'shortlisted',       94, now() - INTERVAL '4 days'),
+ (4, 5, 4, 5, 'scheduling',        44, now() - INTERVAL '3 days'),
+ (5, 5, 4, 6, 'submitted',         42, now() - INTERVAL '1 day');
 
 INSERT INTO application_status_history (application_id, old_status, new_status, changed_by, changed_at) VALUES
  (1, NULL, 'submitted', 3, now() - INTERVAL '3 days'), (1, 'submitted', 'scheduling', 2, now() - INTERVAL '2 days'), (1, 'scheduling', 'initial_interview', 2, now() - INTERVAL '1 day'),

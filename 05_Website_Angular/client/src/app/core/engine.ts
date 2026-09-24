@@ -1068,6 +1068,64 @@ export function jobMentionsAny(text: string, skills: readonly string[]): boolean
   return false;
 }
 
+/** WHAT UNRELATED COUNTS FOR, beside related. Applied to both halves of the
+ *  panel's revision: a month of work unrelated to the opening counts half a
+ *  month, and a degree in another field counts half a degree.
+ *
+ *  Half, not zero, and deliberately the same number as UNEVIDENCED_CREDIT, so
+ *  the whole engine follows one rule that can be said in a sentence: what you
+ *  can show is related counts fully; the rest still counts, at half. Zero
+ *  would score a fresh graduate whose only jobs were part-time work outside
+ *  their course as having no experience at all, which is not true, and is
+ *  exactly the applicant this study is for. Mirrored in server/src/lib/engine.ts. */
+export const UNRELATED_CREDIT = 0.5;
+
+/* Words that say how senior or how employed someone was, never what the job
+   was ABOUT. Sharing "Intern" does not make a sales internship relevant to an
+   IT one, and sharing "Manager" does not make a store manager a social media
+   manager. Kept short on purpose: every word added here is a match removed,
+   so only words that carry no subject belong in it. */
+const ROLE_WORDS = new Set([
+  'intern', 'interns', 'internship', 'ojt', 'trainee', 'apprentice',
+  'assistant', 'asst', 'associate', 'junior', 'jr', 'senior', 'sr',
+  'staff', 'officer', 'specialist', 'agent', 'representative', 'rep',
+  'clerk', 'worker', 'employee', 'volunteer', 'student', 'lead', 'head',
+  'manager', 'supervisor', 'coordinator', 'executive', 'member', 'crew',
+  'helper', 'aide', 'part', 'full', 'time', 'parttime', 'fulltime',
+  'contract', 'contractual', 'temporary', 'seasonal', 'freelance', 'freelancer',
+  'and', 'of', 'the', 'for', 'in', 'at', 'to', 'a', 'an', 'on', 'with',
+  'i', 'ii', 'iii', 'iv',
+]);
+
+/** The words in a job title that say what the job was about. */
+export function titleWords(text: string): Set<string> {
+  return new Set(String(text || '').toLowerCase().split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 2 && !ROLE_WORDS.has(w)));
+}
+
+/** IS THIS JOB RELEVANT TO THIS OPENING? The panel asked for the job's title
+ *  and description to be read, not only its length. Two tests, either enough:
+ *
+ *    · its title, description or bullets mention a skill the opening asks
+ *      for — read by the same word runs and synonyms the skills component
+ *      uses, so "JS" in a bullet counts for "JavaScript"; or
+ *    · its title shares a subject word with the opening's title —
+ *      "Web Development Intern" and "Junior Web Developer" share "web";
+ *      "Customer Service Representative" and "Customer Support Agent" share
+ *      "customer". Seniority and employment words are ignored (ROLE_WORDS).
+ *
+ *  No similarity score and no guessing: a recruiter can predict it, and an
+ *  applicant can be told exactly which word made a job count. */
+export function experienceRelevant(e: any, posting: any, required: readonly string[]): boolean {
+  const text = [e?.position, e?.description, ...(Array.isArray(e?.bullets) ? e.bullets : [])]
+    .filter(Boolean).join(' ');
+  if (jobMentionsAny(text, required)) return true;
+  const want = titleWords(String(posting?.title || ''));
+  if (!want.size) return false;
+  for (const w of titleWords(String(e?.position || ''))) if (want.has(w)) return true;
+  return false;
+}
+
 /* ------------------------------------------------------------
    FIELD OF STUDY — what a degree is ABOUT, not what level it is.
 
@@ -1348,13 +1406,42 @@ export function scoreLocal(
   const credited = matched.length - unevidenced.length * (1 - UNEVIDENCED_CREDIT);
   const skillPart = required.length ? credited / required.length : 1;
 
+  /* EDUCATION = LEVEL × RELEVANCE. The level is scored as it always was,
+     your rank ÷ the rank asked for. The panel's revision adds what the
+     degree is ABOUT: a degree in a field the opening accepts counts in full,
+     one in another field counts at UNRELATED_CREDIT.
+
+     Relevance applies only where it means something — when the opening asks
+     for college AND the applicant has college. A high-school requirement has
+     no field to be relevant to, and an applicant with no degree is already
+     scored down by the level, so halving them again would count one gap
+     twice. An opening that accepts any field (see acceptedFields) never
+     halves anybody. */
   const seekerEdu = Math.max(0, ...(resume.education || []).map((e) => EDU_RANK[e.level] || 0));
   const reqEdu = EDU_RANK[posting.educationLevel] || 0;
-  const eduPart = reqEdu === 0 ? 1 : Math.min(1, seekerEdu / reqEdu);
+  const levelPart = reqEdu === 0 ? 1 : Math.min(1, seekerEdu / reqEdu);
 
+  const wantedFields = acceptedFields(posting);
+  const seekerFields = educationFields(
+    (resume.education || []).map((e: any) => `${e?.degree || ''} ${e?.field || ''}`).join(' '));
+  const fieldMeets = wantedFields.size === 0
+    || [...seekerFields].some((f) => wantedFields.has(f));
+  const fieldApplies = reqEdu >= EDU_RANK['associate'] && seekerEdu >= EDU_RANK['associate'] && wantedFields.size > 0;
+  const eduFieldRelated: boolean | null = fieldApplies ? fieldMeets : null;
+  const eduPart = levelPart * (eduFieldRelated === false ? UNRELATED_CREDIT : 1);
+
+  /* EXPERIENCE = CREDITED MONTHS ÷ MONTHS ASKED FOR. Every month still
+     counts, but a month in a job relevant to this opening (see
+     experienceRelevant) counts in full and any other month counts at
+     UNRELATED_CREDIT — so nine months behind a counter meets a nine-month
+     requirement halfway, and nine months at a help desk meets it fully. An
+     opening asking for no experience still scores full marks. */
   const months = (resume.experience || []).reduce((t, e) => t + (Number(e.months) || 0), 0);
   const reqMonths = Number(posting.minExperienceMonths) || 0;
-  const expPart = reqMonths <= 0 ? 1 : Math.min(1, months / reqMonths);
+  const relevantMonths = (resume.experience || []).reduce(
+    (t, e) => (experienceRelevant(e, posting, required) ? t + (Number(e?.months) || 0) : t), 0);
+  const creditedMonths = relevantMonths + (months - relevantMonths) * UNRELATED_CREDIT;
+  const expPart = reqMonths <= 0 ? 1 : Math.min(1, creditedMonths / reqMonths);
 
   /* CERTIFICATIONS — the optional fourth component. An opening asking for
      none scores full marks here, exactly as an unstated education or months
@@ -1396,53 +1483,18 @@ export function scoreLocal(
   const minReferences = Math.max(0, Number(posting.minReferences) || 0);
   const refPart = minReferences <= 0 ? 1 : Math.min(1, referenceCount / minReferences);
 
-  /* RELEVANT EXPERIENCE — the optional eighth component.
-   *
-   * The experience component above counts months and nothing else: a year
-   * behind a counter and a year at a help desk are the same number to it.
-   * Four of the ten HR respondents said so independently, and the panel asked
-   * for the job's title and description to be read rather than only its
-   * length. This is that, kept separate from the months so the recruiter
-   * decides how much it is worth.
-   *
-   * ZERO BY DEFAULT, like every optional component. That is deliberate and
-   * load-bearing: at the default weight this contributes nothing and the
-   * score is bit-for-bit the one every respondent in the evaluation rated.
-   * A recruiter who wants relevance counted switches it on for their own
-   * opening.
-   *
-   * Relevance is decided by THE SKILLS THE OPENING ALREADY ASKS FOR, read out
-   * of the job's own title, description and bullets. No new vocabulary and no
-   * similarity guessing: the same normSkill() the skills component uses, so a
-   * recruiter can predict it and an applicant can be told why. */
-  const relevantMonths = (resume.experience || []).reduce((t, e) => {
-    const text = [e?.position, e?.description, ...(Array.isArray((e as any)?.bullets) ? (e as any).bullets : [])]
-      .filter(Boolean).join(' ');
-    return jobMentionsAny(text, required) ? t + (Number(e?.months) || 0) : t;
-  }, 0);
-  /* Measured against the SAME requirement the months are measured against, so
-     the two components answer the same question and differ only in which
-     months they are willing to count. An opening stating no requirement scores
-     full marks here too — a requirement nobody set cannot be one the applicant
-     failed, which is the rule every other component follows. */
+  /* RELEVANT EXPERIENCE — the optional eighth component. Relevance already
+     counts inside the experience component above; this slider is for a
+     recruiter who wants it to count MORE — only relevant months, weighed on
+     their own. Zero unless the recruiter gives it a share. Measured against
+     the same requirement as the months, and an opening stating none scores
+     full marks, the rule every other component follows. */
   const relPart = reqMonths <= 0 ? 1 : Math.min(1, relevantMonths / reqMonths);
 
-  /* FIELD OF STUDY — the optional ninth component.
-     What the degree is ABOUT, matched against what the opening accepts. Zero
-     by default, like every optional component, so an opening that ignores it
-     scores exactly as it did before this existed.
-
-     The recruiter PICKS the field (see acceptedFields): one of the thirteen,
-     or "any field", or — the default, and what every opening saved before the
-     picker existed does — read it from the department. An opening that
-     accepts anything scores FULL MARKS rather than nothing: a requirement
-     nobody stated cannot be one the applicant failed, and that is the honest
-     answer for a support role where any degree does. */
-  const wantedFields = acceptedFields(posting);
-  const seekerFields = educationFields(
-    (resume.education || []).map((e: any) => `${e?.degree || ''} ${e?.field || ''}`).join(' '));
-  const fieldMeets = wantedFields.size === 0
-    || [...seekerFields].some((f) => wantedFields.has(f));
+  /* FIELD OF STUDY — the optional ninth component. The field already counts
+     inside the education component above; this slider is for a recruiter who
+     wants it to count MORE, all or nothing, and at any level. Zero unless the
+     recruiter gives it a share. */
   const fieldPart = fieldMeets ? 1 : 0;
 
   const raw = (skillPart * W.skills + eduPart * W.education
@@ -1461,6 +1513,9 @@ export function scoreLocal(
     expMeets: expPart >= 1,
     seekerMonths: months,
     relevantMonths,
+    creditedMonths,
+    eduLevelMeets: levelPart >= 1,
+    eduFieldRelated,
     fieldMeets,
     matchedCertifications: matchedCerts,
     missingCertifications: missingCerts,

@@ -485,6 +485,16 @@ export interface MatchResult {
    *  seekerMonths so a recruiter can see the total and the relevant part
    *  separately, whether or not the component carries any weight. */
   relevantMonths: number;
+  /** Relevant months in full plus every other month at UNRELATED_CREDIT —
+   *  the figure the experience component actually divides by the months
+   *  asked for. */
+  creditedMonths: number;
+  /** Does the education LEVEL alone meet the opening's? eduMeets can be false
+   *  while this is true: the right level, in another field. */
+  eduLevelMeets: boolean;
+  /** Is the degree in a field the opening accepts? Null when field relevance
+   *  does not apply: no college asked for, none held, or any field accepted. */
+  eduFieldRelated: boolean | null;
   /** Whether the degree's field matches the opening's department. True when
    *  the department names no field the vocabulary knows, since an unstated
    *  requirement is never one the applicant failed. */

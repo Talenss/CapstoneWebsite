@@ -713,7 +713,7 @@ export class HrApplicants {
     const header = [
       'Rank', 'Name', 'Email', 'Score', 'Match level', 'Status',
       'Skills matched', 'Skills required', 'Missing skills',
-      'Meets education', 'Meets experience', 'Months experience',
+      'Meets education', 'Degree in the field', 'Meets experience', 'Months experience', 'Related months',
       'Own file attached', 'Applied on',
     ];
 
@@ -728,8 +728,11 @@ export class HrApplicants {
       r.totalSkills,
       r.missingSkills.join('; '),
       r.eduMeets ? 'Yes' : 'No',
+      // Blank, not "No", where field relevance does not apply to this opening.
+      r.eduFieldRelated === null || r.eduFieldRelated === undefined ? '' : (r.eduFieldRelated ? 'Yes' : 'No'),
       r.expMeets ? 'Yes' : 'No',
       r.seekerMonths,
+      r.relevantMonths ?? '',
       r.resume.ownFile ? 'Yes' : 'No',
       new Date(r.application.appliedAt).toISOString().slice(0, 10),
     ].map((c) => this.csvCell(c)).join(','));

@@ -89,7 +89,7 @@
                     }
                   </div>
                   <div class="req">
-                    <span>Education <b [class.ok]="item.eduMeets" [class.no]="!item.eduMeets">{{ item.eduMeets ? 'meets' : 'below' }}</b></span>
+                    <span>Education <b [class.ok]="item.eduMeets" [class.no]="!item.eduMeets">{{ item.eduMeets ? 'meets' : (item.eduLevelMeets && item.eduFieldRelated === false ? 'other field' : 'below') }}</b></span>
                     <span>Experience <b [class.ok]="item.expMeets" [class.no]="!item.expMeets">{{ item.expMeets ? 'meets' : 'below' }}</b></span>
                   </div>
                   <div class="foot">
@@ -325,12 +325,12 @@
             </div>
           }
           <div class="row">
-            <span><b>Education</b><span class="w">{{ item.weights.education * 100 }}% of the score</span></span>
-            <b [style.color]="item.eduMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ item.eduMeets ? 'Meets ' + EDU_LABELS[item.posting.educationLevel] : 'Below ' + EDU_LABELS[item.posting.educationLevel] }}</b>
+            <span><b>Education</b><span class="w">{{ item.weights.education * 100 }}% of the score · a degree in another field counts half</span></span>
+            <b [style.color]="item.eduMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ item.eduMeets ? 'Meets ' + EDU_LABELS[item.posting.educationLevel] : (item.eduLevelMeets && item.eduFieldRelated === false ? EDU_LABELS[item.posting.educationLevel] + ', other field · counts half' : 'Below ' + EDU_LABELS[item.posting.educationLevel]) }}</b>
           </div>
           <div class="row">
-            <span><b>Experience</b><span class="w">{{ item.weights.experience * 100 }}% of the score</span></span>
-            <b [style.color]="item.expMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ item.seekerMonths }} mo · asks for {{ item.posting.minExperienceMonths || 0 }} mo</b>
+            <span><b>Experience</b><span class="w">{{ item.weights.experience * 100 }}% of the score · unrelated months count half</span></span>
+            <b [style.color]="item.expMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ item.seekerMonths }} mo{{ item.seekerMonths && item.posting.minExperienceMonths ? ', ' + item.relevantMonths + ' related' : '' }} · asks for {{ item.posting.minExperienceMonths || 0 }} mo</b>
           </div>
           @if (item.weights.certifications > 0) {
             <div class="row">

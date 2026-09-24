@@ -226,6 +226,10 @@ export class HrPosting {
          recruiter is editing, which is the whole point of the preview. */
       educationField: this.fieldVal() || null,
       department: this.deptVal(),
+      // The title decides which of an applicant's jobs are relevant, so the
+      // preview needs it or it would score experience differently from the
+      // saved opening.
+      title: this.titleVal(),
       minExperienceMonths: this.monthsVal(),
       certifications: this.certsVal(),
       languages: this.langsVal(),

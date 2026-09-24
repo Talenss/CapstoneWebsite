@@ -116,7 +116,7 @@
           <span class="score-ring" [style.--p]="r.score" [style.--c]="tierColor(r.score)"><b>{{ r.score }}%</b></span>
           <div class="who">
             <h3>{{ r.seeker.name }} @if (r.resume.ownFile) {<span class="clip" title="Attached their own resume file">&#128206;</span>}</h3>
-            <div class="meta">{{ r.matchedSkills.length }} of {{ r.totalSkills }} skills · education {{ r.eduMeets ? 'meets' : 'below' }} · {{ r.seekerMonths }} mo experience · applied {{ day(r.application.appliedAt) }}</div>
+            <div class="meta">{{ r.matchedSkills.length }} of {{ r.totalSkills }} skills · education {{ r.eduMeets ? 'meets' : (r.eduLevelMeets && r.eduFieldRelated === false ? 'other field' : 'below') }} · {{ r.seekerMonths }} mo experience ({{ r.relevantMonths }} related) · applied {{ day(r.application.appliedAt) }}</div>
             <div class="chips">
               @for (s of p.skills; track s) {
                 <span class="chip" [class.miss]="!r.matchedSkills.includes(s)">{{ s }}</span>
@@ -290,12 +290,12 @@
                 </div>
               }
               <div class="row">
-                <span><b>Education</b><span class="w">{{ r.weights.education * 100 }}% of the score</span></span>
-                <b [style.color]="r.eduMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ r.eduMeets ? 'Meets' : 'Below' }} {{ posting() ? eduLabels[posting()!.educationLevel] : '' }}</b>
+                <span><b>Education</b><span class="w">{{ r.weights.education * 100 }}% of the score · a degree in another field counts half</span></span>
+                <b [style.color]="r.eduMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ r.eduMeets ? 'Meets' : (r.eduLevelMeets && r.eduFieldRelated === false ? 'Right level, other field ·' : 'Below') }} {{ posting() ? eduLabels[posting()!.educationLevel] : '' }}</b>
               </div>
               <div class="row">
-                <span><b>Experience</b><span class="w">{{ r.weights.experience * 100 }}% of the score</span></span>
-                <b [style.color]="r.expMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ r.seekerMonths }} mo · asks for {{ posting()?.minExperienceMonths || 0 }} mo</b>
+                <span><b>Experience</b><span class="w">{{ r.weights.experience * 100 }}% of the score · unrelated months count half</span></span>
+                <b [style.color]="r.expMeets ? 'var(--emerald)' : 'var(--accent-deep)'">{{ r.seekerMonths }} mo{{ r.seekerMonths && posting()?.minExperienceMonths ? ', ' + r.relevantMonths + ' related' : '' }} · asks for {{ posting()?.minExperienceMonths || 0 }} mo</b>
               </div>
               <!-- Only when this opening scores certificates. Shown for the
                    same reason the other three are: a breakdown that omits a
