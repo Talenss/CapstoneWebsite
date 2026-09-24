@@ -128,7 +128,7 @@ export const routes: Routes = [
     data: PRIVATE,
   },
   {
-    path: 'admin/metrics', canActivate: [authGuard('admin')], title: 'Study metrics, Linaw PH',
+    path: 'admin/metrics', canActivate: [authGuard('admin')], title: 'Platform metrics, Linaw PH',
     loadComponent: () => import('./pages/admin-metrics/admin-metrics').then((m) => m.AdminMetrics),
     data: PRIVATE,
   },
