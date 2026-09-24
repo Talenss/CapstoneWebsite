@@ -8,8 +8,17 @@
       <p>Keep a version for each kind of role. The <b>active</b> one is what gets scored on your dashboard and sent when you apply.</p>
     </div>
     <div style="display:flex;gap:9px;flex-wrap:wrap">
-      <a class="btn ghost" routerLink="/upload-resume">Upload &amp; analyze</a>
-      <a class="btn primary" routerLink="/resume-builder">+ New resume</a>
+      @if (!atLimit()) {
+        <a class="btn ghost" routerLink="/upload-resume">Upload &amp; analyze</a>
+        <a class="btn primary" routerLink="/resume-builder">+ New resume</a>
+      } @else {
+        <!-- Where the buttons were, so the reason they are gone is read in
+             the same glance, not twenty cards further down. -->
+        <p style="max-width:320px;font-size:13px;color:var(--muted);margin:0">
+          <b style="color:var(--text)">{{ resumes().length }} of {{ MAX_RESUMES }} resumes.</b>
+          That is the most one account can keep. Delete one you no longer use to add another.
+        </p>
+      }
     </div>
   </div>
 
@@ -73,12 +82,17 @@
               <a class="btn ghost sm" routerLink="/resume-builder" [queryParams]="{ id: r.id }">Edit</a>
               <a class="btn ghost sm" routerLink="/resume-print" [queryParams]="{ id: r.id }" target="_blank" rel="noopener"
                  title="See the finished resume, and print or save it as PDF">View / PDF</a>
-              <button class="btn ghost sm" type="button" (click)="duplicateResume(r)">Duplicate</button>
+              <button class="btn ghost sm" type="button" (click)="duplicateResume(r)" [disabled]="atLimit()"
+                      [attr.title]="atLimit() ? 'You have ' + MAX_RESUMES + ' resumes, the most one account can keep' : null">Duplicate</button>
               <button class="btn warn sm" type="button" style="margin-left:auto" (click)="deleteResume(r)">Delete</button>
             </div>
           </article>
         }
-        <a class="new" routerLink="/resume-builder"><span>+</span>New resume</a>
+        @if (!atLimit()) {
+          <a class="new" routerLink="/resume-builder"><span>+</span>New resume</a>
+        } @else {
+          <div class="alert show" role="status" style="grid-column:1/-1">You have {{ MAX_RESUMES }} resumes, the most one account can keep. Delete one you no longer use to add another.</div>
+        }
       </div>
     }
   </div>
@@ -91,7 +105,7 @@
    <aside class="rail-side" aria-label="About your resume library">
      <div class="rail-card">
        <h3>Your library</h3>
-       <div class="rail-row"><span>Resumes saved</span><b>{{ resumes().length }}</b></div>
+       <div class="rail-row"><span>Resumes saved</span><b>{{ resumes().length }} of {{ MAX_RESUMES }}</b></div>
        <div class="rail-row"><span>Used in applications</span><b>{{ usedTotal() }}</b></div>
        @if (activeTitle(); as t) {
          <div class="rail-row"><span>Active</span><b>{{ t }}</b></div>

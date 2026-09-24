@@ -4,6 +4,7 @@ import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { Resume, ResumeDesign, Template } from '../../core/models';
+import { MAX_RESUMES } from '../../core/engine';
 
 /** Port of the PHP my-resumes.html — the seeker's resume library.
  *  Grid of resume cards with make-active / edit / PDF / duplicate / delete
@@ -20,6 +21,10 @@ export class MyResumes implements OnInit {
 
   loaded = signal(false);
   resumes = signal<Resume[]>([]);
+  readonly MAX_RESUMES = MAX_RESUMES;
+  /** At the limit, every way of adding one says so up front, rather than
+   *  letting someone build a whole resume the server will then refuse. */
+  atLimit = computed(() => this.resumes().length >= MAX_RESUMES);
   activeId = signal<string | null>(null);
   usedCounts = signal<Record<string, number>>({});
 

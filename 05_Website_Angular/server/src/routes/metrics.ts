@@ -5,13 +5,13 @@
 import { asyncRouter } from '../lib/async-router';
 import { query, queryOne } from '../db';
 import { ok } from '../lib/http';
-import { requireRole } from '../lib/auth';
+import { requireHeadOfRecruitment } from '../lib/auth';
 import { getSettings } from '../lib/engine';
 
 const router = asyncRouter();
 
 router.post('/summary', async (req, res) => {
-  const u = await requireRole(req, res, 'admin');
+  const u = await requireHeadOfRecruitment(req, res);
   if (!u) return;
 
   const T = (await getSettings()).thresholds;

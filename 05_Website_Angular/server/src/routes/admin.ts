@@ -1,16 +1,18 @@
 /* Linaw PH — routes/admin.ts
-   The research-team side of "recruiter accounts are provisioned, not
-   self-served". An admin reviews the requests that the auth page's
-   recruiter form creates, and approving one is what actually creates the
-   verified recruiter account. Admin accounts are made with
-   `npm run create-admin` — there is deliberately no self-serve path. */
+   The partner company's side of "recruiter accounts are provisioned, not
+   self-served". The admin is the company's HEAD OF RECRUITMENT (see
+   requireHeadOfRecruitment): they review the requests the auth page's
+   recruiter form creates FOR THEIR COMPANY, and approving one is what
+   actually creates the verified recruiter account. Admin accounts are made
+   with `npm run create-admin`, which ties each to a company — there is
+   deliberately no self-serve path. */
 import { asyncRouter } from '../lib/async-router';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { query, queryOne, exec } from '../db';
 import { UserRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
-import { requireRole } from '../lib/auth';
+import { requireHeadOfRecruitment } from '../lib/auth';
 import { ts } from '../lib/serializers';
 import { APP_URL, DEBUG } from '../config';
 import { mailConfigured, sendMail } from '../lib/mailer';
@@ -44,19 +46,20 @@ const serializeRequest = (r: RequestRow) => ({
   requestedAt: ts(r.requested_at),
 });
 
-async function listRequests() {
+async function listRequests(companyId: number) {
   const rows = await query<RequestRow>(
     `SELECT r.*, c.company_name FROM recruiter_requests r
        LEFT JOIN companies c ON c.company_id = r.company_id
-      ORDER BY (r.status = 'pending') DESC, r.requested_at DESC`,
+      WHERE r.company_id = ?
+      ORDER BY (r.status = 'pending') DESC, r.requested_at DESC`, [companyId],
   );
   return rows.map(serializeRequest);
 }
 
 router.post('/requests', async (req, res) => {
-  const u = await requireRole(req, res, 'admin');
+  const u = await requireHeadOfRecruitment(req, res);
   if (!u) return;
-  ok(res, { requests: await listRequests() });
+  ok(res, { requests: await listRequests(u.company_id!) });
 });
 
 /* Approving a request IS the account creation. The account gets an
@@ -64,7 +67,7 @@ router.post('/requests', async (req, res) => {
    to use "Forgot password" to set their own — same proven code flow,
    nothing new to secure. */
 router.post('/approve', async (req, res) => {
-  const u = await requireRole(req, res, 'admin');
+  const u = await requireHeadOfRecruitment(req, res);
   if (!u) return;
   const id = idOf(req.body?.id);
 
@@ -73,9 +76,10 @@ router.post('/approve', async (req, res) => {
        LEFT JOIN companies c ON c.company_id = r.company_id
       WHERE r.request_id = ? LIMIT 1`, [id],
   );
-  if (!r) return fail(res, 'Request not found.');
+  // Another company's request reads as "not found", not "forbidden": a head
+  // of recruitment has no business learning that it exists.
+  if (!r || r.company_id !== u.company_id) return fail(res, 'Request not found.');
   if (r.status !== 'pending') return fail(res, 'This request was already handled.');
-  if (!r.company_id) return fail(res, 'This request has no partner company attached.');
 
   const existing = await queryOne('SELECT 1 FROM users WHERE email = ? LIMIT 1', [r.email]);
   if (existing) return fail(res, 'An account already uses this email. Decline the request instead.');
@@ -97,7 +101,7 @@ router.post('/approve', async (req, res) => {
       `
         <h1 style="margin:0 0 10px;font-size:22px">Welcome aboard</h1>
         <p style="margin:0 0 14px;font-size:14.5px;line-height:1.65;color:#4C5566">Hi ${r.full_name},</p>
-        <p style="margin:0 0 14px;font-size:14.5px;line-height:1.65;color:#4C5566">Your recruiter account for <b>${co}</b> on Linaw PH is now active — verified with your HR department by the research team.</p>
+        <p style="margin:0 0 14px;font-size:14.5px;line-height:1.65;color:#4C5566">Your recruiter account for <b>${co}</b> on Linaw PH is now active — confirmed by your company’s head of recruitment.</p>
         <p style="margin:0;font-size:14.5px;line-height:1.65;color:#4C5566"><b>One step left — set your password:</b> open the site, choose <b>“Forgot your password?”</b> on the log-in panel, enter this email address, and follow the code we send you. Then log in and your postings are yours to manage.</p>
         <p style="margin:22px 0 0"><a href="${APP_URL}/auth" style="display:inline-block;background:#C9A24B;color:#141926;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:8px">Set my password</a></p>`,
     ).catch((e) => console.error('approval email failed:', e?.message || e));
@@ -105,16 +109,16 @@ router.post('/approve', async (req, res) => {
     console.log(`[admin] approved ${r.email} — SMTP not configured, tell them to use "Forgot password" to set a password.`);
   }
 
-  ok(res, { requests: await listRequests() });
+  ok(res, { requests: await listRequests(u.company_id!) });
 });
 
 router.post('/decline', async (req, res) => {
-  const u = await requireRole(req, res, 'admin');
+  const u = await requireHeadOfRecruitment(req, res);
   if (!u) return;
   const id = idOf(req.body?.id);
 
   const r = await queryOne<RequestRow>('SELECT * FROM recruiter_requests WHERE request_id = ? LIMIT 1', [id]);
-  if (!r) return fail(res, 'Request not found.');
+  if (!r || r.company_id !== u.company_id) return fail(res, 'Request not found.');
   if (r.status !== 'pending') return fail(res, 'This request was already handled.');
 
   await exec("UPDATE recruiter_requests SET status = 'declined' WHERE request_id = ?", [id]);
@@ -123,17 +127,17 @@ router.post('/decline', async (req, res) => {
     sendMail(
       r.email,
       'About your Linaw PH recruiter request',
-      `We couldn't verify this request\n\nYour request for recruiter access wasn't approved this time. This usually means the research team couldn't confirm the request with the partner company's HR department. If you believe this is a mistake, please coordinate with your HR and ask them to reach out to the research team.`,
+      `We couldn't verify this request\n\nYour request for recruiter access wasn't approved this time. This usually means your company's head of recruitment couldn't confirm that you work there. If you believe this is a mistake, please contact your head of recruitment directly.`,
       `
         <h1 style="margin:0 0 10px;font-size:22px">We couldn’t verify this request</h1>
         <p style="margin:0 0 14px;font-size:14.5px;line-height:1.65;color:#4C5566">Hi ${r.full_name},</p>
-        <p style="margin:0;font-size:14.5px;line-height:1.65;color:#4C5566">Your request for recruiter access wasn’t approved this time. This usually means the research team couldn’t confirm the request with the partner company’s HR department. If you believe this is a mistake, please coordinate with your HR and ask them to contact the research team directly.</p>`,
+        <p style="margin:0;font-size:14.5px;line-height:1.65;color:#4C5566">Your request for recruiter access wasn’t approved this time. This usually means your company’s head of recruitment couldn’t confirm that you work there. If you believe this is a mistake, please contact your head of recruitment directly.</p>`,
     ).catch((e) => console.error('decline email failed:', e?.message || e));
   } else if (DEBUG) {
     console.log(`[admin] declined request from ${r.email}`);
   }
 
-  ok(res, { requests: await listRequests() });
+  ok(res, { requests: await listRequests(u.company_id!) });
 });
 
 /* ---------- department routing ----------
@@ -150,12 +154,14 @@ interface RoutingCompany {
   assignments: { department: string; userId: string; userName: string }[];
 }
 
-async function listDeptRouting(): Promise<RoutingCompany[]> {
-  // Companies that actually have postings (so there are departments to route).
+async function listDeptRouting(companyId: number): Promise<RoutingCompany[]> {
+  // The head's own company, when it has postings (so there are departments
+  // to route).
   const companies = await query<{ company_id: number; company_name: string }>(
     `SELECT DISTINCT c.company_id, c.company_name
        FROM companies c JOIN job_postings jp ON jp.company_id = c.company_id
-      ORDER BY c.company_name`,
+      WHERE c.company_id = ?
+      ORDER BY c.company_name`, [companyId],
   );
 
   const out: RoutingCompany[] = [];
@@ -195,18 +201,19 @@ async function listDeptRouting(): Promise<RoutingCompany[]> {
 }
 
 router.post('/dept-assignments', async (req, res) => {
-  const u = await requireRole(req, res, 'admin');
+  const u = await requireHeadOfRecruitment(req, res);
   if (!u) return;
-  ok(res, { companies: await listDeptRouting() });
+  ok(res, { companies: await listDeptRouting(u.company_id!) });
 });
 
 router.post('/assign-department', async (req, res) => {
-  const u = await requireRole(req, res, 'admin');
+  const u = await requireHeadOfRecruitment(req, res);
   if (!u) return;
   const companyId = idOf(req.body?.companyId);
   const department = String(req.body?.department ?? '').trim();
   const rawUser = req.body?.userId;
   if (!companyId || !department) return fail(res, 'Pick a company and a department.');
+  if (companyId !== u.company_id) return fail(res, "You can only route your own company's departments.", 403);
 
   const company = await queryOne('SELECT 1 FROM companies WHERE company_id = ? LIMIT 1', [companyId]);
   if (!company) return fail(res, 'That company no longer exists.');
@@ -215,7 +222,7 @@ router.post('/assign-department', async (req, res) => {
   // falls back to notifying every verified recruiter.
   if (rawUser === null || rawUser === undefined || rawUser === '' || rawUser === 0 || rawUser === '0') {
     await exec('DELETE FROM department_assignments WHERE company_id = ? AND LOWER(TRIM(department)) = LOWER(?)', [companyId, department]);
-    return ok(res, { companies: await listDeptRouting() });
+    return ok(res, { companies: await listDeptRouting(u.company_id!) });
   }
 
   const userId = Number(rawUser);
@@ -232,16 +239,16 @@ router.post('/assign-department', async (req, res) => {
        DO UPDATE SET user_id = EXCLUDED.user_id, assigned_at = now()`,
     [companyId, department, userId],
   );
-  ok(res, { companies: await listDeptRouting() });
+  ok(res, { companies: await listDeptRouting(u.company_id!) });
 });
 
 router.post('/recruiters', async (req, res) => {
-  const u = await requireRole(req, res, 'admin');
+  const u = await requireHeadOfRecruitment(req, res);
   if (!u) return;
   const rows = await query<UserRow & { company_name: string | null }>(
     `SELECT u.*, c.company_name FROM users u
        LEFT JOIN companies c ON c.company_id = u.company_id
-      WHERE u.role = 'recruiter' ORDER BY u.created_at DESC`,
+      WHERE u.role = 'recruiter' AND u.company_id = ? ORDER BY u.created_at DESC`, [u.company_id],
   );
   ok(res, {
     recruiters: rows.map((r) => ({

@@ -17,8 +17,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { MAX_RESUMES } from '../src/config';
 import { scoreWith, DEFAULT_SETTINGS, skillNorm, SKILL_ALIASES, EDU_RANK, MatchSettings, UNEVIDENCED_CREDIT, EVIDENCE_KINDS, EvidenceKind, evidenceLabels, OPTIONAL_WEIGHTS, EDU_FIELD_OPTIONS as SERVER_EDU_FIELD_OPTIONS, titleWords, UNRELATED_CREDIT } from '../src/lib/engine';
-import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK, UNEVIDENCED_CREDIT as CLIENT_UNEVIDENCED_CREDIT, evidenceLabels as clientEvidenceLabels, SKILL_CATEGORY, SKILL_CATALOGUE, missingHint, EDU_FIELD_OPTIONS, EDU_FIELD_VOCAB, titleWords as clientTitleWords, UNRELATED_CREDIT as CLIENT_UNRELATED_CREDIT } from '../../client/src/app/core/engine';
+import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK, UNEVIDENCED_CREDIT as CLIENT_UNEVIDENCED_CREDIT, evidenceLabels as clientEvidenceLabels, SKILL_CATEGORY, SKILL_CATALOGUE, missingHint, EDU_FIELD_OPTIONS, EDU_FIELD_VOCAB, MAX_RESUMES as CLIENT_MAX_RESUMES, titleWords as clientTitleWords, UNRELATED_CREDIT as CLIENT_UNRELATED_CREDIT } from '../../client/src/app/core/engine';
 
 // ---------- helpers ----------
 
@@ -1255,4 +1256,12 @@ test('a department naming two fields matches either', () => {
   r.education = [{ level: 'bachelor', degree: 'BS Marketing Management' }];
   const s = score(r, posting(['Communication'], 'bachelor', 0, w as any, undefined, 'HR and Marketing'));
   assert.equal(s.fieldMeets, true);
+});
+
+test('the resume limit is the same number in the server and the browser', () => {
+  // The browser shows the limit before a save; the server enforces it. If
+  // they disagreed, the builder would either refuse a save the server takes,
+  // or invite one it refuses.
+  assert.equal(MAX_RESUMES, 20);
+  assert.equal(CLIENT_MAX_RESUMES, MAX_RESUMES);
 });

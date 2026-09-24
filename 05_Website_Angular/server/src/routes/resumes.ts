@@ -10,7 +10,7 @@ import { requireUser, requireRole } from '../lib/auth';
 import { fetchResume, prefetchResumeChildren, serializeResume, recruiterMayReadResume, parseHiddenSections } from '../lib/serializers';
 import { EDU_RANK, EVIDENCE_KINDS, EvidenceKind, evidenceLabels, skillId, skillNorm } from '../lib/engine';
 import { extractResume } from '../lib/extract';
-import { MAX_UPLOAD, ALLOWED_MIME } from '../config';
+import { MAX_UPLOAD, ALLOWED_MIME, MAX_RESUMES } from '../config';
 import { putFile, deleteFile } from '../lib/storage';
 import { sniffBytes, typeMatches } from '../lib/file-type';
 
@@ -175,6 +175,14 @@ router.post('/save', async (req, res) => {
     if (!own || own.user_id !== u.user_id) return fail(res, 'You can only edit your own resumes.', 403);
   }
 
+  /* AT MOST MAX_RESUMES PER APPLICANT — checked only when this save CREATES
+     one, so editing any resume an applicant already has always works, even
+     at the limit. */
+  if (!R.id) {
+    const have = await queryOne<{ n: number }>('SELECT COUNT(*)::int AS n FROM resumes WHERE user_id = ?', [u.user_id]);
+    if ((have?.n ?? 0) >= MAX_RESUMES) return fail(res, `You already have ${MAX_RESUMES} resumes, the most one account can keep. Delete one you no longer use to make room for this one.`);
+  }
+
   /* ONE TITLE PER APPLICANT. The title is the only thing that tells two of
      an applicant's resumes apart: it is what the dashboard lists, what the
      "which resume?" picker on an application shows, and what a recruiter
@@ -189,7 +197,7 @@ router.post('/save', async (req, res) => {
      and `<> ?` excludes the row being edited so re-saving under its own
      title is not mistaken for a collision. */
   const clash = await queryOne<{ resume_id: number }>(
-    'SELECT resume_id FROM resumes WHERE user_id = ? AND LOWER(title) = LOWER(?) AND resume_id <> ?',
+    'SELECT resume_id FROM resumes WHERE user_id = ? AND LOWER(BTRIM(title)) = LOWER(BTRIM(?)) AND resume_id <> ?',
     [u.user_id, title, R.id ? Number(R.id) : 0],
   );
   if (clash) {
@@ -364,6 +372,11 @@ router.post('/save', async (req, res) => {
     const saved = await fetchResume(savedId);
     ok(res, { resume: await serializeResume(saved!) });
   } catch (e: any) {
+    // Two saves racing past the check above meet the unique index instead;
+    // the loser is told the same thing the check would have said.
+    if (e?.code === '23505' && String(e?.constraint ?? e?.message ?? '').includes('resumes_user_title_unique')) {
+      return fail(res, `You already have a resume called “${title}”. Give this one a different title — it is how you tell them apart when you apply.`);
+    }
     fail(res, "Your resume couldn't be saved. Try again.", 500);
   }
 });
@@ -401,6 +414,10 @@ router.post('/duplicate', async (req, res) => {
   const id = idOf(req.body?.id);
   const r = await fetchResume(id);
   if (!r || r.user_id !== u.user_id) return fail(res, 'Resume not found.');
+
+  // A copy is a new resume, so the limit applies to it exactly as to /save.
+  const have = await queryOne<{ n: number }>('SELECT COUNT(*)::int AS n FROM resumes WHERE user_id = ?', [u.user_id]);
+  if ((have?.n ?? 0) >= MAX_RESUMES) return fail(res, `You already have ${MAX_RESUMES} resumes, the most one account can keep. Delete one you no longer use to make room for this one.`);
 
   /* The copy needs a title no other resume of this applicant holds, or it
      would create exactly the collision /save now refuses — and the applicant
@@ -490,7 +507,12 @@ router.post('/duplicate', async (req, res) => {
 
     const created = await fetchResume(newId);
     ok(res, { resume: await serializeResume(created!) });
-  } catch (e) {
+  } catch (e: any) {
+    // Only reachable if another copy took the same name in the moment
+    // between choosing it and inserting it.
+    if (e?.code === '23505' && String(e?.constraint ?? e?.message ?? '').includes('resumes_user_title_unique')) {
+      return fail(res, 'Another copy was made at the same moment. Try again.');
+    }
     fail(res, 'Copy failed. Try again.', 500);
   }
 });

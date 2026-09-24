@@ -122,7 +122,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     return fail(res, "That email and password don't match an account.", 401);
 
   if (u.role === 'recruiter' && !u.verified)
-    return fail(res, "This recruiter account isn't active yet. Accounts are activated by the research team together with the partner company's HR.", 403);
+    return fail(res, "This recruiter account isn't active yet. Accounts are activated by your company's head of recruitment.", 403);
 
   // regenerate() takes a callback and ignores whatever it returns, so an
   // async callback's rejection escapes the request entirely: the caller

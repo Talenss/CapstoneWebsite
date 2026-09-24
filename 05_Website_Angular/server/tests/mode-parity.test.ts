@@ -819,3 +819,21 @@ test('private links and hidden sections behave identically in both modes', async
   assert.ok(aShown.score > aHidden.score,
     `hiding a scored section must cost points in api mode, got ${aHidden.score} then ${aShown.score}`);
 });
+
+test('the resume limit is enforced identically in both modes', async () => {
+  await demo.auth.login('ana@demo.ph', 'demo123');
+  await api('auth/login', { email: 'ana@demo.ph', password: 'demo123' });
+  const draft = (title: string) => ({
+    title, template: 'chronological', design: 'classic',
+    personal: { fullName: 'Ana Reyes', email: 'ana@demo.ph', phone: '0917', address: '', summary: 'Two plain sentences.' },
+    education: [{ school: 'HAU', degree: 'BS Computer Science', level: 'bachelor', year: '2025' }],
+    experience: [], skills: ['Teamwork'], certifications: [],
+  });
+  const count = async () => [((await demo.resumes.mine()) as any).resumes.length, ((await api('resumes/list')) as any).resumes.length];
+  let [d, a] = await count();
+  for (let n = 1; d < 20; n++, d++) await demo.resumes.save(draft(`Parity limit ${n}`) as any);
+  for (let n = 1; a < 20; n++, a++) await api('resumes/save', { resume: draft(`Parity limit ${n}`) });
+  assert.deepEqual(await count(), [20, 20]);
+  await agree('the twenty-first resume', demo.resumes.save(draft('One too many') as any), api('resumes/save', { resume: draft('One too many') }));
+  assert.deepEqual(await count(), [20, 20], 'neither mode may accept it');
+});

@@ -6,7 +6,7 @@
     <p>Job seekers build a structured resume and can attach their own file. Clark Outsourcing's HR posts structured openings. The engine compares them and shows both sides the same honest number.</p>
     <div class="plaque">
       <b>Recruiter accounts are provisioned, not self-served.</b>
-      So that every posting on this platform is a real job, recruiter accounts are created by the research team together with the partner company's HR department. Request access here. Job seeker accounts open immediately.
+      So that every posting on this platform is a real job, recruiter accounts are approved by each partner company's own head of recruitment. Request access here. Job seeker accounts open immediately.
     </div>
   </aside>
 
@@ -138,7 +138,7 @@
         <div class="alert" [class.error]="regMessage()?.type === 'error'" [class.ok]="regMessage()?.type === 'ok'" [class.show]="!!regMessage()" id="regMsg" role="alert">
           @if (regMessage(); as m) {
             @if (m.type === 'ok') {
-              Request received. The research team will confirm it with <b>{{ m.companyName }}</b>&rsquo;s HR department, then activate your account and email you.
+              Request received. <b>{{ m.companyName }}</b>&rsquo;s head of recruitment will confirm it, then activate your account and email you.
               @if (showDemoAccounts) {
                 <br><br>
                 Meanwhile, you can explore the recruiter side with <code>hr&#64;demo.ph</code> / <code>demo123</code>.
@@ -208,7 +208,7 @@
                     </hlm-select-content>
                   </hlm-select>
                   <span class="err">Choose your partner company.</span>
-                  <p class="hint">Company not listed? Companies join as partners through the research team first.</p>
+                  <p class="hint">Company not listed? Linaw PH works only with partner companies, and yours has not joined yet.</p>
                 </div>
                 <div class="field" [class.invalid]="regPositionInvalid()">
                   <label for="rpos">Your position</label>
@@ -216,7 +216,7 @@
                   <span class="err">Enter your position.</span>
                 </div>
                 <div class="field">
-                  <label for="rnote">Anything the research team should know <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(optional)</span></label>
+                  <label for="rnote">Anything your head of recruitment should know <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(optional)</span></label>
                   <textarea id="rnote" rows="2" placeholder="e.g. an HR contact number we can verify this request against" [(ngModel)]="regNote" name="rnote"></textarea>
                 </div>
               </div>

@@ -187,6 +187,11 @@ CREATE TABLE resumes (
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_resume_user ON resumes (user_id);
+-- One title per applicant, enforced by the database itself: case and the
+-- spaces around it do not make a different name. routes/resumes.ts checks
+-- first so the applicant gets a readable message; this is what makes it
+-- impossible rather than merely checked.
+CREATE UNIQUE INDEX resumes_user_title_unique ON resumes (user_id, LOWER(BTRIM(title)));
 CREATE TRIGGER trg_resumes_updated BEFORE UPDATE ON resumes
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
@@ -718,14 +723,18 @@ INSERT INTO companies (company_id, company_name, industry, location, about, webs
 --    The practical consequence worth knowing: you cannot change one of these
 --    passwords BACK to demo123 through the UI — the change would be rejected.
 --
--- For a real deployment, create your own admin instead:
---   cd server && npm run create-admin -- you@example.com "a strong password"
+-- THE ADMIN IS THE PARTNER COMPANY'S HEAD OF RECRUITMENT, not the research
+-- team: they approve their own company's recruiters and route its
+-- departments, and see no other company's (routes/admin.ts). The login is
+-- unchanged, admin@demo.ph / demo123. For a real deployment, create the real
+-- head of recruitment instead:
+--   cd server && npm run create-admin -- head@company.com "a strong password" "Clark Outsourcing"
 --
 -- The admin IS seeded here because demo mode has one, the README documents
 -- one, and without it a fresh full-mode install cannot approve a single
--- recruiter — which is the first thing the study needs to do.
-INSERT INTO users (user_id, role, first_name, last_name, email, password_hash, verified) VALUES
- (7, 'admin', 'Research', 'Team', 'admin@demo.ph', '$2y$12$99r3f85tx.CU49v3eRoKE.DXfHiRQ9YNUyCliZfGvjnARdtwGpZO6', 1);
+-- recruiter. Inserted after the companies it belongs to.
+INSERT INTO users (user_id, role, first_name, last_name, email, password_hash, company_id, position_title, verified) VALUES
+ (7, 'admin', 'Head of Recruitment', '', 'admin@demo.ph', '$2y$12$99r3f85tx.CU49v3eRoKE.DXfHiRQ9YNUyCliZfGvjnARdtwGpZO6', 1, 'Head of Recruitment', 1);
 
 INSERT INTO users (user_id, role, first_name, last_name, email, password_hash, company_id, position_title, verified) VALUES
  (2, 'recruiter', 'Maria', 'Santos', 'hr@demo.ph',    '$2y$12$99r3f85tx.CU49v3eRoKE.DXfHiRQ9YNUyCliZfGvjnARdtwGpZO6', 1, 'HR Officer', 1),

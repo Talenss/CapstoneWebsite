@@ -30,3 +30,25 @@ export async function requireRole(req: Request, res: Response, role: 'seeker' | 
   }
   return u;
 }
+
+/** THE ADMIN LEVEL BELONGS TO A PARTNER COMPANY'S HEAD OF RECRUITMENT, and
+ *  covers that company only.
+ *
+ *  It was the research team's, with every company in view — which answers
+ *  nothing once the study ends and the researchers leave. The person who can
+ *  actually confirm that a recruiter works at the company is the company's
+ *  own head of recruitment, so they approve their recruiters, route their
+ *  departments, and see nobody else's.
+ *
+ *  An admin account with no company is the old research-team account. It
+ *  can still sign in, but every admin route refuses it with a message that
+ *  says how to set up the head of recruitment instead. */
+export async function requireHeadOfRecruitment(req: Request, res: Response): Promise<UserRow | null> {
+  const u = await requireRole(req, res, 'admin');
+  if (!u) return null;
+  if (!u.company_id) {
+    fail(res, "This admin account isn't linked to a partner company. The admin level belongs to the company's head of recruitment; set one up with: npm run create-admin -- <email> <password> \"<company name>\"", 403);
+    return null;
+  }
+  return u;
+}

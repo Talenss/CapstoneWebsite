@@ -22,6 +22,9 @@
   @if (formError()) {
     <div class="alert error show" role="alert">{{ formError() }}</div>
   }
+  @if (atResumeLimit()) {
+    <div class="alert error show" role="alert">You already have {{ MAX_RESUMES }} resumes, the most one account can keep, so this one can't be saved. <a routerLink="/my-resumes">Delete one you no longer use</a>, then come back.</div>
+  }
 
   @if (!ready()) {
     <div class="loading"><span class="spinner"></span> Loading your resume…</div>

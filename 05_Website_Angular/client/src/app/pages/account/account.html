@@ -88,7 +88,7 @@
           }
         </div>
       }
-      <div class="kv"><span>Account type</span><b>{{ session.user()?.role === 'seeker' ? 'Job seeker' : session.user()?.role === 'admin' ? 'Research team (admin)' : 'Recruiter / HR' }}</b></div>
+      <div class="kv"><span>Account type</span><b>{{ session.user()?.role === 'seeker' ? 'Job seeker' : session.user()?.role === 'admin' ? 'Head of recruitment (admin)' : 'Recruiter / HR' }}</b></div>
       <div class="kv"><span>Member since</span><b>{{ memberSince() }}</b></div>
     </section>
 

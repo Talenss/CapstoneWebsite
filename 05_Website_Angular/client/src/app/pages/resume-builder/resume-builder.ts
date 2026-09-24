@@ -8,7 +8,7 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { AnalysisService } from '../../core/analysis.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, visibleResume, WEIGHTS, DEGREE_CATALOGUE, SKILL_CATALOGUE } from '../../core/engine';
+import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, visibleResume, WEIGHTS, DEGREE_CATALOGUE, SKILL_CATALOGUE, MAX_RESUMES } from '../../core/engine';
 import { Education, EduLevel, EvidenceKind, Experience, Language, Project, Reference, Resume, ResumeDesign, ResumeLink, ResumeSection, SkillEvidence, Template } from '../../core/models';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 
@@ -127,6 +127,13 @@ export class ResumeBuilder implements OnInit {
    *  title field can say "taken" while it is being typed rather than after a
    *  round trip. The server is what actually enforces it. */
   private otherTitles = signal<{ id: string | null; title: string }[]>([]);
+
+  readonly MAX_RESUMES = MAX_RESUMES;
+  /** A NEW resume when the applicant already holds the most they can keep.
+   *  Said at the top of the builder from the start, so nobody fills in seven
+   *  steps only to be refused at the end. Editing an existing one is never
+   *  affected. otherTitles holds every resume they own. */
+  atResumeLimit = computed(() => !this.resume().id && this.otherTitles().length >= MAX_RESUMES);
 
   /** True while the title matches another of this applicant's resumes. Excluded
    *  by id, so a saved resume never clashes with itself. */
@@ -860,6 +867,11 @@ export class ResumeBuilder implements OnInit {
     if (!r.title.trim()) {
       r = { ...r, title: this.freeTitle('Untitled resume') };
       this.resume.set(r);
+    }
+
+    if (this.atResumeLimit()) {
+      this.formError.set(`You already have ${MAX_RESUMES} resumes, the most one account can keep. Delete one you no longer use to make room for this one.`);
+      return false;
     }
 
     /* TITLES MUST BE UNIQUE PER APPLICANT. The title is the only thing that

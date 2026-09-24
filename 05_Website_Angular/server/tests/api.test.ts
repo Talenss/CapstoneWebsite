@@ -1690,3 +1690,72 @@ test('a recruiter can score projects, languages and references too', async () =>
     { skills: 0.4, education: 0.1, experience: 0.1, certifications: 0.1, projects: 0.1, languages: 0.1, references: 0.1, relevance: 0, field: 0 },
     'the split it reports is the split it used');
 });
+
+// ---------- the admin level belongs to the partner company's head of recruitment ----------
+
+test("the head of recruitment sees and decides only their own company's requests", async () => {
+  psql(['-c', "INSERT INTO companies (company_id, company_name) VALUES (902, 'Other Partner Inc.') ON CONFLICT DO NOTHING"], DB);
+  psql(['-c', `INSERT INTO recruiter_requests (first_name, last_name, email, position_title, company_id, status) VALUES
+     ('Own', 'Company', 'own.req@clark.test', 'Recruiter', 1, 'pending'),
+     ('Other', 'Company', 'other.req@other.test', 'Recruiter', 902, 'pending')`], DB);
+  const head = client();
+  await head('auth/login', { email: 'admin@demo.ph', password: 'demo123' });
+
+  const emails = (await head('admin/requests')).body.requests.map((r: any) => r.email);
+  assert.ok(emails.includes('own.req@clark.test'), 'their own company\'s request must be listed');
+  assert.ok(!emails.includes('other.req@other.test'), 'another company\'s request must not be listed');
+
+  const otherId = Number(psql(['-tAc', "SELECT request_id FROM recruiter_requests WHERE email = 'other.req@other.test'"], DB).trim());
+  assert.equal((await head('admin/approve', { id: otherId })).body.ok, false, 'approving another company\'s request');
+  assert.equal((await head('admin/decline', { id: otherId })).body.ok, false, 'declining another company\'s request');
+  assert.equal(psql(['-tAc', `SELECT status FROM recruiter_requests WHERE request_id = ${otherId}`], DB).trim(), 'pending');
+
+  assert.equal((await head('admin/assign-department', { companyId: 902, department: 'IT', userId: null })).status, 403);
+  const recs = (await head('admin/recruiters')).body.recruiters;
+  assert.ok(recs.length && recs.every((r: any) => r.companyName === 'Clark Outsourcing'), 'only their own recruiters');
+});
+
+test('an admin with no company — the old research-team admin — is refused everywhere', async () => {
+  psql(['-c', `INSERT INTO users (role, first_name, last_name, email, password_hash, verified)
+     SELECT 'admin', 'Research', 'Team', 'research.old@demo.ph', password_hash, 1 FROM users WHERE email = 'admin@demo.ph'`], DB);
+  const old = client();
+  await old('auth/login', { email: 'research.old@demo.ph', password: 'demo123' });
+  for (const route of ['admin/requests', 'admin/recruiters', 'admin/dept-assignments', 'metrics/summary']) {
+    const r = await old(route);
+    assert.equal(r.status, 403, route);
+    assert.match(r.body.error, /head of recruitment/, route);
+  }
+});
+
+// ---------- resume names and the resume limit ----------
+
+test('the database itself refuses a second resume with the same name', () => {
+  // Not through the API: straight at the table, differently cased and padded,
+  // to show the rule does not depend on the route remembering to check.
+  assert.throws(
+    () => psql(['-c', "INSERT INTO resumes (user_id, title) SELECT user_id, '  ' || UPPER(title) || '  ' FROM resumes ORDER BY resume_id LIMIT 1"], DB),
+    /resumes_user_title_unique/,
+  );
+});
+
+test('an applicant can keep 20 resumes, and no more', async () => {
+  const c = client();
+  await c('auth/login', { email: 'marco@demo.ph', password: 'demo123' });
+  const draft = (title: string, id?: string) => ({ resume: {
+    ...(id ? { id } : {}), title, template: 'chronological', design: 'classic',
+    personal: { fullName: 'Marco Garcia', email: 'marco@demo.ph', phone: '0917', address: '', summary: 'Two plain sentences.' },
+    education: [{ school: 'HAU', degree: 'BS Business Administration', level: 'bachelor', year: '2025' }],
+    experience: [], skills: ['Teamwork'], certifications: [],
+  } });
+  let have = (await c('resumes/list')).body.resumes.length;
+  for (let n = 1; have < 20; n++, have++) assert.equal((await c('resumes/save', draft(`Limit ${n}`))).body.ok, true);
+
+  const over = await c('resumes/save', draft('The twenty-first'));
+  assert.equal(over.body.ok, false);
+  assert.match(over.body.error, /20 resumes/);
+  assert.equal((await c('resumes/duplicate', { id: (await c('resumes/list')).body.resumes[0].id })).body.ok, false, 'a copy is a new resume');
+
+  const one = (await c('resumes/list')).body.resumes.find((r: any) => r.title === 'Limit 1');
+  assert.equal((await c('resumes/save', draft('Limit 1, edited', one.id))).body.ok, true, 'editing still works at the limit');
+  assert.equal((await c('resumes/list')).body.resumes.length, 20);
+});

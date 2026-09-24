@@ -263,6 +263,17 @@ export function passwordOk(p: string): boolean {
 }
 
 export const MAX_UPLOAD = 2 * 1024 * 1024; // 2 MB
+
+/** THE MOST RESUMES ONE APPLICANT CAN KEEP. Twenty, and the reasons are
+ *  practical, not a judgement about how many an applicant should want:
+ *    · storage — each resume can carry its own 2 MB uploaded file, so twenty
+ *      bounds one account at about 40 MB on a free-tier database and bucket;
+ *    · the "which resume?" picker when applying stays short enough to read;
+ *    · twenty is still more than one tailored resume per opening the
+ *      platform typically lists, so nobody is stopped from tailoring.
+ *  Reached, the applicant deletes one they no longer use; nothing is lost
+ *  silently. Mirrored in server/src/config.ts; a parity test asserts the two agree. */
+export const MAX_RESUMES = 20;
 export const ALLOWED_MIME = [
   'application/pdf', 'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

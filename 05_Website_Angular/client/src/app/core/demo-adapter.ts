@@ -5,7 +5,7 @@
    ============================================================ */
 import { ApiAdapter } from './adapter';
 import { AnalyzedResume, ApiResult, AppStatus, Application, ApplicationAnswer, Company, EvidenceKind, RejectionReason, HrStats, HrStatsFilters, InviteSchedule, MatchResult, Posting, PostingQuestion, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User, RankedQuery} from './models';
-import { passwordOk, PASSWORD_HINT, scoreLocal, visibleResume, RESUME_SECTIONS, OPTIONAL_WEIGHTS, WEIGHT_FLOOR, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert, EDU_FIELD_OPTIONS, EDU_FIELD_ANY } from './engine';
+import { passwordOk, PASSWORD_HINT, scoreLocal, visibleResume, RESUME_SECTIONS, OPTIONAL_WEIGHTS, WEIGHT_FLOOR, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert, EDU_FIELD_OPTIONS, EDU_FIELD_ANY, MAX_RESUMES } from './engine';
 
 const KEY = 'linaw_v3_db';
 
@@ -30,7 +30,7 @@ const KEY = 'linaw_v3_db';
  * database written by an earlier build carries the old shape. Those rows
  * would render with no name at all rather than with a stale one.
  */
-const SEED_VERSION = '2026-08-25-name-split';
+const SEED_VERSION = '2026-09-24-head-of-recruitment';
 const SESSION = 'linaw_v3_session';
 const D = 86400000;
 
@@ -111,7 +111,7 @@ function seed(): Db {
       { id: 'u3', role: 'seeker', firstName: 'Ana', lastName: 'Reyes', email: 'ana@demo.ph', password: 'demo123', activeResumeId: 'r2', createdAt: Date.now() - D * 20 },
       { id: 'u4', role: 'seeker', firstName: 'Marco', lastName: 'Garcia', email: 'marco@demo.ph', password: 'demo123', activeResumeId: 'r3', createdAt: Date.now() - D * 15 },
       { id: 'u5', role: 'seeker', firstName: 'Liza', lastName: 'Cruz', email: 'liza@demo.ph', password: 'demo123', activeResumeId: 'r4', createdAt: Date.now() - D * 10 },
-      { id: 'u6', role: 'admin', firstName: 'Research', lastName: 'Team', email: 'admin@demo.ph', password: 'demo123', createdAt: Date.now() - D * 90 },
+      { id: 'u6', role: 'admin', firstName: 'Head of Recruitment', lastName: '', email: 'admin@demo.ph', password: 'demo123', companyId: 'c1', position: 'Head of Recruitment', createdAt: Date.now() - D * 90 },
       { id: 'u7', role: 'recruiter', firstName: 'Grace', lastName: 'Lopez', email: 'grace@demo.ph', password: 'demo123', companyId: 'c1', position: 'HR Officer, Customer Support', verified: true, createdAt: Date.now() - D * 55 },
     ] as DemoUser[],
     resumes: [
@@ -243,7 +243,7 @@ function seed(): Db {
     recruiterRequests: [
       // A sample pending request, so the admin panel has something to demonstrate.
       { id: 'q1', name: 'Carlos Mendoza', email: 'carlos.mendoza@clarkoutsourcing.ph', position: 'Talent Acquisition Specialist',
-        companyId: 'c1', note: 'Verify with HR head Ms. Santos, local 214.', status: 'pending', requestedAt: Date.now() - D * 1 },
+        companyId: 'c1', note: 'I joined the IT team this month; my manager is on extension 214.', status: 'pending', requestedAt: Date.now() - D * 1 },
     ],
     emailCodes: [],
     savedJobs: [],
@@ -277,6 +277,17 @@ function seed(): Db {
   };
 }
 
+/** The admin level belongs to a partner company's HEAD OF RECRUITMENT and
+ *  covers that company only — the same rule, and the same wording, as
+ *  requireHeadOfRecruitment() in server/src/lib/auth.ts. */
+function headDenied(me: DemoUser | null | undefined) {
+  if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+  if (!me.companyId) {
+    return apiFail("This admin account isn't linked to a partner company. The admin level belongs to the company's head of recruitment; set one up with: npm run create-admin -- <email> <password> \"<company name>\"");
+  }
+  return null;
+}
+
 function load(): Db {
   try {
     const raw = localStorage.getItem(KEY);
@@ -303,7 +314,7 @@ function load(): Db {
       }
       if (!db.users.some((u) => u.role === 'admin')) {
         // databases saved before the admin panel existed get the admin account
-        db.users.push({ id: 'u6', role: 'admin', firstName: 'Research', lastName: 'Team', email: 'admin@demo.ph', password: 'demo123', createdAt: Date.now() } as DemoUser);
+        db.users.push({ id: 'u6', role: 'admin', firstName: 'Head of Recruitment', lastName: '', email: 'admin@demo.ph', password: 'demo123', companyId: 'c1', position: 'Head of Recruitment', createdAt: Date.now() } as DemoUser);
         persist(db);
       }
       return db;
@@ -419,7 +430,7 @@ export class DemoAdapter implements ApiAdapter {
       const u = db.users.find((x) => x.email.toLowerCase() === String(email).trim().toLowerCase() && x.password === password);
       if (!u) return apiFail("That email and password don't match an account.");
       if (u.role === 'recruiter' && !u.verified)
-        return apiFail("This recruiter account isn't active yet. Accounts are activated by the research team together with the partner company's HR.");
+        return apiFail("This recruiter account isn't active yet. Accounts are activated by your company's head of recruitment.");
       setSession(u.id);
       return apiOk({ user: pubUser(u)! });
     },
@@ -824,6 +835,11 @@ export class DemoAdapter implements ApiAdapter {
          routes/resumes.ts, checked against the title AFTER trimming and
          truncation so the two modes compare the same string. Scoped to this
          user, case-insensitive, and skipping the record being edited. */
+      // The limit, as routes/resumes.ts applies it: only a save that CREATES.
+      if (i < 0 && db.resumes.filter((r) => r.userId === me.id).length >= MAX_RESUMES) {
+        return apiFail(`You already have ${MAX_RESUMES} resumes, the most one account can keep. Delete one you no longer use to make room for this one.`);
+      }
+
       const clash = db.resumes.some(
         (r) => r.userId === me.id && r.id !== resume.id &&
           (r.title || '').trim().toLowerCase() === resume.title.toLowerCase());
@@ -872,6 +888,9 @@ export class DemoAdapter implements ApiAdapter {
       const db = load(); const me = meRow(db);
       const src = db.resumes.find((x) => x.id === id);
       if (!me || !src || src.userId !== me.id) return apiFail('Resume not found.');
+      if (db.resumes.filter((r) => r.userId === me.id).length >= MAX_RESUMES) {
+        return apiFail(`You already have ${MAX_RESUMES} resumes, the most one account can keep. Delete one you no longer use to make room for this one.`);
+      }
       const copy: Resume = JSON.parse(JSON.stringify(src));
       /* A free title, exactly as routes/resumes.ts picks one: without this the
          second copy would collide with the first and could never be saved. */
@@ -1472,7 +1491,7 @@ export class DemoAdapter implements ApiAdapter {
   metrics = {
     summary: () => {
       const db = load(); const me = meRow(db);
-      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+      const denied = headDenied(me); if (denied) return denied;
       const T = THRESHOLDS;
       const scored = db.applications.map((a) => {
         // Prefer the snapshot taken when they applied. Older demo databases
@@ -1639,13 +1658,13 @@ export class DemoAdapter implements ApiAdapter {
   admin = {
     requests: () => {
       const db = load(); const me = meRow(db);
-      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
-      return apiOk({ requests: this.reqList(db) });
+      const denied = headDenied(me); if (denied) return denied;
+      return apiOk({ requests: this.reqList(db, me!.companyId!) });
     },
     approve: (id: string) => {
       const db = load(); const me = meRow(db);
-      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
-      const r = db.recruiterRequests.find((x) => x.id === id);
+      const denied = headDenied(me); if (denied) return denied;
+      const r = db.recruiterRequests.find((x) => x.id === id && x.companyId === me!.companyId);
       if (!r) return apiFail('Request not found.');
       if (r.status !== 'pending') return apiFail('This request was already handled.');
       if (db.users.some((u) => u.email.toLowerCase() === r.email.toLowerCase()))
@@ -1657,23 +1676,23 @@ export class DemoAdapter implements ApiAdapter {
       } as DemoUser);
       r.status = 'approved';
       persist(db);
-      return apiOk({ requests: this.reqList(db) });
+      return apiOk({ requests: this.reqList(db, me!.companyId!) });
     },
     decline: (id: string) => {
       const db = load(); const me = meRow(db);
-      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
-      const r = db.recruiterRequests.find((x) => x.id === id);
+      const denied = headDenied(me); if (denied) return denied;
+      const r = db.recruiterRequests.find((x) => x.id === id && x.companyId === me!.companyId);
       if (!r) return apiFail('Request not found.');
       if (r.status !== 'pending') return apiFail('This request was already handled.');
       r.status = 'declined';
       persist(db);
-      return apiOk({ requests: this.reqList(db) });
+      return apiOk({ requests: this.reqList(db, me!.companyId!) });
     },
     recruiters: () => {
       const db = load(); const me = meRow(db);
-      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+      const denied = headDenied(me); if (denied) return denied;
       return apiOk({
-        recruiters: db.users.filter((u) => u.role === 'recruiter').map((u) => ({
+        recruiters: db.users.filter((u) => u.role === 'recruiter' && u.companyId === me!.companyId).map((u) => ({
           id: u.id, name: userDisplayName(u), email: u.email, position: u.position || '',
           companyName: db.companies.find((c) => c.id === u.companyId)?.name || '—',
           verified: !!u.verified, createdAt: u.createdAt, lastLoginAt: null,
@@ -1682,14 +1701,15 @@ export class DemoAdapter implements ApiAdapter {
     },
     deptAssignments: () => {
       const db = load(); const me = meRow(db);
-      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
-      return apiOk({ companies: this.routingList(db) });
+      const denied = headDenied(me); if (denied) return denied;
+      return apiOk({ companies: this.routingList(db, me!.companyId!) });
     },
     assignDepartment: (companyId: string, department: string, userId: string | null) => {
       const db = load(); const me = meRow(db);
-      if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+      const denied = headDenied(me); if (denied) return denied;
       const dept = (department || '').trim();
       if (!companyId || !dept) return apiFail('Pick a company and a department.');
+      if (companyId !== me!.companyId) return apiFail("You can only route your own company's departments.");
       if (!db.companies.some((c) => c.id === companyId)) return apiFail('That company no longer exists.');
       // clear any existing owner for this department first
       db.deptAssignments = db.deptAssignments.filter(
@@ -1703,13 +1723,13 @@ export class DemoAdapter implements ApiAdapter {
         db.deptAssignments.push({ companyId, department: dept, userId });
       }
       persist(db);
-      return apiOk({ companies: this.routingList(db) });
+      return apiOk({ companies: this.routingList(db, me!.companyId!) });
     },
   };
 
   /** Build the per-company department-routing view the admin panel renders. */
-  private routingList(db: Db) {
-    const companyIds = Array.from(new Set(db.postings.map((p) => p.companyId)));
+  private routingList(db: Db, companyId: string) {
+    const companyIds = Array.from(new Set(db.postings.map((p) => p.companyId))).filter((cid) => cid === companyId);
     return companyIds.map((cid) => ({
       id: cid,
       name: db.companies.find((c) => c.id === cid)?.name || '—',
@@ -1727,8 +1747,8 @@ export class DemoAdapter implements ApiAdapter {
     })).sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  private reqList(db: Db) {
-    return db.recruiterRequests.map((r) => ({
+  private reqList(db: Db, companyId: string) {
+    return db.recruiterRequests.filter((r) => r.companyId === companyId).map((r) => ({
       id: r.id, name: r.name, email: r.email, position: r.position || '',
       companyId: r.companyId ?? null,
       companyName: db.companies.find((c) => c.id === r.companyId)?.name || '—',

@@ -111,7 +111,7 @@ export class Header {
   brandHome = computed(() => this.session.homeFor(this.session.user()));
 
   brandSuffix = computed(() =>
-    this.effectiveVariant() === 'recruiter' ? 'Recruiter' : this.effectiveVariant() === 'admin' ? 'Research Team' : 'Philippines');
+    this.effectiveVariant() === 'recruiter' ? 'Recruiter' : this.effectiveVariant() === 'admin' ? 'Head of Recruitment' : 'Philippines');
 
   navItems = computed<NavItem[]>(() => {
     switch (this.effectiveVariant()) {

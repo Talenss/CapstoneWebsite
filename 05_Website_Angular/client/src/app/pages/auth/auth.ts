@@ -54,7 +54,7 @@ export class Auth implements OnInit, OnDestroy {
    *  a real database, and a list of credentials on an unauthenticated
    *  screen is a standing risk from the moment that build goes up.
    *
-   *  The research team's admin login is gone from both modes regardless:
+   *  The head of recruitment's admin login is gone from both modes regardless:
    *  it reaches every applicant record and the study's own metrics, so it
    *  does not belong on a public screen even in a demo. */
   readonly showDemoAccounts = environment.mode === 'demo';

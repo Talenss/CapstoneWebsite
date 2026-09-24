@@ -188,6 +188,53 @@ async function splitUserNames(): Promise<void> {
   }
 }
 
+/* ONE TITLE PER APPLICANT, as a UNIQUE INDEX — so the database refuses a
+   duplicate however it arrives, not only when routes/resumes.ts remembers to
+   check.
+
+   A database that predates the rule may ALREADY hold duplicates, and creating
+   the index over them would fail and stop the server booting. So, once, in one
+   transaction: every applicant's oldest resume keeps its name, and each later
+   one with the same name (ignoring case and surrounding spaces) is renamed
+   "Name (2)", "Name (3)"... to the first that is free. Nothing is deleted.
+   Skipped entirely once the index exists. */
+async function ensureUniqueResumeTitles(): Promise<void> {
+  const has = await query(
+    "SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'resumes_user_title_unique'");
+  if (has.length) return;
+
+  await withTransaction(async (tx) => {
+    const rows = await tx.query<{ resume_id: number; user_id: number; title: string }>(
+      'SELECT resume_id, user_id, title FROM resumes ORDER BY user_id, resume_id');
+    const key = (t: string) => String(t ?? '').trim().toLowerCase();
+    const takenBy = new Map<number, Set<string>>();
+    for (const r of rows) {
+      if (!takenBy.has(r.user_id)) takenBy.set(r.user_id, new Set());
+      takenBy.get(r.user_id)!.add(key(r.title));
+    }
+    const kept = new Map<number, Set<string>>();
+    let renamed = 0;
+    for (const r of rows) {
+      if (!kept.has(r.user_id)) kept.set(r.user_id, new Set());
+      const mine = kept.get(r.user_id)!;
+      const taken = takenBy.get(r.user_id)!;
+      if (!mine.has(key(r.title))) { mine.add(key(r.title)); continue; }
+      const base = String(r.title ?? '').trim() || 'Untitled resume';
+      for (let n = 2; ; n++) {
+        const suffix = ` (${n})`;
+        const candidate = base.slice(0, 120 - suffix.length) + suffix;
+        if (!taken.has(key(candidate))) {
+          await tx.exec('UPDATE resumes SET title = ? WHERE resume_id = ?', [candidate, r.resume_id]);
+          taken.add(key(candidate)); mine.add(key(candidate)); renamed++;
+          break;
+        }
+      }
+    }
+    await tx.exec('CREATE UNIQUE INDEX resumes_user_title_unique ON resumes (user_id, LOWER(BTRIM(title)))');
+    console.log(`Resume titles are now unique per applicant${renamed ? ` (${renamed} duplicate(s) renamed)` : ''}.`);
+  });
+}
+
 export async function runMigrations(): Promise<void> {
   await ensureEmailCodesTable();
   await ensureRowLevelSecurity();
@@ -867,4 +914,6 @@ export async function runMigrations(): Promise<void> {
     ('Laravel','laravel','technical'),
     ('Docker','docker','technical')
     ON CONFLICT (skill_norm) DO NOTHING`);
+
+  await ensureUniqueResumeTitles();
 }
