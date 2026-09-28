@@ -51,6 +51,17 @@ export const MAX_UPLOAD = 2 * 1024 * 1024; // 2 MB
  *  Reached, the applicant deletes one they no longer use; nothing is lost
  *  silently. Mirrored in client/src/app/core/engine.ts. */
 export const MAX_RESUMES = 20;
+
+/* WHAT AN APPLICANT ASKS BEFORE APPLYING — pay, shift, where, and how many
+   are being hired. None of these is scored; they are facts about the job
+   the applicant reads, and filters on. Every one is optional, and an opening
+   that leaves one blank simply does not state it — which is what every
+   opening written before they existed does. Mirrored in client engine.ts. */
+export const SHIFTS = ['day', 'mid', 'night', 'rotating', 'flexible'] as const;
+export const WORK_SETUPS = ['onsite', 'hybrid', 'remote'] as const;
+/** Monthly pesos. A sanity bound against a typo's extra zeros, not a policy. */
+export const MAX_MONTHLY_SALARY = 1_000_000;
+export const MAX_VACANCIES = 999;
 export const ALLOWED_MIME: Record<string, string> = {
   'application/pdf': 'pdf',
   'application/msword': 'doc',

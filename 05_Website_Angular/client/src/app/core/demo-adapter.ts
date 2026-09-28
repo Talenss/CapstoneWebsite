@@ -5,7 +5,7 @@
    ============================================================ */
 import { ApiAdapter } from './adapter';
 import { AnalyzedResume, ApiResult, AppStatus, Application, ApplicationAnswer, Company, EvidenceKind, RejectionReason, HrStats, HrStatsFilters, InviteSchedule, MatchResult, Posting, PostingQuestion, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User, RankedQuery} from './models';
-import { passwordOk, PASSWORD_HINT, scoreLocal, visibleResume, RESUME_SECTIONS, OPTIONAL_WEIGHTS, WEIGHT_FLOOR, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert, EDU_FIELD_OPTIONS, EDU_FIELD_ANY, MAX_RESUMES } from './engine';
+import { passwordOk, PASSWORD_HINT, scoreLocal, visibleResume, RESUME_SECTIONS, OPTIONAL_WEIGHTS, WEIGHT_FLOOR, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert, EDU_FIELD_OPTIONS, EDU_FIELD_ANY, MAX_RESUMES, SHIFT_LABELS, WORK_SETUP_LABELS, MAX_MONTHLY_SALARY, MAX_VACANCIES } from './engine';
 
 const KEY = 'linaw_v3_db';
 
@@ -96,6 +96,20 @@ function isExpired(p: Posting): boolean {
   return !!p.deadline && String(p.deadline).slice(0, 10) < new Date().toISOString().slice(0, 10);
 }
 const withExpired = (p: Posting): Posting => ({ ...p, expired: isExpired(p) });
+/** A stated-facts key holding null means "not stated", which the server
+ *  stores as NULL and never sends. Dropped, so the two modes read the same. */
+const tidyFacts = (p: Posting): Posting => {
+  for (const k of ['salaryMin', 'salaryMax', 'shift', 'workSetup', 'workLocation', 'vacancies'] as const) {
+    if ((p as any)[k] === null || (p as any)[k] === undefined) delete (p as any)[k];
+  }
+  return p;
+};
+/** withExpired plus "filled": how many are hired, for an opening that states
+ *  a number — exactly what the server's serializer adds. */
+const withFacts = (p: Posting, db: { applications: { postingId: string; status: string }[] }): Posting => ({
+  ...withExpired(p),
+  ...(p.vacancies != null ? { filled: db.applications.filter((a) => a.postingId === p.id && a.status === 'hired').length } : {}),
+});
 
 function seed(): Db {
   return {
@@ -966,7 +980,7 @@ export class DemoAdapter implements ApiAdapter {
       const db = load();
       return apiOk({
         postings: db.postings.filter((p) => p.status === 'open' && !isExpired(p))
-          .map((p) => ({ ...withExpired(p), company: db.companies.find((c) => c.id === p.companyId) })),
+          .map((p) => ({ ...withFacts(p, db), company: db.companies.find((c) => c.id === p.companyId) })),
       });
     },
     mine: () => { // recruiter: every posting of my company, open or closed
@@ -998,7 +1012,7 @@ export class DemoAdapter implements ApiAdapter {
       const db = load();
       const p = db.postings.find((x) => x.id === id);
       if (!p) return apiFail('That opening no longer exists.');
-      return apiOk({ posting: { ...withExpired(p), company: db.companies.find((c) => c.id === p.companyId) } });
+      return apiOk({ posting: { ...withFacts(p, db), company: db.companies.find((c) => c.id === p.companyId) } });
     },
     save: (posting: Partial<Posting>) => {
       const db = load(); const me = meRow(db);
@@ -1077,6 +1091,40 @@ export class DemoAdapter implements ApiAdapter {
         minProjects: cnt(posting.minProjects),
         minReferences: cnt(posting.minReferences),
       };
+
+      /* Pay, shift, setup, location, openings — the same rules and wording as
+         routes/postings.ts. A blank is "not stated" and leaves no key; a value
+         present but wrong is refused, never silently dropped. */
+      {
+        const blank = (v: unknown) => v === null || v === undefined || String(v).trim() === '';
+        const salaryOf = (v: unknown): number | null | 'bad' => {
+          if (blank(v)) return null;
+          const n = Number(String(v).replace(/[,\s₱]/g, ''));
+          return Number.isInteger(n) && n >= 0 && n <= MAX_MONTHLY_SALARY ? n : 'bad';
+        };
+        const lo = salaryOf(posting.salaryMin), hi = salaryOf(posting.salaryMax);
+        if (lo === 'bad' || hi === 'bad') return apiFail('Enter the salary as a whole number of pesos a month, for example 18000.');
+        if (lo !== null && hi !== null && hi < lo) return apiFail("The top of the salary range can't be below the bottom.");
+        let vac: number | null = null;
+        if (!blank(posting.vacancies)) {
+          const n = Number(posting.vacancies);
+          if (!Number.isInteger(n) || n < 1 || n > MAX_VACANCIES) {
+            return apiFail(`The number of openings must be a whole number from 1 to ${MAX_VACANCIES}.`);
+          }
+          vac = n;
+        }
+        const facts: Partial<Posting> = {
+          salaryMin: lo, salaryMax: hi,
+          shift: (posting.shift && posting.shift in SHIFT_LABELS) ? posting.shift : null,
+          workSetup: (posting.workSetup && posting.workSetup in WORK_SETUP_LABELS) ? posting.workSetup : null,
+          workLocation: String(posting.workLocation ?? '').trim().slice(0, 200) || null,
+          vacancies: vac,
+        };
+        // Nulls are KEPT here, so the merge below overwrites a stored value the
+        // recruiter just cleared; tidyFacts() then drops them.
+        posting = { ...posting, ...facts };
+        delete (posting as any).filled; // derived on read, never stored
+      }
 
       /* The recruiter's own screening questions. Ids are assigned here and
          kept stable across a save where the prompt is unchanged, because an
@@ -1171,15 +1219,16 @@ export class DemoAdapter implements ApiAdapter {
       const i = db.postings.findIndex((p) => p.id === posting.id);
       if (i >= 0) {
         if (db.postings[i].companyId !== me.companyId) return apiFail("You can only edit your own company's openings.");
-        db.postings[i] = { ...db.postings[i], ...posting } as Posting;
+        db.postings[i] = tidyFacts({ ...db.postings[i], ...posting } as Posting);
       } else {
         // Always 'open', like the server, a caller must not create a
         // posting that is already closed.
         posting = { ...posting, id: uid(), companyId: me.companyId!, status: 'open', createdAt: Date.now() };
-        db.postings.push(posting as Posting);
+        db.postings.push(tidyFacts(posting as Posting));
       }
       persist(db);
-      return apiOk({ posting: db.postings.find((p) => p.id === posting.id)! });
+      // Returned as the server returns it, with "filled" derived, not stored.
+      return apiOk({ posting: withFacts(db.postings.find((p) => p.id === posting.id)!, db) });
     },
     toggle: (id: string) => {
       const db = load(); const me = meRow(db);
@@ -1329,8 +1378,14 @@ export class DemoAdapter implements ApiAdapter {
         db.statusHistory.push({ applicationId: a.id, from: wasStatus, to: a.status, at: a.updatedAt!, by: 'employer', byUserId: me.id,
           reason: (reason as RejectionReason) ?? null });
       }
+      // Filled means closed — the same rule as routes/applications.ts.
+      let postingClosed = false;
+      if (status === 'hired' && wasStatus !== 'hired' && p.vacancies != null && p.status === 'open') {
+        const hired = db.applications.filter((x) => x.postingId === p.id && x.status === 'hired').length;
+        if (hired >= p.vacancies) { p.status = 'closed'; postingClosed = true; }
+      }
       persist(db);
-      return apiOk({ application: a });
+      return apiOk({ application: a, ...(postingClosed ? { postingClosed: true } : {}) });
     },
     /* The applicant's own exit, mirrors server routes/applications.ts.
        Marked, not deleted, so the recruiter sees an honest "Withdrawn"
@@ -1466,7 +1521,7 @@ export class DemoAdapter implements ApiAdapter {
         postings: mine
           .map((s) => db.postings.find((p) => p.id === s.postingId))
           .filter((p): p is Posting => !!p)
-          .map((p) => ({ ...withExpired(p), company: db.companies.find((c) => c.id === p.companyId) })),
+          .map((p) => ({ ...withFacts(p, db), company: db.companies.find((c) => c.id === p.companyId) })),
       });
     },
     toggle: (postingId: string) => {

@@ -416,12 +416,32 @@ router.post('/set-status', async (req, res) => {
 
   // Atomic for the same reason as apply: a status change that leaves no
   // history row would be a decision with nobody's name on it.
+  /* FILLED MEANS CLOSED. An opening that states how many it is hiring closes
+     itself the moment the last of them is marked hired, in the same
+     transaction, so it cannot keep collecting applications for jobs that no
+     longer exist. It is never reopened automatically: moving someone back
+     out of "hired" is a correction, and whether the vacancy is really open
+     again is the recruiter's call. An opening with no stated number never
+     closes by itself — which is every opening written before this existed. */
+  let closedAsFilled = false;
   await withTransaction(async (tx) => {
     await tx.exec('UPDATE applications SET status = ? WHERE application_id = ?', [status, aid]);
     await tx.exec(
       'INSERT INTO application_status_history (application_id, old_status, new_status, changed_by, reason) VALUES (?,?,?,?,?)',
       [aid, a.status, status, u.user_id, reason],
     );
+    if (status === 'hired' && a.status !== 'hired') {
+      const p = await tx.queryOne<{ vacancies: number | null; status: string }>(
+        'SELECT vacancies, status FROM job_postings WHERE posting_id = ? FOR UPDATE', [a.posting_id]);
+      if (p?.vacancies != null && p.status === 'open') {
+        const h = await tx.queryOne<{ n: number }>(
+          "SELECT COUNT(*)::int AS n FROM applications WHERE posting_id = ? AND status = 'hired'", [a.posting_id]);
+        if ((h?.n ?? 0) >= p.vacancies) {
+          await tx.exec("UPDATE job_postings SET status = 'closed' WHERE posting_id = ?", [a.posting_id]);
+          closedAsFilled = true;
+        }
+      }
+    }
   });
 
   // Tell the seeker — unless they opted out, nothing actually changed, or
@@ -440,7 +460,7 @@ router.post('/set-status', async (req, res) => {
   }
 
   const updated = await queryOne<ApplicationRow>('SELECT * FROM applications WHERE application_id = ?', [aid]);
-  ok(res, { application: serializeApplication(updated!) });
+  ok(res, { application: serializeApplication(updated!), ...(closedAsFilled ? { postingClosed: true } : {}) });
 });
 
 /* The applicant's own exit. The privacy notice promises consent can be

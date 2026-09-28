@@ -356,6 +356,25 @@ export async function runMigrations(): Promise<void> {
      it stays out of the block that owns posting_weights_complete. */
   await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS education_field VARCHAR(32)');
 
+  /* What an applicant asks before applying: pay, shift, work setup, where,
+     and how many are being hired. All NULLABLE with no default — NULL is
+     "the opening does not state it", which is exactly what every existing
+     opening says, so none of them changes. A column constraint rides on
+     ADD COLUMN IF NOT EXISTS, so a second boot adds nothing twice. */
+  await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS salary_min INT CHECK (salary_min IS NULL OR salary_min >= 0)');
+  await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS salary_max INT CHECK (salary_max IS NULL OR salary_max >= 0)');
+  await exec(`ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS shift TEXT
+    CHECK (shift IS NULL OR shift IN ('day','mid','night','rotating','flexible'))`);
+  await exec(`ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS work_setup TEXT
+    CHECK (work_setup IS NULL OR work_setup IN ('onsite','hybrid','remote'))`);
+  await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS work_location VARCHAR(200)');
+  await exec('ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS vacancies INT CHECK (vacancies IS NULL OR vacancies BETWEEN 1 AND 999)');
+  const range = await query("SELECT 1 FROM pg_constraint WHERE conname = 'job_postings_salary_range'");
+  if (!range.length) {
+    await exec(`ALTER TABLE job_postings ADD CONSTRAINT job_postings_salary_range
+      CHECK (salary_min IS NULL OR salary_max IS NULL OR salary_max >= salary_min)`);
+  }
+
   // saved_jobs — a seeker's bookmarked openings
   await exec(`CREATE TABLE IF NOT EXISTS saved_jobs (
     user_id     INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,

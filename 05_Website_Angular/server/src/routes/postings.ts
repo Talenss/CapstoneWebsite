@@ -6,6 +6,7 @@ import { ok, fail, idOf } from '../lib/http';
 import { requireRole, currentUser } from '../lib/auth';
 import { fetchPosting, fetchResume, serializePosting, serializeResume, visibleResume } from '../lib/serializers';
 import { EDU_RANK, skillId, rmScore, getSettings, certNorm, OPTIONAL_WEIGHTS, WEIGHT_FLOOR, EDU_FIELD_OPTIONS, EDU_FIELD_ANY } from '../lib/engine';
+import { SHIFTS, WORK_SETUPS, MAX_MONTHLY_SALARY, MAX_VACANCIES } from '../config';
 import { notifyNewPostingMatch } from '../lib/notify';
 
 const router = asyncRouter();
@@ -201,6 +202,36 @@ router.post('/save', async (req, res) => {
   const type = ['full-time', 'part-time', 'contract', 'internship'].includes(P.employmentType) ? P.employmentType : 'full-time';
   const months = Math.max(0, Number(P.minExperienceMonths) || 0);
 
+  /* PAY, SHIFT, SETUP, LOCATION, OPENINGS — all optional, none scored. A
+     blank is NULL, "not stated". A value that is present but wrong is
+     REFUSED rather than dropped: a recruiter who typed a salary should not
+     find it silently missing from the advert. */
+  const blank = (v: unknown) => v === null || v === undefined || String(v).trim() === '';
+  const salaryOf = (v: unknown): number | null | 'bad' => {
+    if (blank(v)) return null;
+    const n = Number(String(v).replace(/[,\s₱]/g, ''));
+    return Number.isInteger(n) && n >= 0 && n <= MAX_MONTHLY_SALARY ? n : 'bad';
+  };
+  const salaryMin = salaryOf(P.salaryMin);
+  const salaryMax = salaryOf(P.salaryMax);
+  if (salaryMin === 'bad' || salaryMax === 'bad') {
+    return fail(res, 'Enter the salary as a whole number of pesos a month, for example 18000.');
+  }
+  if (salaryMin !== null && salaryMax !== null && salaryMax < salaryMin) {
+    return fail(res, "The top of the salary range can't be below the bottom.");
+  }
+  const shift = (SHIFTS as readonly string[]).includes(P.shift) ? P.shift : null;
+  const workSetup = (WORK_SETUPS as readonly string[]).includes(P.workSetup) ? P.workSetup : null;
+  const workLocation = String(P.workLocation ?? '').trim().slice(0, 200) || null;
+  let vacancies: number | null = null;
+  if (!blank(P.vacancies)) {
+    const n = Number(P.vacancies);
+    if (!Number.isInteger(n) || n < 1 || n > MAX_VACANCIES) {
+      return fail(res, `The number of openings must be a whole number from 1 to ${MAX_VACANCIES}.`);
+    }
+    vacancies = n;
+  }
+
   /* Optional per-opening weights, sent as whole percentages. Absent means the
      opening inherits the site defaults, which is what every existing posting
      does — so this validates only what was actually supplied.
@@ -271,20 +302,24 @@ router.post('/save', async (req, res) => {
           `UPDATE job_postings SET title=?, department=?, employment_type=?, description=?, education_level=?,
              education_field=?,
              min_experience_months=?, min_projects=?, min_references=?, application_deadline=?,
+             salary_min=?, salary_max=?, shift=?, work_setup=?, work_location=?, vacancies=?,
              weight_skills=?, weight_education=?, weight_experience=?,
              weight_certifications=?, weight_projects=?, weight_languages=?, weight_references=?, weight_relevance=?, weight_field=?
            WHERE posting_id=?`,
           [title, dept, type, desc, edu, eduField, months, minProjects, minReferences, deadline,
+            salaryMin, salaryMax, shift, workSetup, workLocation, vacancies,
             wS, wE, wX, wC, wP, wL, wR, wV, wF, pid],
         );
       } else {
         const ins = await tx.exec(
           `INSERT INTO job_postings (company_id, created_by, title, department, employment_type, description,
              education_level, education_field, min_experience_months, min_projects, min_references, application_deadline,
+             salary_min, salary_max, shift, work_setup, work_location, vacancies,
              weight_skills, weight_education, weight_experience,
              weight_certifications, weight_projects, weight_languages, weight_references, weight_relevance, weight_field, status)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'open') RETURNING posting_id`,
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'open') RETURNING posting_id`,
           [u.company_id, u.user_id, title, dept, type, desc, edu, eduField, months, minProjects, minReferences, deadline,
+            salaryMin, salaryMax, shift, workSetup, workLocation, vacancies,
             wS, wE, wX, wC, wP, wL, wR, wV, wF],
         );
         pid = ins.insertId;

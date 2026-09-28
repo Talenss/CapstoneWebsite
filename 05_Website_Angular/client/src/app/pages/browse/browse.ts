@@ -5,7 +5,7 @@ import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { ApplicationAnswer, Company, MatchResult, Posting, Resume } from '../../core/models';
-import { EDU_LABELS, SKILL_CATEGORY, WEIGHTS, experienceLabel, missingHint, scoreLocal, tierColor, tierLabel, tierOf, weightsFor, normSkill} from '../../core/engine';
+import { SHIFT_LABELS, WORK_SETUP_LABELS, salaryLabel, openingsLabel, EDU_LABELS, SKILL_CATEGORY, WEIGHTS, experienceLabel, missingHint, scoreLocal, tierColor, tierLabel, tierOf, weightsFor, normSkill} from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 import { ApplyQuestions } from '../../shared/apply-questions/apply-questions';
 import { Seo } from '../../core/seo';
@@ -38,6 +38,10 @@ export class Browse implements OnInit, OnDestroy {
   session = inject(SessionService);
 
   readonly EDU_LABELS = EDU_LABELS;
+  readonly SHIFT_LABELS: Record<string, string> = SHIFT_LABELS;
+  readonly WORK_SETUP_LABELS: Record<string, string> = WORK_SETUP_LABELS;
+  readonly salaryLabel = salaryLabel;
+  readonly openingsLabel = openingsLabel;
   readonly WEIGHTS = WEIGHTS;
   readonly experienceLabel = experienceLabel;
   readonly tierColor = tierColor;
@@ -60,6 +64,18 @@ export class Browse implements OnInit, OnDestroy {
 
   query = signal('');
   dept = signal('');
+  /* Work setup and shift: what an applicant most often needs settled before
+     anything else, especially for BPO night work. An opening that does not
+     state one is left OUT when filtering by it — someone filtering for work
+     from home is asking to see only openings that say so. */
+  setupF = signal('');
+  shiftF = signal('');
+  readonly setupOptions = [{ v: '', label: 'Any work setup' },
+    ...Object.entries(WORK_SETUP_LABELS).map(([v, label]) => ({ v, label }))];
+  readonly shiftOptions = [{ v: '', label: 'Any shift' },
+    ...Object.entries(SHIFT_LABELS).map(([v, label]) => ({ v, label }))];
+  readonly setupFLabel = (v: string): string => this.setupOptions.find((o) => o.v === (v ?? ''))?.label ?? 'Any work setup';
+  readonly shiftFLabel = (v: string): string => this.shiftOptions.find((o) => o.v === (v ?? ''))?.label ?? 'Any shift';
   sort = signal<SortKey>('score');
 
   current = signal<BrowseRow | null>(null);
@@ -186,10 +202,14 @@ export class Browse implements OnInit, OnDestroy {
   filteredRows = computed<BrowseRow[]>(() => {
     const q = this.query().trim().toLowerCase();
     const d = this.dept();
+    const setup = this.setupF();
+    const shift = this.shiftF();
     const sort = this.effectiveSort();
 
     let out = this.rows().filter((r) => {
       if (d && r.posting.department !== d) return false;
+      if (setup && r.posting.workSetup !== setup) return false;
+      if (shift && r.posting.shift !== shift) return false;
       if (!q) return true;
       return (r.posting.title + ' ' + r.posting.department + ' ' + r.posting.description + ' ' + r.posting.skills.join(' '))
         .toLowerCase()

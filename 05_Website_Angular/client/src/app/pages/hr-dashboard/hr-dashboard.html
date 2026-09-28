@@ -165,6 +165,10 @@
                   <span class="badge wine" title="The application deadline has passed. It no longer accepts applications. Edit it to extend the deadline.">Deadline passed</span>
                 } @else if (p.status === 'open') {
                   <span class="badge green">Open</span>
+                } @else if (p.vacancies != null && (p.filled ?? 0) >= p.vacancies) {
+                  <!-- Closed BECAUSE it is full, which is different news from
+                       closed by hand: nothing is left to recruit for. -->
+                  <span class="badge slate" title="Every opening is filled, so it closed by itself.">Filled</span>
                 } @else {
                   <span class="badge slate">Closed</span>
                 }
@@ -175,6 +179,9 @@
               <div class="meta">{{ p.department }} · {{ p.skills.length }} skills asked for · posted {{ day(p.createdAt) }}</div>
             </div>
             <div class="num"><b>{{ p.applicantCount }}</b><span>applied</span></div>
+            @if (p.vacancies != null) {
+              <div class="num"><b>{{ p.filled ?? 0 }}/{{ p.vacancies }}</b><span>filled</span></div>
+            }
             <div class="acts">
               <!-- Filled red only where someone is actually waiting. Seven rows
                    each carrying the strongest button on the page meant the

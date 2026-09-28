@@ -85,6 +85,14 @@ export interface PostingRow {
    *  written before the column existed. */
   education_field: string | null;
   min_experience_months: number;
+  /** Monthly pesos; NULL = not stated. */
+  salary_min: number | null;
+  salary_max: number | null;
+  shift: string | null;
+  work_setup: string | null;
+  work_location: string | null;
+  /** How many are being hired; NULL = not stated, and never closes by itself. */
+  vacancies: number | null;
   application_deadline: string | null;
   status: 'open' | 'closed';
   created_at: string;

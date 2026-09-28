@@ -346,6 +346,17 @@ export interface Posting {
   /** Questions the applicant must answer to apply. Never scored — they exist
    *  so a recruiter can ask the one or two things a resume never says. */
   questions?: PostingQuestion[];
+  /** Monthly pay in pesos. Each absent when the opening does not state it. */
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  shift?: 'day' | 'mid' | 'night' | 'rotating' | 'flexible' | null;
+  workSetup?: 'onsite' | 'hybrid' | 'remote' | null;
+  workLocation?: string | null;
+  /** How many are being hired. When stated, the opening closes itself once
+   *  that many applicants are marked hired. `filled` is how many are, so
+   *  far; both absent when no number is stated. */
+  vacancies?: number | null;
+  filled?: number;
   status: 'open' | 'closed';
   createdAt: number;
   company?: Company;

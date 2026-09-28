@@ -1759,3 +1759,117 @@ test('an applicant can keep 20 resumes, and no more', async () => {
   assert.equal((await c('resumes/save', draft('Limit 1, edited', one.id))).body.ok, true, 'editing still works at the limit');
   assert.equal((await c('resumes/list')).body.resumes.length, 20);
 });
+
+// ---------- pay, shift, work setup, location, and the number of openings ----------
+
+test('an opening can state pay, shift, setup, location and openings, and clear them again', async () => {
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const base = {
+    title: 'Facts Test Role', department: 'Customer Support', employmentType: 'full-time',
+    description: 'A role used to check the stated facts about a job.', skills: ['Customer Service'],
+    educationLevel: 'highschool', minExperienceMonths: 0,
+  };
+  const made = await hr('postings/save', { posting: {
+    ...base, salaryMin: '18,000', salaryMax: 22000, shift: 'night', workSetup: 'onsite',
+    workLocation: '  Clark Freeport Zone, Pampanga  ', vacancies: '10',
+  } });
+  assert.equal(made.body.ok, true, made.body.error);
+  const p = made.body.posting;
+  assert.equal(p.salaryMin, 18000, '"18,000" is read as 18000, not refused and not 18');
+  assert.equal(p.salaryMax, 22000);
+  assert.equal(p.shift, 'night');
+  assert.equal(p.workSetup, 'onsite');
+  assert.equal(p.workLocation, 'Clark Freeport Zone, Pampanga');
+  assert.equal(p.vacancies, 10);
+  assert.equal(p.filled, 0);
+
+  // Anyone browsing sees the same facts.
+  const pub = (await client()('postings/list')).body.postings.find((x: any) => x.id === p.id);
+  assert.equal(pub.salaryMin, 18000);
+  assert.equal(pub.shift, 'night');
+
+  // Clearing a field clears it — no leftover value, and no key at all.
+  const cleared = (await hr('postings/save', { posting: { ...base, id: p.id } })).body.posting;
+  for (const k of ['salaryMin', 'salaryMax', 'shift', 'workSetup', 'workLocation', 'vacancies', 'filled']) {
+    assert.equal(k in cleared, false, `${k} should be gone once cleared`);
+  }
+});
+
+test('a wrong salary or number of openings is refused, not silently dropped', async () => {
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const base = {
+    title: 'Refusal Test Role', department: 'Customer Support', description: 'A role used to check refusals.',
+    skills: ['Customer Service'], educationLevel: 'highschool', minExperienceMonths: 0,
+  };
+  const refused = async (extra: any, why: RegExp, label: string) => {
+    const r = await hr('postings/save', { posting: { ...base, ...extra } });
+    assert.equal(r.body.ok, false, label);
+    assert.match(r.body.error, why, label);
+  };
+  await refused({ salaryMin: 'about 20k' }, /whole number of pesos/, 'words for a salary');
+  await refused({ salaryMin: -5 }, /whole number of pesos/, 'a negative salary');
+  await refused({ salaryMin: 25000, salaryMax: 18000 }, /can't be below/, 'a range upside down');
+  await refused({ vacancies: 0 }, /from 1 to 999/, 'zero openings');
+  await refused({ vacancies: 2.5 }, /from 1 to 999/, 'half an opening');
+  // An unknown shift or setup is "not stated", like an unknown design elsewhere.
+  const ok = await hr('postings/save', { posting: { ...base, shift: 'graveyard', workSetup: 'moon' } });
+  assert.equal(ok.body.ok, true);
+  assert.equal('shift' in ok.body.posting, false);
+});
+
+test('an opening closes itself when its last opening is filled, and only then', async () => {
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const made = (await hr('postings/save', { posting: {
+    title: 'Two Seats Role', department: 'Customer Support', description: 'Hiring exactly two people for this.',
+    skills: ['Customer Service'], educationLevel: 'highschool', minExperienceMonths: 0, vacancies: 2,
+  } })).body.posting;
+
+  const apply = async (email: string) => {
+    const c = client();
+    await c('auth/login', { email, password: 'demo123' });
+    const rid = (await c('resumes/list')).body.resumes[0].id;
+    const r = await c('applications/apply', { resumeId: rid, postingId: made.id });
+    assert.equal(r.body.ok, true, `${email}: ${r.body.error}`);
+    return r.body.application.id;
+  };
+  const a1 = await apply('ana@demo.ph');
+  const a2 = await apply('liza@demo.ph');
+
+  const first = await hr('applications/set-status', { id: a1, status: 'hired' });
+  assert.equal(first.body.ok, true);
+  assert.equal(first.body.postingClosed, undefined, 'one of two filled: still open');
+  let p = (await hr('postings/get', { id: made.id })).body.posting;
+  assert.equal(p.status, 'open');
+  assert.equal(p.filled, 1);
+
+  const second = await hr('applications/set-status', { id: a2, status: 'hired' });
+  assert.equal(second.body.postingClosed, true, 'the last seat closes it');
+  p = (await hr('postings/get', { id: made.id })).body.posting;
+  assert.equal(p.status, 'closed');
+  assert.equal(p.filled, 2);
+  const pub = (await client()('postings/list')).body.postings.some((x: any) => x.id === made.id);
+  assert.equal(pub, false, 'a filled opening leaves the public list');
+
+  // Moving a hire back is a correction; it never reopens the opening by itself.
+  await hr('applications/set-status', { id: a2, status: 'offer' });
+  assert.equal((await hr('postings/get', { id: made.id })).body.posting.status, 'closed');
+});
+
+test('an opening that states no number never closes by itself', async () => {
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const made = (await hr('postings/save', { posting: {
+    title: 'Open-Ended Role', department: 'Customer Support', description: 'No number of openings stated here.',
+    skills: ['Customer Service'], educationLevel: 'highschool', minExperienceMonths: 0,
+  } })).body.posting;
+  const c = client();
+  await c('auth/login', { email: 'marco@demo.ph', password: 'demo123' });
+  const rid = (await c('resumes/list')).body.resumes[0].id;
+  const app = (await c('applications/apply', { resumeId: rid, postingId: made.id })).body.application;
+  const hired = await hr('applications/set-status', { id: app.id, status: 'hired' });
+  assert.equal(hired.body.postingClosed, undefined);
+  assert.equal((await hr('postings/get', { id: made.id })).body.posting.status, 'open');
+});

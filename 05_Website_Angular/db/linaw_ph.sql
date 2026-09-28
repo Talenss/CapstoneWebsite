@@ -381,6 +381,17 @@ CREATE TABLE job_postings (
   min_projects          INT NOT NULL DEFAULT 0,
   min_references        INT NOT NULL DEFAULT 0,
   application_deadline  DATE,
+  -- What an applicant asks before applying. All optional and none scored;
+  -- NULL means the opening does not state it. Salary is monthly, in pesos.
+  -- vacancies, when set, closes the opening by itself once that many
+  -- applicants are marked hired (routes/applications.ts, set-status).
+  salary_min      INT CHECK (salary_min IS NULL OR salary_min >= 0),
+  salary_max      INT CHECK (salary_max IS NULL OR salary_max >= 0),
+  shift           TEXT CHECK (shift IS NULL OR shift IN ('day','mid','night','rotating','flexible')),
+  work_setup      TEXT CHECK (work_setup IS NULL OR work_setup IN ('onsite','hybrid','remote')),
+  work_location   VARCHAR(200),
+  vacancies       INT CHECK (vacancies IS NULL OR vacancies BETWEEN 1 AND 999),
+  CONSTRAINT job_postings_salary_range CHECK (salary_min IS NULL OR salary_max IS NULL OR salary_max >= salary_min),
   status          TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed')),
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
 

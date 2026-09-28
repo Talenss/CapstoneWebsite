@@ -678,7 +678,12 @@ export class HrApplicants {
     this.closeModal();
     const id = this.postingId();
     if (id) await this.load(id);
-    this.showToast(name + ' → ' + STATUS_LABELS[next] + '. They’ll see it on their dashboard.');
+    // The last hire on an opening that states how many it needs closes it —
+    // said here, because otherwise the opening just vanishes from the public
+    // list with nothing on this screen explaining why.
+    this.showToast(res.postingClosed
+      ? name + ' → Hired. That fills every opening, so this posting is now closed to new applicants.'
+      : name + ' → ' + STATUS_LABELS[next] + '. They’ll see it on their dashboard.');
   }
 
   /* ---------- taking the shortlist off the screen ----------

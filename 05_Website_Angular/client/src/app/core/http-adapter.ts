@@ -93,7 +93,7 @@ export class HttpAdapter implements ApiAdapter {
       total?: number; matched?: number; page?: number; pages?: number; pageSize?: number;
     }>('applications', 'ranked', { postingId, ...(opts ?? {}) }),
     setStatus: (id: string, status: string, reason?: string | null) =>
-      this.call<{ application: Application }>('applications', 'set-status', { id, status, reason: reason ?? null }),
+      this.call<{ application: Application; postingClosed?: boolean }>('applications', 'set-status', { id, status, reason: reason ?? null }),
     notes: (id: string) => this.call<{ notes: ScreeningNote[] }>('applications', 'notes', { id }),
     noteAdd: (id: string, body: string) => this.call<{ id: string }>('applications', 'note-add', { id, body }),
     noteDelete: (id: string) => this.call<Record<string, never>>('applications', 'note-delete', { id }),

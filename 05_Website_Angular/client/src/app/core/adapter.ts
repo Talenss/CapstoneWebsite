@@ -77,7 +77,7 @@ export interface ApiAdapter {
      *  their own filing wording, the applicant in the second person. What the
      *  applicant does not learn is which staff member chose it. See
      *  routes/applications.ts for why those two gates differ. */
-    setStatus(applicationId: string, status: string, reason?: string | null): Promise<ApiResult<{ application: Application }>>;
+    setStatus(applicationId: string, status: string, reason?: string | null): Promise<ApiResult<{ application: Application; postingClosed?: boolean }>>;
 
     /* SCREENING NOTES. Recruiter-only on every route: the applicant has no
        endpoint that returns them. See routes/applications.ts for why. */

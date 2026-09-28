@@ -6,7 +6,7 @@ import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { EduLevel, EmploymentType, Posting, Resume } from '../../core/models';
-import { EDU_FIELD_OPTIONS, EDU_LABELS, SKILL_BY_INDUSTRY, SKILL_CATALOGUE, THRESHOLDS, WEIGHTS, WEIGHT_FLOOR, WEIGHT_STEP, scoreLocal, tierColor } from '../../core/engine';
+import { SHIFT_LABELS, WORK_SETUP_LABELS, EDU_FIELD_OPTIONS, EDU_LABELS, SKILL_BY_INDUSTRY, SKILL_CATALOGUE, THRESHOLDS, WEIGHTS, WEIGHT_FLOOR, WEIGHT_STEP, scoreLocal, tierColor } from '../../core/engine';
 import { reportInvalidFields } from '../../shared/invalid-fields';
 import { HlmComboboxImports } from '@spartan-ng/helm/combobox';
 import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
@@ -54,6 +54,25 @@ export class HrPosting {
    *  third real answer, "read it from the department", and it is the default
    *  so that adding this picker changed no existing opening. */
   fieldVal = signal<string>('');
+
+  /* What an applicant asks before applying. Held as the TEXT typed, not a
+     number, so a half-typed "18,0" is not silently turned into 180 on the
+     way; the server parses it and says so if it cannot. '' = not stated. */
+  salaryMinVal = signal('');
+  salaryMaxVal = signal('');
+  shiftVal = signal<string>('');
+  setupVal = signal<string>('');
+  locationVal = signal('');
+  vacanciesVal = signal('');
+  readonly shiftOptions = [{ v: '', label: 'Not stated' },
+    ...Object.entries(SHIFT_LABELS).map(([v, label]) => ({ v, label }))];
+  readonly setupOptions = [{ v: '', label: 'Not stated' },
+    ...Object.entries(WORK_SETUP_LABELS).map(([v, label]) => ({ v, label }))];
+  readonly shiftLabel = (v: string): string => this.shiftOptions.find((o) => o.v === (v ?? ''))?.label ?? 'Not stated';
+  readonly setupLabel = (v: string): string => this.setupOptions.find((o) => o.v === (v ?? ''))?.label ?? 'Not stated';
+  /** "3 of 10 filled", shown under the number once an opening has hires. */
+  filledNote = signal<string | null>(null);
+  textOf(e: Event): string { return (e.target as HTMLInputElement).value; }
   monthsVal = signal(0); // canonical unit — the engine and API speak months
   /** The recruiter enters YEARS (partner states requirements in years); the
    *  field shows this and stores months underneath. Whole and half years are
@@ -283,6 +302,13 @@ export class HrPosting {
       this.skillsVal.set([...p.skills]);
       this.eduVal.set(p.educationLevel);
       this.fieldVal.set(p.educationField || '');
+      this.salaryMinVal.set(p.salaryMin != null ? String(p.salaryMin) : '');
+      this.salaryMaxVal.set(p.salaryMax != null ? String(p.salaryMax) : '');
+      this.shiftVal.set(p.shift || '');
+      this.setupVal.set(p.workSetup || '');
+      this.locationVal.set(p.workLocation || '');
+      this.vacanciesVal.set(p.vacancies != null ? String(p.vacancies) : '');
+      this.filledNote.set(p.vacancies != null ? `${p.filled ?? 0} of ${p.vacancies} filled so far.` : null);
       this.monthsVal.set(p.minExperienceMonths || 0);
       this.deadlineVal.set(p.deadline || '');
       this.certsVal.set([...(p.certifications ?? [])]);
@@ -592,6 +618,14 @@ export class HrPosting {
       title, department, employmentType: this.typeVal(), description,
       skills, educationLevel: this.eduVal(),
       educationField: this.fieldVal() || null,
+      // Sent as typed ("18,000" included) and parsed by the server, which
+      // refuses what it cannot read instead of storing a wrong number.
+      salaryMin: (this.salaryMinVal().trim() || null) as any,
+      salaryMax: (this.salaryMaxVal().trim() || null) as any,
+      shift: (this.shiftVal() || null) as Posting['shift'],
+      workSetup: (this.setupVal() || null) as Posting['workSetup'],
+      workLocation: this.locationVal().trim() || null,
+      vacancies: (this.vacanciesVal().trim() || null) as any,
       minExperienceMonths: Math.max(0, this.monthsVal() || 0),
       certifications: this.certsVal(),
       languages: this.langsVal(),

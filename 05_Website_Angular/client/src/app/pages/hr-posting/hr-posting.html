@@ -51,6 +51,58 @@
         <p class="hint">Plain language. This is what the applicant reads before deciding to apply.</p>
       </div>
 
+      <!-- ============ ABOUT THE JOB ============
+           The things an applicant asks before applying: pay, shift, where,
+           and how many are being hired. None of it is scored. All optional:
+           a blank is simply not stated on the advert. -->
+      <h3 style="font-size:17px;margin:6px 0 4px">About the job</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">What applicants ask before they apply. All optional, shown on the opening, and none of it changes anyone's score.</p>
+      <div class="row2">
+        <div class="field">
+          <label for="salMin">Salary from <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(₱ a month, optional)</span></label>
+          <input type="text" inputmode="numeric" id="salMin" placeholder="18000" [value]="salaryMinVal()" (input)="salaryMinVal.set(textOf($event))">
+        </div>
+        <div class="field">
+          <label for="salMax">Salary to <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(₱ a month, optional)</span></label>
+          <input type="text" inputmode="numeric" id="salMax" placeholder="22000" [value]="salaryMaxVal()" (input)="salaryMaxVal.set(textOf($event))">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="shift">Shift <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(optional)</span></label>
+          <hlm-select [value]="shiftVal()" [itemToString]="shiftLabel" (valueChange)="shiftVal.set($any($event))">
+            <hlm-select-trigger id="shift" class="w-full"><hlm-select-value placeholder="Not stated" /></hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (o of shiftOptions; track o.v) {
+                <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+              }
+            </hlm-select-content>
+          </hlm-select>
+        </div>
+        <div class="field">
+          <label for="setup">Work setup <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(optional)</span></label>
+          <hlm-select [value]="setupVal()" [itemToString]="setupLabel" (valueChange)="setupVal.set($any($event))">
+            <hlm-select-trigger id="setup" class="w-full"><hlm-select-value placeholder="Not stated" /></hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (o of setupOptions; track o.v) {
+                <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+              }
+            </hlm-select-content>
+          </hlm-select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="loc">Work location <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(optional)</span></label>
+          <input type="text" id="loc" placeholder="Clark Freeport Zone, Pampanga" [value]="locationVal()" (input)="locationVal.set(textOf($event))">
+        </div>
+        <div class="field">
+          <label for="vac">Number of openings <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(optional)</span></label>
+          <input type="text" inputmode="numeric" id="vac" placeholder="Not stated" [value]="vacanciesVal()" (input)="vacanciesVal.set(textOf($event))">
+          <p class="hint">When set, the opening closes by itself once that many applicants are marked Hired.@if (filledNote(); as f) { <b>{{ f }}</b> }</p>
+        </div>
+      </div>
+
       <hr style="border:0;border-top:1px solid var(--rule);margin:26px 0">
       <h2 style="font-size:21px;margin-bottom:4px">The scoring rule</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:20px">Skills, education and experience decide how every applicant is scored. The <b>job title</b> above and the <b>field of study</b> below decide which experience and which degrees count in full; anything unrelated still counts, at half.</p>

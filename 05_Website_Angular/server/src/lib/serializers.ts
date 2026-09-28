@@ -364,6 +364,14 @@ export function postingExpired(p: PostingRow): boolean {
   return String(p.application_deadline).slice(0, 10) < today;
 }
 
+/** How many of an opening's applicants are marked hired — the "filled" in
+ *  "3 of 10 filled". Only asked for openings that state a number. */
+export async function hiredCount(postingId: number): Promise<number> {
+  const r = await queryOne<{ n: number }>(
+    "SELECT COUNT(*)::int AS n FROM applications WHERE posting_id = ? AND status = 'hired'", [postingId]);
+  return r?.n ?? 0;
+}
+
 export async function serializePosting(p: PostingRow, withCompany = true): Promise<any> {
   const st = await query<{ skill_name: string }>(
     'SELECT s.skill_name FROM posting_skills ps JOIN skills s ON s.skill_id=ps.skill_id WHERE ps.posting_id=? ORDER BY s.skill_name',
@@ -398,6 +406,15 @@ export async function serializePosting(p: PostingRow, withCompany = true): Promi
        engine to fall back to reading the department, so emitting '' here
        would be a different answer, not a tidier one. */
     ...((p as any).education_field ? { educationField: (p as any).education_field } : {}),
+    /* Stated facts only: a key is absent when the opening does not state it,
+       so no screen can print "₱0" or "null shift" for an opening that simply
+       said nothing. */
+    ...(p.salary_min != null ? { salaryMin: Number(p.salary_min) } : {}),
+    ...(p.salary_max != null ? { salaryMax: Number(p.salary_max) } : {}),
+    ...(p.shift ? { shift: p.shift } : {}),
+    ...(p.work_setup ? { workSetup: p.work_setup } : {}),
+    ...(p.work_location ? { workLocation: p.work_location } : {}),
+    ...(p.vacancies != null ? { vacancies: Number(p.vacancies), filled: await hiredCount(p.posting_id) } : {}),
     minExperienceMonths: Number(p.min_experience_months),
     /* WHOLE PERCENTAGES, the same units the column stores and the recruiter
        types — so "must total 100" is an exact integer check rather than a

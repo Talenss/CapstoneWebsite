@@ -837,3 +837,55 @@ test('the resume limit is enforced identically in both modes', async () => {
   await agree('the twenty-first resume', demo.resumes.save(draft('One too many') as any), api('resumes/save', { resume: draft('One too many') }));
   assert.deepEqual(await count(), [20, 20], 'neither mode may accept it');
 });
+
+test('pay, shift, setup, location and openings follow the same rules in both modes', async () => {
+  await demo.auth.login('hr@demo.ph', 'demo123');
+  await api('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const base = {
+    title: 'Parity Facts Role', department: 'Customer Support', employmentType: 'full-time',
+    description: 'Checks the stated facts about a job in both modes.', skills: ['Customer Service'],
+    educationLevel: 'highschool', minExperienceMonths: 0,
+  };
+  for (const [label, extra] of [
+    ['a full, valid set', { salaryMin: '18,000', salaryMax: 22000, shift: 'night', workSetup: 'hybrid', workLocation: 'Clark', vacancies: 3 }],
+    ['words for a salary', { salaryMin: 'about 20k' }],
+    ['an upside-down range', { salaryMin: 25000, salaryMax: 18000 }],
+    ['zero openings', { vacancies: 0 }],
+    ['an unknown shift', { shift: 'graveyard' }],
+  ] as const) {
+    await agree(label, demo.postings.save({ ...base, ...extra } as any), api('postings/save', { posting: { ...base, ...extra } }));
+  }
+  // …and when both accept, they store the same facts.
+  const d: any = await demo.postings.save({ ...base, salaryMin: '18,000', shift: 'night', vacancies: 3 } as any);
+  const a: any = await api('postings/save', { posting: { ...base, salaryMin: '18,000', shift: 'night', vacancies: 3 } });
+  for (const k of ['salaryMin', 'salaryMax', 'shift', 'workSetup', 'workLocation', 'vacancies', 'filled']) {
+    assert.deepEqual(d.posting[k] ?? null, a.posting[k] ?? null, `${k} differs between the modes`);
+  }
+});
+
+test('a filled opening closes itself in both modes', async () => {
+  await demo.auth.login('hr@demo.ph', 'demo123');
+  await api('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const base = {
+    title: 'Parity One Seat', department: 'Customer Support', description: 'Hiring exactly one person here.',
+    skills: ['Customer Service'], educationLevel: 'highschool', minExperienceMonths: 0, vacancies: 1,
+  };
+  const dp: any = (await demo.postings.save(base as any)).posting;
+  const ap: any = (await api('postings/save', { posting: base })).posting;
+
+  await demo.auth.login('marco@demo.ph', 'demo123');
+  await api('auth/login', { email: 'marco@demo.ph', password: 'demo123' });
+  const dr = ((await demo.resumes.mine()) as any).resumes[0].id;
+  const ar = ((await api('resumes/list')) as any).resumes[0].id;
+  const da: any = (await demo.applications.apply(dr, dp.id)).application;
+  const aa: any = ((await api('applications/apply', { resumeId: ar, postingId: ap.id })) as any).application;
+
+  await demo.auth.login('hr@demo.ph', 'demo123');
+  await api('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const dh: any = await demo.applications.setStatus(da.id, 'hired');
+  const ah: any = await api('applications/set-status', { id: aa.id, status: 'hired' });
+  assert.equal(dh.postingClosed, true, 'demo did not close the filled opening');
+  assert.equal(ah.postingClosed, true, 'api did not close the filled opening');
+  assert.equal(((await demo.postings.get(dp.id)) as any).posting.status, 'closed');
+  assert.equal(((await api('postings/get', { id: ap.id })) as any).posting.status, 'closed');
+});

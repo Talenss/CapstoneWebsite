@@ -274,6 +274,34 @@ export const MAX_UPLOAD = 2 * 1024 * 1024; // 2 MB
  *  Reached, the applicant deletes one they no longer use; nothing is lost
  *  silently. Mirrored in server/src/config.ts; a parity test asserts the two agree. */
 export const MAX_RESUMES = 20;
+
+/* WHAT AN APPLICANT ASKS BEFORE APPLYING — pay, shift, setup, where, how
+   many. Never scored; stated facts about the job, shown on the advert and
+   filterable. All optional: an opening that leaves one blank does not state
+   it. The value lists mirror server/src/config.ts. */
+export const SHIFT_LABELS = {
+  day: 'Day shift', mid: 'Mid shift', night: 'Night shift', rotating: 'Rotating shifts', flexible: 'Flexible hours',
+} as const;
+export type Shift = keyof typeof SHIFT_LABELS;
+export const WORK_SETUP_LABELS = { onsite: 'On-site', hybrid: 'Hybrid', remote: 'Work from home' } as const;
+export type WorkSetup = keyof typeof WORK_SETUP_LABELS;
+export const MAX_MONTHLY_SALARY = 1_000_000;
+export const MAX_VACANCIES = 999;
+
+const peso = (n: number) => '₱' + n.toLocaleString('en-PH');
+/** "₱18,000 – ₱22,000 a month", "From ₱18,000 a month", or null when the
+ *  opening states no pay. A single figure reads as that figure. */
+export function salaryLabel(p: { salaryMin?: number | null; salaryMax?: number | null }): string | null {
+  const lo = p.salaryMin ?? null, hi = p.salaryMax ?? null;
+  if (lo === null && hi === null) return null;
+  if (lo !== null && hi !== null) return lo === hi ? `${peso(lo)} a month` : `${peso(lo)} – ${peso(hi)} a month`;
+  return lo !== null ? `From ${peso(lo)} a month` : `Up to ${peso(hi!)} a month`;
+}
+/** "3 openings", "1 opening", or null when the number is not stated. */
+export function openingsLabel(p: { vacancies?: number | null }): string | null {
+  const n = p.vacancies ?? null;
+  return n === null ? null : `${n} opening${n === 1 ? '' : 's'}`;
+}
 export const ALLOWED_MIME = [
   'application/pdf', 'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

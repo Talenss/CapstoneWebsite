@@ -31,6 +31,26 @@
         }
       </hlm-select-content>
     </hlm-select>
+    <hlm-select class="sel" [value]="setupF()" [itemToString]="setupFLabel" (valueChange)="setupF.set($any($event))">
+      <hlm-select-trigger aria-label="Filter by work setup">
+        <hlm-select-value placeholder="Any work setup" />
+      </hlm-select-trigger>
+      <hlm-select-content *hlmSelectPortal>
+        @for (o of setupOptions; track o.v) {
+          <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+        }
+      </hlm-select-content>
+    </hlm-select>
+    <hlm-select class="sel" [value]="shiftF()" [itemToString]="shiftFLabel" (valueChange)="shiftF.set($any($event))">
+      <hlm-select-trigger aria-label="Filter by shift">
+        <hlm-select-value placeholder="Any shift" />
+      </hlm-select-trigger>
+      <hlm-select-content *hlmSelectPortal>
+        @for (o of shiftOptions; track o.v) {
+          <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+        }
+      </hlm-select-content>
+    </hlm-select>
     <hlm-select class="sel" [value]="effectiveSort()" [itemToString]="sortLabel"
                 (valueChange)="sort.set($any($event))">
       <hlm-select-trigger aria-label="Sort openings">
@@ -71,6 +91,21 @@
               <div>
                 <h2>{{ row.posting.title }}</h2>
                 <div class="co">{{ row.company?.name }} · {{ row.posting.department }}</div>
+                <!-- Only what the opening states; an unstated fact leaves no
+                     placeholder behind. -->
+                @if (salaryLabel(row.posting) || row.posting.workSetup || row.posting.shift || openingsLabel(row.posting)) {
+                  <!-- Each fact is its own wrapping item (see .facts in browse.css):
+                       the line breaks BETWEEN facts, and the separator is drawn by
+                       CSS. An earlier version kept each " · fact" in one nowrap
+                       span, which left no break point anywhere on the line and
+                       pushed the page sideways on a 390px phone. -->
+                  <div class="co facts">
+                    @if (salaryLabel(row.posting); as pay) { <b class="pay">{{ pay }}</b> }
+                    @if (row.posting.workSetup) { <span>{{ WORK_SETUP_LABELS[row.posting.workSetup] }}</span> }
+                    @if (row.posting.shift) { <span>{{ SHIFT_LABELS[row.posting.shift] }}</span> }
+                    @if (openingsLabel(row.posting); as n) { <span>{{ n }}</span> }
+                  </div>
+                }
               </div>
               @if (row.s) {
                 <span class="score-ring" [style.--p]="row.s.score" [style.--c]="tierColor(row.s.score)"><b>{{ row.s.score }}%</b></span>
@@ -229,6 +264,13 @@
           <span class="badge slate">{{ EDU_LABELS[row.posting.educationLevel] }}</span>
           <span class="badge slate">{{ experienceLabel(row.posting.minExperienceMonths || 0) }}</span>
           <span class="badge slate">{{ row.posting.employmentType || 'full-time' }}</span>
+          @if (salaryLabel(row.posting); as pay) { <span class="badge green">{{ pay }}</span> }
+          @if (row.posting.workSetup) { <span class="badge slate">{{ WORK_SETUP_LABELS[row.posting.workSetup] }}</span> }
+          @if (row.posting.shift) { <span class="badge slate">{{ SHIFT_LABELS[row.posting.shift] }}</span> }
+          <!-- The one badge holding free text (up to 200 characters), so it is
+               allowed to wrap; every other badge is a short fixed label. -->
+          @if (row.posting.workLocation) { <span class="badge slate" style="white-space:normal;text-align:left">{{ row.posting.workLocation }}</span> }
+          @if (openingsLabel(row.posting); as n) { <span class="badge slate">{{ n }}</span> }
           @if (deadlineLabel(row.posting); as dl) {
             <span class="badge amber">{{ dl }}</span>
           }
