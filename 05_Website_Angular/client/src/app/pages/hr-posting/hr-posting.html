@@ -105,7 +105,7 @@
 
       <hr style="border:0;border-top:1px solid var(--rule);margin:26px 0">
       <h2 style="font-size:21px;margin-bottom:4px">The scoring rule</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:20px">Skills, education and experience decide how every applicant is scored. The <b>job title</b> above and the <b>field of study</b> below decide which experience and which degrees count in full; anything unrelated still counts, at half.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:20px">Skills, education and experience decide how every applicant is scored. The <b>job title</b> above and the <b>field of study</b> below decide which experience and which degrees count in full; anything unrelated still counts, at half. How much each part is worth can be <a href="#weightsSection" (click)="editWeights($event)">changed for this opening</a>.</p>
 
       <div class="field" [class.invalid]="skillsInvalid()">
         <label for="skillInput">Required skills <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">· {{ wSkills() }}% of the score</span></label>
@@ -257,10 +257,12 @@
            exactly what the recruiter sees",
            and that promise does not survive a recruiter tuning the score in
            private. -->
-      <div class="field">
+      <h3 id="weightsSection" style="font-size:17px;margin:6px 0 4px">Scoring weights</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">How much skills, education and experience are each worth for this opening. The site defaults suit most roles; change them when this one genuinely turns on one part more than the others.</p>
+      <div class="field wbox" [class.on]="customWeights()">
         <label class="wcheck">
-          <input type="checkbox" [checked]="customWeights()" (change)="toggleCustomWeights($event)">
-          <span>Set the scoring weights for this opening</span>
+          <input type="checkbox" id="customWeights" [checked]="customWeights()" (change)="toggleCustomWeights($event)">
+          <span>Use my own weights for this opening</span>
         </label>
         <p class="hint">
           @if (customWeights()) {
@@ -480,6 +482,9 @@
           <div class="r"><span>Strong match at</span><b>{{ thresholds.strong }}% and up</b></div>
           <div class="r"><span>Below {{ thresholds.related }}%</span><b>Still shown to you</b></div>
         </div>
+        <button type="button" class="btn dark sm" style="margin-top:12px;width:100%" (click)="editWeights()">
+          {{ customWeights() ? 'Adjust these weights' : 'Change the weights for this opening' }}
+        </button>
       </div>
 
       <div class="card" style="margin-top:18px">

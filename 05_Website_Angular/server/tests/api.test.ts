@@ -1873,3 +1873,18 @@ test('an opening that states no number never closes by itself', async () => {
   assert.equal(hired.body.postingClosed, undefined);
   assert.equal((await hr('postings/get', { id: made.id })).body.posting.status, 'open');
 });
+
+test('"hide below N%" is opt-in, counted, and ignores nonsense', async () => {
+  const hr = client();
+  await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const all = (await hr('applications/ranked', { postingId: '1' })).body;
+  assert.equal(all.belowMin, 0, 'nobody is hidden unless the recruiter asks');
+  for (const junk of ['abc', -20, null, 0]) {
+    const r = (await hr('applications/ranked', { postingId: '1', minScore: junk })).body;
+    assert.equal(r.matched, all.matched, `minScore ${junk} should hide nobody`);
+  }
+  const top = (await hr('applications/ranked', { postingId: '1', minScore: 500 })).body;
+  assert.ok(top.rows.every((r: any) => r.score >= 100), 'an out-of-range cutoff is capped at 100');
+  assert.equal(top.matched + top.belowMin, all.matched);
+  assert.equal(top.total, all.total, 'total stays everyone who applied');
+});

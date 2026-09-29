@@ -70,6 +70,8 @@ export interface ApiAdapter {
       total?: number;
       /** How many survived the filters, across all pages. */
       matched?: number;
+      /** Rows the opt-in minScore left out, so the page can offer them back. */
+      belowMin?: number;
       page?: number; pages?: number; pageSize?: number;
     }>>;
     /** `reason` is optional and only meaningful on a rejection. It is recorded

@@ -6,6 +6,12 @@
   font-family:var(--body);font-size:13.5px;background:var(--paper)}
 .bar input{flex:1;min-width:210px}
 .bar .n{margin-left:auto;font-size:12.5px;color:var(--muted)}
+.low-toggle{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer;white-space:nowrap}
+.bar .low-toggle input{flex:none;min-width:0;width:16px;height:16px;padding:0;accent-color:var(--text);margin:0}
+.low-note{font-size:13px;color:var(--muted);margin:-8px 0 14px;padding:10px 14px;
+  border:1px dashed var(--rule);border-radius:var(--r);background:var(--paper)}
+.low-note .linkish{background:none;border:none;padding:0;margin-left:4px;font:inherit;font-weight:600;
+  color:var(--text);text-decoration:underline;cursor:pointer}
 
 .app{display:flex;align-items:center;gap:18px;padding:20px;border-bottom:1px solid var(--rule-2);flex-wrap:wrap}
 .app:last-child{border-bottom:none}
@@ -124,7 +130,7 @@
   /* Every interactive control, by what it actually is rather than a class
      that does not exist. Buttons and .btn links do nothing on paper, and
      each row's "Open both resumes" cost a third of the row's width. */
-  .bar, .modal-back, .no-print,
+  .bar, .low-note, .modal-back, .no-print,
   button, .btn, a.btn{ display:none !important }
 
   /* Tighter rows: the on-screen spacing is generous for clicking, which

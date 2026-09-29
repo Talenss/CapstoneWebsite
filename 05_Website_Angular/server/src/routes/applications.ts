@@ -350,8 +350,14 @@ router.post('/ranked', async (req, res) => {
   const fStatus = String(req.body?.status ?? '');
   const fTier = String(req.body?.tier ?? '');
   const fFile = String(req.body?.file ?? '');
+  /* "Hide applicants below N%", an option the recruiter switches on, never a
+     default. The list still ranks everyone; this only stops drawing the low
+     scores, and `belowMin` says how many that is so the page can tell the
+     recruiter what they are not seeing and offer them back. */
+  const rawMin = Number(req.body?.minScore);
+  const minScore = Number.isFinite(rawMin) && rawMin > 0 ? Math.min(rawMin, 100) : 0;
 
-  const matchedRows = out.filter((r: any) => {
+  const filtered = out.filter((r: any) => {
     if (fStatus && r.application.status !== fStatus) return false;
     if (fTier && r.tier !== fTier) return false;
     if (fFile === 'yes' && !r.resume?.ownFile) return false;
@@ -359,6 +365,8 @@ router.post('/ranked', async (req, res) => {
     if (!q) return true;
     return (r.seeker.name + ' ' + (r.resume?.skills || []).join(' ')).toLowerCase().includes(q);
   });
+  const matchedRows = minScore ? filtered.filter((r: any) => r.score >= minScore) : filtered;
+  const belowMin = filtered.length - matchedRows.length;
 
   /* Absent pageSize means "everything", which is what this route has always
      returned. Paging is something the caller ASKS for: defaulting to a page
@@ -372,7 +380,7 @@ router.post('/ranked', async (req, res) => {
   const page = Math.min(Math.max(1, Number(req.body?.page) || 1), pages);
   const slice = pageSize ? matchedRows.slice((page - 1) * pageSize, page * pageSize) : matchedRows;
 
-  ok(res, { posting, rows: slice, total, matched: matchedRows.length, page, pages, pageSize });
+  ok(res, { posting, rows: slice, total, matched: matchedRows.length, belowMin, page, pages, pageSize });
 });
 
 /* Every status change is a HUMAN decision, and it is recorded as one. */

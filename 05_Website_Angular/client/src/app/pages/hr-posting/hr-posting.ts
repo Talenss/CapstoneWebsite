@@ -428,6 +428,23 @@ export class HrPosting {
     if (on) this.resetWeights();
   }
 
+  /** The way in from the "How it will score" card and the scoring-rule
+   *  intro. The weights used to be reachable only by finding one tick box
+   *  near the bottom of a long form, which is how an expert reviewer came
+   *  away thinking they could not be changed per opening at all. */
+  editWeights(e?: Event): void {
+    e?.preventDefault();
+    if (!this.customWeights()) {
+      this.customWeights.set(true);
+      this.resetWeights();
+    }
+    // After the weight inputs have rendered.
+    setTimeout(() => {
+      document.getElementById('weightsSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      (document.getElementById('wSkills') as HTMLInputElement | null)?.focus({ preventScroll: true });
+    });
+  }
+
   resetWeights(): void {
     this.wSkills.set(Math.round(WEIGHTS.skills * 100));
     this.wEdu.set(Math.round(WEIGHTS.education * 100));

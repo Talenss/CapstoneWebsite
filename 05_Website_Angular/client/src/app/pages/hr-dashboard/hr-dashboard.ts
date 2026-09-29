@@ -5,7 +5,7 @@ import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { HrStats, Posting } from '../../core/models';
+import { AppStatus, HrStats, Posting } from '../../core/models';
 import { STATUS_LABELS, STATUS_ORDER } from '../../core/engine';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { labelFor, SelectOption } from '../../shared/select-options';
@@ -41,7 +41,55 @@ export class HrDashboard implements OnInit {
      to read the whole page to find one. The same three controls, plus the
      one filter only this side needs: open vs closed. */
   query = signal('');
-  state = signal<'' | 'open' | 'closed' | 'expired' | 'waiting'>('');
+  state = signal<'' | 'open' | 'expired' | 'waiting'>('');
+
+  /* ---- the archive ----
+     Closed openings used to sit in the same list as the live ones, greyed
+     out, so a company that had been hiring for a year scrolled past every
+     vacancy it ever filled to find the three it is recruiting for now. They
+     are filed under Archive instead: out of the way, one click back, and
+     every application in them kept. Reopening one moves it back. */
+  view = signal<'current' | 'archive'>('current');
+  readonly currentCount = computed(() => this.postings().filter((p) => p.status !== 'closed').length);
+  readonly archivedCount = computed(() => this.postings().filter((p) => p.status === 'closed').length);
+  /** Closed openings still holding unopened applications, so the Archive
+   *  tab can say so rather than hide them. */
+  readonly archivedWaiting = computed(() =>
+    this.postings().filter((p) => p.status === 'closed' && p.newCount).length);
+  setView(v: 'current' | 'archive'): void {
+    this.view.set(v);
+    this.state.set('');
+  }
+
+  /* ---- following a number to where it comes from ----
+     Every stage count in the pipeline, and "Waiting for you" in the tally,
+     leads to the openings that number is made of. Picking one narrows the
+     openings list to those with somebody at that stage, shows how many on
+     each row, and sends "Review applicants" to the list already filtered to
+     that stage. It looks across current AND archived openings, because an
+     applicant waiting in a closed opening is still waiting. */
+  stage = signal<AppStatus | ''>('');
+  readonly stageLabel = computed(() => { const k = this.stage(); return k ? STATUS_LABELS[k] : ''; });
+  stageCount(p: Posting): number {
+    const st = this.stage();
+    return st ? (this.stats()?.byPosting?.[p.id]?.[st] ?? 0) : 0;
+  }
+  pickStage(k: AppStatus): void {
+    const next = this.stage() === k ? '' : k;
+    this.stage.set(next);
+    if (next) {
+      this.query.set('');
+      this.state.set('');
+      // After the list has re-rendered, so the scroll lands on the result.
+      setTimeout(() => document.getElementById('postSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    }
+  }
+  clearStage(): void { this.stage.set(''); }
+  /** Query params for a row's "Review applicants" link. */
+  reviewParams(p: Posting): Record<string, string> {
+    const st = this.stage();
+    return st && this.stageCount(p) ? { id: p.id, status: st } : { id: p.id };
+  }
   sort = signal<'new' | 'applicants' | 'az'>('new');
 
   /* ---- narrowing the dashboard ----
@@ -89,6 +137,9 @@ export class HrDashboard implements OnInit {
     const to = this.fTo() ? Date.parse(this.fTo() + 'T00:00:00') + 86400000 : NaN;
 
     const only = this.fPosting();
+    const stage = this.stage();
+    const cells = this.stats()?.byPosting ?? {};
+    const view = this.view();
 
     let out = this.postings().filter((p) => {
       // Picking one opening narrows this list to it as well. It was left out
@@ -96,6 +147,15 @@ export class HrDashboard implements OnInit {
       // to — but the effect was a control that changed the counters and left
       // every row in place, which reads as a control that does nothing.
       if (only && p.id !== only) return false;
+      if (stage) {
+        // A stage looks across current and archived alike (see pickStage).
+        if (!(cells[p.id]?.[stage])) return false;
+      } else if (!only) {
+        // One picked opening is shown wherever it is filed; otherwise the
+        // tab decides.
+        if (view === 'current' && p.status === 'closed') return false;
+        if (view === 'archive' && p.status !== 'closed') return false;
+      }
       if (staff && (p.ownerId ?? '') !== staff) return false;
       if (dept && p.department !== dept) return false;
       if (!Number.isNaN(from) && p.createdAt < from) return false;
@@ -104,7 +164,6 @@ export class HrDashboard implements OnInit {
       // still marked open that no longer accepts anyone. Rolling it into
       // "open" would hide exactly the rows that need attention.
       if (state === 'open' && !(p.status === 'open' && !p.expired)) return false;
-      if (state === 'closed' && p.status !== 'closed') return false;
       if (state === 'expired' && !(p.status === 'open' && p.expired)) return false;
       if (state === 'waiting' && !p.newCount) return false;
       if (!q) return true;
@@ -124,7 +183,6 @@ export class HrDashboard implements OnInit {
     { v: '', label: 'All openings' },
     { v: 'open', label: 'Open and accepting' },
     { v: 'expired', label: 'Deadline passed' },
-    { v: 'closed', label: 'Closed' },
     { v: 'waiting', label: 'Has new applicants' },
   ];
   readonly sortOptions: readonly SelectOption[] = [
@@ -155,6 +213,8 @@ export class HrDashboard implements OnInit {
     this.fStaff.set(''); this.fDept.set('');
     this.fFrom.set(''); this.fTo.set('');
     this.fPosting.set(''); this.fApplicant.set('');
+    this.dateErr.set('');
+    this.stage.set('');
     void this.loadStats();
   }
 
@@ -175,22 +235,48 @@ export class HrDashboard implements OnInit {
    *  department is appended ONLY where a title is shared, so the common case
    *  stays short and the ambiguous case stops being ambiguous. */
   readonly postingOptions = computed<readonly SelectOption[]>(() => {
-    const posts = this.postings();
+    // Newest first, like the list below, so a repost sits above the original.
+    const posts = [...this.postings()].sort((a, b) => b.createdAt - a.createdAt);
     const seen = new Map<string, number>();
-    for (const p of posts) seen.set(p.title, (seen.get(p.title) ?? 0) + 1);
-    return [
-      { v: '', label: 'All openings' },
-      ...posts.map((p) => ({
-        v: p.id,
-        label: (seen.get(p.title) ?? 0) > 1 && p.department
-          ? `${p.title} · ${p.department}`
-          : p.title,
-      })),
-    ];
+    const key = (t: string) => t.trim().toLowerCase();
+    for (const p of posts) seen.set(key(p.title), (seen.get(key(p.title)) ?? 0) + 1);
+    const opts = posts.map((p) => {
+      // The department alone did not separate a role reposted into the SAME
+      // department, which is the usual repost, so a shared title also
+      // carries the date it went up, and whether it has since closed.
+      if ((seen.get(key(p.title)) ?? 0) < 2) return { v: p.id, label: p.title };
+      const bits = [p.title];
+      if (p.department) bits.push(p.department);
+      bits.push('posted ' + this.dayYear(p.createdAt));
+      if (p.status === 'closed') bits.push('closed');
+      return { v: p.id, label: bits.join(' · ') };
+    });
+    // Reposted twice on the same day: the time it went up tells them apart,
+    // and a number does if even that is shared.
+    const count = (l: string) => opts.filter((o) => o.label === l).length;
+    const byId = new Map(posts.map((p) => [p.id, p]));
+    for (const o of opts.filter((x) => count(x.label) > 1)) {
+      o.label += ', ' + new Date(byId.get(o.v)!.createdAt).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
+    }
+    const clash = opts.filter((x) => count(x.label) > 1);
+    const n = new Map<string, number>();
+    for (const o of clash) { const i = (n.get(o.label) ?? 0) + 1; n.set(o.label, i); o.label += ` (${i})`; }
+    return [{ v: '', label: 'All openings' }, ...opts];
   });
   readonly staffLabelFn = computed(() => labelFor(this.staffOptions()));
   readonly deptLabelFn = computed(() => labelFor(this.deptOptions()));
-  readonly postingLabelFn = computed(() => labelFor(this.postingOptions()));
+  /** What the closed box shows: the short form, title and date, because the
+   *  box has a fixed width and the date is the part that tells reposts
+   *  apart. The open list keeps the full label. */
+  readonly postingLabelFn = computed(() => {
+    const full = labelFor(this.postingOptions());
+    const byId = new Map(this.postings().map((p) => [p.id, p]));
+    return (v: string): string => {
+      const label = full(v);
+      const p = byId.get(v);
+      return p && label !== p.title ? `${p.title} · ${this.day(p.createdAt)}` : label;
+    };
+  });
 
   /** Re-count the pipeline for the current filters.
    *
@@ -220,8 +306,32 @@ export class HrDashboard implements OnInit {
   setStaff(v: string): void { this.fStaff.set(v); void this.loadStats(); }
   setDept(v: string): void { this.fDept.set(v); void this.loadStats(); }
   setPosting(v: string): void { this.fPosting.set(v); void this.loadStats(); }
+  /** Today as the date box writes it (local YYYY-MM-DD), the latest day
+   *  either box accepts: nobody has applied tomorrow. */
+  readonly today = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
+  dateErr = signal('');
+  /** The min/max on the boxes stop the calendar offering an impossible day,
+   *  but a date can still be typed, so it is checked here too. An impossible
+   *  range is refused with a reason and the box goes back to what it held,
+   *  rather than quietly counting nothing. */
   onDateInput(which: 'from' | 'to', e: Event): void {
-    (which === 'from' ? this.fFrom : this.fTo).set((e.target as HTMLInputElement).value);
+    const box = e.target as HTMLInputElement;
+    const v = box.value;
+    const from = which === 'from' ? v : this.fFrom();
+    const to = which === 'to' ? v : this.fTo();
+    let err = '';
+    if (v && v > this.today) err = 'Dates cannot be later than today.';
+    else if (from && to && from > to) err = '“Applied from” has to be on or before the “to” date.';
+    if (err) {
+      this.dateErr.set(err);
+      box.value = which === 'from' ? this.fFrom() : this.fTo();
+      return;
+    }
+    this.dateErr.set('');
+    (which === 'from' ? this.fFrom : this.fTo).set(v);
     void this.loadStats();
   }
 
@@ -282,12 +392,17 @@ export class HrDashboard implements OnInit {
   day(ts: number): string {
     return new Date(ts).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
   }
+  dayYear(ts: number): string {
+    return new Date(ts).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
 
   async toggle(p: Posting): Promise<void> {
     const r = await this.api.postings.toggle(p.id);
     if (!r.ok) { this.showToast(r.error); return; }
     await this.render();
-    this.showToast(p.title + ' is now ' + r.posting.status + '.');
+    this.showToast(r.posting.status === 'closed'
+      ? p.title + ' is closed and filed under Archive. Its applications are kept.'
+      : p.title + ' is open again and back with your current openings.');
   }
 
   private showToast(msg: string): void {

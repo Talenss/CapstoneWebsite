@@ -14,7 +14,14 @@
     @if (stats(); as s) {
       <div><b>{{ s.openPostings }}</b><span>Open positions</span></div>
       <div><b>{{ s.totalApplicants }}</b><span>Total applicants</span></div>
-      <div><b [class.alert]="s.needsReview > 0">{{ s.needsReview }}</b><span>Waiting for you</span></div>
+      <!-- The number that matters most on the page, so it leads somewhere:
+           to the openings those unopened applications are sitting in. -->
+      <button type="button" class="tile" (click)="pickStage('submitted')"
+              [attr.aria-pressed]="stage() === 'submitted'"
+              [disabled]="!s.needsReview"
+              [title]="s.needsReview ? 'Show the openings with applications nobody has opened yet' : 'Nothing is waiting'">
+        <b [class.hot]="s.needsReview > 0">{{ s.needsReview }}</b><span>Waiting for you @if (s.needsReview) {<i class="go">&rarr;</i>}</span>
+      </button>
       <div><b>{{ s.byStatus.shortlisted }}</b><span>Shortlisted</span></div>
     }
   </div>
@@ -53,7 +60,7 @@
           </hlm-select-content>
         </hlm-select>
       </label>
-      <label>
+      <label class="wide">
         <span>Opening</span>
         <hlm-select class="sel" [value]="fPosting()" [itemToString]="postingLabelFn()"
                     (valueChange)="setPosting($any($event))">
@@ -65,14 +72,16 @@
           </hlm-select-content>
         </hlm-select>
       </label>
-      <label>
+      <label class="date">
         <span>Applied from</span>
         <input type="date" [value]="fFrom()" (change)="onDateInput('from', $event)"
+               [max]="fTo() || today" [class.bad]="dateErr()"
                aria-label="Applied on or after">
       </label>
-      <label>
+      <label class="date">
         <span>to</span>
         <input type="date" [value]="fTo()" (change)="onDateInput('to', $event)"
+               [min]="fFrom()" [max]="today" [class.bad]="dateErr()"
                aria-label="Applied on or before">
       </label>
       <label class="grow">
@@ -85,6 +94,10 @@
       }
     </div>
 
+    @if (dateErr()) {
+      <p class="date-err" role="alert">{{ dateErr() }}</p>
+    }
+
     <!-- Said plainly, because a filtered count that looks like a total is the
          one way this feature could mislead rather than help. -->
     @if (anyFilter()) {
@@ -94,10 +107,16 @@
       </p>
     }
 
+    <p class="pipe-hint">Click a stage to see which openings those applicants are in.</p>
     <div class="pipe" id="pipe">
       @if (stats(); as s) {
+        <!-- Each count leads to the openings it is made of. A zero has
+             nowhere to lead, so it stays a plain number. -->
         @for (k of statusOrder; track k) {
-          <div><b>{{ s.byStatus[k] }}</b><span>{{ statusLabels[k] }}</span></div>
+          <button type="button" (click)="pickStage(k)" [attr.aria-pressed]="stage() === k" [disabled]="!s.byStatus[k]"
+                  [title]="s.byStatus[k] ? 'Show the openings with applicants at ' + statusLabels[k] : 'Nobody at this stage'">
+            <b>{{ s.byStatus[k] }}</b><span>{{ statusLabels[k] }}</span>
+          </button>
         }
       }
     </div>
@@ -107,24 +126,47 @@
     <div class="head-row" style="margin-bottom:16px">
       <div>
         <h2 style="font-size:24px">Openings</h2>
-        <p style="color:var(--muted);font-size:13.5px">Close an opening to stop new applications without losing the ones you already have.</p>
+        <p style="color:var(--muted);font-size:13.5px">Close an opening to stop new applications without losing the ones you already have. Closed openings are filed under Archive.</p>
       </div>
     </div>
+    @if (!loading() && postings().length) {
+      <div class="tabs" role="tablist" aria-label="Current or archived openings">
+        <button type="button" role="tab" [attr.aria-selected]="view() === 'current' && !stage()"
+                [class.on]="view() === 'current' && !stage()" (click)="clearStage(); setView('current')">
+          Current <span class="n">{{ currentCount() }}</span>
+        </button>
+        <button type="button" role="tab" [attr.aria-selected]="view() === 'archive' && !stage()"
+                [class.on]="view() === 'archive' && !stage()" (click)="clearStage(); setView('archive')">
+          Archive <span class="n">{{ archivedCount() }}</span>
+          @if (archivedWaiting()) { <span class="badge amber">{{ archivedWaiting() }} with new</span> }
+        </button>
+      </div>
+    }
+    @if (stage()) {
+      <div class="stage-note" role="status">
+        <span>Openings with applicants at <b>{{ stageLabel() }}</b>, current and archived.</span>
+        <button class="btn ghost sm" type="button" (click)="clearStage()">Show all openings</button>
+      </div>
+    }
     @if (!loading() && postings().length) {
       <div class="filters">
         <input type="search" placeholder="Search your openings by title, department, or skill"
                aria-label="Search your openings" [value]="query()" (input)="onQueryInput($event)">
-        <hlm-select class="sel" [value]="state()" [itemToString]="stateLabel"
-                    (valueChange)="state.set($any($event))">
-          <hlm-select-trigger aria-label="Filter openings by state">
-            <hlm-select-value placeholder="All openings" />
-          </hlm-select-trigger>
-          <hlm-select-content *hlmSelectPortal>
-            @for (o of stateOptions; track o.v) {
-              <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
-            }
-          </hlm-select-content>
-        </hlm-select>
+        <!-- Open / deadline passed / new only mean something among current
+             openings; the archive is all closed by definition. -->
+        @if (view() === 'current' && !stage()) {
+          <hlm-select class="sel" [value]="state()" [itemToString]="stateLabel"
+                      (valueChange)="state.set($any($event))">
+            <hlm-select-trigger aria-label="Filter openings by state">
+              <hlm-select-value placeholder="All openings" />
+            </hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (o of stateOptions; track o.v) {
+                <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+              }
+            </hlm-select-content>
+          </hlm-select>
+        }
         <hlm-select class="sel" [value]="sort()" [itemToString]="sortLabel"
                     (valueChange)="sort.set($any($event))">
           <hlm-select-trigger aria-label="Sort openings">
@@ -136,7 +178,7 @@
             }
           </hlm-select-content>
         </hlm-select>
-        <span class="count">{{ visiblePostings().length }} of {{ postings().length }} shown</span>
+        <span class="count">{{ visiblePostings().length }} shown</span>
       </div>
     }
 
@@ -148,6 +190,17 @@
           <h2>No openings yet</h2>
           <p>Post one and applicants will start arriving here, already scored against the skills and qualifications you asked for.</p>
           <a class="btn primary" routerLink="/hr-posting">Post your first opening</a>
+        </div>
+      } @else if (!visiblePostings().length && view() === 'archive' && !archivedCount() && !stage()) {
+        <div class="empty">
+          <h2>Nothing archived yet</h2>
+          <p>When you close an opening it is filed here, with every application in it kept. Reopen it from here any time.</p>
+        </div>
+      } @else if (!visiblePostings().length && view() === 'current' && !currentCount() && !stage()) {
+        <div class="empty">
+          <h2>No current openings</h2>
+          <p>Every opening you have posted is closed and filed under Archive.</p>
+          <a class="btn primary" routerLink="/hr-posting">Post an opening</a>
         </div>
       } @else if (!visiblePostings().length) {
         <div class="empty">
@@ -175,6 +228,9 @@
                 @if (p.newCount) {
                   <span class="badge amber">{{ p.newCount }} new</span>
                 }
+                @if (stage() && stageCount(p)) {
+                  <span class="badge">{{ stageCount(p) }} at {{ stageLabel() }}</span>
+                }
               </div>
               <div class="meta">{{ p.department }} · {{ p.skills.length }} skills asked for · posted {{ day(p.createdAt) }}</div>
             </div>
@@ -188,8 +244,8 @@
                    button pointed at nothing, and a row with no applicants
                    asked for attention as loudly as a row with three. -->
               <a class="btn sm" [class.primary]="p.newCount" [routerLink]="['/hr-applicants']"
-                 [queryParams]="{ id: p.id }">
-                {{ p.applicantCount ? 'Review applicants' : 'No applicants yet' }}
+                 [queryParams]="reviewParams(p)">
+                {{ stage() && stageCount(p) ? 'Review these ' + stageCount(p) : (p.applicantCount ? 'Review applicants' : 'No applicants yet') }}
               </a>
               <a class="btn ghost sm" [routerLink]="['/hr-posting']" [queryParams]="{ id: p.id }">Edit</a>
               <button class="btn ghost sm" type="button" (click)="toggle(p)">{{ p.status === 'open' ? 'Close' : 'Reopen' }}</button>

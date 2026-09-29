@@ -921,3 +921,54 @@ test('bad contact details are refused, and good ones accepted, in both modes', a
   assert.equal(d.ok, true, `demo refused valid details: ${d.error}`);
   assert.equal(a.ok, true, `api refused valid details: ${a.error}`);
 });
+
+test('"hide below 50%" and the per-opening stage counts agree in both modes', async () => {
+  await demo.auth.login('hr@demo.ph', 'demo123');
+  await api('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const dPosts: any[] = ((await demo.postings.mine()) as any).postings;
+  const aPosts: any[] = ((await api('postings/mine')) as any).postings;
+  const key = (p: any) => p.title + ' | ' + p.department + ' | ' + p.createdAt;
+  const aByKey = new Map(aPosts.map((p) => [p.title + ' | ' + p.department, p]));
+
+  // The switch leaves the same people out, counts them the same, and is off
+  // unless asked for: no minScore means nobody is left out.
+  let sawLow = false;
+  for (const dp of dPosts) {
+    const ap = aByKey.get(dp.title + ' | ' + dp.department);
+    if (!ap) continue;
+    const dAll: any = await demo.applications.ranked(dp.id);
+    const aAll: any = await api('applications/ranked', { postingId: ap.id });
+    assert.equal(dAll.belowMin, 0, `demo hid applicants with the switch off @ ${key(dp)}`);
+    assert.equal(aAll.belowMin, 0, `api hid applicants with the switch off @ ${key(dp)}`);
+    const dHi: any = await demo.applications.ranked(dp.id, { minScore: 50 });
+    const aHi: any = await api('applications/ranked', { postingId: ap.id, minScore: 50 });
+    assert.deepEqual(dHi.rows.map((r: any) => r.score), aHi.rows.map((r: any) => r.score), dp.title);
+    assert.equal(dHi.belowMin, aHi.belowMin, dp.title);
+    assert.equal(dHi.matched + dHi.belowMin, dAll.matched, dp.title);
+    assert.equal(aHi.matched + aHi.belowMin, aAll.matched, dp.title);
+    assert.ok(aHi.rows.every((r: any) => r.score >= 50), dp.title);
+    assert.equal(aHi.total, aAll.total, 'total must stay everyone who applied');
+    if (aHi.belowMin > 0) sawLow = true;
+  }
+  assert.ok(sawLow, 'expected at least one seeded applicant below 50% to exercise the switch');
+
+  // Each stage count splits by opening, and the split adds back up to it.
+  const dS: any = (await demo.stats.hr()).stats;
+  const aS: any = ((await api('stats/hr')) as any).stats;
+  for (const [label, s, posts] of [['demo', dS, dPosts], ['api', aS, aPosts]] as const) {
+    const sums: Record<string, number> = {};
+    for (const [pid, cell] of Object.entries<any>(s.byPosting)) {
+      assert.ok((posts as any[]).some((p) => p.id === pid), `${label}: byPosting names an unknown opening ${pid}`);
+      for (const [st, n] of Object.entries<number>(cell)) {
+        assert.ok(n > 0, `${label}: a zero cell was sent`);
+        sums[st] = (sums[st] ?? 0) + n;
+      }
+    }
+    for (const [st, n] of Object.entries<number>(s.byStatus)) assert.equal(sums[st] ?? 0, n, `${label}: ${st}`);
+  }
+  const named = (s: any, posts: any[]) => Object.fromEntries(Object.entries<any>(s.byPosting).map(([pid, cell]) => {
+    const p = posts.find((x) => x.id === pid);
+    return [p.title + ' | ' + p.department + ' | ' + p.status, cell];
+  }));
+  assert.deepEqual(named(dS, dPosts), named(aS, aPosts));
+});

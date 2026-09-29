@@ -1350,7 +1350,7 @@ export class DemoAdapter implements ApiAdapter {
          sit on another, and `total` stays everyone who applied whatever the
          filters say. */
       const q = (opts?.q ?? '').trim().toLowerCase();
-      const matchedRows = (rows as any[]).filter((r) => {
+      const filtered = (rows as any[]).filter((r) => {
         if (opts?.status && r.application.status !== opts.status) return false;
         if (opts?.tier && r.tier !== opts.tier) return false;
         if (opts?.file === 'yes' && !r.resume?.ownFile) return false;
@@ -1358,6 +1358,12 @@ export class DemoAdapter implements ApiAdapter {
         if (!q) return true;
         return (r.seeker.name + ' ' + (r.resume?.skills || []).join(' ')).toLowerCase().includes(q);
       });
+      // The opt-in "hide below N%" switch, counted so the page can say how
+      // many it is not drawing. Mirrors routes/applications.ts.
+      const rawMin = Number(opts?.minScore);
+      const minScore = Number.isFinite(rawMin) && rawMin > 0 ? Math.min(rawMin, 100) : 0;
+      const matchedRows = minScore ? filtered.filter((r) => r.score >= minScore) : filtered;
+      const belowMin = filtered.length - matchedRows.length;
       const size = Number(opts?.pageSize);
       const pageSize = Number.isFinite(size) && size > 0 ? Math.min(size, 200) : 0;
       const pages = pageSize ? Math.max(1, Math.ceil(matchedRows.length / pageSize)) : 1;
@@ -1365,7 +1371,7 @@ export class DemoAdapter implements ApiAdapter {
       const slice = pageSize ? matchedRows.slice((page - 1) * pageSize, page * pageSize) : matchedRows;
 
       return apiOk({ posting: p, rows: slice as unknown as RankedRow[],
-                     total: rows.length, matched: matchedRows.length, page, pages, pageSize });
+                     total: rows.length, matched: matchedRows.length, belowMin, page, pages, pageSize });
     },
     setStatus: (applicationId: string, status: string, reason?: string | null) => {
       const db = load(); const me = meRow(db);
@@ -1692,6 +1698,13 @@ export class DemoAdapter implements ApiAdapter {
       });
 
       const byStatus: any = {}; ALL_STATUSES.forEach((s) => byStatus[s] = apps.filter((a) => a.status === s).length);
+      // Split by opening under the same filters; non-zero cells only, as the
+      // server sends them.
+      const byPosting: Record<string, Record<string, number>> = {};
+      for (const a of apps) {
+        const cell = (byPosting[a.postingId] ??= {});
+        cell[a.status] = (cell[a.status] ?? 0) + 1;
+      }
       return apiOk({
         stats: {
           openPostings: mine.filter((p) => p.status === 'open').length,
@@ -1699,6 +1712,7 @@ export class DemoAdapter implements ApiAdapter {
           totalApplicants: apps.length,
           needsReview: apps.filter((a) => a.status === 'submitted').length,
           byStatus,
+          byPosting,
         } as HrStats,
       });
     },

@@ -136,6 +136,22 @@ router.post('/hr', async (req, res) => {
   let total = 0;
   for (const r of rows) { byStatus[r.status] = Number(r.n); total += Number(r.n); }
 
+  /* The same counts split by opening, under the same filters, so each stage
+     on the dashboard can lead to the openings its number is made of. Only
+     non-zero cells are sent: an opening absent from a stage has nobody there. */
+  const cells = await query<{ posting_id: number; status: string; n: number }>(
+    `SELECT a.posting_id, a.status, COUNT(*) AS n
+       FROM applications a
+       JOIN job_postings jp ON jp.posting_id = a.posting_id
+      WHERE jp.company_id = ?${extra}
+      GROUP BY a.posting_id, a.status`, [cid, ...args],
+  );
+  const byPosting: Record<string, Record<string, number>> = {};
+  for (const c of cells) {
+    const k = String(c.posting_id);
+    (byPosting[k] ??= {})[c.status] = Number(c.n);
+  }
+
   ok(res, {
     stats: {
       openPostings: Number(p?.open_n ?? 0),
@@ -143,6 +159,7 @@ router.post('/hr', async (req, res) => {
       totalApplicants: total,
       needsReview: byStatus.submitted,
       byStatus,
+      byPosting,
     },
   });
 });

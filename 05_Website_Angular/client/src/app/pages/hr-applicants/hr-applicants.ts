@@ -101,6 +101,13 @@ export class HrApplicants {
   fStatus = signal('');
   fTier = signal('');
   fFile = signal('');
+  /** "Hide applicants below 50%", from the expert review. An option, never
+   *  the default: the list opens showing everyone, as it always has, and a
+   *  recruiter who wants a shorter list switches it on for themselves. */
+  readonly LOW_CUTOFF = 50;
+  hideLow = signal(false);
+  /** How many the switch is leaving out, under the other filters. */
+  belowMin = signal(0);
 
   current = signal<RankedRow | null>(null);
   modalStatus = signal<AppStatus>('submitted');
@@ -279,6 +286,11 @@ export class HrApplicants {
       const id = params.get('id');
       if (!id) { this.router.navigateByUrl('/hr-dashboard'); return; }
       this.postingId.set(id);
+      // Arriving from a pipeline stage on the dashboard opens the list
+      // already narrowed to that stage, so the number clicked is the list
+      // shown. Anything unrecognised is ignored rather than trusted.
+      const st = params.get('status');
+      this.fStatus.set(st && (this.statusOrder as string[]).includes(st) ? st : '');
       this.load(id);
       void this.loadCompany();
     });
@@ -297,6 +309,7 @@ export class HrApplicants {
       page: this.page(), pageSize,
       q: this.q().trim(), status: this.fStatus(), tier: this.fTier(),
       file: this.fFile() as '' | 'yes' | 'no',
+      minScore: this.hideLow() ? this.LOW_CUTOFF : 0,
     };
   }
 
@@ -310,6 +323,7 @@ export class HrApplicants {
     this.rows.set(res.rows);
     this.total.set(res.total ?? res.rows.length);
     this.matched.set(res.matched ?? res.rows.length);
+    this.belowMin.set(res.belowMin ?? 0);
     this.pages.set(res.pages ?? 1);
     this.page.set(res.page ?? 1);
     void this.countStatuses(id);
@@ -488,6 +502,8 @@ export class HrApplicants {
   onFStatus(v: string): void { this.fStatus.set(v ?? ''); void this.refilter(); }
   onFTier(v: string): void { this.fTier.set(v ?? ''); void this.refilter(); }
   onFFile(v: string): void { this.fFile.set(v ?? ''); void this.refilter(); }
+  onHideLow(e: Event): void { this.hideLow.set((e.target as HTMLInputElement).checked); void this.refilter(); }
+  showLow(): void { this.hideLow.set(false); void this.refilter(); }
   onModalStatus(v: AppStatus): void { this.modalStatus.set(v); }
 
   /** The filter bar, the status control and the interview length all store

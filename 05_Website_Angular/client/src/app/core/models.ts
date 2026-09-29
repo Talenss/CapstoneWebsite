@@ -545,6 +545,9 @@ export interface RankedQuery {
   status?: string;
   tier?: string;
   file?: '' | 'yes' | 'no';
+  /** Leave out rows scoring below this. An opt-in view setting, off (0) by
+   *  default: the list ranks everyone, and this only stops drawing some. */
+  minScore?: number;
 }
 
 export interface RankedRow extends MatchResult {
@@ -590,6 +593,9 @@ export interface HrStats {
   totalApplicants: number;
   needsReview: number;
   byStatus: Record<AppStatus, number>;
+  /** The same counts split by opening id, non-zero cells only, so a stage
+   *  can lead to the openings behind its number. */
+  byPosting?: Record<string, Partial<Record<AppStatus, number>>>;
 }
 
 /** What the recruiter dashboard can narrow its counters by. All optional:

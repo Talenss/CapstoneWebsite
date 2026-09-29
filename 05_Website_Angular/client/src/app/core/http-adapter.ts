@@ -90,7 +90,7 @@ export class HttpAdapter implements ApiAdapter {
     mine: () => this.call<{ applications: Application[] }>('applications', 'mine'),
     ranked: (postingId: string, opts?: RankedQuery) => this.call<{
       posting: Posting; rows: RankedRow[];
-      total?: number; matched?: number; page?: number; pages?: number; pageSize?: number;
+      total?: number; matched?: number; belowMin?: number; page?: number; pages?: number; pageSize?: number;
     }>('applications', 'ranked', { postingId, ...(opts ?? {}) }),
     setStatus: (id: string, status: string, reason?: string | null) =>
       this.call<{ application: Application; postingClosed?: boolean }>('applications', 'set-status', { id, status, reason: reason ?? null }),

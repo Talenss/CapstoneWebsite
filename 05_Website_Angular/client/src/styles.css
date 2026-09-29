@@ -128,6 +128,19 @@ button[data-slot="combobox-trigger"]:hover,
 button[data-slot="select-trigger"]:hover,
 button[data-slot="date-picker-trigger"]:hover { background: var(--paper); border-color: var(--ink-line); }
 
+/* Filter dropdowns keep ONE width whatever is picked. The trigger is
+   size-to-fit by default, so choosing "Final interview & selection" over
+   "All statuses" pushed every control after it along the bar, and the thing
+   just clicked moved out from under the pointer. A fixed width, with a long
+   choice cut short by an ellipsis (it is shown in full in the open list). */
+hlm-select.sel { width: 220px; max-width: 100%; flex: none; }
+hlm-select.sel > hlm-select-trigger { display: block; }
+hlm-select.sel button[data-slot="select-trigger"] { width: 100%; }
+hlm-select.sel [data-slot="select-value"] {
+  display: block; flex: 1; min-width: 0; text-align: left;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
 /* The panels these open are the same family of surface, so they carry the
    same radius as the trigger rather than shadcn's larger one. */
 hlm-combobox-content, hlm-select-content, hlm-popover-content { border-radius: var(--r); }

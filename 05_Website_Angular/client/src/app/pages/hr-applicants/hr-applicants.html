@@ -26,7 +26,11 @@
   <p class="printed-note">
     {{ matched() }} of {{ total() }} applicants
     @if (matched() !== total()) { <span>(filtered view)</span> }
-    · ranked by compatibility score, never filtered by it
+    @if (hideLow()) {
+      · ranked by compatibility score · applicants below {{ LOW_CUTOFF }}% left out at the recruiter's choice
+    } @else {
+      · ranked by compatibility score, never filtered by it
+    }
     · the score is a reading aid; the hiring decision rests with the recruiter
     · printed {{ printedOn }}
   </p>
@@ -60,6 +64,13 @@
         }
       </hlm-select-content>
     </hlm-select>
+    <!-- The recruiter's option, off by default: nobody is hidden unless the
+         person reading the list asks for it, and the note under the bar says
+         how many were left out and gives them back in one click. -->
+    <label class="low-toggle" title="Only changes what this list shows. Nobody is rejected or moved.">
+      <input type="checkbox" [checked]="hideLow()" (change)="onHideLow($event)">
+      Hide below {{ LOW_CUTOFF }}%
+    </label>
     <span class="n">{{ matched() }} of {{ total() }} shown</span>
     <!-- Both act on the FILTERED rows, so what leaves the screen is exactly
          what is on it. A recruiter who filtered to "strong only" gets the
@@ -71,6 +82,14 @@
               [disabled]="!filteredRows().length">Print list</button>
     </span>
   </div>
+
+  @if (hideLow() && belowMin() > 0) {
+    <p class="low-note" role="status">
+      {{ belowMin() }} applicant{{ belowMin() === 1 ? '' : 's' }} scoring below {{ LOW_CUTOFF }}% {{ belowMin() === 1 ? 'is' : 'are' }} hidden because you switched that on.
+      They are still in the pipeline and can still be reviewed.
+      <button type="button" class="linkish" (click)="showLow()">Show them</button>
+    </p>
+  }
 
   <div class="card flush" id="list">
     @if (loadError(); as err) {
@@ -102,6 +121,9 @@
       <div class="empty">
         <h2>Nothing matches those filters</h2>
         <p>Clear a filter to see the rest of the pool. Applicants are only ever hidden by <i>your</i> filters, never by the system.</p>
+        @if (hideLow() && belowMin() > 0) {
+          <button class="btn ghost" type="button" (click)="showLow()">Show the {{ belowMin() }} below {{ LOW_CUTOFF }}%</button>
+        }
       </div>
     } @else if (posting(); as p) {
       @for (r of filteredRows(); track r.application.id) {
