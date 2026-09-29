@@ -52,21 +52,24 @@
             <!-- `.invalid` on the WRAPPER, which is what styles.css keys on:
                  it reddens the input and is the only thing that reveals the
                  `.err` below it (`.field .err` is display:none otherwise). -->
-            <div class="field" [class.invalid]="titleClash()">
-              <label for="rtitle">Name this resume <span class="opt">optional &middot; only you see this</span></label>
+            <div class="field" [class.invalid]="titleClash() || titleMissing()">
+              <!-- Required, and honestly labelled: the recruiter DOES see this
+                   name, beside the application ("resume: …"). It used to say
+                   "only you see this", which was not true. -->
+              <label for="rtitle">Resume name <span class="opt">recruiters see this too</span></label>
               <input type="text" id="rtitle" placeholder="e.g. IT, fresh graduate" [value]="resume().title" (input)="setTitle(inputValue($event))"
                      [attr.aria-invalid]="titleClash() ? 'true' : null">
               <!-- Said while it is being typed rather than only on save: the
                    title is how you pick the right resume when you apply, and
                    two with the same name cannot be told apart. -->
-              <span class="err">You already have a resume with this name. Give this one a different title so you can tell them apart when you apply.</span>
+              <span class="err">{{ titleMissing() ? 'Give this resume a name, for example “IT, fresh graduate”.' : 'You already have a resume with this name. Give this one a different title so you can tell them apart when you apply.' }}</span>
             </div>
             <div class="row2">
               <div class="field">
                 <label for="pName">Full name</label>
                 <input type="text" id="pName" autocomplete="name" [value]="resume().personal.fullName" (input)="setPersonal('fullName', inputValue($event))">
               </div>
-              <div class="field">
+              <div class="field" [class.invalid]="!!emailErr()">
                 <!-- Not "optional": the resume needs an email OR a phone, so
                      either one alone can be left blank but both cannot. Tagging
                      these the same way as City would tell someone with no email
@@ -74,12 +77,14 @@
                      reach "ready" with nothing on screen explaining why. -->
                 <label for="pEmail">Email <span class="opt">email or phone</span></label>
                 <input type="email" id="pEmail" autocomplete="email" [value]="resume().personal.email" (input)="setPersonal('email', inputValue($event))">
+                <span class="err">{{ emailErr() }}</span>
               </div>
             </div>
             <div class="row2">
-              <div class="field">
+              <div class="field" [class.invalid]="!!phoneErr()">
                 <label for="pPhone">Phone <span class="opt">email or phone</span></label>
                 <input type="tel" id="pPhone" placeholder="0917 000 0000" [value]="resume().personal.phone" (input)="setPersonal('phone', inputValue($event))">
+                <span class="err">{{ phoneErr() }}</span>
               </div>
               <div class="field">
                 <label for="pAddr">City / province <span class="opt">optional</span></label>
@@ -93,9 +98,10 @@
               <p class="hint">One line under your name. What you are, not what you want.</p>
             </div>
             <div class="row2">
-              <div class="field">
+              <div class="field" [class.invalid]="!!linkedinErr()">
                 <label for="pLinkedin">LinkedIn <span class="opt">optional</span></label>
                 <input type="text" id="pLinkedin" placeholder="linkedin.com/in/juandelacruz" [value]="resume().personal.linkedin || ''" (input)="setPersonal('linkedin', inputValue($event))">
+                <span class="err">{{ linkedinErr() }}</span>
               </div>
               <div class="field">
                 <label for="pPortfolio">Portfolio or GitHub <span class="opt">optional</span></label>
@@ -250,6 +256,11 @@
                         <input type="checkbox" [id]="'exp-cur-' + $index" [checked]="!!e.current" (change)="toggleCurrent($index, !e.current)">
                         <span>Yes, print "Present" as the end date</span>
                       </label>
+                      @if (e.current) {
+                        <!-- Said here because the list above keeps the order
+                             it was typed in, while the resume does not. -->
+                        <p class="hint">A job you still hold is always printed first on the resume.</p>
+                      }
                     </div>
                   </div>
                   <div class="field">
@@ -788,7 +799,7 @@
             @if (visibleExperience().length) {
               <div class="p-sec">
                 <h4>Work Experience</h4>
-                @for (e of visibleExperience(); track $index) {
+                @for (e of previewExperience(); track $index) {
                   <div class="p-item">
                     <b>{{ e.position || 'Position' }}</b>
                     <i>{{ joinMeta([e.company, e.location, dateRange(e) || monthsLabel(e.months)]) }}</i>

@@ -1743,7 +1743,7 @@ test('an applicant can keep 20 resumes, and no more', async () => {
   await c('auth/login', { email: 'marco@demo.ph', password: 'demo123' });
   const draft = (title: string, id?: string) => ({ resume: {
     ...(id ? { id } : {}), title, template: 'chronological', design: 'classic',
-    personal: { fullName: 'Marco Garcia', email: 'marco@demo.ph', phone: '0917', address: '', summary: 'Two plain sentences.' },
+    personal: { fullName: 'Marco Garcia', email: 'marco@demo.ph', phone: '0917 123 4567', address: '', summary: 'Two plain sentences.' },
     education: [{ school: 'HAU', degree: 'BS Business Administration', level: 'bachelor', year: '2025' }],
     experience: [], skills: ['Teamwork'], certifications: [],
   } });

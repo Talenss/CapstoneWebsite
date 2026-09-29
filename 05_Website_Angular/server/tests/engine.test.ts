@@ -18,8 +18,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { MAX_RESUMES } from '../src/config';
+import * as serverContact from '../src/lib/contact';
 import { scoreWith, DEFAULT_SETTINGS, skillNorm, SKILL_ALIASES, EDU_RANK, MatchSettings, UNEVIDENCED_CREDIT, EVIDENCE_KINDS, EvidenceKind, evidenceLabels, OPTIONAL_WEIGHTS, EDU_FIELD_OPTIONS as SERVER_EDU_FIELD_OPTIONS, titleWords, UNRELATED_CREDIT } from '../src/lib/engine';
-import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK, UNEVIDENCED_CREDIT as CLIENT_UNEVIDENCED_CREDIT, evidenceLabels as clientEvidenceLabels, SKILL_CATEGORY, SKILL_CATALOGUE, missingHint, EDU_FIELD_OPTIONS, EDU_FIELD_VOCAB, MAX_RESUMES as CLIENT_MAX_RESUMES, titleWords as clientTitleWords, UNRELATED_CREDIT as CLIENT_UNRELATED_CREDIT } from '../../client/src/app/core/engine';
+import { scoreLocal, WEIGHTS, THRESHOLDS, normSkill, SKILL_ALIASES as CLIENT_SKILL_ALIASES, EDU_RANK as CLIENT_EDU_RANK, UNEVIDENCED_CREDIT as CLIENT_UNEVIDENCED_CREDIT, evidenceLabels as clientEvidenceLabels, SKILL_CATEGORY, SKILL_CATALOGUE, missingHint, EDU_FIELD_OPTIONS, EDU_FIELD_VOCAB, MAX_RESUMES as CLIENT_MAX_RESUMES, emailProblem, phoneProblem, linkedinProblem, experienceInPrintOrder, titleWords as clientTitleWords, UNRELATED_CREDIT as CLIENT_UNRELATED_CREDIT } from '../../client/src/app/core/engine';
 
 // ---------- helpers ----------
 
@@ -1264,4 +1265,28 @@ test('the resume limit is the same number in the server and the browser', () => 
   // or invite one it refuses.
   assert.equal(MAX_RESUMES, 20);
   assert.equal(CLIENT_MAX_RESUMES, MAX_RESUMES);
+});
+
+test('contact details: the browser and the server accept and refuse the same values', () => {
+  const cases: [('email' | 'phone' | 'linkedin'), string, boolean][] = [
+    ['email', 'juan@gmail.com', true], ['email', 'maria.santos@hau.edu.ph', true], ['email', 'wedawdawd', false], ['email', 'a@b', false],
+    ['phone', '0917 123 4567', true], ['phone', '+63 917 123 4567', true], ['phone', '(045) 123 4567', true], ['phone', '+1 415 555 0100', true],
+    ['phone', '12312321312321321312', false], ['phone', '123', false], ['phone', 'call me', false],
+    ['linkedin', 'linkedin.com/in/juandelacruz', true], ['linkedin', 'https://www.linkedin.com/in/juan-dela-cruz/', true],
+    ['linkedin', 'github.com/juan', false], ['linkedin', 'LinkedIn', false],
+    ['email', '', true], ['phone', '', true], ['linkedin', '', true], // blank is not an error here
+  ];
+  const client = { email: emailProblem, phone: phoneProblem, linkedin: linkedinProblem };
+  const server = { email: serverContact.emailProblem, phone: serverContact.phoneProblem, linkedin: serverContact.linkedinProblem };
+  for (const [kind, v, ok] of cases) {
+    assert.equal(client[kind](v) === null, ok, `browser: ${kind} "${v}"`);
+    assert.equal(server[kind](v), client[kind](v), `server and browser differ on ${kind} "${v}"`);
+  }
+});
+
+test('a job still held is printed first, and the rest keep their order', () => {
+  const order = experienceInPrintOrder([
+    { position: 'Coder' }, { position: 'Dancer', current: true }, { position: 'Intern', current: false }, { position: 'Tutor', current: true },
+  ]).map((e) => e.position);
+  assert.deepEqual(order, ['Dancer', 'Tutor', 'Coder', 'Intern']);
 });

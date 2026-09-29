@@ -6,7 +6,7 @@ import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { AppStatus, Education, Experience, InviteSchedule, Personal, Posting, RankedRow, RejectionReason, Resume, ScreeningNote, SkillEvidence, StatusEvent, Tier, RankedQuery} from '../../core/models';
-import { APPLICANT_REASON_LABELS, EDU_LABELS, EDU_RANK, EVIDENCE_KIND_LABELS, evidenceSources, experienceLabel, REASON_LABELS, REJECTION_REASONS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
+import { experienceInPrintOrder, APPLICANT_REASON_LABELS, EDU_LABELS, EDU_RANK, EVIDENCE_KIND_LABELS, evidenceSources, experienceLabel, REASON_LABELS, REJECTION_REASONS, STATUS_LABELS, STATUS_ORDER, WEIGHTS, statusBadge, tierColor, tierLabel } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
@@ -32,6 +32,8 @@ export class HrApplicants {
 
   readonly statusOrder = STATUS_ORDER;
   readonly experienceLabel = experienceLabel;
+  /** Jobs still held first, the order every screen prints them in. */
+  readonly printOrder = experienceInPrintOrder;
   readonly statusLabels = STATUS_LABELS;
   readonly eduLabels = EDU_LABELS;
 

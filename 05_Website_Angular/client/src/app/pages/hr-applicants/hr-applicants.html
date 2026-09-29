@@ -462,7 +462,7 @@
               @if (r.resume.experience.length) {
                 <div class="p-sec">
                   <h4>Work Experience</h4>
-                  @for (e of r.resume.experience; track $index) {
+                  @for (e of printOrder(r.resume.experience); track $index) {
                     <div class="p-item">
                       <b>{{ e.position }}</b>
                       <i>{{ join([e.company, e.location, dateRange(e) || monthsLabel(e.months)]) }}</i>

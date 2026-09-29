@@ -11,6 +11,7 @@ import { fetchResume, prefetchResumeChildren, serializeResume, recruiterMayReadR
 import { EDU_RANK, EVIDENCE_KINDS, EvidenceKind, evidenceLabels, skillId, skillNorm } from '../lib/engine';
 import { extractResume } from '../lib/extract';
 import { MAX_UPLOAD, ALLOWED_MIME, MAX_RESUMES } from '../config';
+import { emailProblem, phoneProblem, linkedinProblem } from '../lib/contact';
 import { putFile, deleteFile } from '../lib/storage';
 import { sniffBytes, typeMatches } from '../lib/file-type';
 
@@ -105,6 +106,14 @@ router.post('/save', async (req, res) => {
   }
   if (!hasSkills) {
     return fail(res, 'Add at least one skill before saving — skills carry the largest share of every match score.');
+  }
+  /* Contact details that can actually reach someone — see lib/contact.ts.
+     Refused, not cleaned up: a recruiter must never be shown a number or an
+     address that the system quietly guessed at. */
+  {
+    const pp = (R.personal ?? {}) as any;
+    const problem = emailProblem(pp.email) ?? phoneProblem(pp.phone) ?? linkedinProblem(pp.linkedin);
+    if (problem) return fail(res, problem);
   }
 
   /* SECTIONS THE APPLICANT SWITCHED OFF. parseHiddenSections keeps only the

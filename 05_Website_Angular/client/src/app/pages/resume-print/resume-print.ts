@@ -3,7 +3,7 @@ import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
-import { DESIGN_ORDER, visibleResume } from '../../core/engine';
+import { DESIGN_ORDER, visibleResume, experienceInPrintOrder } from '../../core/engine';
 import { Resume } from '../../core/models';
 
 type SectionKind = 'education' | 'experience' | 'skills' | 'projects' | 'certifications';
@@ -23,6 +23,8 @@ const PAPER_KEY = 'linaw_paper_size';
   styleUrl: './resume-print.css',
 })
 export class ResumePrint implements OnInit, OnDestroy {
+  /** Jobs still held first, the order every screen prints them in. */
+  readonly printOrder = experienceInPrintOrder;
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   private location = inject(Location);

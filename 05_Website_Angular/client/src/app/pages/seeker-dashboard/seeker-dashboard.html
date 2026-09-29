@@ -85,7 +85,12 @@
                       <span class="chip">{{ s }}</span>
                     }
                     @if (item.missingSkills.length) {
-                      <span class="chip more">+{{ item.missingSkills.length }} more asked for</span>
+                      <!-- A button now: it looked clickable and did nothing. It
+                           opens the full breakdown — every skill the applicant
+                           HAS, the education and experience asked for, and the
+                           KINDS of skill still missing, never their names. -->
+                      <button type="button" class="chip more" (click)="openApply(item)"
+                              title="See everything this opening asks for">+{{ item.missingSkills.length }} more asked for</button>
                     }
                   </div>
                   <div class="req">
@@ -95,7 +100,12 @@
                   <div class="foot">
                     <span>{{ item.matchedSkills.length }} of {{ item.posting.skills.length }} skills</span>
                     @if (item.applied) {
-                      <span class="badge slate">Applied</span>
+                      <!-- Applied openings keep their breakdown within reach;
+                           before, the card lost its only button on applying. -->
+                      <span style="display:flex;gap:8px;align-items:center">
+                        <span class="badge slate">Applied</span>
+                        <button class="btn ghost sm" type="button" (click)="openApply(item)">Details</button>
+                      </span>
                     } @else {
                       <button class="btn primary sm" type="button" (click)="openApply(item)">View &amp; apply</button>
                     }
@@ -160,12 +170,41 @@
         <div><b>{{ countByStatus('hired') }}</b><span>Hired</span></div>
       </div>
     }
+    @if (applications().length) {
+      <div class="app-filters">
+        <div class="f">
+          <label for="afStatus">Status</label>
+          <hlm-select [value]="appStatusF()" [itemToString]="appStatusLabel" (valueChange)="appStatusF.set($any($event))">
+            <hlm-select-trigger id="afStatus" class="w-full"><hlm-select-value placeholder="All statuses" /></hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (o of appStatusOptions(); track o.v) {
+                <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+              }
+            </hlm-select-content>
+          </hlm-select>
+        </div>
+        <div class="f">
+          <label for="afFrom">Applied from</label>
+          <input type="date" id="afFrom" [max]="appTo() || todayISO" [value]="appFrom()" (change)="appFrom.set(dateOf($event))">
+        </div>
+        <div class="f">
+          <label for="afTo">To</label>
+          <input type="date" id="afTo" [min]="appFrom() || null" [max]="todayISO" [value]="appTo()" (change)="appTo.set(dateOf($event))">
+        </div>
+        <div class="f end">
+          <span class="shown">{{ filteredApps().length }} of {{ applications().length }} shown</span>
+          @if (appFiltersOn()) {
+            <button class="btn ghost sm" type="button" (click)="clearAppFilters()">Clear filters</button>
+          }
+        </div>
+      </div>
+    }
     <div class="card flush" style="margin-top:18px">
       <div class="wrap-x">
         <table class="tbl" id="apps">
           <thead><tr><th>Position</th><th>Company</th><th>Resume sent</th><th>Score sent</th><th>Applied</th><th>Status</th><th></th></tr></thead>
           <tbody>
-            @for (a of applications(); track a.id) {
+            @for (a of filteredApps(); track a.id) {
               <tr>
                 <td><b>{{ a.posting ? a.posting.title : 'Removed' }}</b></td>
                 <td>{{ a.company ? a.company.name : '—' }}</td>
@@ -266,6 +305,12 @@
                   </td>
                 </tr>
               }
+            }
+            @if (applications().length && !filteredApps().length) {
+              <tr><td colspan="7" style="text-align:center;padding:22px;color:var(--muted)">
+                No applications match these filters.
+                <button class="btn ghost sm" type="button" style="margin-left:8px" (click)="clearAppFilters()">Clear filters</button>
+              </td></tr>
             }
           </tbody>
         </table>
@@ -388,9 +433,13 @@
            dismiss this, so a fourth control here was only another way to do
            what three already did. -->
       <div class="modal-foot">
-        <button class="btn primary" type="button" [disabled]="applying()" (click)="applyNow()">
-          @if (applying()) { <span class="spinner"></span> Sending… } @else { Apply now }
-        </button>
+        @if (item.applied) {
+          <span class="badge slate">You applied to this opening</span>
+        } @else {
+          <button class="btn primary" type="button" [disabled]="applying()" (click)="applyNow()">
+            @if (applying()) { <span class="spinner"></span> Sending… } @else { Apply now }
+          </button>
+        }
       </div>
     </div>
   }

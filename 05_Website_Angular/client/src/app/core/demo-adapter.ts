@@ -5,7 +5,7 @@
    ============================================================ */
 import { ApiAdapter } from './adapter';
 import { AnalyzedResume, ApiResult, AppStatus, Application, ApplicationAnswer, Company, EvidenceKind, RejectionReason, HrStats, HrStatsFilters, InviteSchedule, MatchResult, Posting, PostingQuestion, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User, RankedQuery} from './models';
-import { passwordOk, PASSWORD_HINT, scoreLocal, visibleResume, RESUME_SECTIONS, OPTIONAL_WEIGHTS, WEIGHT_FLOOR, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert, EDU_FIELD_OPTIONS, EDU_FIELD_ANY, MAX_RESUMES, SHIFT_LABELS, WORK_SETUP_LABELS, MAX_MONTHLY_SALARY, MAX_VACANCIES } from './engine';
+import { passwordOk, PASSWORD_HINT, scoreLocal, visibleResume, RESUME_SECTIONS, OPTIONAL_WEIGHTS, WEIGHT_FLOOR, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert, EDU_FIELD_OPTIONS, EDU_FIELD_ANY, MAX_RESUMES, emailProblem, phoneProblem, linkedinProblem, SHIFT_LABELS, WORK_SETUP_LABELS, MAX_MONTHLY_SALARY, MAX_VACANCIES } from './engine';
 
 const KEY = 'linaw_v3_db';
 
@@ -669,6 +669,13 @@ export class DemoAdapter implements ApiAdapter {
       }
       if (!hasSkills) {
         return apiFail('Add at least one skill before saving — skills carry the largest share of every match score.');
+      }
+      // Contact details that can reach someone — the same rules and wording as
+      // routes/resumes.ts (lib/contact.ts on the server).
+      {
+        const pp: any = resume.personal || {};
+        const problem = emailProblem(pp.email) ?? phoneProblem(pp.phone) ?? linkedinProblem(pp.linkedin);
+        if (problem) return apiFail(problem);
       }
 
       const p: any = resume.personal || {};

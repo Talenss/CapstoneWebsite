@@ -53,7 +53,7 @@
           @if (r.experience.length) {
             <section>
               <h2>Work Experience</h2>
-              @for (e of r.experience; track $index) {
+              @for (e of printOrder(r.experience); track $index) {
                 <div class="item">
                   <h3>{{ e.position }}</h3>
                   <p class="meta">{{ join([e.company, e.location, dateRange(e) || monthsLabel(e.months)]) }}</p>

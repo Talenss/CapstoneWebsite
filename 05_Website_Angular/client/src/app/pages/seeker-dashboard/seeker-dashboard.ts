@@ -55,6 +55,35 @@ export class SeekerDashboard implements OnInit {
      empty state tells "nothing posted" from "nothing matched you". */
   openCount = signal(0);
   applications = signal<Application[]>([]);
+
+  /* FILTERS ON "MY APPLICATIONS" — by status and by the day applied. Dates
+     compare as local calendar days (YYYY-MM-DD), which is how the table
+     prints them, so "to Sep 18" includes everything applied on Sep 18. The
+     date pickers refuse the future and a "from" later than "to". */
+  appStatusF = signal('');
+  appFrom = signal('');
+  appTo = signal('');
+  readonly todayISO = new Date().toLocaleDateString('en-CA');
+  private dayOf = (ms: number) => new Date(ms).toLocaleDateString('en-CA');
+  /** Only statuses the applicant actually has, so no choice leads to nothing. */
+  appStatusOptions = computed(() => [{ v: '', label: 'All statuses' },
+    ...[...new Set(this.applications().map((a) => a.status))].map((v) => ({ v, label: STATUS_LABELS[v as AppStatus] ?? v }))]);
+  readonly appStatusLabel = (v: string): string =>
+    this.appStatusOptions().find((o) => o.v === (v ?? ''))?.label ?? 'All statuses';
+  filteredApps = computed(() => {
+    const st = this.appStatusF(), from = this.appFrom(), to = this.appTo();
+    return this.applications().filter((a) => {
+      if (st && a.status !== st) return false;
+      const d = this.dayOf(a.appliedAt);
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+      return true;
+    });
+  });
+  appFiltersOn = computed(() => !!(this.appStatusF() || this.appFrom() || this.appTo()));
+  clearAppFilters(): void { this.appStatusF.set(''); this.appFrom.set(''); this.appTo.set(''); }
+  dateOf(e: Event): string { return (e.target as HTMLInputElement).value; }
+
   current = signal<RecommendationItem | null>(null);
   applying = signal(false);
   toastMsg = signal<string | null>(null);

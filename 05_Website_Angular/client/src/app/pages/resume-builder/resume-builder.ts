@@ -8,7 +8,7 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { AnalysisService } from '../../core/analysis.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, visibleResume, WEIGHTS, DEGREE_CATALOGUE, SKILL_CATALOGUE, MAX_RESUMES } from '../../core/engine';
+import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, visibleResume, WEIGHTS, DEGREE_CATALOGUE, SKILL_CATALOGUE, MAX_RESUMES, emailProblem, phoneProblem, linkedinProblem, experienceInPrintOrder } from '../../core/engine';
 import { Education, EduLevel, EvidenceKind, Experience, Language, Project, Reference, Resume, ResumeDesign, ResumeLink, ResumeSection, SkillEvidence, Template } from '../../core/models';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 
@@ -74,6 +74,11 @@ export class ResumeBuilder implements OnInit {
   /** The original file from the Upload & Analyze flow, attached to the
    *  resume as the recruiter-visible "own file" after the first save. */
   private pendingAnalysisFile: File | null = null;
+  /** True when this visit STARTED a new resume (no id in the URL) — built from
+   *  scratch or from an uploaded file. Such a resume becomes the active one
+   *  when the applicant finishes it; editing an existing resume never moves
+   *  "active" on its own. */
+  private createdHere = false;
 
   /** The skills the analyzer read OUT of that file, kept from the prefill so
    *  they can be credited to it once it is attached. Skills typed by hand
@@ -129,6 +134,17 @@ export class ResumeBuilder implements OnInit {
   private otherTitles = signal<{ id: string | null; title: string }[]>([]);
 
   readonly MAX_RESUMES = MAX_RESUMES;
+
+  /* Contact details, checked as they are typed — the same rules the server
+     binds (lib/contact.ts), so what the field accepts is what saves. Null
+     while blank: "email or phone" is its own rule, and a field someone has
+     not reached yet is not an error. */
+  emailErr = computed(() => emailProblem(this.resume().personal.email));
+  phoneErr = computed(() => phoneProblem(this.resume().personal.phone));
+  linkedinErr = computed(() => linkedinProblem(this.resume().personal.linkedin));
+  /** The resume's name is required: it is what the applicant picks from when
+   *  applying, and what the recruiter sees beside the application. */
+  titleMissing = computed(() => !this.resume().title.trim());
   /** A NEW resume when the applicant already holds the most they can keep.
    *  Said at the top of the builder from the start, so nobody fills in seven
    *  steps only to be refused at the end. Editing an existing one is never
@@ -176,6 +192,9 @@ export class ResumeBuilder implements OnInit {
   });
   visibleEducation = computed(() => this.resume().education.filter((e) => e.school || e.degree));
   visibleExperience = computed(() => this.resume().experience.filter((e) => e.position || e.company));
+  /** The live preview's order: jobs still held first, as every printed copy
+   *  has them. The step's own list keeps the order the applicant typed. */
+  previewExperience = computed(() => experienceInPrintOrder(this.visibleExperience()));
   /* A switched-off section is empty HERE too, not only on the saved sheet.
      The preview beside the form is the applicant's only view of what the
      recruiter will get; if hiding a section left it standing in the preview,
@@ -316,6 +335,7 @@ export class ResumeBuilder implements OnInit {
   async ngOnInit(): Promise<void> {
     const user = this.session.user()!;
     const id = this.route.snapshot.queryParamMap.get('id');
+    this.createdHere = !id;
     const welcome = this.route.snapshot.queryParamMap.get('welcome');
 
     const fromAnalysis = this.route.snapshot.queryParamMap.get('from') === 'analysis';
@@ -864,9 +884,20 @@ export class ResumeBuilder implements OnInit {
     this.formError.set(null);
 
     let r = this.resume();
-    if (!r.title.trim()) {
-      r = { ...r, title: this.freeTitle('Untitled resume') };
-      this.resume.set(r);
+    /* A NAME IS REQUIRED. It used to fall back to "Untitled resume", which is
+       how an applicant ended up with several resumes nobody could tell apart
+       in the picker. The builder pre-fills a free name, so this only stops
+       someone who cleared it. */
+    if (this.titleMissing()) {
+      this.formError.set('Give this resume a name, so you can tell it apart when you apply. A recruiter sees the name too.');
+      this.goTo(0);
+      return false;
+    }
+    const contact = this.emailErr() ?? this.phoneErr() ?? this.linkedinErr();
+    if (contact) {
+      this.formError.set(contact);
+      this.goTo(0);
+      return false;
     }
 
     if (this.atResumeLimit()) {
@@ -966,6 +997,15 @@ export class ResumeBuilder implements OnInit {
     }
 
     if (andLeave) {
+      /* A NEW RESUME BECOMES THE ACTIVE ONE once it is finished — the one just
+         built is the one the applicant expects the board to score. Only on
+         Finish, never on "Save draft": a half-built draft taking over the
+         scoring would drop every match on the board. If this fails, the
+         resume is still saved; the applicant can make it active by hand. */
+      if (this.createdHere && this.resume().id) {
+        const act = await this.api.resumes.setActive(this.resume().id!);
+        if (act.ok) this.createdHere = false;
+      }
       this.showToast('Resume saved. Scoring it now…');
       setTimeout(() => this.router.navigateByUrl('/seeker-dashboard'), 700);
     } else {
@@ -1145,7 +1185,8 @@ export class ResumeBuilder implements OnInit {
       .map((e) => `<div class="p-item"><b>${esc([e.degree || 'Degree', e.field].filter(Boolean).join(', '))}</b>`
         + `<i>${meta([e.school, e.location, e.year])}</i>${e.honors ? `<p>${esc(e.honors)}</p>` : ''}</div>`)
       .join('');
-    const expHtml = this.visibleExperience()
+    // Jobs still held first — the order every screen prints them in.
+    const expHtml = experienceInPrintOrder(this.visibleExperience())
       .map((e) => `<div class="p-item"><b>${esc(e.position || 'Position')}</b>`
         + `<i>${meta([e.company, e.location, this.dateRange(e) || (e.months ? e.months + ' month' + (e.months > 1 ? 's' : '') : '')])}</i>`
         + `${e.description ? `<p>${esc(e.description)}</p>` : ''}`

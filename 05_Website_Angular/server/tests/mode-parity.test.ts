@@ -231,7 +231,7 @@ test('a resume title already taken is refused in both modes', async () => {
   const draft = (title: string) => ({
     title,
     template: 'chronological', design: 'classic',
-    personal: { fullName: 'Marco Dizon', email: 'marco@demo.ph', phone: '0917', address: '', summary: 'A summary of two plain sentences.' },
+    personal: { fullName: 'Marco Dizon', email: 'marco@demo.ph', phone: '0917 123 4567', address: '', summary: 'A summary of two plain sentences.' },
     education: [{ school: 'HAU', degree: 'BS Information Technology', level: 'bachelor', year: '2025' }],
     experience: [], skills: ['Customer Service'], certifications: [],
   });
@@ -247,8 +247,11 @@ test('a resume title already taken is refused in both modes', async () => {
   // ...and a free title is still accepted, or the rule would read as a pass
   // simply by refusing everything.
   const free = 'Parity draft ' + Date.now();
-  await agree('a title nobody holds',
-    demo.resumes.save(draft(free) as any), api('resumes/save', { resume: draft(free) }));
+  const [dFree, aFree]: any[] = await Promise.all([demo.resumes.save(draft(free) as any), api('resumes/save', { resume: draft(free) })]);
+  // Asserted as a SUCCESS, not merely as agreement: two modes refusing a
+  // valid draft for some other reason would "agree" and prove nothing.
+  assert.equal(dFree.ok, true, `demo refused a free title: ${dFree.error}`);
+  assert.equal(aFree.ok, true, `api refused a free title: ${aFree.error}`);
 });
 
 test('duplicating twice gives each copy a title of its own, in both modes', async () => {
@@ -825,7 +828,7 @@ test('the resume limit is enforced identically in both modes', async () => {
   await api('auth/login', { email: 'ana@demo.ph', password: 'demo123' });
   const draft = (title: string) => ({
     title, template: 'chronological', design: 'classic',
-    personal: { fullName: 'Ana Reyes', email: 'ana@demo.ph', phone: '0917', address: '', summary: 'Two plain sentences.' },
+    personal: { fullName: 'Ana Reyes', email: 'ana@demo.ph', phone: '0917 123 4567', address: '', summary: 'Two plain sentences.' },
     education: [{ school: 'HAU', degree: 'BS Computer Science', level: 'bachelor', year: '2025' }],
     experience: [], skills: ['Teamwork'], certifications: [],
   });
@@ -888,4 +891,33 @@ test('a filled opening closes itself in both modes', async () => {
   assert.equal(ah.postingClosed, true, 'api did not close the filled opening');
   assert.equal(((await demo.postings.get(dp.id)) as any).posting.status, 'closed');
   assert.equal(((await api('postings/get', { id: ap.id })) as any).posting.status, 'closed');
+});
+
+test('bad contact details are refused, and good ones accepted, in both modes', async () => {
+  // Juan: Liza's password is changed by the policy test above, and Ana is at
+  // the resume limit by now. Sign-in is ASSERTED, so a failed login cannot
+  // make every refusal below "agree" for the wrong reason.
+  const dl: any = await demo.auth.login('seeker@demo.ph', 'demo123');
+  const al: any = await api('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  assert.equal(dl.ok && al.ok, true, 'the harness must be signed in as the applicant in both modes');
+  const draft = (personal: any, title: string) => ({
+    title, template: 'chronological', design: 'classic',
+    personal: { fullName: 'Juan Dela Cruz', email: 'seeker@demo.ph', phone: '0917 123 4567', address: '', summary: 'Two plain sentences.', ...personal },
+    education: [{ school: 'HAU', degree: 'BS Information Technology', level: 'bachelor', year: '2025' }],
+    experience: [], skills: ['Teamwork'], certifications: [],
+  });
+  for (const [label, personal] of [
+    ['an email with no @', { email: 'wedawdawd' }],
+    ['a 20-digit phone', { phone: '12312321312321321312' }],
+    ['a LinkedIn field holding a GitHub link', { linkedin: 'github.com/juan' }],
+  ] as const) {
+    const [d, a]: any[] = await Promise.all([demo.resumes.save(draft(personal, 'Bad ' + label) as any), api('resumes/save', { resume: draft(personal, 'Bad ' + label) })]);
+    assert.equal(d.ok, false, `demo accepted ${label}`);
+    assert.equal(a.ok, false, `api accepted ${label}`);
+    assert.equal(d.error, a.error, `${label}: the two modes say different things`);
+  }
+  const good = { email: 'juan.delacruz@gmail.com', phone: '+63 917 123 4567', linkedin: 'linkedin.com/in/juandelacruz' };
+  const [d, a]: any[] = await Promise.all([demo.resumes.save(draft(good, 'Good contact') as any), api('resumes/save', { resume: draft(good, 'Good contact') })]);
+  assert.equal(d.ok, true, `demo refused valid details: ${d.error}`);
+  assert.equal(a.ok, true, `api refused valid details: ${a.error}`);
 });
