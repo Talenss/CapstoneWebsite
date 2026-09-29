@@ -4,6 +4,7 @@ import {
   ActivatedRoute, NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Router, RouterOutlet,
 } from '@angular/router';
 import { Seo, SeoData } from './core/seo';
+import { DialogHost } from './shared/dialog/dialog-host';
 
 /** Each page owns its own <app-header>/<app-footer> (variants differ too
  *  much across guest/seeker/recruiter/auth/print to share one app shell),
@@ -23,7 +24,7 @@ import { Seo, SeoData } from './core/seo';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, DialogHost],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

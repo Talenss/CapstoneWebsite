@@ -1,3 +1,4 @@
+import { DialogService } from '../../shared/dialog/dialog.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { OtpInput } from '../../shared/otp-input/otp-input';
@@ -22,6 +23,7 @@ import { PasswordRevealDirective } from '../../shared/password-reveal.directive'
   styleUrl: './account.css',
 })
 export class Account {
+  private dialog = inject(DialogService);
   private api = inject(ApiService);
   session = inject(SessionService);
 
@@ -237,7 +239,11 @@ export class Account {
     this.delInvalid.set(!delPwInput.value);
     if (!reportInvalidFields([{ id: 'delPw', invalid: !delPwInput.value }])) return;
 
-    if (!confirm('Delete your account and everything in it? This cannot be undone.')) return;
+    if (!(await this.dialog.confirm({
+      title: 'Delete your account?',
+      message: 'Your account and everything in it, every resume, file and application, will be deleted. This cannot be undone.',
+      confirmLabel: 'Delete my account', cancelLabel: 'Keep my account', danger: true,
+    }))) return;
 
     this.delSaving.set(true);
     const res = await this.api.auth.deleteAccount(delPwInput.value);
@@ -247,7 +253,10 @@ export class Account {
       this.msg.set(res.error);
       return;
     }
-    alert('Your account and all of its data have been deleted.');
+    await this.dialog.notice({
+      title: 'Your account has been deleted',
+      message: 'Your account and all of its data are gone. You will be taken to the home page.',
+    });
     location.href = '/';
   }
 

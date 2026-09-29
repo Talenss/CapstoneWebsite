@@ -52,7 +52,7 @@
   display: flex; gap:10px; align-items: flex-start; transition: .15s; background: var(--paper);
 }
 .roles label:has(input:checked) { border-color: var(--accent); background: var(--accent-wash); }
-.roles input { margin-top:4px; accent-color: var(--accent-deep); width: auto; }
+.roles input { margin-top:4px; accent-color: var(--focus); width: auto; }
 .roles b { display: block; font-size: 13.5px; color:var(--text); }
 .roles small { display: block; font-size: 12px; color: var(--muted); margin-top:4px; line-height: 1.5; }
 

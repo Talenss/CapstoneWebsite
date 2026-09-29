@@ -1,3 +1,4 @@
+import { DialogService } from '../../shared/dialog/dialog.service';
 import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
@@ -27,6 +28,7 @@ interface TierConfig { key: TierKey; title: string; badgeClass: string; note: st
   styleUrl: './seeker-dashboard.css',
 })
 export class SeekerDashboard implements OnInit {
+  private dialog = inject(DialogService);
   private api = inject(ApiService);
   session = inject(SessionService);
   private tour = inject(TourService);
@@ -221,7 +223,11 @@ export class SeekerDashboard implements OnInit {
 
   async withdraw(a: Application): Promise<void> {
     const title = a.posting?.title ?? 'this position';
-    if (!confirm(`Withdraw your application for ${title}?\n\nThe recruiter will see that you withdrew, and you can apply again later if the opening is still accepting applications.`)) return;
+    if (!(await this.dialog.confirm({
+      title: `Withdraw your application for ${title}?`,
+      message: 'The recruiter will see that you withdrew, and you can apply again later if the opening is still accepting applications.',
+      confirmLabel: 'Withdraw application', cancelLabel: 'Keep it', danger: true,
+    }))) return;
     this.withdrawingId.set(a.id);
     const res = await this.api.applications.withdraw(a.id);
     this.withdrawingId.set(null);

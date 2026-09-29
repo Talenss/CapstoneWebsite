@@ -1,3 +1,4 @@
+import { DialogService } from '../../shared/dialog/dialog.service';
 import { Component, OnInit, inject, signal, computed} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
@@ -17,6 +18,7 @@ import { MAX_RESUMES } from '../../core/engine';
   styleUrl: './my-resumes.css',
 })
 export class MyResumes implements OnInit {
+  private dialog = inject(DialogService);
   private api = inject(ApiService);
 
   loaded = signal(false);
@@ -102,7 +104,19 @@ export class MyResumes implements OnInit {
    *  from "Front office", so it belongs where the resumes are listed. */
   async renameResume(r: Resume): Promise<void> {
     if (!r.id) return;
-    const answer = prompt('What should this resume be called?', r.title);
+    // Other resumes' names, so a clash is caught in the box, before saving.
+    const taken = new Set(this.resumes().filter((x) => x.id !== r.id)
+      .map((x) => (x.title || '').trim().toLowerCase()));
+    const answer = await this.dialog.prompt({
+      title: 'Rename this resume', label: 'Resume name', value: r.title, confirmLabel: 'Rename', maxLength: 120,
+      message: 'Recruiters see this name beside your application.',
+      validate: (v) => {
+        const t = v.trim().replace(/\s+/g, ' ');
+        if (!t) return 'A resume needs a name.';
+        if (taken.has(t.toLowerCase())) return 'You already have a resume with this name.';
+        return '';
+      },
+    });
     if (answer === null) return;                       // Cancel
     const title = answer.trim().replace(/\s+/g, ' ').slice(0, 120);
     if (!title) { this.showToast('A resume needs a name.'); return; }
@@ -133,7 +147,11 @@ export class MyResumes implements OnInit {
 
   async deleteResume(r: Resume): Promise<void> {
     if (!r.id) return;
-    if (!confirm(`Delete "${r.title}"? This can’t be undone.`)) return;
+    if (!(await this.dialog.confirm({
+      title: `Delete "${r.title}"?`,
+      message: 'This can’t be undone.',
+      confirmLabel: 'Delete resume', danger: true,
+    }))) return;
     const d = await this.api.resumes.remove(r.id);
     if (!d.ok) {
       this.showToast(d.error);

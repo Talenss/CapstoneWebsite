@@ -7,7 +7,7 @@
 .kv b{font-weight:600}
 .notify-toggle{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--rule);border-radius:var(--r);padding:14px 16px;cursor:pointer;background:var(--paper);font-size:14px;line-height:1.6}
 .notify-toggle:has(input:checked){border-color:var(--accent);background:var(--accent-wash)}
-.notify-toggle input{margin-top:4px;accent-color:var(--accent-deep);width:auto}
+.notify-toggle input{margin-top:4px;accent-color:var(--focus);width:auto}
 .notify-toggle b{font-weight:700}
 /* Padded to clear the 24px minimum tap target — at 12.5px the text box alone
    is about 15px tall, which is a hard thing to hit with a thumb. */

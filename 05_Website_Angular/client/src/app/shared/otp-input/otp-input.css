@@ -2,7 +2,7 @@
 
    Deliberately minimal: these are .field input elements sitting inside the
    page's existing .field wrapper, so the border, the background, the radius
-   and the red focus ring all come from the global rules and match every
+   and the focus ring all come from the global rules and match every
    other control on the form. Only the things that must differ are set here.
 
    In particular NOTHING here sets border-color or background. The global

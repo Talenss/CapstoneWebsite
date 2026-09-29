@@ -6,7 +6,7 @@
 
 .consent{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--accent-line);background:var(--accent-wash);
   border-radius:var(--r);padding:14px 16px;cursor:pointer}
-.consent input{margin-top:4px;accent-color:var(--accent-deep);width:auto;flex:none}
+.consent input{margin-top:4px;accent-color:var(--focus);width:auto;flex:none}
 /* A token, not a fixed olive — this is the statement the applicant is
    agreeing to, and the old colour was unreadable once the theme went dark. */
 .consent span{font-size:13px;line-height:1.6;color:var(--text)}

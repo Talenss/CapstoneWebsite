@@ -96,7 +96,7 @@
   border: 1px solid var(--rule); border-radius: 8px; padding:12px 14px; background: var(--paper);
   transition: border-color .15s, box-shadow .15s;
 }
-.src-card:focus-within { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-wash); }
+.src-card:focus-within { border-color: var(--focus); box-shadow: 0 0 0 3px var(--focus-wash); }
 .src-head { display: flex; align-items: center; flex-wrap: wrap; gap:6px 8px; margin-bottom:10px; }
 .src-head b { font-size: 14px; color: var(--ink); }
 .src-kind {

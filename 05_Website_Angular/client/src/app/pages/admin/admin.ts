@@ -1,3 +1,4 @@
+import { DialogService } from '../../shared/dialog/dialog.service';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
@@ -20,6 +21,7 @@ import { HlmSelectImports } from '@spartan-ng/helm/select';
   styleUrl: './admin.css',
 })
 export class Admin implements OnInit {
+  private dialog = inject(DialogService);
   private api = inject(ApiService);
   session = inject(SessionService);
 
@@ -92,7 +94,11 @@ export class Admin implements OnInit {
   }
 
   async decline(r: RecruiterRequest): Promise<void> {
-    if (!confirm(`Decline ${r.name}'s request? They'll be told the request couldn't be verified.`)) return;
+    if (!(await this.dialog.confirm({
+      title: `Decline ${r.name}'s request?`,
+      message: "They'll be told the request couldn't be verified.",
+      confirmLabel: 'Decline request', danger: true,
+    }))) return;
     this.errorMsg.set('');
     this.busyId.set(r.id);
     const res = await this.api.admin.decline(r.id);

@@ -438,6 +438,14 @@ export class ResumeBuilder implements OnInit {
     return this.dirty();
   }
 
+  /** "Save draft and leave", from the unsaved-changes dialog. The same save
+   *  as the Save draft button, minus rewriting this page's address: the
+   *  router is already on its way somewhere else, and a second navigation
+   *  started now would cancel the one the user asked for. */
+  saveBeforeLeaving(): Promise<boolean> {
+    return this.save(false, { keepUrl: true });
+  }
+
   /** Reads the current value out of an (input)/(change) DOM event —
    *  shared by every plain text/select/textarea binding in the template. */
   inputValue(e: Event): string {
@@ -879,7 +887,7 @@ export class ResumeBuilder implements OnInit {
   }
 
   // ---------- save ----------
-  async save(andLeave: boolean): Promise<boolean> {
+  async save(andLeave: boolean, opts: { keepUrl?: boolean } = {}): Promise<boolean> {
     if (this.saving()) return false;
     this.formError.set(null);
 
@@ -955,7 +963,14 @@ export class ResumeBuilder implements OnInit {
     /* Emitted only once the question has been put. An empty map is not the
        same as no map: empty means asked and no sources given, which is half
        credit; absent means never asked, which is full. */
-    if (this.evidenceAsked() && !r.skillEvidence) r = { ...r, skillEvidence: {} };
+    if (this.evidenceAsked() && !r.skillEvidence) {
+      r = { ...r, skillEvidence: {} };
+      // Into the form as well, not just the payload. The after-save check
+      // below compares the form with what was sent, and a difference only the
+      // save itself introduced read as unsaved typing: the form stayed dirty,
+      // and finishing a resume asked "leave without saving?" on the way out.
+      this.resume.set(r);
+    }
 
     this.saving.set(true);
     // What we are actually sending. Compared against the live signal after
@@ -980,7 +995,9 @@ export class ResumeBuilder implements OnInit {
     }) !== sent;
     this.dirty.set(changedDuringSave);
     this.savedFlag.set(true);
-    this.router.navigate([], { relativeTo: this.route, queryParams: { id: res.resume.id }, replaceUrl: true });
+    if (!opts.keepUrl) {
+      this.router.navigate([], { relativeTo: this.route, queryParams: { id: res.resume.id }, replaceUrl: true });
+    }
 
     // Upload & Analyze flow: attach the original uploaded file to the saved
     // resume as the recruiter-visible copy (dual-resume model). One attempt —

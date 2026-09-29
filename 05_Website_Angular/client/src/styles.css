@@ -127,6 +127,14 @@ button[data-slot="date-picker-trigger"] {
 button[data-slot="combobox-trigger"]:hover,
 button[data-slot="select-trigger"]:hover,
 button[data-slot="date-picker-trigger"]:hover { background: var(--paper); border-color: var(--ink-line); }
+/* The rule above resets the border, which also wiped out the library's
+   keyboard focus ring: tabbing onto a dropdown showed nothing at all. The
+   same navy ring as every other field, never red. */
+button[data-slot="combobox-trigger"]:focus-visible,
+button[data-slot="select-trigger"]:focus-visible,
+button[data-slot="date-picker-trigger"]:focus-visible {
+  border-color: var(--focus); box-shadow: 0 0 0 3px var(--focus-wash); outline: none;
+}
 
 /* Filter dropdowns keep ONE width whatever is picked. The trigger is
    size-to-fit by default, so choosing "Final interview & selection" over
@@ -186,7 +194,7 @@ hlm-select-item, hlm-combobox-item {
   /* lines and focus */
   --color-border: var(--rule);
   --color-input: var(--rule);
-  --color-ring: var(--accent);
+  --color-ring: var(--focus);
 
   /* 4px, matching --r. Tailwind's default is rounder than this system,
      which describes itself as "refined, not rounded-SaaS". */
@@ -240,6 +248,10 @@ hlm-select-item, hlm-combobox-item {
   --ink:#16305C; --ink-2:#1E3C6E; --ink-3:#27497F; --ink-line:#33578F;
   /* accent — Clark Outsourcing red. Brand + action only, never a status. */
   --accent:#C1272D; --accent-deep:#961F24; --accent-bright:#DC3A41; --accent-wash:#FBECED; --accent-line:#F0CFD1;
+  /* focus — navy, never red. Red on a field reads as "something is wrong
+     here", so it is kept for validation alone (the expert review caught a
+     field turning red just because it was clicked into). */
+  --focus:#2F5FA8; --focus-wash:rgba(47,95,168,.16);
   /* surfaces — cool greys; cards stay pure --paper white */
   --ivory:#F5F6F8; --paper:#FFFFFF; --stone-2:#E9EDF2; --rule:#D9DFE7; --rule-2:#EAEEF3;
   /* text */
@@ -298,6 +310,7 @@ hlm-select-item, hlm-combobox-item {
   --rule:#293752; --rule-2:#17202F;
   --text:#E6EAF1; --muted:#9BA6B8; --faint:#7E8DA6;
   --accent:#E5545A; --accent-deep:#F58388; --accent-wash:#33161A; --accent-line:#5B2429;
+  --focus:#7FA8E8; --focus-wash:rgba(127,168,232,.22);
   --emerald:#5FA56F; --emerald-wash:#16281D;
   --amber:#D79A3C;   --amber-wash:#2E2413; --amber-line:#4E3D1C;
   --slate:#9AA4B6; --slate-wash:#212C42;
@@ -341,7 +354,7 @@ body{font-family:var(--body);color:var(--text);background:var(--ivory);line-heig
 img{max-width:100%;display:block}
 a{color:var(--text);text-underline-offset:3px}
 h1,h2,h3{font-family:var(--display);color:var(--text);font-weight:600;line-height:1.15;letter-spacing:-.01em}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:2px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}}
 
 /* ---------- layout ---------- */
@@ -352,6 +365,15 @@ h1,h2,h3{font-family:var(--display);color:var(--text);font-weight:600;line-heigh
    side rail to spend the width on — prose columns inside still set their own
    measure. */
 @media(min-width:1440px){ .container.wide{max-width:1400px} }
+/* ...and the header and footer widen WITH the page. They used to stay at
+   1180px while a wide page went to 1400px, so on a large monitor the logo
+   and the Log out button sat about 110px inside the page's own edges, which
+   the expert review marked as the menu not being aligned with the page.
+   Keyed off the page's own <main>, so no page has to remember to say so. */
+@media(min-width:1440px){
+  app-header:has(~ main.container.wide) .site-header .container,
+  main.container.wide ~ app-footer .footer .container{max-width:1400px}
+}
 
 /* ---------- page with a context rail ----------
    A second column carrying what the page is already about: the rule a score
@@ -591,11 +613,14 @@ main{flex:1}
 .field label{display:block;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text);margin-bottom:8px}
 .field input,.field select,.field textarea{width:100%;font-family:var(--body);font-size:14.5px;padding:12px 12px;
   border:1px solid var(--rule);border-radius:var(--r);background:var(--paper);color:var(--text);transition:.15s}
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(198,166,100,.16)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--focus);outline:none;box-shadow:0 0 0 3px var(--focus-wash)}
 .field textarea{resize:vertical;min-height:78px}
 .field .hint{font-size:12px;color:var(--muted);margin-top:6px}
 .field .err{display:none;font-size:12.5px;color:var(--wine);margin-top:6px;font-weight:500}
 .field.invalid input,.field.invalid select,.field.invalid textarea{border-color:var(--wine);background:var(--wine-wash)}
+/* A field in error stays red while it is being corrected; the navy focus
+   ring would otherwise hide the one signal that matters. */
+.field.invalid input:focus,.field.invalid select:focus,.field.invalid textarea:focus{border-color:var(--wine);box-shadow:0 0 0 3px var(--wine-wash)}
 .field.invalid .err{display:block}
 /* Show / Hide inside a password field. The button sits over the right
    edge of the input, so the input reserves room for it rather than letting
@@ -607,7 +632,7 @@ main{flex:1}
   font-family:var(--body);font-size:12px;font-weight:600;letter-spacing:.04em;
   color:var(--muted);border-radius:0 var(--r) var(--r) 0}
 .pw-toggle:hover{color:var(--text)}
-.pw-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;color:var(--text)}
+.pw-toggle:focus-visible{outline:2px solid var(--focus);outline-offset:-2px;color:var(--text)}
 /* The label sits above the input, so the button must clear it, not the field. */
 .field.pw-wrap .pw-toggle{bottom:auto;top:26px;height:42px}
 .field.pw-wrap.invalid .pw-toggle{color:var(--wine)}
@@ -676,6 +701,9 @@ table.tbl tbody tr:hover{background:var(--ivory)}
   border-top:2px solid var(--accent);position:relative;animation:pop .2s cubic-bezier(.2,.7,.3,1);
   max-height:90vh;display:flex;flex-direction:column}
 .modal.wide{max-width:960px}
+/* Focus moves to the dialog itself on open, so a screen reader announces it;
+   the box is not a control, so it needs no ring. Its controls still get one. */
+.modal:focus{outline:none}
 @keyframes pop{from{opacity:0;transform:translateY(10px)}}
 .modal-head{padding:24px 26px 0;flex:none}
 .modal-head h3{font-size:25px}
