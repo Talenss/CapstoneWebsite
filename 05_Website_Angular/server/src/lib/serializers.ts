@@ -6,6 +6,7 @@
    ============================================================ */
 import { query, queryOne } from '../db';
 import { UserRow, CompanyRow, ResumeRow, PostingRow, ApplicationRow } from '../types';
+import { isCompanyAdmin } from './auth';
 
 // node-postgres returns TIMESTAMP/TIMESTAMPTZ columns as JS Date objects;
 // accept those, or a 'YYYY-MM-DD HH:MM:SS' string, and return epoch millis.
@@ -35,6 +36,13 @@ export function serializeUser(u: UserRow | null): any {
     out.companyId = u.company_id !== null ? String(u.company_id) : null;
     out.position = u.position_title;
     out.verified = !!u.verified;
+    // A recruiter given admin access: the header offers them the admin panel
+    // alongside their own dashboard.
+    out.isAdmin = isCompanyAdmin(u);
+  } else if (u.role === 'admin') {
+    out.companyId = u.company_id !== null ? String(u.company_id) : null;
+    out.position = u.position_title;
+    out.isAdmin = isCompanyAdmin(u);
   }
   return out; // password_hash is never included
 }

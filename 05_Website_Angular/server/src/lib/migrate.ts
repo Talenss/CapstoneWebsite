@@ -3,7 +3,9 @@
    Everything here is idempotent (IF NOT EXISTS / DROP-then-ADD), so a
    database created from db/linaw_ph.sql boots with nothing to do,
    and one carried over from an earlier feature set catches up on boot. */
-import { exec, query, withTransaction, Tx } from '../db';
+import { exec, query, queryOne, withTransaction, Tx } from '../db';
+import { BUILT_IN_CATALOGUE } from './skill-catalogue';
+import { skillNorm } from './engine';
 import { ensureEmailCodesTable } from './email-codes';
 
 
@@ -243,6 +245,13 @@ export async function runMigrations(): Promise<void> {
 
   // users.email_notifications — the per-user opt-out for application emails
   await exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_notifications SMALLINT NOT NULL DEFAULT 1');
+
+  // users.is_admin — admin access GIVEN TO A RECRUITER (the expert review:
+  // the admin panel belongs to the main recruiter / IT manager). The
+  // recruiter keeps their own dashboard and also gets the panel. Admin-only
+  // accounts (an IT manager who does not recruit) are role 'admin' instead
+  // and do not use this. Off for everyone already here.
+  await exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false');
 
   // users.role gains 'admin' — the research-team account that approves
   // recruiter requests (routes/admin.ts, scripts/create-admin.ts). The role
@@ -934,5 +943,59 @@ export async function runMigrations(): Promise<void> {
     ('Docker','docker','technical')
     ON CONFLICT (skill_norm) DO NOTHING`);
 
+  await ensureSkillDictionary();
   await ensureUniqueResumeTitles();
+}
+
+/* THE SKILL DICTIONARY, editable from the admin panel (the expert review:
+   "list of dictionary currently listed into catalogue for editing, or linking
+   if they should be considered as one").
+
+   skills.in_catalogue  whether a skill is OFFERED in the pickers. The skills
+                        table also holds every term anyone ever typed, so
+                        "is a row" and "is in the catalogue" were never the
+                        same thing; this says which.
+   skills.industry      the heading it is filed under in the posting form.
+   skill_aliases        a term an admin has said means the same as a skill.
+                        Global, like the skills table it points into: a resume
+                        is one document scored against every company's
+                        openings, so the words on it cannot mean different
+                        things to different employers.
+
+   The shipped catalogue is marked ONCE, recorded in schema_marks. After that
+   the admins' edits are the catalogue, and a skill an admin took out is not
+   quietly put back by the next deploy. */
+async function ensureSkillDictionary(): Promise<void> {
+  await exec('ALTER TABLE skills ADD COLUMN IF NOT EXISTS in_catalogue BOOLEAN NOT NULL DEFAULT false');
+  await exec('ALTER TABLE skills ADD COLUMN IF NOT EXISTS industry VARCHAR(60)');
+  await exec(`CREATE TABLE IF NOT EXISTS skill_aliases (
+    alias_norm  VARCHAR(120) PRIMARY KEY,
+    alias_name  VARCHAR(120) NOT NULL,
+    skill_id    INT NOT NULL REFERENCES skills(skill_id) ON DELETE CASCADE,
+    created_by  INT REFERENCES users(user_id) ON DELETE SET NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`);
+  await exec('CREATE INDEX IF NOT EXISTS idx_skill_aliases_skill ON skill_aliases (skill_id)');
+  await exec(`CREATE TABLE IF NOT EXISTS schema_marks (
+    mark TEXT PRIMARY KEY, done_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`);
+
+  // Closed to Supabase's public REST API like every other table (see
+  // ensureRowLevelSecurity); not fatal where RLS means nothing.
+  for (const t of ['skill_aliases', 'schema_marks']) {
+    try { await exec(`ALTER TABLE ${t} ENABLE ROW LEVEL SECURITY`); }
+    catch (e: any) { console.warn(`Could not enable RLS on ${t}:`, e?.message || e); }
+  }
+
+  const done = await queryOne('SELECT 1 FROM schema_marks WHERE mark = ? LIMIT 1', ['skill-catalogue-v1']);
+  if (done) return;
+  for (const c of BUILT_IN_CATALOGUE) {
+    const norm = skillNorm(c.name);
+    await exec(
+      `INSERT INTO skills (skill_name, skill_norm, category, in_catalogue, industry) VALUES (?,?,?,true,?)
+       ON CONFLICT (skill_norm) DO UPDATE SET in_catalogue = true, industry = EXCLUDED.industry`,
+      [c.name, norm, c.category, c.industry],
+    );
+  }
+  await exec('INSERT INTO schema_marks (mark) VALUES (?) ON CONFLICT DO NOTHING', ['skill-catalogue-v1']);
 }

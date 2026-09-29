@@ -123,8 +123,13 @@ export const routes: Routes = [
     data: PRIVATE,
   },
   {
-    path: 'admin', canActivate: [authGuard('admin')], title: 'Recruiter requests, Linaw PH',
+    path: 'admin', canActivate: [authGuard('admin')], title: 'Admin panel, Linaw PH',
     loadComponent: () => import('./pages/admin/admin').then((m) => m.Admin),
+    data: PRIVATE,
+  },
+  {
+    path: 'admin/skills', canActivate: [authGuard('admin')], title: 'Skill dictionary, Linaw PH',
+    loadComponent: () => import('./pages/admin-skills/admin-skills').then((m) => m.AdminSkills),
     data: PRIVATE,
   },
   {

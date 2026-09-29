@@ -4,7 +4,7 @@
    implement this interface, so every page component talks to
    ApiService without caring which mode is active.
    ============================================================ */
-import {
+import { SkillAdminView, SkillDictionary, CompanyAdmin,
   AdminRecruiter, AnalyzedResume, ApiResult, Application, ApplicationAnswer, Company, HrStats, HrStatsFilters, InviteSchedule, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
 
 export interface ApiAdapter {
@@ -138,6 +138,16 @@ export interface ApiAdapter {
     deptAssignments(): Promise<ApiResult<{ companies: RoutingCompany[] }>>;
     /** Set (or, with a null userId, clear) the HR owner of one department. */
     assignDepartment(companyId: string, department: string, userId: string | null): Promise<ApiResult<{ companies: RoutingCompany[] }>>;
+    /** Everyone who can use this company's admin panel. */
+    admins(): Promise<ApiResult<{ admins: CompanyAdmin[] }>>;
+    /** Give a verified recruiter admin access; they keep recruiting. */
+    grantAdmin(userId: string): Promise<ApiResult<{ admins: CompanyAdmin[] }>>;
+    /** Take it away: a recruiter goes back to recruiting only, an admin-only
+     *  account is removed. Refused if it would leave the company with none. */
+    revokeAdmin(userId: string): Promise<ApiResult<{ admins: CompanyAdmin[]; removedSelf?: boolean }>>;
+    /** An admin-only account for someone who does not recruit (an IT
+     *  manager). They set their own password with "Forgot password". */
+    addAdmin(d: { firstName: string; lastName: string; email: string; position: string }): Promise<ApiResult<{ admins: CompanyAdmin[] }>>;
   };
   analyze: {
     /** Opt-in extraction of an uploaded resume file. Returns a structured
@@ -149,6 +159,18 @@ export interface ApiAdapter {
      *  'gemini', sent to Google for reading
      *  'demo'  . Nothing is read at all; the demo build fakes it */
     reader(): Promise<ApiResult<{ reader: 'rules' | 'gemini' | 'demo'; configured: boolean }>>;
+  };
+  skills: {
+    /** The catalogue and the admins' synonym links. Public; every browser
+     *  loads it at start so its engine scores as the server does. */
+    dictionary(): Promise<ApiResult<SkillDictionary>>;
+    /** Company admins only, from here down. */
+    admin(): Promise<ApiResult<SkillAdminView>>;
+    add(d: { name: string; category: string; industry: string }): Promise<ApiResult<SkillAdminView>>;
+    update(d: { id: string; name: string; category: string; industry: string }): Promise<ApiResult<SkillAdminView>>;
+    remove(id: string): Promise<ApiResult<SkillAdminView>>;
+    link(alias: string, targetId: string): Promise<ApiResult<SkillAdminView>>;
+    unlink(aliasNorm: string): Promise<ApiResult<SkillAdminView>>;
   };
   resetDemo(): Promise<ApiResult<object>>;
 }

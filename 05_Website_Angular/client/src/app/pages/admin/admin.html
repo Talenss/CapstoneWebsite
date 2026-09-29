@@ -2,8 +2,8 @@
 
 <main id="main" class="container" style="padding-bottom:80px">
   <div class="page-head">
-    <span class="eyebrow">Head of Recruitment</span>
-    <h1>Recruiter requests</h1>
+    <span class="eyebrow">{{ myTitle() }}</span>
+    <h1>Admin panel</h1>
     <p>Every posting on the platform is a real job because every recruiter account at your company passes through this desk. Approve only people you can confirm work with you, <b>approving is what creates the account</b>. You see your own company's requests and recruiters, and no one else's. The recruiter then sets their own password through "Forgot password"{{ isDemo ? ' (in demo mode the code appears on screen)' : ', guided by the approval email' }}.</p>
   </div>
 
@@ -58,7 +58,7 @@
         <div class="card" style="padding:0;overflow-x:auto">
           <table>
             <thead>
-              <tr><th>Name</th><th>Email</th><th>Position</th><th>Company</th><th>Since</th><th>Last login</th></tr>
+              <tr><th>Name</th><th>Email</th><th>Position</th><th>Since</th><th>Last login</th><th>Admin access</th></tr>
             </thead>
             <tbody>
               @for (u of recruiters(); track u.id) {
@@ -66,15 +66,70 @@
                   <td><b>{{ u.name }}</b></td>
                   <td>{{ u.email }}</td>
                   <td>{{ u.position || '—' }}</td>
-                  <td>{{ u.companyName }}</td>
                   <td>{{ day(u.createdAt) }}</td>
                   <td>{{ u.lastLoginAt ? day(u.lastLoginAt) : 'Never' }}</td>
+                  <td>
+                    @if (u.isAdmin) {
+                      <span class="badge green">Admin</span>
+                    } @else if (u.verified) {
+                      <button class="btn ghost sm" type="button" [disabled]="busyAdmin() === u.id"
+                              (click)="grant(u)">Give admin access</button>
+                    } @else {
+                      <span class="muted">Not verified</span>
+                    }
+                  </td>
                 </tr>
               }
             </tbody>
           </table>
         </div>
       }
+    </section>
+
+    <!-- ADMIN ACCESS. The expert review: the panel should be available to the
+         main recruiter or the IT manager, not one fixed account. -->
+    <section class="block" id="adminAccess">
+      <h2>Admin access <span class="count">{{ admins().length }}</span></h2>
+      <p class="lead">
+        Everyone here can approve recruiters, route departments and edit the skill dictionary.
+        A <b>recruiter with admin access</b> keeps their own recruiter dashboard as well.
+        An <b>admin-only account</b> is for someone who looks after the system but does not recruit, such as the IT manager.
+        There is always at least one admin, so your company can never be locked out.
+      </p>
+      <div class="card" style="padding:0;overflow-x:auto">
+        <table>
+          <thead><tr><th>Name</th><th>Position</th><th>Account</th><th></th></tr></thead>
+          <tbody>
+            @for (a of admins(); track a.id) {
+              <tr>
+                <td><b>{{ a.name }}</b>@if (a.isYou) { <span class="muted">&nbsp;(you)</span> }<br><span class="muted">{{ a.email }}</span></td>
+                <td>{{ a.position || '—' }}</td>
+                <td>{{ a.kind === 'admin' ? 'Admin only' : 'Recruiter with admin access' }}</td>
+                <td style="text-align:right">
+                  <button class="btn warn sm" type="button" [disabled]="busyAdmin() === a.id || admins().length <= 1"
+                          [attr.title]="admins().length <= 1 ? 'The only admin cannot be removed' : null"
+                          (click)="revoke(a)">{{ a.kind === 'admin' ? 'Remove' : 'Remove access' }}</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <form class="card add-admin" (submit)="addAdmin($event)" novalidate>
+        <h3>Add an admin-only account</h3>
+        <p class="muted" style="margin:2px 0 14px">For someone who manages the system but does not recruit. They set their own password with "Forgot password"{{ isDemo ? ' (in demo mode the code appears on screen)' : ', and an email tells them how' }}. To give a recruiter admin access, use the button in the recruiter list above.</p>
+        <div class="add-grid">
+          <div class="field"><label for="aFirst">First name</label><input id="aFirst" [value]="aFirst()" (input)="aFirst.set(val($event))" autocomplete="off"></div>
+          <div class="field"><label for="aLast">Last name</label><input id="aLast" [value]="aLast()" (input)="aLast.set(val($event))" autocomplete="off"></div>
+          <div class="field"><label for="aEmail">Work email</label><input id="aEmail" type="email" [value]="aEmail()" (input)="aEmail.set(val($event))" autocomplete="off"></div>
+          <div class="field"><label for="aPos">Position</label><input id="aPos" [value]="aPos()" (input)="aPos.set(val($event))" autocomplete="off"></div>
+        </div>
+        @if (addErr()) { <p class="add-err" role="alert">{{ addErr() }}</p> }
+        <button class="btn primary sm" type="submit" [disabled]="adding()">
+          @if (adding()) { <span class="spinner"></span> Adding… } @else { Add admin }
+        </button>
+      </form>
     </section>
 
     <section class="block">

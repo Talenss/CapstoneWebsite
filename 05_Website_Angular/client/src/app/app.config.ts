@@ -5,7 +5,8 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { routes } from './app.routes';
 import { SessionService } from './core/session.service';
 import { environment } from '../environments/environment';
-import { applyMatchSettings } from './core/engine';
+import { applyMatchSettings, applyDictionary } from './core/engine';
+import { ApiService } from './core/api.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -48,6 +49,16 @@ export const appConfig: ApplicationConfig = {
         .then((r) => (r.ok ? r.json() : null))
         .then((j) => { if (j?.ok) applyMatchSettings(j); })
         .catch(() => { /* keep the published defaults */ });
+    }),
+    // The skill dictionary the admins keep: the catalogue the pickers offer,
+    // and the synonyms they have linked, so this browser's engine (live
+    // previews, the job board) matches skills exactly as the server does.
+    // Same terms as the settings above: fire-and-forget, and on failure the
+    // shipped catalogue and built-in synonyms stay in place.
+    provideAppInitializer(() => {
+      void inject(ApiService).skills.dictionary()
+        .then((r) => { if (r.ok) applyDictionary(r); })
+        .catch(() => { /* keep the shipped dictionary */ });
     }),
   ]
 };

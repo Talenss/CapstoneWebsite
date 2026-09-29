@@ -1,7 +1,7 @@
 /* Linaw PH — routes/admin.ts
    The partner company's side of "recruiter accounts are provisioned, not
    self-served". The admin is the company's HEAD OF RECRUITMENT (see
-   requireHeadOfRecruitment): they review the requests the auth page's
+   requireCompanyAdmin): they review the requests the auth page's
    recruiter form creates FOR THEIR COMPANY, and approving one is what
    actually creates the verified recruiter account. Admin accounts are made
    with `npm run create-admin`, which ties each to a company — there is
@@ -12,7 +12,8 @@ import bcrypt from 'bcryptjs';
 import { query, queryOne, exec } from '../db';
 import { UserRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
-import { requireHeadOfRecruitment } from '../lib/auth';
+import { requireCompanyAdmin, isCompanyAdmin, companyAdminCount } from '../lib/auth';
+import { emailProblem } from '../lib/contact';
 import { ts } from '../lib/serializers';
 import { APP_URL, DEBUG } from '../config';
 import { mailConfigured, sendMail } from '../lib/mailer';
@@ -57,7 +58,7 @@ async function listRequests(companyId: number) {
 }
 
 router.post('/requests', async (req, res) => {
-  const u = await requireHeadOfRecruitment(req, res);
+  const u = await requireCompanyAdmin(req, res);
   if (!u) return;
   ok(res, { requests: await listRequests(u.company_id!) });
 });
@@ -67,7 +68,7 @@ router.post('/requests', async (req, res) => {
    to use "Forgot password" to set their own — same proven code flow,
    nothing new to secure. */
 router.post('/approve', async (req, res) => {
-  const u = await requireHeadOfRecruitment(req, res);
+  const u = await requireCompanyAdmin(req, res);
   if (!u) return;
   const id = idOf(req.body?.id);
 
@@ -113,7 +114,7 @@ router.post('/approve', async (req, res) => {
 });
 
 router.post('/decline', async (req, res) => {
-  const u = await requireHeadOfRecruitment(req, res);
+  const u = await requireCompanyAdmin(req, res);
   if (!u) return;
   const id = idOf(req.body?.id);
 
@@ -201,13 +202,13 @@ async function listDeptRouting(companyId: number): Promise<RoutingCompany[]> {
 }
 
 router.post('/dept-assignments', async (req, res) => {
-  const u = await requireHeadOfRecruitment(req, res);
+  const u = await requireCompanyAdmin(req, res);
   if (!u) return;
   ok(res, { companies: await listDeptRouting(u.company_id!) });
 });
 
 router.post('/assign-department', async (req, res) => {
-  const u = await requireHeadOfRecruitment(req, res);
+  const u = await requireCompanyAdmin(req, res);
   if (!u) return;
   const companyId = idOf(req.body?.companyId);
   const department = String(req.body?.department ?? '').trim();
@@ -243,7 +244,7 @@ router.post('/assign-department', async (req, res) => {
 });
 
 router.post('/recruiters', async (req, res) => {
-  const u = await requireHeadOfRecruitment(req, res);
+  const u = await requireCompanyAdmin(req, res);
   if (!u) return;
   const rows = await query<UserRow & { company_name: string | null }>(
     `SELECT u.*, c.company_name FROM users u
@@ -258,10 +259,114 @@ router.post('/recruiters', async (req, res) => {
       position: r.position_title || '',
       companyName: r.company_name || '—',
       verified: !!r.verified,
+      isAdmin: isCompanyAdmin(r),
       createdAt: ts(r.created_at),
       lastLoginAt: r.last_login_at ? ts(r.last_login_at) : null,
     })),
   });
+});
+
+/* ---------- who can use this panel ----------
+   The expert review: the admin panel should be available to "the main
+   recruiter / IT manager". So it is no longer one fixed account. Any admin
+   can give admin access to a verified recruiter at the company (who keeps
+   recruiting), add an admin-only account for someone who does not recruit
+   (an IT manager), and take either away again. The one thing refused is
+   leaving the company with no admin at all. */
+
+async function listAdmins(companyId: number, meId: number) {
+  const rows = await query<UserRow>(
+    `SELECT * FROM users
+      WHERE company_id = ? AND (role = 'admin' OR (role = 'recruiter' AND is_admin AND verified = 1))
+      ORDER BY (role = 'admin') DESC, full_name`, [companyId],
+  );
+  return rows.map((r) => ({
+    id: String(r.user_id),
+    name: r.full_name,
+    email: r.email,
+    position: r.position_title || '',
+    kind: r.role === 'admin' ? 'admin' as const : 'recruiter' as const,
+    isYou: r.user_id === meId,
+    lastLoginAt: r.last_login_at ? ts(r.last_login_at) : null,
+  }));
+}
+
+router.post('/admins', async (req, res) => {
+  const u = await requireCompanyAdmin(req, res);
+  if (!u) return;
+  ok(res, { admins: await listAdmins(u.company_id!, u.user_id) });
+});
+
+router.post('/grant-admin', async (req, res) => {
+  const u = await requireCompanyAdmin(req, res);
+  if (!u) return;
+  const id = idOf(req.body?.userId);
+  const t = await queryOne<UserRow>('SELECT * FROM users WHERE user_id = ? LIMIT 1', [id]);
+  // Someone at another company reads as not found, as everywhere here.
+  if (!t || t.company_id !== u.company_id || t.role !== 'recruiter') return fail(res, 'Recruiter not found.');
+  if (!t.verified) return fail(res, 'Only a verified recruiter can be given admin access.');
+  if (t.is_admin) return fail(res, `${t.full_name} already has admin access.`);
+  await exec('UPDATE users SET is_admin = true WHERE user_id = ?', [t.user_id]);
+  ok(res, { admins: await listAdmins(u.company_id!, u.user_id) });
+});
+
+/* Taking access away. From a recruiter it removes the panel and leaves them
+   recruiting; an admin-only account has nothing else to fall back to, so it
+   is removed outright (its approvals and routing history keep their rows,
+   with the name cleared, as they do when anyone deletes their account). */
+router.post('/revoke-admin', async (req, res) => {
+  const u = await requireCompanyAdmin(req, res);
+  if (!u) return;
+  const id = idOf(req.body?.userId);
+  const t = await queryOne<UserRow>('SELECT * FROM users WHERE user_id = ? LIMIT 1', [id]);
+  if (!t || t.company_id !== u.company_id || !isCompanyAdmin(t)) return fail(res, 'Admin not found.');
+  if ((await companyAdminCount(u.company_id!)) <= 1)
+    return fail(res, 'This is the only admin for your company. Give someone else admin access first, so the company is never left without one.');
+  if (t.role === 'admin') await exec('DELETE FROM users WHERE user_id = ?', [t.user_id]);
+  else await exec('UPDATE users SET is_admin = false WHERE user_id = ?', [t.user_id]);
+  ok(res, { admins: await listAdmins(u.company_id!, u.user_id), removedSelf: t.user_id === u.user_id });
+});
+
+/* An admin-only account, for someone who looks after the system but does
+   not recruit. Created the way an approved recruiter is: verified, with an
+   unguessable placeholder password, and the person sets their own through
+   "Forgot password". Nobody ever types a password for someone else. */
+router.post('/add-admin', async (req, res) => {
+  const u = await requireCompanyAdmin(req, res);
+  if (!u) return;
+  const first = String(req.body?.firstName ?? '').trim().replace(/\s+/g, ' ').slice(0, 80);
+  const last = String(req.body?.lastName ?? '').trim().replace(/\s+/g, ' ').slice(0, 80);
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
+  const position = String(req.body?.position ?? '').trim().replace(/\s+/g, ' ').slice(0, 120) || 'IT Manager';
+  if (!first || !last) return fail(res, 'Enter their first and last name.');
+  const eErr = emailProblem(email);
+  if (!email || eErr) return fail(res, eErr || 'Enter their work email address.');
+  if (await queryOne('SELECT 1 FROM users WHERE LOWER(email) = ? LIMIT 1', [email]))
+    return fail(res, 'An account already uses this email. If they are a recruiter here, give them admin access from the recruiter list instead.');
+
+  const placeholder = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+  await exec(
+    `INSERT INTO users (role, first_name, last_name, email, password_hash, company_id, position_title, verified)
+     VALUES ('admin', ?, ?, ?, ?, ?, ?, 1)`,
+    [first, last, email, placeholder, u.company_id, position],
+  );
+
+  const co = await queryOne<{ company_name: string }>('SELECT company_name FROM companies WHERE company_id = ?', [u.company_id]);
+  if (mailConfigured()) {
+    sendMail(
+      email,
+      'You have admin access to Linaw PH',
+      `You have been given admin access to Linaw PH for ${co?.company_name ?? 'your company'} by ${u.full_name}.\n\nTo set your password: open ${APP_URL}/auth, click "Forgot your password?", enter this email address, and follow the code we send you.`,
+      `
+        <h1 style="margin:0 0 10px;font-size:22px">You have admin access</h1>
+        <p style="margin:0 0 14px;font-size:14.5px;line-height:1.65;color:#4C5566">Hi ${first},</p>
+        <p style="margin:0 0 14px;font-size:14.5px;line-height:1.65;color:#4C5566">${u.full_name} has given you admin access to Linaw PH for <b>${co?.company_name ?? 'your company'}</b>, as ${position}.</p>
+        <p style="margin:0;font-size:14.5px;line-height:1.65;color:#4C5566"><b>Set your password:</b> open the site, choose <b>“Forgot your password?”</b> on the log-in panel, enter this email address, and follow the code we send you.</p>`,
+    ).catch((e) => console.error('admin invite email failed:', e?.message || e));
+  } else if (DEBUG) {
+    console.log(`[admin] added admin ${email} — SMTP not configured, tell them to use "Forgot password".`);
+  }
+  ok(res, { admins: await listAdmins(u.company_id!, u.user_id) });
 });
 
 export default router;

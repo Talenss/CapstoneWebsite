@@ -8,7 +8,7 @@
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ApiAdapter } from './adapter';
-import { AdminRecruiter, AnalyzedResume, Application, ApplicationAnswer, ApiResult, Company, HrStats, HrStatsFilters, InviteSchedule, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
+import { SkillAdminView, SkillDictionary, CompanyAdmin, AdminRecruiter, AnalyzedResume, Application, ApplicationAnswer, ApiResult, Company, HrStats, HrStatsFilters, InviteSchedule, MatchResult, Posting, RankedRow, RecommendationItem, RecruiterRequest, Resume, RoutingCompany, ScreeningNote, StatusEvent, User, RankedQuery} from './models';
 import { MAX_UPLOAD, ALLOWED_MIME } from './engine';
 
 export class HttpAdapter implements ApiAdapter {
@@ -132,6 +132,11 @@ export class HttpAdapter implements ApiAdapter {
     deptAssignments: () => this.call<{ companies: RoutingCompany[] }>('admin', 'dept-assignments'),
     assignDepartment: (companyId: string, department: string, userId: string | null) =>
       this.call<{ companies: RoutingCompany[] }>('admin', 'assign-department', { companyId, department, userId }),
+    admins: () => this.call<{ admins: CompanyAdmin[] }>('admin', 'admins'),
+    grantAdmin: (userId: string) => this.call<{ admins: CompanyAdmin[] }>('admin', 'grant-admin', { userId }),
+    revokeAdmin: (userId: string) => this.call<{ admins: CompanyAdmin[]; removedSelf?: boolean }>('admin', 'revoke-admin', { userId }),
+    addAdmin: (d: { firstName: string; lastName: string; email: string; position: string }) =>
+      this.call<{ admins: CompanyAdmin[] }>('admin', 'add-admin', d),
   };
 
   analyze = {
@@ -162,6 +167,16 @@ export class HttpAdapter implements ApiAdapter {
         return { ok: false, error: 'unknown' };
       }
     },
+  };
+
+  skills = {
+    dictionary: () => this.call<SkillDictionary>('skills', 'dictionary'),
+    admin: () => this.call<SkillAdminView>('skills', 'admin'),
+    add: (d: { name: string; category: string; industry: string }) => this.call<SkillAdminView>('skills', 'add', d),
+    update: (d: { id: string; name: string; category: string; industry: string }) => this.call<SkillAdminView>('skills', 'update', d),
+    remove: (id: string) => this.call<SkillAdminView>('skills', 'remove', { id }),
+    link: (alias: string, targetId: string) => this.call<SkillAdminView>('skills', 'link', { alias, targetId }),
+    unlink: (aliasNorm: string) => this.call<SkillAdminView>('skills', 'unlink', { aliasNorm }),
   };
 
   resetDemo(): Promise<ApiResult<object>> {

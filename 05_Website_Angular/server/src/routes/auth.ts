@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import { query, queryOne, exec } from '../db';
 import { UserRow, ResumeRow, ApplicationRow } from '../types';
 import { ok, fail } from '../lib/http';
-import { currentUser, requireUser } from '../lib/auth';
+import { currentUser, requireUser, isCompanyAdmin, companyAdminCount } from '../lib/auth';
 import { serializeUser, serializeResume, serializeApplication, prefetchResumeChildren} from '../lib/serializers';
 import { DEBUG } from '../config';
 import { deleteFile } from '../lib/storage';
@@ -356,6 +356,11 @@ router.post('/delete-account', async (req, res) => {
   if (!u) return;
   if (!(await bcrypt.compare(String(req.body?.password ?? ''), u.password_hash)))
     return fail(res, 'Password is incorrect.');
+  // The last person who can approve this company's recruiters cannot leave
+  // without handing that on first, or the company is locked out of its own
+  // admin panel with nobody able to let anyone back in.
+  if (isCompanyAdmin(u) && (await companyAdminCount(u.company_id!)) <= 1)
+    return fail(res, "You are the only admin for your company. Give admin access to someone else in the admin panel before deleting this account.");
 
   const files = await query<{ own_file_path: string }>(
     'SELECT own_file_path FROM resumes WHERE user_id = ? AND own_file_path IS NOT NULL', [u.user_id],

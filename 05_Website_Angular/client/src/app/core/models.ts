@@ -29,7 +29,21 @@ export interface AdminRecruiter {
   position: string;
   companyName: string;
   verified: boolean;
+  /** Has been given admin access (keeps recruiting as well). */
+  isAdmin?: boolean;
   createdAt: number;
+  lastLoginAt: number | null;
+}
+
+/** Someone who can use their company's admin panel: an admin-only account
+ *  (an IT manager, say) or a recruiter who has been given admin access. */
+export interface CompanyAdmin {
+  id: string;
+  name: string;
+  email: string;
+  position: string;
+  kind: 'admin' | 'recruiter';
+  isYou: boolean;
   lastLoginAt: number | null;
 }
 
@@ -97,6 +111,9 @@ export interface User {
   companyId?: string | null;
   position?: string | null;
   verified?: boolean;
+  /** Can open the company's admin panel: an admin-only account, or a
+   *  recruiter who has been given admin access. */
+  isAdmin?: boolean;
 }
 
 export interface Company {
@@ -632,3 +649,23 @@ export interface AnalyzedResume {
 export type ApiResult<T extends object = object> =
   | ({ ok: true } & T)
   | { ok: false; error: string; exists?: boolean };
+
+/* ---------- the skill dictionary (admin panel) ---------- */
+
+/** One catalogue skill as the browser needs it. */
+export interface DictionarySkill { name: string; category: 'technical' | 'soft'; industry: string }
+/** A term an admin linked to a catalogue skill. Norms are lowercase
+ *  alphanumerics, the form the engines compare. */
+export interface DictionaryLink { alias: string; aliasNorm: string; target: string; targetNorm: string }
+export interface SkillDictionary { catalogue: DictionarySkill[]; links: DictionaryLink[] }
+
+/** The admin page's view: every catalogue skill with its usage and synonyms,
+ *  plus the terms people typed that the catalogue does not offer. */
+export interface AdminSkill {
+  id: string; name: string; category: 'technical' | 'soft'; industry: string;
+  resumes: number; postings: number;
+  links: { norm: string; name: string; by: string | null; at: number }[];
+  builtIn: string[];
+}
+export interface TypedSkill { id: string; name: string; resumes: number; postings: number; linkedTo: string | null }
+export interface SkillAdminView { catalogue: AdminSkill[]; typed: TypedSkill[]; industries: string[] }

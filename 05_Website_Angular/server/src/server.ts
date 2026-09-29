@@ -29,6 +29,7 @@ import analyzeRoutes from './routes/analyze';
 import adminRoutes from './routes/admin';
 import savedRoutes from './routes/saved';
 import metricsRoutes from './routes/metrics';
+import skillsRoutes, { loadSkillLinks } from './routes/skills';
 import { runMigrations } from './lib/migrate';
 import { db } from './db';
 
@@ -106,6 +107,7 @@ app.use('/api/analyze', analyzeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/saved', savedRoutes);
 app.use('/api/metrics', metricsRoutes);
+app.use('/api/skills', skillsRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
@@ -174,7 +176,13 @@ process.on('uncaughtException', (err) => {
 logDatabaseTarget();
 
 runMigrations().then(
-  () => listen(),
+  async () => {
+    // The admins' synonym links, before the first request is scored; then
+    // once a minute, so a second instance picks up another's edits.
+    await loadSkillLinks();
+    setInterval(() => void loadSkillLinks(), 60_000).unref();
+    listen();
+  },
   (e) => {
     const why = e?.message || e;
     if (IS_PROD) {

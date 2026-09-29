@@ -1888,3 +1888,195 @@ test('"hide below N%" is opt-in, counted, and ignores nonsense', async () => {
   assert.equal(top.matched + top.belowMin, all.matched);
   assert.equal(top.total, all.total, 'total stays everyone who applied');
 });
+
+// ---------- admin access: the main recruiter / IT manager ----------
+
+test('admin access can be given to a recruiter, who keeps recruiting, and taken back', async () => {
+  const head = client();
+  await head('auth/login', { email: 'admin@demo.ph', password: 'demo123' });
+  const start = (await head('admin/admins')).body.admins;
+  assert.equal(start.length, 1);
+  assert.equal(start[0].kind, 'admin');
+  assert.equal(start[0].isYou, true);
+  const r1 = await head('admin/revoke-admin', { userId: start[0].id });
+  assert.equal(r1.body.ok, false, 'the only admin cannot be removed');
+  assert.match(r1.body.error, /only admin/);
+
+  // Grace is a verified recruiter at the same company.
+  const g = await head('admin/grant-admin', { userId: '6' });
+  assert.equal(g.body.ok, true, g.body.error);
+  assert.deepEqual(g.body.admins.map((a: any) => a.kind), ['admin', 'recruiter']);
+  assert.equal((await head('admin/grant-admin', { userId: '6' })).body.ok, false, 'granted twice');
+  assert.equal((await head('admin/grant-admin', { userId: '1' })).body.ok, false, 'a seeker cannot be made admin');
+
+  const grace = client();
+  await grace('auth/login', { email: 'grace@demo.ph', password: 'demo123' });
+  const me = (await grace('auth/me')).body.user;
+  assert.equal(me.role, 'recruiter');
+  assert.equal(me.isAdmin, true);
+  assert.equal((await grace('admin/requests')).body.ok, true, 'grace can use the admin panel');
+  assert.equal((await grace('postings/mine')).body.ok, true, 'and still recruits');
+  // Maria was never given access.
+  const maria = client();
+  await maria('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  assert.equal((await maria('admin/requests')).body.ok, false);
+  assert.equal((await maria('auth/me')).body.user.isAdmin, false);
+
+  // Grace, now an admin, can take her own access away (another admin remains).
+  const rv = await grace('admin/revoke-admin', { userId: '6' });
+  assert.equal(rv.body.ok, true, rv.body.error);
+  assert.equal(rv.body.removedSelf, true);
+  assert.equal((await grace('admin/requests')).body.ok, false, 'access is gone at once');
+  assert.equal((await grace('postings/mine')).body.ok, true, 'recruiting is not');
+});
+
+test('an admin-only account for an IT manager: added, refused on bad input, removed', async () => {
+  const head = client();
+  await head('auth/login', { email: 'admin@demo.ph', password: 'demo123' });
+  const bad = [
+    [{ firstName: '', lastName: 'Reyes', email: 'it@clark.test' }, /first and last name/],
+    [{ firstName: 'Jun', lastName: 'Reyes', email: 'not-an-email' }, /./],
+    [{ firstName: 'Jun', lastName: 'Reyes', email: 'hr@demo.ph' }, /already uses this email/],
+  ] as const;
+  for (const [d, re] of bad) {
+    const r = await head('admin/add-admin', d);
+    assert.equal(r.body.ok, false, JSON.stringify(d));
+    assert.match(r.body.error, re);
+  }
+  const ok = await head('admin/add-admin', { firstName: 'Jun', lastName: 'Reyes', email: 'IT.Manager@Clark.test', position: '' });
+  assert.equal(ok.body.ok, true, ok.body.error);
+  const it = ok.body.admins.find((a: any) => a.email === 'it.manager@clark.test');
+  assert.ok(it, 'listed, with the email lower-cased');
+  assert.equal(it.position, 'IT Manager', 'a blank position defaults to IT Manager');
+  assert.equal(it.kind, 'admin');
+  const row = psql(['-tAc', "SELECT role || ',' || company_id || ',' || verified FROM users WHERE email = 'it.manager@clark.test'"], DB).trim();
+  assert.equal(row, 'admin,1,1');
+
+  const rm = await head('admin/revoke-admin', { userId: it.id });
+  assert.equal(rm.body.ok, true, rm.body.error);
+  assert.equal(psql(['-tAc', "SELECT COUNT(*) FROM users WHERE email = 'it.manager@clark.test'"], DB).trim(), '0',
+    'an admin-only account has nothing to fall back to, so it is removed');
+});
+
+test('the last admin cannot delete their own account', async () => {
+  const head = client();
+  await head('auth/login', { email: 'admin@demo.ph', password: 'demo123' });
+  const r = await head('auth/delete-account', { password: 'demo123' });
+  assert.equal(r.body.ok, false);
+  assert.match(r.body.error, /only admin/);
+  assert.equal((await head('auth/me')).body.user?.email, 'admin@demo.ph', 'still signed in, still there');
+});
+
+// ---------- the skill dictionary ----------
+
+test('the skill dictionary: public read, admin-only edits, and a link that really changes matching', async () => {
+  const anon = client();
+  const dict0 = (await anon('skills/dictionary')).body;
+  assert.equal(dict0.ok, true, 'the dictionary is public: every browser loads it');
+  assert.equal(dict0.catalogue.length, 226, 'the shipped catalogue was marked by the first boot');
+  assert.ok(dict0.catalogue.some((c: any) => c.name === 'Git' && c.industry === 'Web Development'));
+  assert.deepEqual(dict0.links, []);
+
+  const maria = client(); await maria('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const juan = client(); await juan('auth/login', { email: 'seeker@demo.ph', password: 'demo123' });
+  assert.equal((await maria('skills/admin')).status, 403, 'a recruiter without admin access');
+  assert.equal((await juan('skills/link', { alias: 'x', targetId: 1 })).status, 403, 'a seeker');
+
+  // A resume that says GitHub, an opening that asks for Git.
+  const rs = await juan('resumes/save', { resume: {
+    title: 'Dictionary test', personal: { fullName: 'Juan Dela Cruz', email: 'juan@example.ph' },
+    education: [{ school: 'Holy Angel University', degree: 'BS Information Technology', level: 'bachelor' }],
+    experience: [], certifications: [], skills: ['GitHub', 'Communication'],
+  } });
+  assert.equal(rs.body.ok, true, rs.body.error);
+  const ps = await maria('postings/save', { posting: {
+    title: 'Dictionary Test Developer', department: 'Information Technology',
+    description: 'An opening used to check that a linked synonym changes matching.',
+    skills: ['Git', 'Communication'], educationLevel: 'bachelor', minExperienceMonths: 0,
+  } });
+  assert.equal(ps.body.ok, true, ps.body.error);
+  const ids = { resumeId: rs.body.resume.id, postingId: ps.body.posting.id };
+  const before = (await juan('match/score', ids)).body;
+  assert.deepEqual(before.matchedSkills, ['Communication']);
+  assert.equal((await juan('applications/apply', ids)).body.ok, true);
+
+  const head = client(); await head('auth/login', { email: 'admin@demo.ph', password: 'demo123' });
+  const v0 = (await head('skills/admin')).body;
+  const git = v0.catalogue.find((c: any) => c.name === 'Git');
+  const typed = v0.typed.find((t: any) => t.name === 'GitHub');
+  assert.ok(typed && typed.resumes === 1 && typed.linkedTo === null, 'GitHub shows as typed, not in the catalogue');
+
+  const refuse = async (alias: string, targetId: any, re: RegExp) => {
+    const r = (await head('skills/link', { alias, targetId })).body;
+    assert.equal(r.ok, false, alias); assert.match(r.error, re, alias);
+  };
+  await refuse('Bookkeeper', git.id, /already built in as Bookkeeping/);
+  await refuse('git', git.id, /is already Git/);
+  await refuse('GitHub', 999999, /Pick a skill from the catalogue/);
+  await refuse('  ', git.id, /Enter the term/);
+
+  const v1 = (await head('skills/link', { alias: 'GitHub', targetId: git.id })).body;
+  assert.equal(v1.ok, true, v1.error);
+  const gitNow = v1.catalogue.find((c: any) => c.name === 'Git');
+  assert.deepEqual(gitNow.links.map((l: any) => [l.name, l.by]), [['GitHub', 'Head of Recruitment']]);
+  assert.equal(v1.typed.find((t: any) => t.name === 'GitHub').linkedTo, 'Git');
+  await refuse('Github', git.id, /already linked to Git/);
+  const bk = v1.catalogue.find((c: any) => c.name === 'Bookkeeping');
+  await refuse('Git', bk.id, /Other terms are linked to "Git"/);
+  const pub = (await anon('skills/dictionary')).body.links;
+  assert.deepEqual(pub, [{ alias: 'GitHub', aliasNorm: 'github', target: 'Git', targetNorm: 'git' }]);
+
+  // The live score follows at once; the recorded one stays, and is flagged.
+  const after = (await juan('match/score', ids)).body;
+  assert.deepEqual(after.matchedSkills.sort(), ['Communication', 'Git']);
+  assert.ok(after.score > before.score);
+  const row = (await maria('applications/ranked', { postingId: ids.postingId })).body.rows[0];
+  assert.equal(row.score, before.score, 'the score recorded when they applied is kept');
+  assert.equal(row.liveScore, after.score);
+  assert.equal(row.scoreDrifted, true, 'and the recruiter can see it would now differ');
+
+  const un = (await head('skills/unlink', { aliasNorm: 'github' })).body;
+  assert.equal(un.ok, true, un.error);
+  assert.deepEqual((await juan('match/score', ids)).body.matchedSkills, ['Communication'], 'unlinked, unmatched');
+  assert.equal((await head('skills/unlink', { aliasNorm: 'github' })).body.ok, false);
+});
+
+test('the catalogue itself: add, rename within the same word, recategorise, remove, fold one into another', async () => {
+  const head = client(); await head('auth/login', { email: 'admin@demo.ph', password: 'demo123' });
+  const anon = client();
+  const names = async () => (await anon('skills/dictionary')).body.catalogue.map((c: any) => c.name);
+  const bad = async (route: string, body: any, re: RegExp) => {
+    const r = (await head(route, body)).body; assert.equal(r.ok, false, JSON.stringify(body)); assert.match(r.error, re);
+  };
+  await bad('skills/add', { name: 'Bookkeeper', category: 'technical', industry: 'Finance' }, /already counts as Bookkeeping/);
+  await bad('skills/add', { name: 'GIT', category: 'technical', industry: 'x' }, /already in the catalogue/);
+  await bad('skills/add', { name: 'Power Automate', category: 'other', industry: 'x' }, /technical or a soft/);
+  await bad('skills/add', { name: '', category: 'soft', industry: 'x' }, /name/);
+
+  let v = (await head('skills/add', { name: 'Power automate', category: 'technical', industry: '' })).body;
+  assert.equal(v.ok, true, v.error);
+  let pa = v.catalogue.find((c: any) => c.name === 'Power automate');
+  assert.equal(pa.industry, 'Other', 'no industry files it under Other');
+  assert.ok((await names()).includes('Power automate'));
+
+  await bad('skills/update', { id: pa.id, name: 'Power Apps', category: 'technical', industry: 'Office Management' }, /only change capitals/);
+  v = (await head('skills/update', { id: pa.id, name: 'Power Automate', category: 'soft', industry: 'Office Management' })).body;
+  assert.equal(v.ok, true, v.error);
+  pa = v.catalogue.find((c: any) => c.id === pa.id);
+  assert.deepEqual([pa.name, pa.category, pa.industry], ['Power Automate', 'soft', 'Office Management']);
+
+  v = (await head('skills/remove', { id: pa.id })).body;
+  assert.equal(v.ok, true, v.error);
+  assert.ok(!(await names()).includes('Power Automate'), 'out of the pickers');
+  await bad('skills/remove', { id: pa.id }, /not found/);
+  v = (await head('skills/add', { name: 'Power Automate', category: 'technical', industry: 'Office Management' })).body;
+  assert.equal(v.ok, true, 'and back in by adding it again');
+
+  // Folding one catalogue skill into another takes it out of the picker.
+  const git = v.catalogue.find((c: any) => c.name === 'Git');
+  v = (await head('skills/add', { name: 'Version Control', category: 'technical', industry: 'Web Development' })).body;
+  v = (await head('skills/link', { alias: 'Version Control', targetId: git.id })).body;
+  assert.equal(v.ok, true, v.error);
+  assert.ok(!(await names()).includes('Version Control'), 'one skill, one name in the picker');
+  await head('skills/unlink', { aliasNorm: 'versioncontrol' });
+});

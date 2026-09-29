@@ -415,8 +415,33 @@ export function acceptedFields(posting: any): Set<string> {
  *  of every comparison, and for the canonical `skills.skill_norm` row,
  *  so a resume and a posting that mean the same thing land on it. */
 export function skillNorm(s: string): string {
-  const base = String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-  return SKILL_ALIASES[base] ?? base;
+  const base = skillBase(s);
+  const canon = SKILL_ALIASES[base] ?? base;
+  return LINKED_SKILLS[canon] ?? canon;
+}
+
+/** A skill with case and punctuation stripped, and NO synonyms applied: the
+ *  term exactly as someone wrote it, in comparable form. */
+export function skillBase(s: string): string {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/* SYNONYMS LINKED BY AN ADMIN, from the skill dictionary in the admin panel
+   (table skill_aliases), on top of the built-in SKILL_ALIASES above. The
+   expert review asked for exactly this: "Git" and "GitHub", "Bookkeeping" and
+   "Bookkeeper", considered as one where the company says they are.
+
+   Applied AFTER the built-in list, so a built-in synonym that points at a
+   linked term follows the link too, and one step only: the dictionary refuses
+   any link that would make a chain, so there is never a second hop to take.
+   Mirrored by setLinkedSkills() in client/src/app/core/engine.ts, which the
+   browser fills from the same table so both engines score alike. */
+let LINKED_SKILLS: Record<string, string> = {};
+export function setLinkedSkills(map: Record<string, string>): void {
+  LINKED_SKILLS = { ...map };
+}
+export function linkedSkills(): Readonly<Record<string, string>> {
+  return LINKED_SKILLS;
 }
 
 /** Does this job's own words mention any of the skills the opening asks for?

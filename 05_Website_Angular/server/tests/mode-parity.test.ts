@@ -972,3 +972,118 @@ test('"hide below 50%" and the per-opening stage counts agree in both modes', as
   }));
   assert.deepEqual(named(dS, dPosts), named(aS, aPosts));
 });
+
+test('admin access is given, refused and taken away identically in both modes', async () => {
+  await demo.auth.login('admin@demo.ph', 'demo123');
+  await api('auth/login', { email: 'admin@demo.ph', password: 'demo123' });
+  const shape = (r: any) => r.ok
+    ? { ok: true, admins: r.admins.map((a: any) => [a.name, a.email, a.position, a.kind, a.isYou]) }
+    : { ok: false, error: r.error };
+  const dList: any = await demo.admin.admins();
+  const aList: any = await api('admin/admins');
+  assert.deepEqual(shape(dList), shape(aList));
+  const byEmail = (list: any, e: string) => list.admins?.find((a: any) => a.email === e)?.id;
+  const dRecs: any = (await demo.admin.recruiters()).recruiters;
+  const aRecs: any = ((await api('admin/recruiters')) as any).recruiters;
+  const dGrace = dRecs.find((r: any) => r.email === 'grace@demo.ph').id;
+  const aGrace = aRecs.find((r: any) => r.email === 'grace@demo.ph').id;
+
+  // the only admin
+  assert.deepEqual(shape(await demo.admin.revokeAdmin(byEmail(dList, 'admin@demo.ph'))),
+    shape(await api('admin/revoke-admin', { userId: byEmail(aList, 'admin@demo.ph') })));
+  // grant, then grant again
+  assert.deepEqual(shape(await demo.admin.grantAdmin(dGrace)), shape(await api('admin/grant-admin', { userId: aGrace })));
+  assert.deepEqual(shape(await demo.admin.grantAdmin(dGrace)), shape(await api('admin/grant-admin', { userId: aGrace })));
+  // add an IT manager: bad, then good
+  for (const d of [
+    { firstName: 'Jun', lastName: '', email: 'jun@clark.test', position: '' },
+    { firstName: 'Jun', lastName: 'Reyes', email: 'nope', position: '' },
+    { firstName: 'Jun', lastName: 'Reyes', email: 'grace@demo.ph', position: '' },
+    { firstName: '  Jun ', lastName: 'Reyes', email: 'Jun.Parity@Clark.test', position: '  IT   Manager ' },
+  ]) assert.deepEqual(shape(await demo.admin.addAdmin(d)), shape(await api('admin/add-admin', d)), JSON.stringify(d));
+
+  // grace sees herself as an admin who still recruits, in both
+  await demo.auth.login('grace@demo.ph', 'demo123');
+  await api('auth/login', { email: 'grace@demo.ph', password: 'demo123' });
+  const dMe: any = (await demo.auth.me()).user; const aMe: any = ((await api('auth/me')) as any).user;
+  assert.equal(dMe.isAdmin, true); assert.equal(aMe.isAdmin, true);
+  assert.equal(dMe.role, aMe.role);
+  assert.equal((await demo.admin.requests()).ok, true);
+  assert.equal(((await api('admin/requests')) as any).ok, true);
+  // and takes it away again
+  const dNow: any = await demo.admin.admins(); const aNow: any = await api('admin/admins');
+  const dr: any = await demo.admin.revokeAdmin(byEmail(dNow, 'grace@demo.ph'));
+  const ar: any = await api('admin/revoke-admin', { userId: byEmail(aNow, 'grace@demo.ph') });
+  assert.deepEqual(shape(dr), shape(ar));
+  assert.equal(dr.removedSelf, true); assert.equal(ar.removedSelf, true);
+  assert.equal((await demo.admin.requests()).ok, false);
+  assert.equal(((await api('admin/requests')) as any).ok, false);
+});
+
+test('the skill dictionary: same catalogue, same rules, same scores after a link, in both modes', async () => {
+  const cat = (r: any) => r.catalogue.map((c: any) => `${c.name}|${c.category}|${c.industry}`).sort();
+  const dD: any = await demo.skills.dictionary(); const aD: any = await api('skills/dictionary');
+  assert.deepEqual(cat(dD), cat(aD), 'the same catalogue in both');
+  assert.equal(dD.catalogue.length, 226);
+
+  await demo.auth.login('admin@demo.ph', 'demo123');
+  await api('auth/login', { email: 'admin@demo.ph', password: 'demo123' });
+  const dV: any = await demo.skills.admin(); const aV: any = await api('skills/admin');
+  const idOf = (v: any, name: string) => v.catalogue.find((c: any) => c.name === name)?.id ?? 'none';
+  const outcome = (r: any) => (r.ok ? { ok: true } : { ok: false, error: r.error });
+
+  // Every refusal, and the good cases, answered alike.
+  const cases: [string, (v: any) => any, (v: any) => any][] = [
+    ['link a built-in', (v) => demo.skills.link('Bookkeeper', idOf(v, 'Git')), (v) => api('skills/link', { alias: 'Bookkeeper', targetId: idOf(v, 'Git') })],
+    ['link to itself', (v) => demo.skills.link('GIT', idOf(v, 'Git')), (v) => api('skills/link', { alias: 'GIT', targetId: idOf(v, 'Git') })],
+    ['link blank', (v) => demo.skills.link(' ', idOf(v, 'Git')), (v) => api('skills/link', { alias: ' ', targetId: idOf(v, 'Git') })],
+    ['link GitHub', (v) => demo.skills.link('GitHub', idOf(v, 'Git')), (v) => api('skills/link', { alias: 'GitHub', targetId: idOf(v, 'Git') })],
+    ['link GitHub again', (v) => demo.skills.link('Github', idOf(v, 'Git')), (v) => api('skills/link', { alias: 'Github', targetId: idOf(v, 'Git') })],
+    ['chain onto a target', (v) => demo.skills.link('Git', idOf(v, 'Bookkeeping')), (v) => api('skills/link', { alias: 'Git', targetId: idOf(v, 'Bookkeeping') })],
+    ['add a built-in', () => demo.skills.add({ name: 'Bookkeeper', category: 'technical', industry: 'Finance' }), () => api('skills/add', { name: 'Bookkeeper', category: 'technical', industry: 'Finance' })],
+    ['add an existing', () => demo.skills.add({ name: 'git', category: 'technical', industry: 'X' }), () => api('skills/add', { name: 'git', category: 'technical', industry: 'X' })],
+    ['add bad kind', () => demo.skills.add({ name: 'Zapier', category: 'x', industry: '' }), () => api('skills/add', { name: 'Zapier', category: 'x', industry: '' })],
+    ['add Zapier', () => demo.skills.add({ name: 'Zapier', category: 'technical', industry: '' }), () => api('skills/add', { name: 'Zapier', category: 'technical', industry: '' })],
+    ['rename to another word', (v) => demo.skills.update({ id: idOf(v, 'Zapier'), name: 'Make.com', category: 'technical', industry: '' }), (v) => api('skills/update', { id: idOf(v, 'Zapier'), name: 'Make.com', category: 'technical', industry: '' })],
+    ['recase and refile', (v) => demo.skills.update({ id: idOf(v, 'Zapier'), name: 'ZAPIER', category: 'soft', industry: 'Office Management' }), (v) => api('skills/update', { id: idOf(v, 'Zapier'), name: 'ZAPIER', category: 'soft', industry: 'Office Management' })],
+    ['remove', (v) => demo.skills.remove(idOf(v, 'ZAPIER')), (v) => api('skills/remove', { id: idOf(v, 'ZAPIER') })],
+    ['remove again', () => demo.skills.remove('nope'), () => api('skills/remove', { id: 0 })],
+    ['unlink a missing link', () => demo.skills.unlink('nothere'), () => api('skills/unlink', { aliasNorm: 'nothere' })],
+  ];
+  let dv = dV, av = aV;
+  for (const [label, d, a] of cases) {
+    const dr: any = await d(dv); const ar: any = await a(av);
+    assert.deepEqual(outcome(dr), outcome(ar), label);
+    if (dr.ok) { dv = dr; av = ar; }
+  }
+  assert.deepEqual(cat(await demo.skills.dictionary()), cat(await api('skills/dictionary')), 'catalogues after the edits');
+  assert.deepEqual((await demo.skills.dictionary() as any).links.map((l: any) => [l.aliasNorm, l.targetNorm]),
+    ((await api('skills/dictionary')) as any).links.map((l: any) => [l.aliasNorm, l.targetNorm]));
+
+  // And the point of it all: a resume saying GitHub now scores the same,
+  // matched as Git, in both modes.
+  await demo.auth.login('marco@demo.ph', 'demo123');
+  await api('auth/login', { email: 'marco@demo.ph', password: 'demo123' });
+  const draft = {
+    title: 'GitHub parity', template: 'chronological', design: 'classic',
+    personal: { fullName: 'Marco Garcia', email: 'marco@demo.ph', phone: '0917 123 4567', address: '', summary: 'Two plain sentences about me. Nothing more.' },
+    education: [{ school: 'HAU', degree: 'BS Information Technology', level: 'bachelor', year: '2025' }],
+    experience: [], skills: ['GitHub', 'HTML/CSS'], certifications: [],
+  };
+  const dRes: any = (await demo.resumes.save(draft as any)).resume;
+  const aRes: any = ((await api('resumes/save', { resume: draft })) as any).resume;
+  const dPosts: any = (await demo.postings.open()).postings; const aPosts: any = ((await api('postings/list')) as any).postings;
+  const dP = dPosts.find((p: any) => p.skills.includes('Git'));
+  assert.ok(dP, 'a seeded opening asks for Git');
+  const aP = aPosts.find((p: any) => p.title === dP.title);
+  const d: any = await demo.match.score(dRes.id, dP.id);
+  const a: any = await api('match/score', { resumeId: aRes.id, postingId: aP.id });
+  assert.ok(d.matchedSkills.includes('Git'), 'demo counts GitHub as Git');
+  assert.equal(d.score, a.score);
+  assert.deepEqual([...d.matchedSkills].sort(), [...a.matchedSkills].sort());
+
+  // Leave both as found for any test after this one.
+  await demo.auth.login('admin@demo.ph', 'demo123');
+  await api('auth/login', { email: 'admin@demo.ph', password: 'demo123' });
+  assert.deepEqual(outcome(await demo.skills.unlink('github')), outcome(await api('skills/unlink', { aliasNorm: 'github' })));
+});

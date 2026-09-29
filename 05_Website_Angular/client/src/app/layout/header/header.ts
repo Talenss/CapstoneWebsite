@@ -111,7 +111,7 @@ export class Header {
   brandHome = computed(() => this.session.homeFor(this.session.user()));
 
   brandSuffix = computed(() =>
-    this.effectiveVariant() === 'recruiter' ? 'Recruiter' : this.effectiveVariant() === 'admin' ? 'Head of Recruitment' : 'Philippines');
+    this.effectiveVariant() === 'recruiter' ? 'Recruiter' : this.effectiveVariant() === 'admin' ? 'Admin' : 'Philippines');
 
   navItems = computed<NavItem[]>(() => {
     switch (this.effectiveVariant()) {
@@ -129,11 +129,16 @@ export class Header {
           { key: 'dashboard', label: 'Dashboard', link: '/hr-dashboard' },
           { key: 'post', label: 'Post an opening', link: '/hr-posting' },
           { key: 'company', label: 'Company profile', link: '/hr-company' },
+          // A recruiter given admin access reaches the panel from here.
+          ...(this.session.user()?.isAdmin ? [{ key: 'admin', label: 'Admin panel', link: '/admin' }] : []),
           { key: 'account', label: 'Account', link: '/account' },
         ];
       case 'admin':
         return [
-          { key: 'admin', label: 'Recruiter requests', link: '/admin' },
+          // ...and gets their own dashboard back from the admin side.
+          ...(this.session.user()?.role === 'recruiter' ? [{ key: 'dashboard', label: 'Recruiter dashboard', link: '/hr-dashboard' }] : []),
+          { key: 'admin', label: 'Admin panel', link: '/admin' },
+          { key: 'skills', label: 'Skill dictionary', link: '/admin/skills' },
           { key: 'metrics', label: 'Platform metrics', link: '/admin/metrics' },
           { key: 'account', label: 'Account', link: '/account' },
         ];

@@ -13,7 +13,10 @@ export function authGuard(role?: Role): CanActivateFn {
 
     const u = await session.refresh();
     if (!u) return router.createUrlTree(['/auth'], { queryParams: { next: state.url } });
-    if (role && u.role !== role) return router.createUrlTree([session.homeFor(u)]);
+    // The admin pages also admit a recruiter who has been given admin access;
+    // they stay a recruiter everywhere else.
+    const allowed = !role || u.role === role || (role === 'admin' && !!u.isAdmin);
+    if (!allowed) return router.createUrlTree([session.homeFor(u)]);
     return true;
   };
 }

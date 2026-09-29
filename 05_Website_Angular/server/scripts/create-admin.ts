@@ -6,6 +6,10 @@
 
      npm run create-admin -- head@company.com "a strong password" "Clark Outsourcing"
      npm run create-admin -- head@company.com "a strong password" "Clark Outsourcing" "Maria" "Santos"
+     npm run create-admin -- it@company.com "a strong password" "Clark Outsourcing" "Jun" "Reyes" "IT Manager"
+   The last argument is the title shown on the account (default "Head of
+   Recruitment"). More admins can also be added, and recruiters given admin
+   access, from the admin panel itself.
 
    The company must already exist; the script lists the ones that do if the
    name does not match. Running it again for the same email resets the
@@ -19,9 +23,10 @@ import { passwordProblem } from '../src/lib/password';
 const TITLE = 'Head of Recruitment';
 
 async function main(): Promise<void> {
-  const [email, password, companyName, firstName, lastName] = process.argv.slice(2);
+  const [email, password, companyName, firstName, lastName, titleArg] = process.argv.slice(2);
+  const title = (titleArg || '').trim() || TITLE;
   if (!email || !password || !companyName) {
-    console.error('Usage: npm run create-admin -- <email> <password> "<company name>" ["First name" "Last name"]');
+    console.error('Usage: npm run create-admin -- <email> <password> "<company name>" ["First name" "Last name" ["Title"]]');
     process.exit(1);
   }
   const pwErr = passwordProblem(password);
@@ -55,16 +60,16 @@ async function main(): Promise<void> {
     }
     await exec(
       'UPDATE users SET password_hash = ?, company_id = ?, position_title = ? WHERE user_id = ?',
-      [hash, company.company_id, TITLE, existing.user_id],
+      [hash, company.company_id, title, existing.user_id],
     );
-    console.log(`Updated ${email}: password reset, head of recruitment for ${company.company_name}.`);
+    console.log(`Updated ${email}: password reset, ${title} (admin) for ${company.company_name}.`);
   } else {
     await exec(
       `INSERT INTO users (role, first_name, last_name, email, password_hash, company_id, position_title, verified)
        VALUES ('admin', ?, ?, ?, ?, ?, ?, 1)`,
-      [firstName || TITLE, lastName || '', email, hash, company.company_id, TITLE],
+      [firstName || title, lastName || '', email, hash, company.company_id, title],
     );
-    console.log(`Head of recruitment for ${company.company_name} created: ${email}`);
+    console.log(`${title} (admin) for ${company.company_name} created: ${email}`);
     console.log('Log in at /auth and open /admin to review your company\'s recruiter requests.');
   }
   await db().end();

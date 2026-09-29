@@ -1,0 +1,167 @@
+<app-header variant="admin" active="skills" />
+
+<main id="main" class="container" style="padding-bottom:80px">
+  <div class="page-head">
+    <span class="eyebrow">Admin panel</span>
+    <h1>Skill dictionary</h1>
+    <p>The skills applicants and recruiters pick from, and the words that should <b>count as the same skill</b>. A link here changes matching for every company from the moment it is saved, so link only terms that genuinely mean the same thing, never a related but different skill.</p>
+  </div>
+
+  @if (loadError()) {
+    <div class="alert error show" role="alert">{{ loadError() }}</div>
+  } @else if (!view()) {
+    <div class="loading"><span class="spinner"></span> Loading the dictionary…</div>
+  } @else {
+
+    <!-- LINK. The thing the review asked for, so it comes first. -->
+    <section class="block" id="linkCard">
+      <h2>Count two terms as one skill</h2>
+      <form class="card link-form" (submit)="link($event)" novalidate>
+        <div class="link-row">
+          <div class="field">
+            <label for="linkTerm">This term</label>
+            <input id="linkTerm" list="typedTerms" placeholder="e.g. GitHub" [value]="linkTerm()"
+                   (input)="linkTerm.set(val($event))" autocomplete="off">
+          </div>
+          <span class="counts-as">counts as</span>
+          <div class="field">
+            <label for="linkTarget">Catalogue skill</label>
+            <input id="linkTarget" list="catalogueNames" placeholder="e.g. Git" [value]="linkTarget()"
+                   (input)="linkTarget.set(val($event))" autocomplete="off">
+          </div>
+          <button class="btn primary" type="submit" [disabled]="busy()">Link</button>
+        </div>
+        @if (linkErr()) { <p class="form-err" role="alert">{{ linkErr() }}</p> }
+        <p class="hint">A resume or opening that uses either term will match the other. Scores shown from now on follow the link; a score already recorded on an application is kept, and marked on the recruiter's list if it would now differ. Built-in synonyms (such as <i>JS</i> for JavaScript) are shown against each skill below and cannot be removed here.</p>
+      </form>
+      <datalist id="catalogueNames">
+        @for (s of catalogue(); track s.id) { <option [value]="s.name"></option> }
+      </datalist>
+      <datalist id="typedTerms">
+        @for (t of typed(); track t.id) { @if (!t.linkedTo) { <option [value]="t.name"></option> } }
+      </datalist>
+    </section>
+
+    <!-- TYPED. Where a "GitHub" waiting to be linked is found. -->
+    <section class="block">
+      <h2>Typed by people, not in the catalogue <span class="count">{{ unlinkedTyped() }}</span></h2>
+      <p class="lead">Skills written on resumes or openings that the catalogue does not offer. Each is matched only as written until you link it or add it.</p>
+      @if (!typed().length) {
+        <div class="card empty"><p>Nothing yet. Every skill in use is in the catalogue.</p></div>
+      } @else {
+        <div class="card" style="padding:0;overflow-x:auto">
+          <table>
+            <thead><tr><th>Term</th><th>Used on</th><th>Counts as</th><th></th></tr></thead>
+            <tbody>
+              @for (t of typed(); track t.id) {
+                <tr>
+                  <td><b>{{ t.name }}</b></td>
+                  <td>{{ usedLabel(t) }}</td>
+                  <td>@if (t.linkedTo) { <span class="badge green">{{ t.linkedTo }}</span> } @else { <span class="muted">Only itself</span> }</td>
+                  <td class="acts">
+                    @if (!t.linkedTo) {
+                      <button class="btn ghost sm" type="button" (click)="countAs(t)">Count it as…</button>
+                      <button class="btn ghost sm" type="button" (click)="addFromTyped(t)">Add to catalogue</button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <!-- THE CATALOGUE. -->
+    <section class="block">
+      <h2>The catalogue <span class="count">{{ catalogue().length }}</span></h2>
+      <div class="filters">
+        <input type="search" placeholder="Search skills and their synonyms" aria-label="Search the catalogue"
+               [value]="q()" (input)="q.set(val($event))">
+        <select aria-label="Filter by industry" [value]="industryF()" (change)="industryF.set(val($event))">
+          <option value="">All industries</option>
+          @for (i of industries(); track i) { <option [value]="i">{{ i }}</option> }
+        </select>
+        <span class="n">{{ shown().length }} shown</span>
+      </div>
+      <div class="card" style="padding:0;overflow-x:auto">
+        <table class="cat">
+          <thead><tr><th>Skill</th><th>Kind</th><th>Industry</th><th>Also counts</th><th>Used on</th><th></th></tr></thead>
+          <tbody>
+            @for (s of shown(); track s.id) {
+              @if (editId() === s.id) {
+                <tr class="editing">
+                  <td><input aria-label="Skill name" [value]="editName()" (input)="editName.set(val($event))"></td>
+                  <td>
+                    <select aria-label="Kind" [value]="editCategory()" (change)="editCategory.set($any(val($event)))">
+                      <option value="technical">Technical</option><option value="soft">Soft</option>
+                    </select>
+                  </td>
+                  <td><input aria-label="Industry" list="industryNames" [value]="editIndustry()" (input)="editIndustry.set(val($event))"></td>
+                  <td colspan="2">
+                    @if (editErr()) { <span class="form-err">{{ editErr() }}</span> }
+                    @else { <span class="muted">Only capitals, spaces and punctuation of the name can change.</span> }
+                  </td>
+                  <td class="acts">
+                    <button class="btn primary sm" type="button" (click)="saveEdit(s)">Save</button>
+                    <button class="btn ghost sm" type="button" (click)="cancelEdit()">Cancel</button>
+                  </td>
+                </tr>
+              } @else {
+                <tr>
+                  <td><b>{{ s.name }}</b></td>
+                  <td>{{ s.category === 'soft' ? 'Soft' : 'Technical' }}</td>
+                  <td>{{ s.industry }}</td>
+                  <td class="syn">
+                    @for (l of s.links; track l.norm) {
+                      <button type="button" class="chip link" [title]="linkTitle(l)" (click)="unlink(s, l)"
+                              [attr.aria-label]="'Unlink ' + l.name + ' from ' + s.name">{{ l.name }} <span aria-hidden="true">×</span></button>
+                    }
+                    @for (b of s.builtIn; track b) {
+                      <span class="chip built" title="Built in">{{ b }}</span>
+                    }
+                    @if (!s.links.length && !s.builtIn.length) { <span class="muted">—</span> }
+                  </td>
+                  <td class="muted">{{ usedLabel(s) }}</td>
+                  <td class="acts">
+                    <button class="btn ghost sm" type="button" (click)="startEdit(s)">Edit</button>
+                    <button class="btn warn sm" type="button" (click)="remove(s)">Remove</button>
+                  </td>
+                </tr>
+              }
+            } @empty {
+              <tr><td colspan="6" class="muted" style="text-align:center;padding:24px">No skill matches that.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ADD. -->
+    <section class="block" id="addCard">
+      <h2>Add a skill</h2>
+      <form class="card add-form" (submit)="add($event)" novalidate>
+        <div class="add-grid">
+          <div class="field"><label for="addName">Skill name</label>
+            <input id="addName" [value]="addName()" (input)="addName.set(val($event))" autocomplete="off"></div>
+          <div class="field"><label for="addCategory">Kind</label>
+            <select id="addCategory" [value]="addCategory()" (change)="addCategory.set($any(val($event)))">
+              <option value="technical">Technical</option><option value="soft">Soft</option>
+            </select></div>
+          <div class="field"><label for="addIndustry">Industry</label>
+            <input id="addIndustry" list="industryNames" placeholder="e.g. BPO" [value]="addIndustry()"
+                   (input)="addIndustry.set(val($event))" autocomplete="off"></div>
+        </div>
+        @if (addErr()) { <p class="form-err" role="alert">{{ addErr() }}</p> }
+        <button class="btn primary sm" type="submit" [disabled]="busy()">Add to catalogue</button>
+      </form>
+      <datalist id="industryNames">
+        @for (i of industries(); track i) { <option [value]="i"></option> }
+      </datalist>
+    </section>
+  }
+</main>
+
+<app-footer />
+
+<div class="toast" [class.show]="!!toastMsg()" role="status" aria-live="polite">{{ toastMsg() }}</div>

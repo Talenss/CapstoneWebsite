@@ -1069,22 +1069,48 @@ export const SKILL_CATALOGUE: CatalogueSkill[] = [
   { name: 'Docker', category: 'technical', industry: 'Web Development' },
 ];
 
+/** The catalogue as it SHIPS. SKILL_CATALOGUE above becomes the live one
+ *  once the app has loaded the admins' edits (setCatalogue); this copy is
+ *  what a new demo database starts from, and what the engine test checks
+ *  against db/linaw_ph.sql. */
+export const BUILT_IN_CATALOGUE: readonly CatalogueSkill[] = SKILL_CATALOGUE.map((c) => ({ ...c }));
+
 /** Catalogue names grouped by industry, for a browsable picker. */
-export const SKILL_BY_INDUSTRY: ReadonlyArray<readonly [string, readonly string[]]> =
-  /* DERIVED from SKILL_CATALOGUE rather than written out again. It used to be
-     a second hand-maintained copy of the same grouping, which meant adding a
-     skill in one place and forgetting the other left the posting form quietly
-     offering a different set than the catalogue held. Industries appear in
-     the order the catalogue first mentions them, and the names within each
-     stay in catalogue order. */
-  (() => {
-    const by = new Map<string, string[]>();
-    for (const s of SKILL_CATALOGUE) {
-      const list = by.get(s.industry);
-      if (list) list.push(s.name); else by.set(s.industry, [s.name]);
-    }
-    return [...by].map(([industry, names]) => [industry, names] as const);
-  })();
+export const SKILL_BY_INDUSTRY: Array<[string, string[]]> = [];
+/* DERIVED from SKILL_CATALOGUE rather than written out again. It used to be
+   a second hand-maintained copy of the same grouping, which meant adding a
+   skill in one place and forgetting the other left the posting form quietly
+   offering a different set than the catalogue held. Industries appear in
+   the order the catalogue first mentions them, and the names within each
+   stay in catalogue order. Rebuilt in place, so anything holding the array
+   sees the current catalogue. */
+function groupByIndustry(): void {
+  const by = new Map<string, string[]>();
+  for (const s of SKILL_CATALOGUE) {
+    const list = by.get(s.industry);
+    if (list) list.push(s.name); else by.set(s.industry, [s.name]);
+  }
+  SKILL_BY_INDUSTRY.splice(0, SKILL_BY_INDUSTRY.length, ...[...by]);
+}
+groupByIndustry();
+
+/** Adopt the dictionary from /api/skills/dictionary: the admins' catalogue
+ *  and their linked synonyms. */
+export function applyDictionary(d: { catalogue: readonly CatalogueSkill[]; links: readonly { aliasNorm: string; targetNorm: string }[] }): void {
+  setCatalogue(d.catalogue);
+  setLinkedSkills(Object.fromEntries((d.links || []).map((l) => [l.aliasNorm, l.targetNorm])));
+}
+
+/** Replace the catalogue with the one the admins keep (from the skill
+ *  dictionary). In place, so every page that imported SKILL_CATALOGUE or
+ *  SKILL_BY_INDUSTRY reads the new one. An empty list is ignored: a picker
+ *  with nothing in it is never the right answer. */
+export function setCatalogue(list: readonly CatalogueSkill[]): void {
+  if (!list?.length) return;
+  SKILL_CATALOGUE.splice(0, SKILL_CATALOGUE.length, ...list.map((c) => ({ ...c })));
+  for (const c of list) SKILL_CATEGORY[normSkillBuiltIn(c.name)] = c.category;
+  groupByIndustry();
+}
 
 /** How the applicant is told about a requirement they have not met.
  *
@@ -1373,8 +1399,34 @@ export function acceptedFields(posting: any): Set<string> {
  *  of every comparison, so a resume and a posting that mean the same
  *  thing land on it. */
 export function normSkill(s: string): string {
-  const base = String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const base = skillBase(s);
+  const canon = SKILL_ALIASES[base] ?? base;
+  return LINKED_SKILLS[canon] ?? canon;
+}
+
+/** A skill with case and punctuation stripped and NO synonyms applied. */
+export function skillBase(s: string): string {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/** normSkill without the admins' links: what the server's skills table
+ *  would have stored the term as, which is how the demo counts usage. */
+export function normSkillBuiltIn(s: string): string {
+  const base = skillBase(s);
   return SKILL_ALIASES[base] ?? base;
+}
+
+/* SYNONYMS LINKED BY AN ADMIN in the skill dictionary, on top of the
+   built-in SKILL_ALIASES. Mirrors setLinkedSkills() in
+   server/src/lib/engine.ts: applied after the built-in list, one step only
+   (the dictionary refuses chains). Filled from /api/skills/dictionary when
+   the app starts, and by the demo adapter from its own store. */
+let LINKED_SKILLS: Record<string, string> = {};
+export function setLinkedSkills(map: Record<string, string>): void {
+  LINKED_SKILLS = { ...map };
+}
+export function linkedSkills(): Readonly<Record<string, string>> {
+  return LINKED_SKILLS;
 }
 
 /** Mirrored 1:1 in server/src/lib/engine.ts (rmScore()). Rule-based

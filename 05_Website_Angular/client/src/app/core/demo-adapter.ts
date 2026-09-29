@@ -4,8 +4,8 @@
    real departments so all three match tiers actually demonstrate.
    ============================================================ */
 import { ApiAdapter } from './adapter';
-import { AnalyzedResume, ApiResult, AppStatus, Application, ApplicationAnswer, Company, EvidenceKind, RejectionReason, HrStats, HrStatsFilters, InviteSchedule, MatchResult, Posting, PostingQuestion, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User, RankedQuery} from './models';
-import { passwordOk, PASSWORD_HINT, scoreLocal, visibleResume, RESUME_SECTIONS, OPTIONAL_WEIGHTS, WEIGHT_FLOOR, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert, EDU_FIELD_OPTIONS, EDU_FIELD_ANY, MAX_RESUMES, emailProblem, phoneProblem, linkedinProblem, SHIFT_LABELS, WORK_SETUP_LABELS, MAX_MONTHLY_SALARY, MAX_VACANCIES } from './engine';
+import { SkillAdminView, SkillDictionary, AnalyzedResume, ApiResult, AppStatus, Application, ApplicationAnswer, Company, EvidenceKind, RejectionReason, HrStats, HrStatsFilters, InviteSchedule, MatchResult, Posting, PostingQuestion, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User, RankedQuery} from './models';
+import { BUILT_IN_CATALOGUE, normSkillBuiltIn, setLinkedSkills, linkedSkills, skillBase, normSkill, SKILL_ALIASES, passwordOk, PASSWORD_HINT, scoreLocal, visibleResume, RESUME_SECTIONS, OPTIONAL_WEIGHTS, WEIGHT_FLOOR, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert, EDU_FIELD_OPTIONS, EDU_FIELD_ANY, MAX_RESUMES, emailProblem, phoneProblem, linkedinProblem, SHIFT_LABELS, WORK_SETUP_LABELS, MAX_MONTHLY_SALARY, MAX_VACANCIES } from './engine';
 
 const KEY = 'linaw_v3_db';
 
@@ -40,9 +40,15 @@ const uid = () => 'x' + Math.random().toString(36).slice(2, 9);
  *  firstName + lastName on the way out (pubUser), mirroring the generated
  *  column in the real database, so the demo build cannot hold a display name
  *  that disagrees with the two parts it is supposed to be made of. */
-interface DemoUser extends Omit<User, 'name'> {
+interface DemoUser extends Omit<User, 'name' | 'isAdmin'> {
   password: string;
+  /** Admin access given to a recruiter; users.is_admin on the server.
+   *  Stored under its own name because `isAdmin` on the way out is DERIVED
+   *  (see demoIsAdmin), exactly as the server derives it. */
+  adminGranted?: boolean;
 }
+interface DemoSkill { norm: string; name: string; category: 'technical' | 'soft'; industry: string; inCatalogue: boolean }
+interface DemoLink { norm: string; name: string; target: string; by: string | null; at: number }
 interface EmailCode {
   email: string;
   purpose: 'verify' | 'reset';
@@ -60,6 +66,10 @@ interface Db {
   emailCodes: EmailCode[];
   savedJobs: { userId: string; postingId: string; createdAt: number }[];
   deptAssignments: { companyId: string; department: string; userId: string }[];
+  /** The skill dictionary: the server's skills rows that matter here (the
+   *  catalogue) and skill_aliases. Terms typed on resumes and openings are
+   *  not stored separately; they are read off those records. */
+  skillDict?: { skills: DemoSkill[]; links: DemoLink[] };
   /** Mirrors the server's application_status_history table. Written on
    *  every status change so demo mode can show the same applicant-facing
    *  timeline as api mode rather than a feature that only half exists. */
@@ -291,18 +301,48 @@ function seed(): Db {
   };
 }
 
-/** The admin level belongs to a partner company's HEAD OF RECRUITMENT and
- *  covers that company only — the same rule, and the same wording, as
- *  requireHeadOfRecruitment() in server/src/lib/auth.ts. */
+/** Mirrors isCompanyAdmin() in server/src/lib/auth.ts: an admin-only
+ *  account, or a verified recruiter given admin access, at a company. */
+function demoIsAdmin(u: DemoUser | null | undefined): boolean {
+  if (!u || !u.companyId) return false;
+  if (u.role === 'admin') return true;
+  return u.role === 'recruiter' && !!u.adminGranted && !!u.verified;
+}
+function demoAdminCount(db: Db, companyId: string): number {
+  return db.users.filter((u) => u.companyId === companyId && demoIsAdmin(u)).length;
+}
+
+/** The admin level belongs to a partner company's own people and covers
+ *  that company only — the same rule, and the same wording, as
+ *  requireCompanyAdmin() in server/src/lib/auth.ts. */
 function headDenied(me: DemoUser | null | undefined) {
-  if (!me || me.role !== 'admin') return apiFail("You don't have access to that.");
+  if (!me || (me.role !== 'admin' && !demoIsAdmin(me))) return apiFail("You don't have access to that.");
   if (!me.companyId) {
     return apiFail("This admin account isn't linked to a partner company. The admin level belongs to the company's head of recruitment; set one up with: npm run create-admin -- <email> <password> \"<company name>\"");
   }
   return null;
 }
 
+/** Every read of the demo database goes through here, so the engine's
+ *  linked synonyms always follow the dictionary in the store, including
+ *  right after a reset. */
+const tidyText = (v: unknown, n: number) => String(v ?? '').trim().replace(/\s+/g, ' ').slice(0, n);
+
 function load(): Db {
+  const db = loadRaw();
+  if (!db.skillDict) {
+    // Databases saved before the dictionary existed start from the shipped one.
+    db.skillDict = {
+      skills: BUILT_IN_CATALOGUE.map((c) => ({ norm: normSkillBuiltIn(c.name), name: c.name, category: c.category, industry: c.industry, inCatalogue: true })),
+      links: [],
+    };
+    persist(db);
+  }
+  setLinkedSkills(Object.fromEntries(db.skillDict.links.map((l) => [l.norm, l.target])));
+  return db;
+}
+
+function loadRaw(): Db {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
@@ -400,6 +440,9 @@ const pubUser = (u: DemoUser | null): User | null => {
      copy that could drift out of step with the two parts, and mode-parity
      would then be testing two different ideas of what someone is called. */
   c.name = userDisplayName(u);
+  // Derived, as the server derives it; recruiters and admins only.
+  delete c.adminGranted;
+  if (u.role === 'recruiter' || u.role === 'admin') c.isAdmin = demoIsAdmin(u);
   return c;
 };
 
@@ -574,6 +617,8 @@ export class DemoAdapter implements ApiAdapter {
       const db = load(); const u = meRow(db);
       if (!u) return apiFail('You are not signed in.');
       if (u.password !== password) return apiFail('Password is incorrect.');
+      if (demoIsAdmin(u) && demoAdminCount(db, u.companyId!) <= 1)
+        return apiFail('You are the only admin for your company. Give admin access to someone else in the admin panel before deleting this account.');
       db.resumes = db.resumes.filter((r) => r.userId !== u.id);
       db.applications = db.applications.filter((a) => a.seekerId !== u.id);
       db.users = db.users.filter((x) => x.id !== u.id);
@@ -1771,9 +1816,57 @@ export class DemoAdapter implements ApiAdapter {
         recruiters: db.users.filter((u) => u.role === 'recruiter' && u.companyId === me!.companyId).map((u) => ({
           id: u.id, name: userDisplayName(u), email: u.email, position: u.position || '',
           companyName: db.companies.find((c) => c.id === u.companyId)?.name || '—',
-          verified: !!u.verified, createdAt: u.createdAt, lastLoginAt: null,
+          verified: !!u.verified, isAdmin: demoIsAdmin(u), createdAt: u.createdAt, lastLoginAt: null,
         })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
       });
+    },
+    // Who can use this panel. Mirrors routes/admin.ts, rule for rule.
+    admins: () => {
+      const db = load(); const me = meRow(db);
+      const denied = headDenied(me); if (denied) return denied;
+      return apiOk({ admins: this.adminList(db, me!) });
+    },
+    grantAdmin: (userId: string) => {
+      const db = load(); const me = meRow(db);
+      const denied = headDenied(me); if (denied) return denied;
+      const t = db.users.find((u) => u.id === userId);
+      if (!t || t.companyId !== me!.companyId || t.role !== 'recruiter') return apiFail('Recruiter not found.');
+      if (!t.verified) return apiFail('Only a verified recruiter can be given admin access.');
+      if (t.adminGranted) return apiFail(`${userDisplayName(t)} already has admin access.`);
+      t.adminGranted = true; persist(db);
+      return apiOk({ admins: this.adminList(db, me!) });
+    },
+    revokeAdmin: (userId: string) => {
+      const db = load(); const me = meRow(db);
+      const denied = headDenied(me); if (denied) return denied;
+      const t = db.users.find((u) => u.id === userId);
+      if (!t || t.companyId !== me!.companyId || !demoIsAdmin(t)) return apiFail('Admin not found.');
+      if (demoAdminCount(db, me!.companyId!) <= 1)
+        return apiFail('This is the only admin for your company. Give someone else admin access first, so the company is never left without one.');
+      if (t.role === 'admin') db.users = db.users.filter((u) => u.id !== t.id);
+      else t.adminGranted = false;
+      persist(db);
+      return apiOk({ admins: this.adminList(db, me!), removedSelf: t.id === me!.id });
+    },
+    addAdmin: (d: { firstName: string; lastName: string; email: string; position: string }) => {
+      const db = load(); const me = meRow(db);
+      const denied = headDenied(me); if (denied) return denied;
+      const tidy = (v: unknown, n: number) => String(v ?? '').trim().replace(/\s+/g, ' ').slice(0, n);
+      const first = tidy(d?.firstName, 80), last = tidy(d?.lastName, 80);
+      const email = String(d?.email ?? '').trim().toLowerCase();
+      const position = tidy(d?.position, 120) || 'IT Manager';
+      if (!first || !last) return apiFail('Enter their first and last name.');
+      const eErr = emailProblem(email);
+      if (!email || eErr) return apiFail(eErr || 'Enter their work email address.');
+      if (db.users.some((u) => u.email.toLowerCase() === email))
+        return apiFail('An account already uses this email. If they are a recruiter here, give them admin access from the recruiter list instead.');
+      db.users.push({
+        id: uid(), role: 'admin', firstName: first, lastName: last, email,
+        password: uid() + uid() + uid(), // placeholder; they set their own via Forgot password
+        companyId: me!.companyId, position, createdAt: Date.now(),
+      } as DemoUser);
+      persist(db);
+      return apiOk({ admins: this.adminList(db, me!) });
     },
     deptAssignments: () => {
       const db = load(); const me = meRow(db);
@@ -1821,6 +1914,19 @@ export class DemoAdapter implements ApiAdapter {
         .filter((a) => a.companyId === cid)
         .map((a) => ({ department: a.department, userId: a.userId, userName: userDisplayName(db.users.find((u) => u.id === a.userId)) || '—' })),
     })).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /** Mirrors listAdmins() in routes/admin.ts: admin-only accounts first,
+   *  then recruiters with access, each group by name. */
+  private adminList(db: Db, me: DemoUser) {
+    return db.users.filter((u) => u.companyId === me.companyId && demoIsAdmin(u))
+      .sort((a, b) => (a.role === 'admin' ? 0 : 1) - (b.role === 'admin' ? 0 : 1)
+        || userDisplayName(a).localeCompare(userDisplayName(b)))
+      .map((u) => ({
+        id: u.id, name: userDisplayName(u), email: u.email, position: u.position || '',
+        kind: u.role === 'admin' ? 'admin' as const : 'recruiter' as const,
+        isYou: u.id === me.id, lastLoginAt: null,
+      }));
   }
 
   private reqList(db: Db, companyId: string) {
@@ -1873,6 +1979,157 @@ export class DemoAdapter implements ApiAdapter {
       return new Promise((resolve) => setTimeout(() => resolve({ ok: true, resume, provider: 'demo', simulated: true }), 1400));
     },
   };
+
+  /* The skill dictionary. Mirrors routes/skills.ts rule for rule and word for
+     word; see there for what a link does and the rules it follows. */
+  skills = {
+    dictionary: () => {
+      const d = load().skillDict!;
+      const cat = d.skills.filter((k) => k.inCatalogue)
+        .sort((a, b) => (a.industry || 'Other').localeCompare(b.industry || 'Other') || a.name.localeCompare(b.name));
+      const nameOf = (n: string) => d.skills.find((k) => k.norm === n)?.name ?? n;
+      return apiOk<SkillDictionary>({
+        catalogue: cat.map((k) => ({ name: k.name, category: k.category, industry: k.industry || 'Other' })),
+        links: [...d.links].sort((a, b) => a.name.localeCompare(b.name))
+          .map((l) => ({ alias: l.name, aliasNorm: l.norm, target: nameOf(l.target), targetNorm: l.target })),
+      });
+    },
+    admin: () => {
+      const db = load(); const me = meRow(db);
+      const denied = headDenied(me); if (denied) return denied;
+      return apiOk(this.skillView(db));
+    },
+    add: (x: { name: string; category: string; industry: string }) => {
+      const db = load(); const me = meRow(db);
+      const denied = headDenied(me); if (denied) return denied;
+      const d = db.skillDict!;
+      const name = tidyText(x?.name, 120); const category = String(x?.category ?? '');
+      const industry = tidyText(x?.industry, 60) || 'Other';
+      if (!name) return apiFail('Enter the skill’s name.');
+      const base = skillBase(name);
+      if (!base) return apiFail('A skill name needs at least one letter or number.');
+      if (category !== 'technical' && category !== 'soft') return apiFail('Pick whether it is a technical or a soft skill.');
+      const canon = normSkill(name);
+      if (canon !== base) return apiFail(`"${name}" already counts as ${this.skillName(db, canon)}, so it is matched as that skill.`);
+      const row = d.skills.find((k) => k.norm === canon);
+      if (row?.inCatalogue) return apiFail(`${row.name} is already in the catalogue.`);
+      if (row) Object.assign(row, { inCatalogue: true, category, industry, name });
+      else d.skills.push({ norm: canon, name, category: category as 'technical' | 'soft', industry, inCatalogue: true });
+      persist(db);
+      return apiOk(this.skillView(db));
+    },
+    update: (x: { id: string; name: string; category: string; industry: string }) => {
+      const db = load(); const me = meRow(db);
+      const denied = headDenied(me); if (denied) return denied;
+      const row = db.skillDict!.skills.find((k) => k.norm === x?.id);
+      if (!row || !row.inCatalogue) return apiFail('Skill not found in the catalogue.');
+      const name = tidyText(x?.name, 120) || row.name;
+      const category = String(x?.category ?? row.category);
+      const industry = tidyText(x?.industry, 60) || row.industry || 'Other';
+      if (category !== 'technical' && category !== 'soft') return apiFail('Pick whether it is a technical or a soft skill.');
+      if (normSkill(name) !== row.norm)
+        return apiFail('A rename can only change capitals, spaces and punctuation. For a different word, add it as a new skill and link the old one to it.');
+      // The server renames the one row every resume and opening points at;
+      // the demo stores names on the records, so it renames them there.
+      if (name !== row.name) {
+        const swap = (list: string[]) => list.map((v) => (normSkillBuiltIn(v) === row.norm ? name : v));
+        for (const r of db.resumes) r.skills = swap(r.skills || []);
+        for (const p of db.postings) p.skills = swap(p.skills || []);
+      }
+      Object.assign(row, { name, category, industry });
+      persist(db);
+      return apiOk(this.skillView(db));
+    },
+    remove: (id: string) => {
+      const db = load(); const me = meRow(db);
+      const denied = headDenied(me); if (denied) return denied;
+      const row = db.skillDict!.skills.find((k) => k.norm === id);
+      if (!row || !row.inCatalogue) return apiFail('Skill not found in the catalogue.');
+      row.inCatalogue = false; persist(db);
+      return apiOk(this.skillView(db));
+    },
+    link: (alias: string, targetId: string) => {
+      const db = load(); const me = meRow(db);
+      const denied = headDenied(me); if (denied) return denied;
+      const d = db.skillDict!;
+      const name = tidyText(alias, 120); const base = skillBase(name);
+      if (!base) return apiFail('Enter the term that should count as this skill.');
+      const target = d.skills.find((k) => k.norm === targetId);
+      if (!target || !target.inCatalogue) return apiFail('Pick a skill from the catalogue to link it to.');
+      if (base === target.norm) return apiFail(`"${name}" is already ${target.name}.`);
+      if (SKILL_ALIASES[base]) return apiFail(`"${name}" is already built in as ${this.skillName(db, SKILL_ALIASES[base])}.`);
+      const linked = linkedSkills();
+      if (linked[base]) return apiFail(`"${name}" is already linked to ${this.skillName(db, linked[base])}. Unlink it first.`);
+      if (Object.values(linked).includes(base))
+        return apiFail(`Other terms are linked to "${name}". Unlink them first, or link them straight to ${target.name}.`);
+      d.links.push({ norm: base, name, target: target.norm, by: me!.id, at: Date.now() });
+      const same = d.skills.find((k) => k.norm === base);
+      if (same) same.inCatalogue = false;
+      persist(db); load();
+      return apiOk(this.skillView(db));
+    },
+    unlink: (aliasNorm: string) => {
+      const db = load(); const me = meRow(db);
+      const denied = headDenied(me); if (denied) return denied;
+      const d = db.skillDict!; const norm = skillBase(aliasNorm);
+      if (!d.links.some((l) => l.norm === norm)) return apiFail('That link no longer exists.');
+      d.links = d.links.filter((l) => l.norm !== norm);
+      persist(db); load();
+      return apiOk(this.skillView(db));
+    },
+  };
+
+  private skillName(db: Db, norm: string): string {
+    return db.skillDict!.skills.find((k) => k.norm === norm)?.name
+      ?? this.typedTerms(db).get(norm)?.name ?? norm;
+  }
+
+  /** Terms on resumes and openings, keyed the way the server's skills table
+   *  would have filed them (built-in synonyms only), with how many of each
+   *  use them. */
+  private typedTerms(db: Db): Map<string, { name: string; resumes: number; postings: number }> {
+    const out = new Map<string, { name: string; resumes: number; postings: number }>();
+    const count = (list: string[] | undefined, key: 'resumes' | 'postings') => {
+      const seen = new Set<string>();
+      for (const v of list || []) {
+        const n = normSkillBuiltIn(v);
+        if (!n || seen.has(n)) continue;
+        seen.add(n);
+        const e = out.get(n) ?? { name: String(v).trim(), resumes: 0, postings: 0 };
+        e[key]++; out.set(n, e);
+      }
+    };
+    for (const r of db.resumes) count(r.skills, 'resumes');
+    for (const p of db.postings) count(p.skills, 'postings');
+    return out;
+  }
+
+  private skillView(db: Db): SkillAdminView {
+    const d = db.skillDict!;
+    const used = this.typedTerms(db);
+    const byId = new Map(db.users.map((u) => [u.id, u]));
+    const builtIn = new Map<string, string[]>();
+    for (const [k, v] of Object.entries(SKILL_ALIASES)) builtIn.set(v, [...(builtIn.get(v) ?? []), k]);
+    const linked = linkedSkills();
+    const catalogue = d.skills.filter((k) => k.inCatalogue)
+      .sort((a, b) => (a.industry || 'Other').localeCompare(b.industry || 'Other') || a.name.localeCompare(b.name))
+      .map((k) => ({
+        id: k.norm, name: k.name, category: k.category, industry: k.industry || 'Other',
+        resumes: used.get(k.norm)?.resumes ?? 0, postings: used.get(k.norm)?.postings ?? 0,
+        links: d.links.filter((l) => l.target === k.norm).sort((a, b) => a.name.localeCompare(b.name))
+          .map((l) => ({ norm: l.norm, name: l.name, by: l.by && byId.get(l.by) ? userDisplayName(byId.get(l.by)!) : null, at: l.at })),
+        builtIn: (builtIn.get(k.norm) ?? []).sort(),
+      }));
+    const catalogueNorms = new Set(d.skills.filter((k) => k.inCatalogue).map((k) => k.norm));
+    const typed = [...used].filter(([n]) => !catalogueNorms.has(n))
+      .map(([n, e]) => ({
+        id: n, name: d.skills.find((k) => k.norm === n)?.name ?? e.name, resumes: e.resumes, postings: e.postings,
+        linkedTo: linked[n] ? this.skillName(db, linked[n]) : null,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const industries = [...new Set(catalogue.map((c) => c.industry))].sort((a, b) => a.localeCompare(b));
+    return { catalogue, typed, industries };
+  }
 
   resetDemo() {
     // setSession(null) rather than a bare removeItem: the session now has a

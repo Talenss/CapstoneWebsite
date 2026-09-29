@@ -1290,3 +1290,38 @@ test('a job still held is printed first, and the rest keep their order', () => {
   ]).map((e) => e.position);
   assert.deepEqual(order, ['Dancer', 'Tutor', 'Coder', 'Intern']);
 });
+
+// ---------- the skill dictionary (admin-linked synonyms) ----------
+
+import { BUILT_IN_CATALOGUE as SERVER_CATALOGUE } from '../src/lib/skill-catalogue';
+import { setLinkedSkills as serverSetLinks } from '../src/lib/engine';
+import { setLinkedSkills as clientSetLinks, BUILT_IN_CATALOGUE as CLIENT_BUILT_IN } from '../../client/src/app/core/engine';
+
+test("the server's copy of the shipped catalogue is the client's, entry for entry", () => {
+  // The migration marks the database's catalogue from the server copy; the
+  // pickers start from the client's. They must be the same list.
+  assert.deepEqual(SERVER_CATALOGUE.map((c) => ({ ...c })), SKILL_CATALOGUE.map((c) => ({ ...c })));
+  assert.deepEqual(CLIENT_BUILT_IN.map((c) => ({ ...c })), SKILL_CATALOGUE.map((c) => ({ ...c })));
+});
+
+test('a linked synonym matches in both engines, after the built-in list, and unlinks cleanly', () => {
+  const r = resume(['GitHub', 'MS Office']);
+  const p = posting(['Git', 'Microsoft Office']);
+  try {
+    const before = score(r, p);
+    assert.equal(before.matchedSkills.length, 1, 'MS Office is built in; GitHub is not linked yet');
+    serverSetLinks({ github: 'git' }); clientSetLinks({ github: 'git' });
+    assert.equal(skillNorm('GitHub'), 'git'); assert.equal(normSkill('GitHub'), 'git');
+    const after = score(r, p); // both engines, asserted equal
+    assert.equal(after.matchedSkills.length, 2, 'the link makes GitHub count as Git');
+    assert.ok(after.score > before.score);
+    // Applied after the built-in list: a built-in synonym of a linked term
+    // follows the link too (CRM -> crmsoftware -> the linked target).
+    serverSetLinks({ crmsoftware: 'salesforce' }); clientSetLinks({ crmsoftware: 'salesforce' });
+    assert.equal(skillNorm('CRM'), 'salesforce'); assert.equal(normSkill('CRM'), 'salesforce');
+  } finally {
+    serverSetLinks({}); clientSetLinks({});
+  }
+  assert.equal(skillNorm('GitHub'), 'github', 'unlinked again');
+  assert.equal(score(r, p).matchedSkills.length, 1);
+});

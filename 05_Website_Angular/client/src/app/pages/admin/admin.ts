@@ -4,7 +4,8 @@ import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
-import { AdminRecruiter, RecruiterRequest, RoutingCompany } from '../../core/models';
+import { AdminRecruiter, CompanyAdmin, RecruiterRequest, RoutingCompany } from '../../core/models';
+import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 
@@ -23,6 +24,7 @@ import { HlmSelectImports } from '@spartan-ng/helm/select';
 export class Admin implements OnInit {
   private dialog = inject(DialogService);
   private api = inject(ApiService);
+  private router = inject(Router);
   session = inject(SessionService);
 
   isDemo = environment.mode === 'demo';
@@ -30,6 +32,19 @@ export class Admin implements OnInit {
   requests = signal<RecruiterRequest[]>([]);
   recruiters = signal<AdminRecruiter[]>([]);
   routing = signal<RoutingCompany[]>([]);
+  admins = signal<CompanyAdmin[]>([]);
+  busyAdmin = signal<string | null>(null);
+  aFirst = signal(''); aLast = signal(''); aEmail = signal(''); aPos = signal('IT Manager');
+  adding = signal(false);
+  addErr = signal('');
+
+  /** Whoever is signed in, by their own title: the panel is no longer only
+   *  the head of recruitment's. */
+  readonly myTitle = computed(() => {
+    const u = this.session.user();
+    const pos = u?.position || (u?.role === 'recruiter' ? 'Recruiter' : 'Admin');
+    return u?.role === 'recruiter' ? `${pos} · admin access` : pos;
+  });
   busyId = signal<string | null>(null);
   busyDept = signal<string | null>(null);
   errorMsg = signal('');
@@ -40,11 +55,13 @@ export class Admin implements OnInit {
   totalAssigned = computed(() => this.routing().reduce((n, c) => n + c.assignments.length, 0));
 
   async ngOnInit(): Promise<void> {
-    const [reqRes, recRes, routeRes] = await Promise.all([
+    const [reqRes, recRes, routeRes, admRes] = await Promise.all([
       this.api.admin.requests(),
       this.api.admin.recruiters(),
       this.api.admin.deptAssignments(),
+      this.api.admin.admins(),
     ]);
+    if (admRes.ok) this.admins.set(admRes.admins);
     if (reqRes.ok) this.requests.set(reqRes.requests);
     if (recRes.ok) this.recruiters.set(recRes.recruiters);
     if (routeRes.ok) this.routing.set(routeRes.companies);
@@ -109,6 +126,68 @@ export class Admin implements OnInit {
     }
     this.requests.set(res.requests);
     this.showToast(`Request from ${r.name} declined.`);
+  }
+
+  val(e: Event): string { return (e.target as HTMLInputElement).value; }
+
+  async grant(u: AdminRecruiter): Promise<void> {
+    if (!(await this.dialog.confirm({
+      title: `Give ${u.name} admin access?`,
+      message: 'They keep their recruiter dashboard, and can also approve recruiters, route departments, edit the skill dictionary and manage who else has admin access.',
+      confirmLabel: 'Give admin access',
+    }))) return;
+    this.errorMsg.set('');
+    this.busyAdmin.set(u.id);
+    const res = await this.api.admin.grantAdmin(u.id);
+    this.busyAdmin.set(null);
+    if (!res.ok) { this.errorMsg.set(res.error); return; }
+    this.admins.set(res.admins);
+    const rec = await this.api.admin.recruiters();
+    if (rec.ok) this.recruiters.set(rec.recruiters);
+    this.showToast(`${u.name} now has admin access.`);
+  }
+
+  async revoke(a: CompanyAdmin): Promise<void> {
+    const self = a.isYou;
+    const ok = await this.dialog.confirm({
+      title: a.kind === 'admin' ? `Remove ${a.name}'s admin account?` : `Remove ${a.name}'s admin access?`,
+      message: (a.kind === 'admin'
+        ? 'This account is admin-only, so it is deleted. They will no longer be able to sign in.'
+        : 'They keep their recruiter account and dashboard; only the admin panel goes.')
+        + (self ? '\n\nThis is you: you will leave the admin panel straight away.' : ''),
+      confirmLabel: a.kind === 'admin' ? 'Remove account' : 'Remove access', danger: true,
+    });
+    if (!ok) return;
+    this.errorMsg.set('');
+    this.busyAdmin.set(a.id);
+    const res = await this.api.admin.revokeAdmin(a.id);
+    this.busyAdmin.set(null);
+    if (!res.ok) { this.errorMsg.set(res.error); return; }
+    if (res.removedSelf) {
+      // Their own access is gone: back to wherever they now belong.
+      const me = await this.session.refresh();
+      await this.router.navigateByUrl(me ? this.session.homeFor(me) : '/auth');
+      return;
+    }
+    this.admins.set(res.admins);
+    const rec = await this.api.admin.recruiters();
+    if (rec.ok) this.recruiters.set(rec.recruiters);
+    this.showToast(a.kind === 'admin' ? `${a.name}'s admin account was removed.` : `${a.name} no longer has admin access.`);
+  }
+
+  async addAdmin(e: Event): Promise<void> {
+    e.preventDefault();
+    this.addErr.set('');
+    this.adding.set(true);
+    const res = await this.api.admin.addAdmin({
+      firstName: this.aFirst(), lastName: this.aLast(), email: this.aEmail(), position: this.aPos(),
+    });
+    this.adding.set(false);
+    if (!res.ok) { this.addErr.set(res.error); return; }
+    this.admins.set(res.admins);
+    const name = `${this.aFirst().trim()} ${this.aLast().trim()}`;
+    this.aFirst.set(''); this.aLast.set(''); this.aEmail.set(''); this.aPos.set('IT Manager');
+    this.showToast(`${name} can now use the admin panel. They set their password with "Forgot password".`);
   }
 
   day(t: number | null): string {
