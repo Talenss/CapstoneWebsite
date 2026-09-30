@@ -8,7 +8,7 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { AnalysisService } from '../../core/analysis.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, visibleResume, WEIGHTS, DEGREE_CATALOGUE, SKILL_CATALOGUE, MAX_RESUMES, emailProblem, phoneProblem, linkedinProblem, experienceInPrintOrder } from '../../core/engine';
+import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, visibleResume, WEIGHTS, DEGREE_CATALOGUE, SKILL_CATALOGUE, MAX_RESUMES, emailProblem, phoneProblem, linkedinProblem, experienceInPrintOrder, educationFields, EDU_FIELD_OPTIONS, EDU_RANK } from '../../core/engine';
 import { Education, EduLevel, EvidenceKind, Experience, Language, Project, Reference, Resume, ResumeDesign, ResumeLink, ResumeSection, SkillEvidence, Template } from '../../core/models';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 
@@ -524,6 +524,22 @@ export class ResumeBuilder implements OnInit {
     this.resume.update((r) => ({ ...r, education: [...r.education, { school: '', degree: '', level: 'none', year: '' } as Education] }));
     this.markDirty();
   }
+  /** What the system reads as this entry's field of study, shown under the
+   *  degree as it is typed. The same function scores it (educationFields in
+   *  core/engine.ts, mirrored on the server), so what the applicant sees is
+   *  what an opening's "field of study" is compared with. Null when there is
+   *  nothing to say: nothing typed yet, or not recognised at a level where
+   *  the field is never checked (below an associate degree). */
+  fieldReadAs(e: { degree?: string; field?: string; level?: string }): { ok: boolean; text: string } | null {
+    const typed = `${e.degree || ''} ${e.field || ''}`.trim();
+    if (!typed) return null;
+    const found = [...educationFields(typed)]
+      .map((v) => EDU_FIELD_OPTIONS.find((o) => o.value === v)?.label).filter((l): l is string => !!l);
+    if (found.length) return { ok: true, text: found.join(' and ') };
+    const college = (EDU_RANK[(e.level || 'none') as keyof typeof EDU_RANK] ?? 0) >= EDU_RANK['associate'];
+    return college ? { ok: false, text: '' } : null;
+  }
+
   updateEducation(i: number, field: string, v: string): void {
     this.resume.update((r) => ({ ...r, education: r.education.map((e, idx) => (idx === i ? { ...e, [field]: v } : e)) }));
     this.markDirty();

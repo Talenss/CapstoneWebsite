@@ -1325,3 +1325,22 @@ test('a linked synonym matches in both engines, after the built-in list, and unl
   assert.equal(skillNorm('GitHub'), 'github', 'unlinked again');
   assert.equal(score(r, p).matchedSkills.length, 1);
 });
+
+/* The abbreviations applicants actually type ("BSIT", "BSN", "BSA") are one
+   word, so they must be in the vocabulary themselves; "BS IT" alone was
+   found only because it is two words. Checked on both engines, which must
+   agree for the builder's "Read as" line to tell the truth. */
+import { educationFields as serverEduFields } from '../src/lib/engine';
+import { educationFields as clientEduFields } from '../../client/src/app/core/engine';
+test('common degree abbreviations are read as their field, the same on both sides', () => {
+  const cases: [string, string][] = [
+    ['BSIT', 'it'], ['BS IT', 'it'], ['BSCS', 'it'], ['BSN', 'healthcare'], ['BSA', 'finance'],
+    ['BSBA Marketing Management', 'business'], ['BSEd English', 'education'], ['BSHM', 'hospitality'],
+    ['BS Criminology', 'security'], ['BSCrim', 'security'],
+  ];
+  for (const [text, field] of cases) {
+    assert.ok(serverEduFields(text).has(field), `server: ${text} → ${[...serverEduFields(text)]}`);
+    assert.deepEqual([...clientEduFields(text)].sort(), [...serverEduFields(text)].sort(), `client and server differ on ${text}`);
+  }
+  assert.equal(serverEduFields('Bachelor of Arts').size, 0, 'a degree that names no field is not guessed at');
+});

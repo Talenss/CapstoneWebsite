@@ -125,7 +125,7 @@
                  "optional" tag and four did not, while only the school is
                  actually needed. Stating the rule is what makes the tags
                  below mean anything. -->
-            <p class="sub">The level you pick here counts toward every compatibility score, so choose the one that matches the diploma you actually hold. A new entry starts at <b>Not stated yet</b>, which counts as nothing. The system never assumes a qualification for you. An entry needs the <b>school</b> filled in before your resume can be scored; anything marked <b>optional</b> can be left blank, though a recruiter reads all of it.</p>
+            <p class="sub">The level you pick here counts toward every compatibility score, so choose the one that matches the diploma you actually hold. Your <b>degree</b> (and <b>field of study</b>, if you add one) tells the system your field: a degree in the field an opening asks for counts in full, a degree in another field counts half. A new entry starts at <b>Not stated yet</b>, which counts as nothing. The system never assumes a qualification for you. An entry needs the <b>school</b> filled in before your resume can be scored; anything marked <b>optional</b> can be left blank, though a recruiter reads all of it.</p>
             <!-- ONCE for the step, not once per entry. This used to sit beside
                  the degree input inside the @for, which gave every education
                  row its own element carrying id="degreeOpts": duplicate ids
@@ -153,17 +153,23 @@
                     <input type="text" [id]="'edu-school-' + $index" [value]="e.school" (input)="updateEducation($index, 'school', inputValue($event))">
                   </div>
                   <div class="field">
-                    <!-- Not a bare "optional": nothing scores it, but it is
-                         what a recruiter actually reads, and an entry appears
-                         on the resume when it has a school OR a degree. -->
-                    <label [for]="'edu-degree-' + $index">Degree or strand <span class="opt">optional &middot; a recruiter reads it</span></label>
+                    <!-- The degree's words are what the field of study is
+                         read from, so it is not a bare "optional": the line
+                         under it shows what was read, as it is typed. -->
+                    <label [for]="'edu-degree-' + $index">Degree or strand <span class="opt">tells the system your field</span></label>
                     <input type="text" [id]="'edu-degree-' + $index" list="degreeOpts" autocomplete="off" placeholder="BS Information Technology" [value]="e.degree" (input)="updateEducation($index, 'degree', inputValue($event))">
+                    @if (fieldReadAs(e); as f) {
+                      @if (f.ok) {
+                        <p class="hint read-as">Read as: <b>{{ f.text }}</b></p>
+                      } @else {
+                        <p class="hint read-as no">Field not recognised. Type it in <b>Field of study</b> below, for example “Information Technology” or “Nursing”.</p>
+                      }
+                    }
                   </div>
                   <div class="row2">
                     <div class="field">
                       <!-- Deliberately not tagged "optional": this select is
-                           never empty, it starts at "Not stated yet", and it is
-                           the only field on this step the score reads. -->
+                           never empty and starts at "Not stated yet". -->
                       <label [for]="'edu-level-' + $index">Level <span class="opt">counts toward your score</span></label>
                       <hlm-select [value]="e.level" [itemToString]="eduLevelLabel"
                                   (valueChange)="updateEducation($index, 'level', $any($event))">
@@ -182,7 +188,7 @@
                   </div>
                   <div class="row2">
                     <div class="field">
-                      <label [for]="'edu-field-' + $index">Field of study <span class="opt">optional</span></label>
+                      <label [for]="'edu-field-' + $index">Field of study <span class="opt">optional &middot; helps the system read your field</span></label>
                       <input type="text" [id]="'edu-field-' + $index" placeholder="Information Technology" [value]="e.field || ''" (input)="updateEducation($index, 'field', inputValue($event))">
                     </div>
                     <div class="field">
@@ -207,7 +213,7 @@
         @if (step() === 2) {
           <section class="step" id="s2">
             <h2>Experience</h2>
-            <p class="sub">Internships, OJT, part-time work, and student-organisation roles all count. If you have none, skip this, plenty of openings ask for zero months.</p>
+            <p class="sub">Internships, OJT, part-time work, and student-organisation roles all count. If you have none, skip this, plenty of openings ask for zero months. A job counts <b>in full</b> toward an opening when its <b>position</b> shares a word with the opening’s title, or <b>what you did</b> names a skill the opening asks for; any other job still counts, at half. So name the tools and skills you actually used.</p>
             <div>
               @for (e of resume().experience; track $index) {
                 <div class="item">
@@ -234,7 +240,7 @@
                       <input type="number" [id]="'exp-months-' + $index" placeholder="6" [value]="e.months.toString()" (input)="updateExperience($index, 'months', inputValue($event))">
                     </div>
                   </div>
-                  <p class="hint" style="margin:-8px 0 14px">Months worked is the only part of this entry the score uses. The dates below are for the recruiter reading the page.</p>
+                  <p class="hint" style="margin:-8px 0 14px;font-size:12.5px">Months worked is how much experience counts. <b>Position</b> and <b>What you did</b> decide whether it counts as related to an opening. The dates below are for the recruiter reading the page.</p>
                   <div class="row2">
                     <div class="field">
                       <label [for]="'exp-loc-' + $index">City <span class="opt">optional</span></label>
@@ -265,7 +271,8 @@
                   </div>
                   <div class="field">
                     <label [for]="'exp-desc-' + $index">What you did</label>
-                    <textarea [id]="'exp-desc-' + $index" rows="2" placeholder="Built and maintained pages for the city job portal." [value]="e.description" (input)="updateExperience($index, 'description', inputValue($event))"></textarea>
+                    <textarea [id]="'exp-desc-' + $index" rows="2" placeholder="Built and maintained pages for the city job portal using JavaScript and Git." [value]="e.description" (input)="updateExperience($index, 'description', inputValue($event))"></textarea>
+                    <p class="hint">Name the tools and skills you used, for example JavaScript, Excel or Zendesk. They decide whether this job counts as related to an opening.</p>
                   </div>
                   <div class="field">
                     <label [for]="'exp-bul-' + $index">Achievements <span class="opt">optional · one per line</span></label>

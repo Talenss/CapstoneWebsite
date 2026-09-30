@@ -318,3 +318,8 @@
 @media (max-width: 520px) {
   .sec-kept { white-space: normal; align-self: flex-start; }
 }
+
+/* "Read as: …" under the degree: what the system understood as the field. */
+.read-as b{color:var(--emerald)}
+.read-as.no{color:var(--accent-deep)}
+.read-as.no b{color:inherit}

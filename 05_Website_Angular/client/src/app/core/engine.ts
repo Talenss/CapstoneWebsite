@@ -1299,6 +1299,20 @@ export const EDU_FIELD_VOCAB: Record<string, string> = {
   criminology: 'security', criminaljustice: 'security',
   // logistics
   supplychainmanagement: 'logistics', logistics: 'logistics', customsadministration: 'logistics',
+  // THE ABBREVIATIONS APPLICANTS ACTUALLY TYPE. Written as one word they are
+  // one token, so "BSIT" never reached the "it" entry the way "BS IT" does.
+  // Only the forms that mean one thing in Philippine schools are listed; an
+  // ambiguous one (BSMT: medical technology or marine transportation) is not.
+  bsit: 'it', bscs: 'it', bsis: 'it', bscpe: 'it', bscoe: 'it', bsemc: 'it', bsict: 'it',
+  bsn: 'healthcare', bspharma: 'healthcare', bspt: 'healthcare', bsmls: 'healthcare',
+  medicallaboratoryscience: 'healthcare', bsrt: 'healthcare',
+  bsa: 'finance', bsma: 'finance', bsais: 'finance', managementaccounting: 'finance',
+  accountinginformationsystem: 'finance', accountinginformationsystems: 'finance',
+  bsba: 'business', bsentrep: 'business', bsoa: 'admin',
+  bsed: 'education', beed: 'education',
+  bsce: 'engineering', bsme: 'engineering', bsee: 'engineering', bsece: 'engineering', bsie: 'engineering',
+  bshm: 'hospitality', bshrm: 'hospitality', bstm: 'hospitality',
+  bspsych: 'hr', bscrim: 'security', abcomm: 'communication', bacomm: 'communication',
 };
 
 /** Which fields does this text belong to? Used for BOTH a degree and an
