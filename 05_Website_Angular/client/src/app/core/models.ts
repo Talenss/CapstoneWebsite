@@ -384,6 +384,11 @@ export interface Posting {
    *  filterable in its own right — an unowned department is worth finding. */
   ownerId?: string | null;
   ownerName?: string | null;
+  /** The recruiter who POSTED it, a different person from the owner above
+   *  as often as not. Shown so reposts of one role (a BPO's usual batches)
+   *  can be told apart by who put each up and when. Recruiter view only. */
+  createdById?: string | null;
+  createdByName?: string | null;
 }
 
 export interface Application {
@@ -620,6 +625,8 @@ export interface HrStats {
  *  Dates are plain YYYY-MM-DD and read as inclusive of both endpoints. */
 export interface HrStatsFilters {
   postingId?: string;
+  /** Several openings at once, e.g. every batch of one role. */
+  postingIds?: string[];
   staffId?: string;
   department?: string;
   applicant?: string;

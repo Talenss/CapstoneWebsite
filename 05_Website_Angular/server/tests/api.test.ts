@@ -2080,3 +2080,46 @@ test('the catalogue itself: add, rename within the same word, recategorise, remo
   assert.ok(!(await names()).includes('Version Control'), 'one skill, one name in the picker');
   await head('skills/unlink', { aliasNorm: 'versioncontrol' });
 });
+
+/* ---------- a BPO's reposts: several openings of one role ----------
+   The same role is posted again as a new batch, often by a different
+   recruiter. The dashboard tells the batches apart by who posted each one,
+   and can count the pipeline for any set of them at once. */
+test('reposts of one role: each says who posted it, and the pipeline counts any set of them', async () => {
+  const maria = client(); await maria('auth/login', { email: 'hr@demo.ph', password: 'demo123' });
+  const grace = client(); await grace('auth/login', { email: 'grace@demo.ph', password: 'demo123' });
+  const role = (by: string) => ({ posting: { title: 'Batch Check Agent', department: 'Customer Support',
+    description: 'Inbound voice support, a new batch opened by ' + by + '.', skills: ['Communication'],
+    educationLevel: 'highschool', minExperienceMonths: 0 } });
+  const a = (await maria('postings/save', role('Maria'))).body.posting;
+  const b = (await grace('postings/save', role('Grace'))).body.posting;
+  assert.ok(a?.id && b?.id, 'both batches posted');
+
+  const mine = (await maria('postings/mine')).body.postings;
+  const pa = mine.find((p: any) => p.id === a.id), pb = mine.find((p: any) => p.id === b.id);
+  assert.equal(pa.createdByName, 'Maria Santos');
+  assert.equal(pb.createdByName, 'Grace Lopez');
+  assert.notEqual(pa.createdById, pb.createdById);
+
+  for (const [email, id] of [['ana@demo.ph', a.id], ['marco@demo.ph', b.id], ['liza@demo.ph', b.id]]) {
+    const s = client(); await s('auth/login', { email, password: 'demo123' });
+    const rid = (await s('auth/me')).body.user.activeResumeId;
+    const r = (await s('applications/apply', { resumeId: rid, postingId: id })).body;
+    assert.equal(r.ok, true, r.error);
+  }
+
+  const both = (await maria('stats/hr', { postingIds: [a.id, b.id] })).body.stats;
+  assert.equal(both.totalApplicants, 3, 'exactly the applicants of the two picked batches');
+  assert.deepEqual(Object.keys(both.byPosting).sort(), [a.id, b.id].map(String).sort());
+  assert.equal(both.totalPostings, 2);
+
+  const one = (await maria('stats/hr', { postingIds: [b.id] })).body.stats;
+  assert.equal(one.totalApplicants, 2);
+  const legacy = (await maria('stats/hr', { postingId: b.id })).body.stats;
+  assert.equal(legacy.totalApplicants, 2, 'a single postingId still works');
+
+  // Junk in the list narrows nothing extra and widens nothing: ids are
+  // checked, and the company scope still applies to whatever is left.
+  const junk = (await maria('stats/hr', { postingIds: [a.id, 'x', -3, 999999] })).body.stats;
+  assert.equal(junk.totalApplicants, 1);
+});

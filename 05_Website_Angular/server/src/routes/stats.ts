@@ -48,7 +48,15 @@ router.post('/hr', async (req, res) => {
 
      company_id is NOT one of these. It is the caller's own, it is applied
      unconditionally below, and no filter can widen past it. */
-  const fPosting = asId(req.body?.postingId);
+  /* One opening, or several. A BPO reposts a role as new batches, so the
+     question "how is the Customer Service hiring going" spans every one of
+     those openings at once; the single id is still accepted for anything
+     that sends one. At most 200, all ids, company-scoped by the join below. */
+  const idList: number[] = [
+    ...(Array.isArray(req.body?.postingIds) ? req.body.postingIds : []),
+    ...(req.body?.postingId != null ? [req.body.postingId] : []),
+  ].map(asId).filter((n): n is number => n !== null).slice(0, 200);
+  const fPostings = [...new Set(idList)];
   const fStaff = asId(req.body?.staffId);
   const fDept = asText(req.body?.department);
   const fWho = asText(req.body?.applicant);
@@ -60,7 +68,7 @@ router.post('/hr', async (req, res) => {
   const where: string[] = [];
   const args: unknown[] = [];
 
-  if (fPosting) { where.push('jp.posting_id = ?'); args.push(fPosting); }
+  if (fPostings.length) { where.push('jp.posting_id = ANY(?)'); args.push(fPostings); }
   if (fDept) { where.push('jp.department = ?'); args.push(fDept); }
 
   /* "Whose pipeline is this" follows the DEPARTMENT ROUTING, not who typed
@@ -98,7 +106,7 @@ router.post('/hr', async (req, res) => {
      depending on whose name was typed above it. */
   const postWhere: string[] = [];
   const postArgs: unknown[] = [];
-  if (fPosting) { postWhere.push('posting_id = ?'); postArgs.push(fPosting); }
+  if (fPostings.length) { postWhere.push('posting_id = ANY(?)'); postArgs.push(fPostings); }
   if (fDept) { postWhere.push('department = ?'); postArgs.push(fDept); }
   if (fStaff) {
     postWhere.push(`EXISTS (SELECT 1 FROM department_assignments da

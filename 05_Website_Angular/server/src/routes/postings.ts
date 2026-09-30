@@ -81,12 +81,19 @@ router.post('/mine', async (req, res) => {
      application lands on, and that is the question a recruiter narrowing to
      a name is asking. A department nobody owns joins to null, which reads as
      "unassigned" and is a real answer rather than a gap. */
-  const rows = await query<PostingRow & { owner_id: number | null; owner_name: string | null }>(
-    `SELECT jp.*, du.user_id AS owner_id, du.full_name AS owner_name
+  /* Who POSTED it is a different question, answered separately: a BPO opens
+     the same role again and again (a new batch for the same account, the
+     same role for another client), so "Customer Service Representative" is
+     routinely several live openings at once. The recruiter who put each one
+     up, beside the date, is what tells them apart to a colleague. A creator
+     whose account has since been removed joins to null and reads as such. */
+  const rows = await query<PostingRow & { owner_id: number | null; owner_name: string | null; creator_name: string | null }>(
+    `SELECT jp.*, du.user_id AS owner_id, du.full_name AS owner_name, cu.full_name AS creator_name
        FROM job_postings jp
        LEFT JOIN department_assignments da
               ON da.company_id = jp.company_id AND da.department = jp.department
        LEFT JOIN users du ON du.user_id = da.user_id
+       LEFT JOIN users cu ON cu.user_id = jp.created_by
       WHERE jp.company_id = ?
       ORDER BY jp.created_at DESC, jp.posting_id DESC`, [u.company_id],
   );
@@ -101,6 +108,8 @@ router.post('/mine', async (req, res) => {
     row.newCount = Number(n?.fresh ?? 0);
     row.ownerId = p.owner_id == null ? null : String(p.owner_id);
     row.ownerName = p.owner_name ?? null;
+    row.createdById = p.created_by == null ? null : String(p.created_by);
+    row.createdByName = p.creator_name ?? null;
     out.push(row);
   }
   ok(res, { postings: out });

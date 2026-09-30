@@ -61,16 +61,32 @@
         </hlm-select>
       </label>
       <label class="wide">
-        <span>Opening</span>
-        <hlm-select class="sel" [value]="fPosting()" [itemToString]="postingLabelFn()"
-                    (valueChange)="setPosting($any($event))">
-          <hlm-select-trigger><hlm-select-value placeholder="All openings" /></hlm-select-trigger>
-          <hlm-select-content *hlmSelectPortal>
-            @for (o of postingOptions(); track o.v) {
-              <hlm-select-item [value]="o.v">{{ o.label }}</hlm-select-item>
+        <span>Opening <small class="multi-hint">pick one or more</small></span>
+        <hlm-select-multiple class="sel" [value]="fPostings()" [itemToString]="postingLabelFn()"
+                             (valueChange)="setPostings($any($event))">
+          <hlm-select-trigger aria-label="Filter by opening, one or more"><hlm-select-value placeholder="All openings" /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal class="opening-list">
+            @if (fPostings().length) {
+              <hlm-select-item [value]="ALL"><div class="opt"><b>All openings</b><small>clear the selection</small></div></hlm-select-item>
+            }
+            @for (g of postingGroups(); track g.key) {
+              @if (g.items.length > 1) {
+                <hlm-select-group>
+                  <hlm-select-label class="role-head">{{ g.title }} · {{ g.items.length }} openings</hlm-select-label>
+                  @for (o of g.items; track o.v) {
+                    <hlm-select-item [value]="o.v"><div class="opt in-role"><small>{{ o.sub }}</small></div></hlm-select-item>
+                  }
+                </hlm-select-group>
+              } @else {
+                @for (o of g.items; track o.v) {
+                  <hlm-select-item [value]="o.v"><div class="opt"><b>{{ o.title }}</b><small>{{ o.sub }}</small></div></hlm-select-item>
+                }
+              }
+            } @empty {
+              <p class="opt-empty">No openings in {{ fDept() || 'this selection' }}.</p>
             }
           </hlm-select-content>
-        </hlm-select>
+        </hlm-select-multiple>
       </label>
       <label class="date">
         <span>Applied from</span>
@@ -232,7 +248,7 @@
                   <span class="badge">{{ stageCount(p) }} at {{ stageLabel() }}</span>
                 }
               </div>
-              <div class="meta">{{ p.department }} · {{ p.skills.length }} {{ p.skills.length === 1 ? 'skill' : 'skills' }} asked for · posted {{ day(p.createdAt) }}</div>
+              <div class="meta">{{ p.department }} · {{ p.skills.length }} {{ p.skills.length === 1 ? 'skill' : 'skills' }} asked for · posted {{ day(p.createdAt) }}@if (p.createdByName) { by {{ p.createdByName }}}</div>
             </div>
             <div class="num"><b>{{ p.applicantCount }}</b><span>applied</span></div>
             @if (p.vacancies != null) {

@@ -10,6 +10,9 @@ import { STATUS_LABELS, STATUS_ORDER } from '../../core/engine';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { labelFor, SelectOption } from '../../shared/select-options';
 
+/** The "All openings" line in the multi-pick, which clears it. */
+const ALL = '__all';
+
 /** Port of the PHP hr-dashboard.html — the recruiter's home: a stat
  *  tally, the five-stage pipeline funnel, and the list of their own
  *  openings with review/edit/close-reopen actions. */
@@ -109,7 +112,10 @@ export class HrDashboard implements OnInit {
   fDept = signal('');
   fFrom = signal('');
   fTo = signal('');
-  fPosting = signal('');
+  /** The openings picked, none meaning all of them. Several, because a BPO
+   *  reposts a role as batches and "how is Customer Service hiring going"
+   *  spans every batch at once. */
+  fPostings = signal<string[]>([]);
   fApplicant = signal('');
 
   staff = signal<{ id: string; name: string }[]>([]);
@@ -118,7 +124,7 @@ export class HrDashboard implements OnInit {
   /** Whether anything is narrowing the page, for the "showing everything"
    *  line and the reset control. */
   readonly anyFilter = computed(() =>
-    !!(this.fStaff() || this.fDept() || this.fFrom() || this.fTo() || this.fPosting() || this.fApplicant()));
+    !!(this.fStaff() || this.fDept() || this.fFrom() || this.fTo() || this.fPostings().length || this.fApplicant()));
 
   /** The departments this company actually posts into, derived rather than
    *  configured: a fixed list would offer departments with no openings and
@@ -136,7 +142,7 @@ export class HrDashboard implements OnInit {
     const from = this.fFrom() ? Date.parse(this.fFrom() + 'T00:00:00') : NaN;
     const to = this.fTo() ? Date.parse(this.fTo() + 'T00:00:00') + 86400000 : NaN;
 
-    const only = this.fPosting();
+    const only = new Set(this.fPostings());
     const stage = this.stage();
     const cells = this.stats()?.byPosting ?? {};
     const view = this.view();
@@ -146,12 +152,12 @@ export class HrDashboard implements OnInit {
       // at first on the reasoning that a list of one is not worth filtering
       // to — but the effect was a control that changed the counters and left
       // every row in place, which reads as a control that does nothing.
-      if (only && p.id !== only) return false;
+      if (only.size && !only.has(p.id)) return false;
       if (stage) {
         // A stage looks across current and archived alike (see pickStage).
         if (!(cells[p.id]?.[stage])) return false;
-      } else if (!only) {
-        // One picked opening is shown wherever it is filed; otherwise the
+      } else if (!only.size) {
+        // Picked openings are shown wherever they are filed; otherwise the
         // tab decides.
         if (view === 'current' && p.status === 'closed') return false;
         if (view === 'archive' && p.status !== 'closed') return false;
@@ -218,7 +224,7 @@ export class HrDashboard implements OnInit {
   clearScope(): void {
     this.fStaff.set(''); this.fDept.set('');
     this.fFrom.set(''); this.fTo.set('');
-    this.fPosting.set(''); this.fApplicant.set('');
+    this.fPostings.set([]); this.fApplicant.set('');
     this.dateErr.set('');
     this.stage.set('');
     void this.loadStats();
@@ -232,57 +238,76 @@ export class HrDashboard implements OnInit {
     { v: '', label: 'All departments' },
     ...this.departments().map((d) => ({ v: d, label: d })),
   ]);
-  /** Openings, labelled so that two of them can be told apart.
+  /** The openings the Opening filter offers: only those inside the other
+   *  scope filters, so picking a department first leaves just that
+   *  department's openings to choose from, and a colleague's name just the
+   *  openings routed to them.
    *
-   *  A company reposts the same role, so "IT Support" is routinely three
-   *  separate openings in different departments. Listed by title alone they
-   *  were three identical lines: picking one filtered correctly and looked
-   *  broken, because nothing on screen said which one had been picked. The
-   *  department is appended ONLY where a title is shared, so the common case
-   *  stays short and the ambiguous case stops being ambiguous. */
-  readonly postingOptions = computed<readonly SelectOption[]>(() => {
-    // Newest first, like the list below, so a repost sits above the original.
-    const posts = [...this.postings()].sort((a, b) => b.createdAt - a.createdAt);
-    const seen = new Map<string, number>();
-    const key = (t: string) => t.trim().toLowerCase();
-    for (const p of posts) seen.set(key(p.title), (seen.get(key(p.title)) ?? 0) + 1);
-    const opts = posts.map((p) => {
-      // The department alone did not separate a role reposted into the SAME
-      // department, which is the usual repost, so a shared title also
-      // carries the date it went up, and whether it has since closed.
-      if ((seen.get(key(p.title)) ?? 0) < 2) return { v: p.id, label: p.title };
-      const bits = [p.title];
-      if (p.department) bits.push(p.department);
-      bits.push('posted ' + this.dayYear(p.createdAt));
-      if (p.status === 'closed') bits.push('closed');
-      return { v: p.id, label: bits.join(' · ') };
-    });
-    // Reposted twice on the same day: the time it went up tells them apart,
-    // and a number does if even that is shared.
-    const count = (l: string) => opts.filter((o) => o.label === l).length;
-    const byId = new Map(posts.map((p) => [p.id, p]));
-    for (const o of opts.filter((x) => count(x.label) > 1)) {
-      o.label += ', ' + new Date(byId.get(o.v)!.createdAt).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
-    }
-    const clash = opts.filter((x) => count(x.label) > 1);
-    const n = new Map<string, number>();
-    for (const o of clash) { const i = (n.get(o.label) ?? 0) + 1; n.set(o.label, i); o.label += ` (${i})`; }
-    return [{ v: '', label: 'All openings' }, ...opts];
+   *  Grouped by role. A BPO opens the same role repeatedly, a new batch for
+   *  the same account or the same role for another client, so several live
+   *  openings routinely share one title. Refusing a repeated title would only
+   *  push recruiters into inventing names ("CSR 2") that match nothing and
+   *  mean nothing to an applicant. Each one is told apart instead by who
+   *  posted it and when, the two facts a colleague actually asks about, and
+   *  the batches of one role sit together so they can be picked together. */
+  readonly scopedPostings = computed<Posting[]>(() => {
+    const dept = this.fDept();
+    const staff = this.fStaff();
+    return this.postings().filter((p) =>
+      (!dept || p.department === dept) && (!staff || (p.ownerId ?? '') === staff));
   });
-  readonly staffLabelFn = computed(() => labelFor(this.staffOptions()));
-  readonly deptLabelFn = computed(() => labelFor(this.deptOptions()));
-  /** What the closed box shows: the short form, title and date, because the
-   *  box has a fixed width and the date is the part that tells reposts
-   *  apart. The open list keeps the full label. */
+
+  readonly postingGroups = computed(() => {
+    const byTitle = new Map<string, Posting[]>();
+    for (const p of this.scopedPostings()) {
+      const k = p.title.trim().toLowerCase();
+      byTitle.set(k, [...(byTitle.get(k) ?? []), p]);
+    }
+    const groups = [...byTitle.values()].map((list) => {
+      const items = [...list].sort((a, b) => b.createdAt - a.createdAt);
+      return { key: items[0].title.trim().toLowerCase(), title: items[0].title, newest: items[0].createdAt,
+        items: items.map((p) => ({ v: p.id, title: p.title, sub: this.postingSub(p, items) })) };
+    });
+    // Most recently active role first, like the list below.
+    return groups.sort((a, b) => b.newest - a.newest);
+  });
+
+  /** "Information Technology · posted by Maria Santos · Sep 30, 2026". The
+   *  time is added only where one person posted the same role twice on the
+   *  same day, which is the one case the date alone cannot separate. */
+  private postingSub(p: Posting, sameRole: Posting[]): string {
+    const bits: string[] = [];
+    if (p.department) bits.push(p.department);
+    bits.push('posted by ' + (p.createdByName || 'a former colleague'));
+    let when = this.dayYear(p.createdAt);
+    const twin = sameRole.some((q) => q.id !== p.id && q.createdById === p.createdById
+      && this.dayYear(q.createdAt) === when);
+    if (twin) when += ', ' + new Date(p.createdAt).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
+    bits.push(when);
+    if (p.status === 'closed') bits.push('closed');
+    return bits.join(' · ');
+  }
+
+  /** What the closed box says. It is handed the whole selection (an array)
+   *  for the box itself, and a single id when the list is read by keyboard
+   *  type-ahead, so it answers both. */
   readonly postingLabelFn = computed(() => {
-    const full = labelFor(this.postingOptions());
     const byId = new Map(this.postings().map((p) => [p.id, p]));
-    return (v: string): string => {
-      const label = full(v);
-      const p = byId.get(v);
-      return p && label !== p.title ? `${p.title} · ${this.day(p.createdAt)}` : label;
+    return (v: string | string[]): string => {
+      if (!Array.isArray(v)) {
+        const p = byId.get(v);
+        return p ? p.title : v === ALL ? 'All openings' : '';
+      }
+      const picked = v.map((id) => byId.get(id)).filter((p): p is Posting => !!p);
+      if (!picked.length) return '';
+      if (picked.length === 1) return `${picked[0].title} · ${this.day(picked[0].createdAt)}`;
+      const titles = new Set(picked.map((p) => p.title.trim().toLowerCase()));
+      return titles.size === 1 ? `${picked[0].title} · ${picked.length} openings` : `${picked.length} openings`;
     };
   });
+  readonly ALL = ALL;
+  readonly staffLabelFn = computed(() => labelFor(this.staffOptions()));
+  readonly deptLabelFn = computed(() => labelFor(this.deptOptions()));
 
   /** Re-count the pipeline for the current filters.
    *
@@ -298,7 +323,7 @@ export class HrDashboard implements OnInit {
     const r = await this.api.stats.hr({
       staffId: this.fStaff() || undefined,
       department: this.fDept() || undefined,
-      postingId: this.fPosting() || undefined,
+      postingIds: this.fPostings().length ? this.fPostings() : undefined,
       applicant: this.fApplicant().trim() || undefined,
       from: this.fFrom() || undefined,
       to: this.fTo() || undefined,
@@ -309,9 +334,21 @@ export class HrDashboard implements OnInit {
     if (r.ok) this.stats.set(r.stats);
   }
 
-  setStaff(v: string): void { this.fStaff.set(v); void this.loadStats(); }
-  setDept(v: string): void { this.fDept.set(v); void this.loadStats(); }
-  setPosting(v: string): void { this.fPosting.set(v); void this.loadStats(); }
+  setStaff(v: string): void { this.fStaff.set(v); this.keepPickedInScope(); void this.loadStats(); }
+  setDept(v: string): void { this.fDept.set(v); this.keepPickedInScope(); void this.loadStats(); }
+  setPostings(v: string[] | null): void {
+    const list = v ?? [];
+    // "All openings" in the list clears the selection rather than joining it.
+    this.fPostings.set(list.includes(ALL) ? [] : list);
+    void this.loadStats();
+  }
+  /** A department or colleague picked after some openings drops the ones
+   *  outside it, rather than leaving the filters asking for an empty set. */
+  private keepPickedInScope(): void {
+    const ok = new Set(this.scopedPostings().map((p) => p.id));
+    const kept = this.fPostings().filter((id) => ok.has(id));
+    if (kept.length !== this.fPostings().length) this.fPostings.set(kept);
+  }
   /** Today as the date box writes it (local YYYY-MM-DD), the latest day
    *  either box accepts: nobody has applied tomorrow. */
   readonly today = (() => {
@@ -379,7 +416,7 @@ export class HrDashboard implements OnInit {
       this.api.stats.hr({
         staffId: this.fStaff() || undefined,
         department: this.fDept() || undefined,
-        postingId: this.fPosting() || undefined,
+        postingIds: this.fPostings().length ? this.fPostings() : undefined,
         applicant: this.fApplicant().trim() || undefined,
         from: this.fFrom() || undefined,
         to: this.fTo() || undefined,

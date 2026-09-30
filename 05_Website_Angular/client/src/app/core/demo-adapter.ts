@@ -229,27 +229,27 @@ function seed(): Db {
         ownFile: null, updatedAt: Date.now() - D * 7 },
     ] as unknown as Resume[],
     postings: [
-      { id: 'p1', companyId: 'c1', title: 'Junior Web Developer', department: 'Information Technology', employmentType: 'full-time',
+      { id: 'p1', companyId: 'c1', createdById: 'u2', title: 'Junior Web Developer', department: 'Information Technology', employmentType: 'full-time',
         description: 'Build and maintain client-facing web pages and internal tools alongside the development team. Fresh graduates are welcome to apply.',
         skills: ['HTML/CSS', 'JavaScript', 'Git', 'Teamwork'], educationLevel: 'bachelor', minExperienceMonths: 0, status: 'open', createdAt: Date.now() - D * 9 },
-      { id: 'p2', companyId: 'c1', title: 'Technical Support Agent', department: 'Customer Support', employmentType: 'full-time',
+      { id: 'p2', companyId: 'c1', createdById: 'u2', title: 'Technical Support Agent', department: 'Customer Support', employmentType: 'full-time',
         description: 'First-line technical support for client accounts across email, chat, and voice. Night shift.',
         skills: ['Troubleshooting', 'Windows', 'Networking', 'Communication'], educationLevel: 'bachelor', minExperienceMonths: 0, status: 'open', createdAt: Date.now() - D * 7 },
-      { id: 'p3', companyId: 'c1', title: 'Customer Support Agent', department: 'Customer Support', employmentType: 'full-time',
+      { id: 'p3', companyId: 'c1', createdById: 'u2', title: 'Customer Support Agent', department: 'Customer Support', employmentType: 'full-time',
         description: 'Handle customer enquiries for offshore client accounts by phone, email, and live chat.',
         skills: ['Customer Service', 'Communication', 'English Proficiency', 'CRM Software'], educationLevel: 'highschool', minExperienceMonths: 0, status: 'open', createdAt: Date.now() - D * 6 },
-      { id: 'p4', companyId: 'c1', title: 'Data Entry and Admin Assistant', department: 'Administration', employmentType: 'full-time',
+      { id: 'p4', companyId: 'c1', createdById: 'u2', title: 'Data Entry and Admin Assistant', department: 'Administration', employmentType: 'full-time',
         description: 'Encode and maintain client records, prepare reports, and support the administration team.',
         skills: ['Data Entry', 'MS Office', 'Organization', 'Attention to Detail'], educationLevel: 'highschool', minExperienceMonths: 0, status: 'open', createdAt: Date.now() - D * 5 },
-      { id: 'p5', companyId: 'c1', title: 'Accounting and Bookkeeping Support', department: 'Finance and Accounting', employmentType: 'full-time',
+      { id: 'p5', companyId: 'c1', createdById: 'u2', title: 'Accounting and Bookkeeping Support', department: 'Finance and Accounting', employmentType: 'full-time',
         description: 'Assist with accounts payable and receivable, bank reconciliation, and month-end reporting for client accounts.',
         skills: ['Bookkeeping', 'QuickBooks', 'MS Office', 'Attention to Detail'], educationLevel: 'bachelor', minExperienceMonths: 0, status: 'open', createdAt: Date.now() - D * 4 },
-      { id: 'p6', companyId: 'c1', title: 'Social Media Manager', department: 'Digital Marketing', employmentType: 'full-time',
+      { id: 'p6', companyId: 'c1', createdById: 'u2', title: 'Social Media Manager', department: 'Digital Marketing', employmentType: 'full-time',
         description: 'Plan and publish content across client social channels; report on engagement.',
         skills: ['Social Media', 'Copywriting', 'Canva', 'Communication'], educationLevel: 'bachelor', minExperienceMonths: 6,
         deadline: new Date(Date.now() + D * 14).toISOString().slice(0, 10), // demos the "Apply by" chip
         status: 'open', createdAt: Date.now() - D * 3 },
-      { id: 'p7', companyId: 'c1', title: 'Patient Coordinator', department: 'Healthcare Support', employmentType: 'full-time',
+      { id: 'p7', companyId: 'c1', createdById: 'u2', title: 'Patient Coordinator', department: 'Healthcare Support', employmentType: 'full-time',
         description: 'Coordinate scheduling and records for a US healthcare client; liaise with patients by phone and email.',
         skills: ['Medical Terminology', 'Customer Service', 'Scheduling', 'English Proficiency'], educationLevel: 'bachelor', minExperienceMonths: 12, status: 'open', createdAt: Date.now() - D * 2 },
     ] as unknown as Posting[],
@@ -1056,6 +1056,11 @@ export class DemoAdapter implements ApiAdapter {
                 ownerName: o ? (o.firstName + ' ' + (o.lastName || '')).trim() : null,
               };
             })(),
+            // Who posted it, as routes/postings.ts joins created_by.
+            ...(() => {
+              const c = p.createdById ? db.users.find((u) => u.id === p.createdById) : null;
+              return { createdById: c ? c.id : null, createdByName: c ? (c.firstName + ' ' + (c.lastName || '')).trim() : null };
+            })(),
           }))
           .sort((a, b) => b.createdAt - a.createdAt),
       });
@@ -1271,11 +1276,14 @@ export class DemoAdapter implements ApiAdapter {
       const i = db.postings.findIndex((p) => p.id === posting.id);
       if (i >= 0) {
         if (db.postings[i].companyId !== me.companyId) return apiFail("You can only edit your own company's openings.");
+        // Who posted it never changes on an edit, whatever the caller sends.
+        delete (posting as any).createdById; delete (posting as any).createdByName;
         db.postings[i] = tidyFacts({ ...db.postings[i], ...posting } as Posting);
       } else {
         // Always 'open', like the server, a caller must not create a
         // posting that is already closed.
-        posting = { ...posting, id: uid(), companyId: me.companyId!, status: 'open', createdAt: Date.now() };
+        posting = { ...posting, id: uid(), companyId: me.companyId!, createdById: me.id, status: 'open', createdAt: Date.now() };
+        delete (posting as any).createdByName;
         db.postings.push(tidyFacts(posting as Posting));
       }
       persist(db);
@@ -1715,9 +1723,11 @@ export class DemoAdapter implements ApiAdapter {
         (db.deptAssignments || []).some(
           (d) => d.companyId === me.companyId && d.department === department && d.userId === staffId);
 
+      // One opening or several, as routes/stats.ts accepts them.
+      const picked = new Set([...(filters.postingIds ?? []), ...(filters.postingId ? [filters.postingId] : [])]);
       const mine = db.postings.filter((p) => {
         if (p.companyId !== me.companyId) return false;
-        if (filters.postingId && p.id !== filters.postingId) return false;
+        if (picked.size && !picked.has(p.id)) return false;
         if (filters.department && p.department !== filters.department) return false;
         if (filters.staffId && !owns(p.department, filters.staffId)) return false;
         return true;

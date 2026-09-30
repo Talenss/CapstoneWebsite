@@ -7,7 +7,7 @@ import { ApiService } from '../../core/api.service';
 import { ScoringSetup } from '../../core/scoring-setup';
 import { SessionService } from '../../core/session.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { AppStatus, Application, ApplicationAnswer, Posting, RecommendationItem, Resume, StatusEvent } from '../../core/models';
+import { AppStatus, Application, ApplicationAnswer, MatchResult, Posting, RecommendationItem, Resume, StatusEvent } from '../../core/models';
 import { APPLICANT_REASON_LABELS, EDU_LABELS, missingHint, STATUS_LABELS, THRESHOLDS, WEIGHTS, scoreLocal, statusBadge, tierColor, tierLabel, tierOf } from '../../core/engine';
 import { FocusTrapDirective } from '../../shared/focus-trap.directive';
 import { ApplyQuestions } from '../../shared/apply-questions/apply-questions';
@@ -110,7 +110,11 @@ export class SeekerDashboard implements OnInit {
     (which === 'from' ? this.appFrom : this.appTo).set(v);
   }
 
-  current = signal<RecommendationItem | null>(null);
+  /** The opening whose breakdown is open. `sentAs` is set when it was opened
+   *  from My applications: the breakdown is then of the resume that was SENT,
+   *  which need not be the active one. */
+  current = signal<(RecommendationItem & { sentAs?: string | null }) | null>(null);
+  detailBusyId = signal<string | null>(null);
   applying = signal(false);
   toastMsg = signal<string | null>(null);
   savedPostings = signal<Posting[]>([]);
@@ -392,6 +396,22 @@ export class SeekerDashboard implements OnInit {
 
   closeApply(): void {
     this.current.set(null);
+  }
+
+  /** The breakdown of an opening already applied to, from My applications.
+   *  Every application is listed there, including ones for openings too low
+   *  to be recommended and openings since closed, so this is the one place
+   *  applying can never take the breakdown away. Scored on the resume that
+   *  was sent, as the recruiter scores it. */
+  async openApplicationDetails(a: Application): Promise<void> {
+    if (!a.posting) return;
+    this.detailBusyId.set(a.id);
+    const r = await this.api.match.score(a.resumeId, a.postingId);
+    this.detailBusyId.set(null);
+    if (!r.ok) { this.showToast(r.error); return; }
+    const { ok: _ok, ...m } = r as MatchResult & { ok: true };
+    this.current.set({ ...m, posting: a.posting, company: a.company ?? a.posting.company ?? null,
+      applied: true, sentAs: a.resumeTitle ?? null });
   }
 
   onBackdropClick(e: MouseEvent): void {

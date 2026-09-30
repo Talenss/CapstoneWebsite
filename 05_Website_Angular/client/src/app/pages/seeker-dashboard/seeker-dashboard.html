@@ -232,6 +232,10 @@
                        fragment link with no target: markup claiming a
                        relationship to something that is not there. Angular
                        removes the attribute entirely when the value is null. -->
+                  <button class="btn ghost sm" type="button" [disabled]="detailBusyId() === a.id || !a.posting"
+                          (click)="openApplicationDetails(a)" title="The score breakdown for this opening">
+                    @if (detailBusyId() === a.id) { <span class="spinner"></span> } @else { Details }
+                  </button>
                   <button class="btn ghost sm" type="button"
                           [attr.aria-expanded]="openHistoryId() === a.id"
                           [attr.aria-controls]="openHistoryId() === a.id ? 'hist-' + a.id : null"
@@ -350,7 +354,7 @@
           <span class="score-ring lg" [style.--p]="item.score" [style.--c]="tierColor(item.score)"><b>{{ item.score }}%</b></span>
           <div>
             <div class="badge {{ tierBadgeClass(item.score) }}" style="margin-bottom:7px">{{ tierLabel(item.score) }}</div>
-            <div style="font-size:13px;color:var(--muted)">Your resume: <b style="color:var(--ink)">{{ activeResumeTitle() }}</b></div>
+            <div style="font-size:13px;color:var(--muted)">{{ item.sentAs ? 'Resume you sent' : 'Your resume' }}: <b style="color:var(--ink)">{{ item.sentAs || activeResumeTitle() }}</b></div>
           </div>
         </div>
         <p style="font-size:14px;background:var(--ivory);border-radius:var(--r);padding:14px 16px;margin:16px 0;color:var(--text)">{{ item.posting.description }}</p>

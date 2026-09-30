@@ -124,7 +124,10 @@
                   <span class="chip">{{ sk }}</span>
                 }
                 @if (row.s.missingSkills.length) {
-                  <span class="chip more">+{{ row.s.missingSkills.length }} more asked for</span>
+                  <!-- Opens the full breakdown, applied or not, the same as
+                       the dashboard's cards. It was plain text here. -->
+                  <button type="button" class="chip more" (click)="openDetail(row)"
+                          title="See everything this opening asks for">+{{ row.s.missingSkills.length }} more asked for</button>
                 }
                 <!-- Certificates are NAMED, where missing skills are only
                      counted. The reasoning behind missingHint() does not
@@ -156,7 +159,10 @@
                           (click)="toggleSave(row)">{{ isSaved(row.posting.id) ? '★' : '☆' }}</button>
                 }
                 @if (row.applied) {
+                  <!-- Applying no longer takes the breakdown away: the card
+                       used to lose its only button the moment you applied. -->
                   <span class="badge slate">Applied</span>
+                  <button class="btn ghost sm" type="button" (click)="openDetail(row)">Details</button>
                 } @else {
                   <button class="btn primary sm" type="button" (click)="openDetail(row)">View</button>
                 }

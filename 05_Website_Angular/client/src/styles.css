@@ -141,10 +141,10 @@ button[data-slot="date-picker-trigger"]:focus-visible {
    "All statuses" pushed every control after it along the bar, and the thing
    just clicked moved out from under the pointer. A fixed width, with a long
    choice cut short by an ellipsis (it is shown in full in the open list). */
-hlm-select.sel { width: 220px; max-width: 100%; flex: none; }
-hlm-select.sel > hlm-select-trigger { display: block; }
-hlm-select.sel button[data-slot="select-trigger"] { width: 100%; }
-hlm-select.sel [data-slot="select-value"] {
+hlm-select.sel, hlm-select-multiple.sel { width: 220px; max-width: 100%; flex: none; }
+hlm-select.sel > hlm-select-trigger, hlm-select-multiple.sel > hlm-select-trigger { display: block; }
+hlm-select.sel button[data-slot="select-trigger"], hlm-select-multiple.sel button[data-slot="select-trigger"] { width: 100%; }
+hlm-select.sel [data-slot="select-value"], hlm-select-multiple.sel [data-slot="select-value"] {
   display: block; flex: 1; min-width: 0; text-align: left;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -425,10 +425,13 @@ app-root{display:flex;flex-direction:column;flex:1 0 auto}
 app-root > *:not(router-outlet){display:flex;flex-direction:column;flex:1 0 auto;min-width:0}
 main{flex:1}
 .grid{display:grid;gap:20px}
-.cols-2{grid-template-columns:1fr 1fr}
-.cols-3{grid-template-columns:repeat(3,1fr)}
-@media(max-width:940px){.cols-3{grid-template-columns:1fr 1fr}}
-@media(max-width:660px){.cols-2,.cols-3{grid-template-columns:1fr}}
+/* minmax(0,1fr), not 1fr: a plain 1fr column cannot shrink below its
+   widest content, so one card with a long row of buttons pushed the whole
+   grid wider than its space, under the side panel beside it. */
+.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:940px){.cols-3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:660px){.cols-2,.cols-3{grid-template-columns:minmax(0,1fr)}}
 .section{padding:80px 0}
 .section.tight{padding:48px 0}
 .section.paper{background:var(--paper);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}

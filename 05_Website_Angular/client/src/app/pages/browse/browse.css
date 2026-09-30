@@ -22,8 +22,10 @@
 .job .desc{font-size:13px;color:var(--muted);line-height:1.6}
 .job .req{display:flex;gap:16px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
 .job .req b.ok{color:var(--emerald)} .job .req b.no{color:var(--accent-deep)}
-.job .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto;padding-top:4px}
+.job .foot{display:flex;justify-content:space-between;align-items:center;gap:8px 10px;margin-top:auto;padding-top:4px;flex-wrap:wrap}
 .job .foot span{font-size:12.5px;color:var(--muted)}
+.job .foot > span:first-child{white-space:nowrap}
+.job .foot > span:last-child{flex-wrap:wrap;justify-content:flex-end;margin-left:auto}
 .req .deadline{color:var(--accent-deep);font-weight:600}
 .bookmark{border:1px solid var(--rule);background:var(--paper);border-radius:8px;width:32px;height:30px;font-size:16px;line-height:1;cursor:pointer;color:var(--muted);transition:.15s}
 .bookmark:hover{border-color:var(--accent);color:var(--accent-deep)}
@@ -45,3 +47,6 @@
   color: var(--muted);
   background: transparent;
 }
+/* "+N more asked for" is a button now, as on the dashboard. */
+button.chip.more { font: inherit; font-size: 11.5px; cursor: pointer; }
+button.chip.more:hover { color: var(--text); border-color: var(--ink-line); }
