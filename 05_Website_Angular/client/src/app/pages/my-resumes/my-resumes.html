@@ -52,7 +52,7 @@
             </div>
             <div class="body">
               <div class="facts">
-                <span><b>{{ (r.skills || []).length }}</b> skills</span>
+                <span><b>{{ (r.skills || []).length }}</b> {{ (r.skills || []).length === 1 ? 'skill' : 'skills' }}</span>
                 <span><b>{{ (r.education || []).length }}</b> education</span>
                 <span><b>{{ monthsFor(r) }}</b> mo experience</span>
               </div>

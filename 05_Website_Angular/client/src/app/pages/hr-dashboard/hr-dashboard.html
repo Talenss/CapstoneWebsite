@@ -232,7 +232,7 @@
                   <span class="badge">{{ stageCount(p) }} at {{ stageLabel() }}</span>
                 }
               </div>
-              <div class="meta">{{ p.department }} · {{ p.skills.length }} skills asked for · posted {{ day(p.createdAt) }}</div>
+              <div class="meta">{{ p.department }} · {{ p.skills.length }} {{ p.skills.length === 1 ? 'skill' : 'skills' }} asked for · posted {{ day(p.createdAt) }}</div>
             </div>
             <div class="num"><b>{{ p.applicantCount }}</b><span>applied</span></div>
             @if (p.vacancies != null) {
