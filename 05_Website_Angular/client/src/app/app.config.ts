@@ -7,6 +7,7 @@ import { SessionService } from './core/session.service';
 import { environment } from '../environments/environment';
 import { applyMatchSettings, applyDictionary } from './core/engine';
 import { ApiService } from './core/api.service';
+import { ScoringSetup } from './core/scoring-setup';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -40,6 +41,7 @@ export const appConfig: ApplicationConfig = {
     // endpoint must not stop the app from painting.
     provideAppInitializer(() => {
       if (environment.mode !== 'api') return;
+      const setup = inject(ScoringSetup);
       void fetch(`${environment.apiBase}/match/settings`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -47,7 +49,7 @@ export const appConfig: ApplicationConfig = {
         body: '{}',
       })
         .then((r) => (r.ok ? r.json() : null))
-        .then((j) => { if (j?.ok) applyMatchSettings(j); })
+        .then((j) => { if (j?.ok) { applyMatchSettings(j); setup.bump(); } })
         .catch(() => { /* keep the published defaults */ });
     }),
     // The skill dictionary the admins keep: the catalogue the pickers offer,
@@ -56,8 +58,10 @@ export const appConfig: ApplicationConfig = {
     // Same terms as the settings above: fire-and-forget, and on failure the
     // shipped catalogue and built-in synonyms stay in place.
     provideAppInitializer(() => {
+      // Pages that scored before this arrived score again (ScoringSetup).
+      const setup = inject(ScoringSetup);
       void inject(ApiService).skills.dictionary()
-        .then((r) => { if (r.ok) applyDictionary(r); })
+        .then((r) => { if (r.ok) { applyDictionary(r); setup.bump(); } })
         .catch(() => { /* keep the shipped dictionary */ });
     }),
   ]

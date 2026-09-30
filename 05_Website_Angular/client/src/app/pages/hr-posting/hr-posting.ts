@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
+import { ScoringSetup } from '../../core/scoring-setup';
 import { EduLevel, EmploymentType, Posting, Resume } from '../../core/models';
 import { SHIFT_LABELS, WORK_SETUP_LABELS, EDU_FIELD_OPTIONS, EDU_LABELS, SKILL_BY_INDUSTRY, SKILL_CATALOGUE, THRESHOLDS, WEIGHTS, WEIGHT_FLOOR, WEIGHT_STEP, scoreLocal, tierColor } from '../../core/engine';
 import { reportInvalidFields } from '../../shared/invalid-fields';
@@ -32,6 +33,7 @@ import { labelFor, SelectOption } from '../../shared/select-options';
 })
 export class HrPosting {
   private api = inject(ApiService);
+  private scoring = inject(ScoringSetup);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
@@ -231,6 +233,8 @@ export class HrPosting {
   poolSkills = computed(() => this.usedSkills());
 
   simRows = computed(() => {
+    // Scored again when the server's weights or skill dictionary land.
+    this.scoring.version();
     const skills = this.skillsVal();
     const known = this.knownResumes();
     if (!skills.length || !known.length) return [];

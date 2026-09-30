@@ -5,6 +5,7 @@ import { ApiService } from '../../core/api.service';
 import { DialogService } from '../../shared/dialog/dialog.service';
 import { AdminSkill, ApiResult, SkillAdminView, TypedSkill } from '../../core/models';
 import { applyDictionary } from '../../core/engine';
+import { ScoringSetup } from '../../core/scoring-setup';
 
 /** THE SKILL DICTIONARY, from the expert review: the admin panel should list
  *  the skills in the catalogue for editing, and let two terms be linked when
@@ -26,6 +27,7 @@ import { applyDictionary } from '../../core/engine';
 export class AdminSkills implements OnInit {
   private api = inject(ApiService);
   private dialog = inject(DialogService);
+  private scoring = inject(ScoringSetup);
 
   view = signal<SkillAdminView | null>(null);
   loadError = signal('');
@@ -84,7 +86,7 @@ export class AdminSkills implements OnInit {
     if (!r.ok) { onError(r.error); return false; }
     this.view.set(r);
     const d = await this.api.skills.dictionary();
-    if (d.ok) applyDictionary(d);
+    if (d.ok) { applyDictionary(d); this.scoring.bump(); }
     this.showToast(done);
     return true;
   }

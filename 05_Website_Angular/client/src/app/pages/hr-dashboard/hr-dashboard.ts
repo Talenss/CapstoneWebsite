@@ -158,8 +158,14 @@ export class HrDashboard implements OnInit {
       }
       if (staff && (p.ownerId ?? '') !== staff) return false;
       if (dept && p.department !== dept) return false;
-      if (!Number.isNaN(from) && p.createdAt < from) return false;
-      if (!Number.isNaN(to) && p.createdAt >= to) return false;
+      // With a stage picked, the dates have already done their work: the
+      // stage's counts are of applications MADE in that range. Filtering the
+      // openings by the day they were POSTED as well dropped every opening
+      // posted earlier, so "Applied: 1" could open onto "Nothing matches".
+      if (!stage) {
+        if (!Number.isNaN(from) && p.createdAt < from) return false;
+        if (!Number.isNaN(to) && p.createdAt >= to) return false;
+      }
       // "Deadline passed" is a state of its own on this page — an opening
       // still marked open that no longer accepts anyone. Rolling it into
       // "open" would hide exactly the rows that need attention.

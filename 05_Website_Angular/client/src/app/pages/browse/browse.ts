@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
+import { ScoringSetup } from '../../core/scoring-setup';
 import { SessionService } from '../../core/session.service';
 import { ApplicationAnswer, Company, MatchResult, Posting, Resume } from '../../core/models';
 import { SHIFT_LABELS, WORK_SETUP_LABELS, salaryLabel, openingsLabel, EDU_LABELS, SKILL_CATEGORY, WEIGHTS, experienceLabel, missingHint, scoreLocal, tierColor, tierLabel, tierOf, weightsFor, normSkill} from '../../core/engine';
@@ -34,6 +35,7 @@ type SortKey = 'score' | 'new' | 'az';
 })
 export class Browse implements OnInit, OnDestroy {
   private api = inject(ApiService);
+  private scoring = inject(ScoringSetup);
   private seo = inject(Seo);
   session = inject(SessionService);
 
@@ -111,6 +113,8 @@ export class Browse implements OnInit, OnDestroy {
   });
 
   rows = computed<BrowseRow[]>(() => {
+    // Scored again when the server's weights or skill dictionary land.
+    this.scoring.version();
     const resume = this.resume();
     const applied = new Set(this.appliedTo());
     return this.postings().map((p) => ({

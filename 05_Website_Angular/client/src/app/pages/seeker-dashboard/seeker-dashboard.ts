@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { Header } from '../../layout/header/header';
 import { Footer } from '../../layout/footer/footer';
 import { ApiService } from '../../core/api.service';
+import { ScoringSetup } from '../../core/scoring-setup';
 import { SessionService } from '../../core/session.service';
 import { TourService } from '../../shared/tour/tour.service';
 import { AppStatus, Application, ApplicationAnswer, Posting, RecommendationItem, Resume, StatusEvent } from '../../core/models';
@@ -30,6 +31,7 @@ interface TierConfig { key: TierKey; title: string; badgeClass: string; note: st
 export class SeekerDashboard implements OnInit {
   private dialog = inject(DialogService);
   private api = inject(ApiService);
+  private scoring = inject(ScoringSetup);
   session = inject(SessionService);
   private tour = inject(TourService);
 
@@ -252,6 +254,8 @@ export class SeekerDashboard implements OnInit {
    *  exactly what the seeker would score. Returns null when there's
    *  nothing to gain — never nags someone who already matches. */
   projectedScore(item: RecommendationItem): number | null {
+    // Worked out again when the server's weights or skill dictionary land.
+    this.scoring.version();
     const r = this.activeResume();
     if (!r || !item.missingSkills.length) return null;
     const projected = scoreLocal(

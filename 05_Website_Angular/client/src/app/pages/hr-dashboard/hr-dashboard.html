@@ -144,7 +144,7 @@
     }
     @if (stage()) {
       <div class="stage-note" role="status">
-        <span>Openings with applicants at <b>{{ stageLabel() }}</b>, current and archived.</span>
+        <span>Openings with applicants at <b>{{ stageLabel() }}</b>, current and archived{{ fFrom() || fTo() ? ', who applied within the dates above' : '' }}.</span>
         <button class="btn ghost sm" type="button" (click)="clearStage()">Show all openings</button>
       </div>
     }
