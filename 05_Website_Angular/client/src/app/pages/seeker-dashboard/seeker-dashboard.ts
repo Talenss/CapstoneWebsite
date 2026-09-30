@@ -85,8 +85,30 @@ export class SeekerDashboard implements OnInit {
     });
   });
   appFiltersOn = computed(() => !!(this.appStatusF() || this.appFrom() || this.appTo()));
-  clearAppFilters(): void { this.appStatusF.set(''); this.appFrom.set(''); this.appTo.set(''); }
+  clearAppFilters(): void { this.appStatusF.set(''); this.appFrom.set(''); this.appTo.set(''); this.appDateErr.set(''); }
   dateOf(e: Event): string { return (e.target as HTMLInputElement).value; }
+
+  /** The calendar already stops at today, but a date can still be TYPED.
+   *  Same rule and wording as the recruiter's dashboard: a future date, or a
+   *  "from" after the "to", is refused with a reason and the box goes back to
+   *  what it held, instead of quietly showing an empty list. */
+  appDateErr = signal('');
+  onAppDate(which: 'from' | 'to', e: Event): void {
+    const box = e.target as HTMLInputElement;
+    const v = box.value;
+    const from = which === 'from' ? v : this.appFrom();
+    const to = which === 'to' ? v : this.appTo();
+    let err = '';
+    if (v && v > this.todayISO) err = 'Dates cannot be later than today.';
+    else if (from && to && from > to) err = '“Applied from” has to be on or before the “to” date.';
+    if (err) {
+      this.appDateErr.set(err);
+      box.value = which === 'from' ? this.appFrom() : this.appTo();
+      return;
+    }
+    this.appDateErr.set('');
+    (which === 'from' ? this.appFrom : this.appTo).set(v);
+  }
 
   current = signal<RecommendationItem | null>(null);
   applying = signal(false);

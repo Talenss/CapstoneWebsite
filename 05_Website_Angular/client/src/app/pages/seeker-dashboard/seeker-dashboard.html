@@ -185,11 +185,11 @@
         </div>
         <div class="f">
           <label for="afFrom">Applied from</label>
-          <input type="date" id="afFrom" [max]="appTo() || todayISO" [value]="appFrom()" (change)="appFrom.set(dateOf($event))">
+          <input type="date" id="afFrom" [max]="appTo() || todayISO" [value]="appFrom()" [class.bad]="appDateErr()" (change)="onAppDate('from', $event)">
         </div>
         <div class="f">
           <label for="afTo">To</label>
-          <input type="date" id="afTo" [min]="appFrom() || null" [max]="todayISO" [value]="appTo()" (change)="appTo.set(dateOf($event))">
+          <input type="date" id="afTo" [min]="appFrom() || null" [max]="todayISO" [value]="appTo()" [class.bad]="appDateErr()" (change)="onAppDate('to', $event)">
         </div>
         <div class="f end">
           <span class="shown">{{ filteredApps().length }} of {{ applications().length }} shown</span>
@@ -198,6 +198,9 @@
           }
         </div>
       </div>
+      @if (appDateErr()) {
+        <p class="date-err" role="alert">{{ appDateErr() }}</p>
+      }
     }
     <div class="card flush" style="margin-top:18px">
       <div class="wrap-x">
