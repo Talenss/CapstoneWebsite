@@ -253,7 +253,7 @@
                       </hlm-select-content>
                     </hlm-select>
                     @if (jobFieldSuggestion(e); as sug) {
-                      <p class="hint read-as">Suggested from the position: <b>{{ sug.label }}</b>
+                      <p class="hint read-as">Suggested from {{ sug.from }}: <b>{{ sug.label }}</b>
                         <button type="button" class="linklike use-sug" (click)="setJobField($index, sug.value)">Use this</button></p>
                     } @else if (!e.field) {
                       <p class="hint">Pick the field so an opening in the same field counts this job in full. The recruiter sees what you choose.</p>

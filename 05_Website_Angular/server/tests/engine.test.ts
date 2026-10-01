@@ -1378,6 +1378,24 @@ test('a job\'s stated field of work makes it related to an opening in that field
   assert.equal(sSuggest({ position: 'Web Developer' }), 'it');
   assert.equal(sSuggest({ position: 'Call Center Agent' }), 'customer_service');
   assert.equal(sSuggest({ position: 'Dancer' }), null);
+  // Common first-job titles are suggested; "it" and "patient" as ordinary
+  // words in a description are not read as IT or healthcare.
+  const said: [any, string | null][] = [
+    [{ position: 'Clinic Assistant' }, 'healthcare'], [{ position: 'Medical Assistant' }, 'healthcare'],
+    [{ position: 'Midwife' }, 'healthcare'], [{ position: 'Patient Care Aide' }, 'healthcare'],
+    [{ position: 'Service Crew' }, 'hospitality'], [{ position: 'Office Assistant' }, 'admin'],
+    [{ position: 'IT Support' }, 'it'], [{ position: 'IT Intern' }, 'it'],
+    [{ position: 'Volunteer', description: 'Cleaned the hall and kept it tidy.' }, null],
+    [{ position: 'Volunteer', description: 'Stayed patient with upset callers.' }, null],
+    [{ position: 'Volunteer', description: 'Did data entry for a clinic.' }, 'admin'],
+  ];
+  for (const [job, want] of said) {
+    assert.equal(sSuggest(job), want, `server: ${job.position} / ${job.description ?? ''}`);
+    assert.equal(cSuggest(job), want, `client: ${job.position} / ${job.description ?? ''}`);
+  }
+  // An opening's department is a label: "It" there still means IT.
+  assert.equal(sRel({ position: 'Dancer', field: 'it' }, { title: 'Junior Staff', department: 'It' }, []), true);
+  assert.equal(cRel({ position: 'Dancer', field: 'it' }, { title: 'Junior Staff', department: 'It' }, []), true);
   // The job vocabulary must not leak into degrees: a Customer Support opening
   // still accepts any degree, as it always has.
   assert.equal(sAccepted(csa).size, 0);

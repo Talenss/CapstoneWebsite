@@ -1449,16 +1449,24 @@ export const JOB_FIELD_VOCAB: Record<string, string> = {
   softwareengineer: 'it', helpdesk: 'it', itsupport: 'it', networkadministrator: 'it', qatester: 'it',
   // healthcare
   nurse: 'healthcare', caregiver: 'healthcare', pharmacist: 'healthcare', medicalcoder: 'healthcare',
-  medicalbiller: 'healthcare', patient: 'healthcare',
+  medicalbiller: 'healthcare', medical: 'healthcare', clinic: 'healthcare', hospital: 'healthcare',
+  dental: 'healthcare', midwife: 'healthcare', therapist: 'healthcare', physician: 'healthcare',
+  doctor: 'healthcare', healthworker: 'healthcare',
+  // "patient" alone is also the adjective ("patient with callers"), so only
+  // the phrases that mean the job are listed.
+  patientcare: 'healthcare', patientcoordinator: 'healthcare', patientservices: 'healthcare',
+  patientaccess: 'healthcare', patientadvocate: 'healthcare',
   // finance
   accountant: 'finance', bookkeeper: 'finance', bookkeeping: 'finance', auditor: 'finance', payroll: 'finance',
   // office administration
   encoder: 'admin', dataentry: 'admin', secretary: 'admin', receptionist: 'admin', admin: 'admin',
-  administrative: 'admin', clerical: 'admin', virtualassistant: 'admin',
+  administrative: 'admin', clerical: 'admin', virtualassistant: 'admin', clerk: 'admin',
+  officeassistant: 'admin', officestaff: 'admin', documentcontroller: 'admin',
   // human resources
   hr: 'hr', recruiter: 'hr', recruitment: 'hr', talentacquisition: 'hr',
   // marketing and sales
   sales: 'marketing', socialmedia: 'marketing', seo: 'marketing', graphicdesigner: 'marketing',
+  merchandiser: 'marketing', promodiser: 'marketing',
   // communication
   writer: 'communication', contentwriter: 'communication', copywriter: 'communication', editor: 'communication',
   // education
@@ -1466,10 +1474,13 @@ export const JOB_FIELD_VOCAB: Record<string, string> = {
   // hospitality
   chef: 'hospitality', cook: 'hospitality', waiter: 'hospitality', barista: 'hospitality',
   housekeeping: 'hospitality', frontdesk: 'hospitality', hotel: 'hospitality', restaurant: 'hospitality',
+  servicecrew: 'hospitality', foodservice: 'hospitality', housekeeper: 'hospitality', bartender: 'hospitality',
+  baker: 'hospitality', kitchen: 'hospitality', tourguide: 'hospitality', travelagent: 'hospitality',
   // security
-  securityguard: 'security', guard: 'security',
+  securityguard: 'security', guard: 'security', securityofficer: 'security', securitypersonnel: 'security',
   // logistics
   warehouse: 'logistics', dispatcher: 'logistics', inventory: 'logistics', delivery: 'logistics',
+  courier: 'logistics', truckdriver: 'logistics', forkliftoperator: 'logistics',
 };
 
 /** The fields a job title (or any text about work) points to: the degree
@@ -1477,10 +1488,13 @@ export const JOB_FIELD_VOCAB: Record<string, string> = {
  *  way as educationFields(). */
 export function jobFields(text: string): Set<string> {
   const out = new Set<string>();
-  const words = String(text || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const raw = String(text || '').split(/[^A-Za-z0-9]+/).filter(Boolean);
+  const words = raw.map((w) => w.toLowerCase());
   for (let i = 0; i < words.length; i++) {
     for (let n = 1; n <= 4 && i + n <= words.length; n++) {
       const k = words.slice(i, i + n).join('');
+      // "IT" the field, not "it" the word: "kept it tidy" is not IT work.
+      if (n === 1 && k === 'it' && raw[i] !== 'IT') continue;
       const hit = JOB_FIELD_VOCAB[k] ?? EDU_FIELD_VOCAB[k];
       if (hit) out.add(hit);
     }
@@ -1503,7 +1517,9 @@ export function suggestJobField(e: { position?: string; description?: string } |
  *  one. Empty when nothing can be placed, and then only the job's own words
  *  can make it related. */
 export function openingJobFields(posting: any): Set<string> {
-  const out = jobFields(`${posting?.department || ''} ${posting?.title || ''}`);
+  // A department or title is a label, not a sentence: "It" or "it" there
+  // means IT, so it is read in capitals.
+  const out = jobFields(`${posting?.department || ''} ${posting?.title || ''}`.toUpperCase());
   const chosen = String(posting?.educationField ?? '').trim().toLowerCase();
   if (chosen && chosen !== EDU_FIELD_ANY && EDU_FIELD_OPTIONS.some((o) => o.value === chosen)) out.add(chosen);
   return out;

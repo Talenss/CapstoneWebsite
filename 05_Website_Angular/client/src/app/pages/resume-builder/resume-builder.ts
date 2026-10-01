@@ -8,7 +8,7 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { AnalysisService } from '../../core/analysis.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, visibleResume, WEIGHTS, DEGREE_CATALOGUE, SKILL_CATALOGUE, MAX_RESUMES, emailProblem, phoneProblem, linkedinProblem, experienceInPrintOrder, educationFields, EDU_FIELD_OPTIONS, EDU_RANK, JOB_FIELD_OPTIONS, JOB_FIELD_OTHER, suggestJobField } from '../../core/engine';
+import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, visibleResume, WEIGHTS, DEGREE_CATALOGUE, SKILL_CATALOGUE, MAX_RESUMES, emailProblem, phoneProblem, linkedinProblem, experienceInPrintOrder, educationFields, EDU_FIELD_OPTIONS, EDU_RANK, JOB_FIELD_OPTIONS, JOB_FIELD_OTHER, jobFields, suggestJobField } from '../../core/engine';
 import { Education, EduLevel, EvidenceKind, Experience, Language, Project, Reference, Resume, ResumeDesign, ResumeLink, ResumeSection, SkillEvidence, Template } from '../../core/models';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 
@@ -579,10 +579,13 @@ export class ResumeBuilder implements OnInit {
   readonly jobFieldLabel = (v: string): string =>
     this.jobFieldOptions.find((o) => o.value === (v ?? ''))?.label ?? 'Not stated';
   /** What the position suggests, offered only while nothing is chosen. */
-  jobFieldSuggestion(e: Experience): { value: string; label: string } | null {
+  jobFieldSuggestion(e: Experience): { value: string; label: string; from: string } | null {
     if (e.field) return null;
     const v = suggestJobField(e);
-    return v ? { value: v, label: this.jobFieldLabel(v) } : null;
+    if (!v) return null;
+    // Say where it came from: a suggestion read off the description is a
+    // weaker guess than one read off the job title, and the applicant should know which.
+    return { value: v, label: this.jobFieldLabel(v), from: jobFields(e.position || '').size ? 'the position' : 'what you did' };
   }
   setJobField(i: number, v: string): void {
     this.resume.update((r) => ({
