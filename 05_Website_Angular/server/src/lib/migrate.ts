@@ -425,6 +425,8 @@ export async function runMigrations(): Promise<void> {
   await exec('ALTER TABLE work_experience ADD COLUMN IF NOT EXISTS end_date VARCHAR(40)');
   await exec('ALTER TABLE work_experience ADD COLUMN IF NOT EXISTS is_current SMALLINT NOT NULL DEFAULT 0');
   await exec('ALTER TABLE work_experience ADD COLUMN IF NOT EXISTS bullets TEXT');
+  // The field of work the applicant says a job was in (engine.ts JOB_FIELD_OPTIONS).
+  await exec('ALTER TABLE work_experience ADD COLUMN IF NOT EXISTS field VARCHAR(40)');
 
   await exec('ALTER TABLE certifications ADD COLUMN IF NOT EXISTS issuer VARCHAR(200)');
   await exec('ALTER TABLE certifications ADD COLUMN IF NOT EXISTS credential_id VARCHAR(120)');

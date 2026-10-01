@@ -108,7 +108,7 @@ export async function prefetchResumeChildren(ids: number[]): Promise<ResumeChild
   const [edu, exp, sk, ce, pj, lg, rf, ln] = await Promise.all([
     query<any>(`SELECT resume_id, school, degree, level, year_grad, field, location, honors
                   FROM education WHERE resume_id = ANY(?) ORDER BY resume_id, sort_order, education_id`, [ids]),
-    query<any>(`SELECT resume_id, position, company, months, description, location, start_date, end_date, is_current, bullets
+    query<any>(`SELECT resume_id, position, company, months, description, location, start_date, end_date, is_current, bullets, field
                   FROM work_experience WHERE resume_id = ANY(?) ORDER BY resume_id, sort_order, experience_id`, [ids]),
     query<any>(`SELECT rs.resume_id, s.skill_name, rs.added_at, rs.evidence_kind, rs.evidence_ref, rs.evidence_sources
                   FROM resume_skills rs JOIN skills s ON s.skill_id = rs.skill_id
@@ -150,7 +150,7 @@ export async function serializeResume(r: ResumeRow, pre?: ResumeChildren): Promi
   }));
 
   const exp = pre ? (pre.experience.get(id) ?? []) : await query<any>(
-    `SELECT position, company, months, description, location, start_date, end_date, is_current, bullets
+    `SELECT position, company, months, description, location, start_date, end_date, is_current, bullets, field
        FROM work_experience WHERE resume_id=? ORDER BY sort_order, experience_id`,
     [id],
   );
@@ -163,6 +163,7 @@ export async function serializeResume(r: ResumeRow, pre?: ResumeChildren): Promi
     // Stored newline-separated; empty lines dropped so a stray blank line
     // cannot render as an empty bullet.
     ...(e.bullets ? { bullets: String(e.bullets).split('\n').map((b: string) => b.trim()).filter(Boolean) } : {}),
+    ...(e.field ? { field: e.field } : {}),
   }));
 
   const sk = pre ? (pre.skills.get(id) ?? []) : await query<{ skill_name: string; added_at: any; evidence_kind: string | null; evidence_ref: string | null; evidence_sources: any }>(

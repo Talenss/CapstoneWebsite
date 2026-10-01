@@ -213,7 +213,7 @@
         @if (step() === 2) {
           <section class="step" id="s2">
             <h2>Experience</h2>
-            <p class="sub">Internships, OJT, part-time work, and student-organisation roles all count. If you have none, skip this, plenty of openings ask for zero months. A job counts <b>in full</b> toward an opening when its <b>position</b> shares a word with the opening’s title, or <b>what you did</b> names a skill the opening asks for; any other job still counts, at half. So name the tools and skills you actually used.</p>
+            <p class="sub">Internships, OJT, part-time work, and student-organisation roles all count. If you have none, skip this, plenty of openings ask for zero months. A job counts <b>in full</b> toward an opening when the <b>field of work</b> you choose is the opening’s field, its <b>position</b> shares a word with the opening’s title, or <b>what you did</b> names a skill the opening asks for. Any other job still counts, at half.</p>
             <div>
               @for (e of resume().experience; track $index) {
                 <div class="item">
@@ -240,7 +240,27 @@
                       <input type="number" [id]="'exp-months-' + $index" placeholder="6" [value]="e.months.toString()" (input)="updateExperience($index, 'months', inputValue($event))">
                     </div>
                   </div>
-                  <p class="hint" style="margin:-8px 0 14px;font-size:12.5px">Months worked is how much experience counts. <b>Position</b> and <b>What you did</b> decide whether it counts as related to an opening. The dates below are for the recruiter reading the page.</p>
+                  <p class="hint" style="margin:-8px 0 14px;font-size:12.5px">Months worked is how much experience counts. The <b>field of work</b> below, the <b>position</b> and <b>what you did</b> decide whether it counts as related to an opening. The dates are for the recruiter reading the page.</p>
+                  <div class="field">
+                    <label [for]="'exp-field-' + $index">Field of work <span class="opt">which field was this job in?</span></label>
+                    <hlm-select class="sel job-field" [value]="e.field || ''" [itemToString]="jobFieldLabel"
+                                (valueChange)="setJobField($index, $any($event))">
+                      <hlm-select-trigger [id]="'exp-field-' + $index"><hlm-select-value placeholder="Not stated, choose a field" /></hlm-select-trigger>
+                      <hlm-select-content *hlmSelectPortal>
+                        @for (opt of jobFieldOptions; track opt.value) {
+                          <hlm-select-item [value]="opt.value">{{ opt.label }}</hlm-select-item>
+                        }
+                      </hlm-select-content>
+                    </hlm-select>
+                    @if (jobFieldSuggestion(e); as sug) {
+                      <p class="hint read-as">Suggested from the position: <b>{{ sug.label }}</b>
+                        <button type="button" class="linklike use-sug" (click)="setJobField($index, sug.value)">Use this</button></p>
+                    } @else if (!e.field) {
+                      <p class="hint">Pick the field so an opening in the same field counts this job in full. The recruiter sees what you choose.</p>
+                    } @else {
+                      <p class="hint">An opening in this field counts this job in full. The recruiter sees what you chose.</p>
+                    }
+                  </div>
                   <div class="row2">
                     <div class="field">
                       <label [for]="'exp-loc-' + $index">City <span class="opt">optional</span></label>

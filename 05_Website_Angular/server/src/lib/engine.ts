@@ -424,6 +424,105 @@ export function acceptedFields(posting: any): Set<string> {
   return educationFields(String(posting?.department || ''));
 }
 
+/* ------------------------------------------------------------
+   FIELD OF WORK — what a JOB was about, stated by the applicant.
+
+   Reading a job's own words (experienceRelevant below) misses related work
+   written another way: "Administrative Staff" never says "admin", a
+   freelancer who "built websites" never says "web developer". So each job
+   can also carry the field the applicant says it was in, chosen from the
+   same fields a degree is read into, plus customer service and BPO, which
+   is most of the work in a BPO town and is not a field of study.
+
+   It is STATED, not verified, so it never takes anything away: a job counts
+   as related when its stated field matches the opening's OR its own words
+   do, and the recruiter sees the stated field beside the job. A job with no
+   field stated is judged exactly as before.
+   ------------------------------------------------------------ */
+export const JOB_FIELD_OPTIONS: readonly { value: string; label: string }[] = [
+  { value: 'customer_service', label: 'Customer service and BPO' },
+  ...EDU_FIELD_OPTIONS,
+];
+/** "None of these": stored, so the builder does not keep suggesting. */
+export const JOB_FIELD_OTHER = 'other';
+
+/** Words that place a JOB (or an opening's title and department) in a field,
+ *  on top of the degree vocabulary. Kept apart from EDU_FIELD_VOCAB on
+ *  purpose: added there, "Customer Support" as a department would start
+ *  asking every applicant for a customer-service DEGREE. */
+export const JOB_FIELD_VOCAB: Record<string, string> = {
+  // customer service and BPO
+  customerservice: 'customer_service', customersupport: 'customer_service', customercare: 'customer_service',
+  customerexperience: 'customer_service', callcenter: 'customer_service', callcentre: 'customer_service',
+  contactcenter: 'customer_service', contactcentre: 'customer_service', bpo: 'customer_service',
+  csr: 'customer_service', tsr: 'customer_service', telesales: 'customer_service', telemarketing: 'customer_service',
+  chatsupport: 'customer_service', emailsupport: 'customer_service', technicalsupport: 'customer_service',
+  techsupport: 'customer_service',
+  // information technology
+  developer: 'it', programmer: 'it', webdeveloper: 'it', webdevelopment: 'it', softwaredeveloper: 'it',
+  softwareengineer: 'it', helpdesk: 'it', itsupport: 'it', networkadministrator: 'it', qatester: 'it',
+  // healthcare
+  nurse: 'healthcare', caregiver: 'healthcare', pharmacist: 'healthcare', medicalcoder: 'healthcare',
+  medicalbiller: 'healthcare', patient: 'healthcare',
+  // finance
+  accountant: 'finance', bookkeeper: 'finance', bookkeeping: 'finance', auditor: 'finance', payroll: 'finance',
+  // office administration
+  encoder: 'admin', dataentry: 'admin', secretary: 'admin', receptionist: 'admin', admin: 'admin',
+  administrative: 'admin', clerical: 'admin', virtualassistant: 'admin',
+  // human resources
+  hr: 'hr', recruiter: 'hr', recruitment: 'hr', talentacquisition: 'hr',
+  // marketing and sales
+  sales: 'marketing', socialmedia: 'marketing', seo: 'marketing', graphicdesigner: 'marketing',
+  // communication
+  writer: 'communication', contentwriter: 'communication', copywriter: 'communication', editor: 'communication',
+  // education
+  teacher: 'education', tutor: 'education', instructor: 'education',
+  // hospitality
+  chef: 'hospitality', cook: 'hospitality', waiter: 'hospitality', barista: 'hospitality',
+  housekeeping: 'hospitality', frontdesk: 'hospitality', hotel: 'hospitality', restaurant: 'hospitality',
+  // security
+  securityguard: 'security', guard: 'security',
+  // logistics
+  warehouse: 'logistics', dispatcher: 'logistics', inventory: 'logistics', delivery: 'logistics',
+};
+
+/** The fields a job title (or any text about work) points to: the degree
+ *  vocabulary and the job vocabulary together, read word by word the same
+ *  way as educationFields(). */
+export function jobFields(text: string): Set<string> {
+  const out = new Set<string>();
+  const words = String(text || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  for (let i = 0; i < words.length; i++) {
+    for (let n = 1; n <= 4 && i + n <= words.length; n++) {
+      const k = words.slice(i, i + n).join('');
+      const hit = JOB_FIELD_VOCAB[k] ?? EDU_FIELD_VOCAB[k];
+      if (hit) out.add(hit);
+    }
+  }
+  return out;
+}
+
+/** The field the builder suggests for a job: read from its position first,
+ *  then from what the applicant wrote they did. Null when nothing is clear. */
+export function suggestJobField(e: { position?: string; description?: string } | null | undefined): string | null {
+  for (const text of [e?.position, e?.description]) {
+    const f = [...jobFields(String(text || ''))];
+    if (f.length) return f[0];
+  }
+  return null;
+}
+
+/** The fields an opening's work is in: its department and title, read the
+ *  same way, plus the field of study the recruiter picked, if they picked
+ *  one. Empty when nothing can be placed, and then only the job's own words
+ *  can make it related. */
+export function openingJobFields(posting: any): Set<string> {
+  const out = jobFields(`${posting?.department || ''} ${posting?.title || ''}`);
+  const chosen = String(posting?.educationField ?? '').trim().toLowerCase();
+  if (chosen && chosen !== EDU_FIELD_ANY && EDU_FIELD_OPTIONS.some((o) => o.value === chosen)) out.add(chosen);
+  return out;
+}
+
 /** Normalize a skill to its canonical comparable form: strip case and
  *  punctuation, then fold known synonyms together. Used for BOTH sides
  *  of every comparison, and for the canonical `skills.skill_norm` row,
@@ -510,6 +609,8 @@ export function titleWords(text: string): Set<string> {
  *  for, OR its title shares a subject word with the opening's title. Mirrored
  *  1:1 in client engine.ts, where the reasoning is written out. */
 export function experienceRelevant(e: any, posting: any, required: readonly string[]): boolean {
+  const stated = String(e?.field || '');
+  if (stated && stated !== JOB_FIELD_OTHER && openingJobFields(posting).has(stated)) return true;
   const text = [e?.position, e?.description, ...(Array.isArray(e?.bullets) ? e.bullets : [])]
     .filter(Boolean).join(' ');
   if (jobMentionsAny(text, required)) return true;

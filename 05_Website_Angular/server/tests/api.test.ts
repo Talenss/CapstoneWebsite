@@ -2123,3 +2123,23 @@ test('reposts of one role: each says who posted it, and the pipeline counts any 
   const junk = (await maria('stats/hr', { postingIds: [a.id, 'x', -3, 999999] })).body.stats;
   assert.equal(junk.totalApplicants, 1);
 });
+
+test('a job\'s field of work is saved, read back, kept on duplicate; anything unknown is dropped', async () => {
+  const s = client(); await s('auth/login', { email: 'liza@demo.ph', password: 'demo123' });
+  const resume = { title: 'Field of work check', template: 'chronological', design: 'classic',
+    personal: { fullName: 'Marco Garcia', email: 'marco@demo.ph', phone: '0917 123 4567', address: '', summary: 'Checking the field of work.' },
+    education: [{ school: 'HAU', degree: 'BSIT', level: 'bachelor', year: '2024' }], skills: ['JavaScript'], certifications: [],
+    experience: [
+      { position: 'Freelancer', company: 'Self', months: 12, description: 'Built websites.', field: 'it' },
+      { position: 'Dancer', company: 'Troupe', months: 6, description: 'Shows.', field: 'other' },
+      { position: 'Agent', company: 'BPO', months: 6, description: 'Calls.', field: 'astrology' },
+    ] };
+  const saved = (await s('resumes/save', { resume })).body;
+  assert.equal(saved.ok, true, saved.error);
+  const got = (await s('resumes/get', { id: saved.resume.id })).body.resume;
+  assert.deepEqual(got.experience.map((e: any) => e.field ?? null), ['it', 'other', null]);
+  const dup = (await s('resumes/duplicate', { id: saved.resume.id })).body;
+  const copy = (await s('resumes/get', { id: dup.resume.id })).body.resume;
+  assert.deepEqual(copy.experience.map((e: any) => e.field ?? null), ['it', 'other', null]);
+  await s('resumes/delete', { id: dup.resume.id }); await s('resumes/delete', { id: saved.resume.id });
+});

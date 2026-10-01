@@ -323,3 +323,10 @@
 .read-as b{color:var(--emerald)}
 .read-as.no{color:var(--accent-deep)}
 .read-as.no b{color:inherit}
+
+/* Field of work: a full-width box, and the "Use this" link beside the suggestion. */
+hlm-select.job-field { width: 100%; max-width: 360px; }
+.use-sug { margin-left: 8px; font-size: 12px; }
+.use-sug { background: none; border: 0; padding: 0; color: var(--ink); font: inherit; font-size: 12px; font-weight: 600;
+  text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.use-sug:hover { color: var(--accent-deep); }

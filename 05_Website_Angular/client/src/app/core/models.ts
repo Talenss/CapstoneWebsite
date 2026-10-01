@@ -184,6 +184,10 @@ export interface Experience {
   /** Achievement bullets. `description` stays as the prose fallback so
    *  every existing resume keeps rendering exactly as before. */
   bullets?: string[];
+  /** The field of work the applicant says this job was in: a
+   *  JOB_FIELD_OPTIONS tag, or 'other'. Stated, not verified, so it can only
+   *  make a job count as related; the recruiter sees it beside the job. */
+  field?: string;
 }
 
 export interface Certification {

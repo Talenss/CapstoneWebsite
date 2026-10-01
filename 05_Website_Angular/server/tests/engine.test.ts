@@ -1344,3 +1344,50 @@ test('common degree abbreviations are read as their field, the same on both side
   }
   assert.equal(serverEduFields('Bachelor of Arts').size, 0, 'a degree that names no field is not guessed at');
 });
+
+/* FIELD OF WORK: a job the applicant says was in the opening's field counts
+   as related, whatever its words; a job with no field, or "something else",
+   is judged on its words exactly as before. Both engines must agree. */
+import { experienceRelevant as sRel, jobFields as sJobFields, suggestJobField as sSuggest, JOB_FIELD_OPTIONS as S_JOB_OPTS, acceptedFields as sAccepted } from '../src/lib/engine';
+import { experienceRelevant as cRel, jobFields as cJobFields, suggestJobField as cSuggest, JOB_FIELD_OPTIONS as C_JOB_OPTS } from '../../client/src/app/core/engine';
+test('a job\'s stated field of work makes it related to an opening in that field', () => {
+  const web = { title: 'Web Developer', department: 'Information Technology' };
+  const admin = { title: 'Admin Assistant', department: 'Administration' };
+  const csa = { title: 'Customer Support Agent', department: 'Customer Support' };
+  const req = ['JavaScript', 'Git'];
+  const cases: [any, any, boolean][] = [
+    [{ position: 'Dancer', description: 'Performed in shows.' }, web, false],
+    [{ position: 'Dancer', description: 'Performed in shows.', field: 'it' }, web, true],
+    [{ position: 'Dancer', description: 'Performed in shows.', field: 'other' }, web, false],
+    [{ position: 'Freelancer', description: 'Built websites for small businesses.', field: 'it' }, web, true],
+    [{ position: 'Administrative Staff', description: 'Filed records.' }, admin, false],
+    [{ position: 'Administrative Staff', description: 'Filed records.', field: 'admin' }, admin, true],
+    [{ position: 'Call Center Agent', description: 'Inbound calls.', field: 'customer_service' }, csa, true],
+    [{ position: 'Call Center Agent', description: 'Inbound calls.', field: 'it' }, csa, false],
+    [{ position: 'Junior Web Developer', description: 'Pages.', field: 'other' }, web, true],
+  ];
+  for (const [job, post, want] of cases) {
+    assert.equal(sRel(job, post, req), want, `server: ${job.position} (${job.field ?? 'no field'}) vs ${post.title}`);
+    assert.equal(cRel(job, post, req), want, `client: ${job.position} (${job.field ?? 'no field'}) vs ${post.title}`);
+  }
+  assert.deepEqual(C_JOB_OPTS, S_JOB_OPTS, 'the builder offers the fields the server accepts');
+  for (const t of ['Web Developer', 'Call Center Agent', 'Administrative Staff', 'Staff Nurse', 'Bookkeeper', 'Dancer']) {
+    assert.deepEqual([...cJobFields(t)].sort(), [...sJobFields(t)].sort(), t);
+    assert.equal(cSuggest({ position: t }), sSuggest({ position: t }), t);
+  }
+  assert.equal(sSuggest({ position: 'Web Developer' }), 'it');
+  assert.equal(sSuggest({ position: 'Call Center Agent' }), 'customer_service');
+  assert.equal(sSuggest({ position: 'Dancer' }), null);
+  // The job vocabulary must not leak into degrees: a Customer Support opening
+  // still accepts any degree, as it always has.
+  assert.equal(sAccepted(csa).size, 0);
+});
+test('the score counts a stated-field job in full', () => {
+  const posting: any = { title: 'Web Developer', department: 'Information Technology', skills: ['JavaScript'], educationLevel: 'bachelor', minExperienceMonths: 12 };
+  const resume = (field?: string): any => ({ skills: ['JavaScript'], education: [{ degree: 'BSIT', level: 'bachelor' }],
+    experience: [{ position: 'Dancer', months: 12, description: 'Performed.', ...(field ? { field } : {}) }] });
+  const without = scoreWith(DEFAULT_SETTINGS, resume(), posting), withIt = scoreWith(DEFAULT_SETTINGS, resume('it'), posting);
+  assert.equal(without.expMeets, false); assert.equal(without.relevantMonths, 0);
+  assert.equal(withIt.expMeets, true); assert.equal(withIt.relevantMonths, 12);
+  assert.ok(withIt.score > without.score);
+});

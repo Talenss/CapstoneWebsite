@@ -488,6 +488,11 @@
                     <div class="p-item">
                       <b>{{ e.position }}</b>
                       <i>{{ join([e.company, e.location, dateRange(e) || monthsLabel(e.months)]) }}</i>
+                      <!-- Stated by the applicant, and it can make the job
+                           count as related, so the recruiter sees it here. -->
+                      @if (e.field && jobFieldName(e.field); as fname) {
+                        <span class="job-field-tag" title="The field the applicant says this job was in">Field of work (stated): {{ fname }}</span>
+                      }
                       @if (e.description) { <p>{{ e.description }}</p> }
                       @if (e.bullets?.length) {
                         <ul>

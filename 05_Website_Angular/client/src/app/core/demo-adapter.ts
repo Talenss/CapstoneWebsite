@@ -5,7 +5,7 @@
    ============================================================ */
 import { ApiAdapter } from './adapter';
 import { SkillAdminView, SkillDictionary, AnalyzedResume, ApiResult, AppStatus, Application, ApplicationAnswer, Company, EvidenceKind, RejectionReason, HrStats, HrStatsFilters, InviteSchedule, MatchResult, Posting, PostingQuestion, RankedRow, RecommendationItem, Resume, ScreeningNote, SkillEvidence, StatusEvent, User, RankedQuery} from './models';
-import { BUILT_IN_CATALOGUE, normSkillBuiltIn, setLinkedSkills, linkedSkills, skillBase, normSkill, SKILL_ALIASES, passwordOk, PASSWORD_HINT, scoreLocal, visibleResume, RESUME_SECTIONS, OPTIONAL_WEIGHTS, WEIGHT_FLOOR, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert, EDU_FIELD_OPTIONS, EDU_FIELD_ANY, MAX_RESUMES, emailProblem, phoneProblem, linkedinProblem, SHIFT_LABELS, WORK_SETUP_LABELS, MAX_MONTHLY_SALARY, MAX_VACANCIES } from './engine';
+import { BUILT_IN_CATALOGUE, normSkillBuiltIn, setLinkedSkills, linkedSkills, skillBase, normSkill, SKILL_ALIASES, passwordOk, PASSWORD_HINT, scoreLocal, visibleResume, RESUME_SECTIONS, OPTIONAL_WEIGHTS, WEIGHT_FLOOR, STATUS_ORDER, ALL_STATUSES, THRESHOLDS, EDU_RANK, MAX_UPLOAD, ALLOWED_MIME, DESIGNS, EVIDENCE_KINDS, evidenceLabels, normCert, EDU_FIELD_OPTIONS, EDU_FIELD_ANY, JOB_FIELD_OPTIONS, JOB_FIELD_OTHER, MAX_RESUMES, emailProblem, phoneProblem, linkedinProblem, SHIFT_LABELS, WORK_SETUP_LABELS, MAX_MONTHLY_SALARY, MAX_VACANCIES } from './engine';
 
 const KEY = 'linaw_v3_db';
 
@@ -758,6 +758,9 @@ export class DemoAdapter implements ApiAdapter {
         if (e.current) row.current = true;
         const bullets = list(e.bullets, 12).map((b) => clamp(b, 300).trim()).filter(Boolean);
         if (bullets.length) row.bullets = bullets;
+        // Only a known field of work or "other", as routes/resumes.ts keeps.
+        const f = String((e as any).field ?? '').trim().toLowerCase();
+        if (f === JOB_FIELD_OTHER || JOB_FIELD_OPTIONS.some((o) => o.value === f)) row.field = f;
         return row;
       });
 

@@ -237,6 +237,10 @@ CREATE TABLE work_experience (
   -- Achievement bullets, newline-separated. description stays as the
   -- prose fallback so resumes written before this keep rendering.
   bullets       TEXT,
+  -- The field of work the applicant says this job was in (a JOB_FIELD_OPTIONS
+  -- tag, or 'other'). Stated, not verified: it can only make a job count as
+  -- related, and the recruiter sees it.
+  field         VARCHAR(40),
   sort_order    INT NOT NULL DEFAULT 0
 );
 CREATE INDEX idx_exp_resume ON work_experience (resume_id);

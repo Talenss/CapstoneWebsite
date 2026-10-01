@@ -8,7 +8,7 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { AnalysisService } from '../../core/analysis.service';
 import { TourService } from '../../shared/tour/tour.service';
-import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, visibleResume, WEIGHTS, DEGREE_CATALOGUE, SKILL_CATALOGUE, MAX_RESUMES, emailProblem, phoneProblem, linkedinProblem, experienceInPrintOrder, educationFields, EDU_FIELD_OPTIONS, EDU_RANK } from '../../core/engine';
+import { DESIGN_ORDER, EDU_LABELS, EVIDENCE_KINDS, EVIDENCE_KIND_LABELS, evidenceLabels, evidenceSources, visibleResume, WEIGHTS, DEGREE_CATALOGUE, SKILL_CATALOGUE, MAX_RESUMES, emailProblem, phoneProblem, linkedinProblem, experienceInPrintOrder, educationFields, EDU_FIELD_OPTIONS, EDU_RANK, JOB_FIELD_OPTIONS, JOB_FIELD_OTHER, suggestJobField } from '../../core/engine';
 import { Education, EduLevel, EvidenceKind, Experience, Language, Project, Reference, Resume, ResumeDesign, ResumeLink, ResumeSection, SkillEvidence, Template } from '../../core/models';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 
@@ -569,6 +569,33 @@ export class ResumeBuilder implements OnInit {
     }));
     this.markDirty();
   }
+  /** FIELD OF WORK for a job. '' is "not stated", which the engine treats
+   *  exactly as a job had always been treated. */
+  readonly jobFieldOptions: { value: string; label: string }[] = [
+    { value: '', label: 'Not stated' },
+    ...JOB_FIELD_OPTIONS,
+    { value: JOB_FIELD_OTHER, label: 'Something else' },
+  ];
+  readonly jobFieldLabel = (v: string): string =>
+    this.jobFieldOptions.find((o) => o.value === (v ?? ''))?.label ?? 'Not stated';
+  /** What the position suggests, offered only while nothing is chosen. */
+  jobFieldSuggestion(e: Experience): { value: string; label: string } | null {
+    if (e.field) return null;
+    const v = suggestJobField(e);
+    return v ? { value: v, label: this.jobFieldLabel(v) } : null;
+  }
+  setJobField(i: number, v: string): void {
+    this.resume.update((r) => ({
+      ...r,
+      experience: r.experience.map((exp, idx): Experience => {
+        if (idx !== i) return exp;
+        const { field: _old, ...rest } = exp;
+        return v ? { ...rest, field: v } : rest;
+      }),
+    }));
+    this.markDirty();
+  }
+
   /** "I still work here" — clears the end date, since the sheet prints
    *  "Present" for it and two answers would contradict each other. */
   toggleCurrent(i: number, on: boolean): void {

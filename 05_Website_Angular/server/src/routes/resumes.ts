@@ -8,12 +8,19 @@ import { ResumeRow } from '../types';
 import { ok, fail, idOf } from '../lib/http';
 import { requireUser, requireRole } from '../lib/auth';
 import { fetchResume, prefetchResumeChildren, serializeResume, recruiterMayReadResume, parseHiddenSections } from '../lib/serializers';
-import { EDU_RANK, EVIDENCE_KINDS, EvidenceKind, evidenceLabels, skillId, skillNorm } from '../lib/engine';
+import { EDU_RANK, EVIDENCE_KINDS, EvidenceKind, evidenceLabels, skillId, skillNorm, JOB_FIELD_OPTIONS, JOB_FIELD_OTHER } from '../lib/engine';
 import { extractResume } from '../lib/extract';
 import { MAX_UPLOAD, ALLOWED_MIME, MAX_RESUMES } from '../config';
 import { emailProblem, phoneProblem, linkedinProblem } from '../lib/contact';
 import { putFile, deleteFile } from '../lib/storage';
 import { sniffBytes, typeMatches } from '../lib/file-type';
+
+/** A job's stated field of work, as stored: a JOB_FIELD_OPTIONS tag, 'other',
+ *  or null for anything else (including nothing chosen). */
+function jobFieldOf(v: unknown): string | null {
+  const f = String(v ?? '').trim().toLowerCase();
+  return f === JOB_FIELD_OTHER || JOB_FIELD_OPTIONS.some((o) => o.value === f) ? f : null;
+}
 
 const router = asyncRouter();
 /* memoryStorage, not dest: the bytes go straight to lib/storage, which may
@@ -287,8 +294,8 @@ router.post('/save', async (req, res) => {
       for (const e of experience) {
         await tx.exec(
           `INSERT INTO work_experience (resume_id, position, company, months, description,
-             location, start_date, end_date, is_current, bullets, sort_order)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+             location, start_date, end_date, is_current, bullets, field, sort_order)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
           [id, String(e.position ?? '').slice(0, 160), String(e.company ?? '').slice(0, 160),
            Math.max(0, Math.min(720, Number(e.months) || 0)), String(e.description ?? '').slice(0, 2000),
            String(e.location ?? '').slice(0, 160), String(e.startDate ?? '').slice(0, 40), String(e.endDate ?? '').slice(0, 40),
@@ -297,6 +304,8 @@ router.post('/save', async (req, res) => {
            // can ever reach the sheet. Capped like every other list.
            (Array.isArray(e.bullets) ? e.bullets : []).slice(0, 12)
              .map((b: unknown) => String(b ?? '').trim().slice(0, 300)).filter(Boolean).join('\n'),
+           // Only a known field or "other"; anything else is dropped, not stored.
+           jobFieldOf(e.field),
            i++],
         );
       }
@@ -473,9 +482,9 @@ router.post('/duplicate', async (req, res) => {
       );
       await tx.exec(
         `INSERT INTO work_experience (resume_id, position, company, months, description,
-           location, start_date, end_date, is_current, bullets, sort_order)
+           location, start_date, end_date, is_current, bullets, field, sort_order)
          SELECT ?, position, company, months, description,
-           location, start_date, end_date, is_current, bullets, sort_order
+           location, start_date, end_date, is_current, bullets, field, sort_order
            FROM work_experience WHERE resume_id = ?`, [nid, id],
       );
       await tx.exec(
