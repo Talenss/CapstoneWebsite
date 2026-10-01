@@ -421,8 +421,11 @@ app-root{display:flex;flex-direction:column;flex:1 0 auto}
    its content did. Measured on /auth: the page ended at 924px in a 1000px
    viewport, leaving 76px of the body's grey under a navy panel.
    router-outlet is excluded deliberately: it is an empty anchor element, and
-   letting it grow would hand it a share of the free space. */
-app-root > *:not(router-outlet){display:flex;flex-direction:column;flex:1 0 auto;min-width:0}
+   letting it grow would hand it a share of the free space. app-dialog-host is
+   excluded for the same reason: its dialogs are fixed overlays, so it has no
+   height of its own, and when it was let grow it took a share of the spare
+   height on a tall screen and left a grey band under the page. */
+app-root > *:not(router-outlet):not(app-dialog-host){display:flex;flex-direction:column;flex:1 0 auto;min-width:0}
 main{flex:1}
 .grid{display:grid;gap:20px}
 /* minmax(0,1fr), not 1fr: a plain 1fr column cannot shrink below its

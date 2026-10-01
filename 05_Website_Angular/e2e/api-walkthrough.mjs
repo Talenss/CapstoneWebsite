@@ -172,13 +172,13 @@ await t('SEEKER · can read the recorded history of an application', async () =>
   await page.waitForTimeout(1500);
   const events = await page.locator('.timeline li').count();
   if (!events) throw new Error('timeline rendered no recorded events');
-  const txt = await page.locator('.hist-panel').first().innerText();
+  const txt = await page.locator('.hist-inline').first().innerText();
   if (!/You applied/.test(txt)) throw new Error('the earliest event is not the applicant applying');
   if (!/\d{4}/.test(txt)) throw new Error('events carry no date');
 });
 
 await t('the timeline never names the individual who decided', async () => {
-  const txt = await page.locator('.hist-panel').first().innerText();
+  const txt = await page.locator('.hist-inline').first().innerText();
   for (const name of ['Santos', 'Maria', 'Grace', 'Lopez']) {
     if (txt.includes(name)) throw new Error('leaked a recruiter name to the applicant: ' + name);
   }
@@ -242,33 +242,52 @@ await t('the builder asks about sources by reaching the skills step, not by luck
      scored 100 where the published rule says 75.
 
      Reaching the skills step IS being asked; the source picker sits beside
-     every skill on it. So: no map before that step, an empty map after. */
+     every skill on it. A resume now needs a name, an education entry and a
+     skill before it can be saved at all (the panel and expert revisions), and
+     skills are added on that step, so a save from the builder always comes
+     after it: the map must be sent with the save, empty or not, and no source
+     may be invented for a skill nobody gave one. */
   const seen = [];
   const watch = (req) => {
     if (req.url().includes('/api/resumes/save') && req.method() === 'POST') {
-      try { seen.push('skillEvidence' in (JSON.parse(req.postData() || '{}').resume || {})); } catch { /* ignore */ }
+      try { seen.push(JSON.parse(req.postData() || '{}').resume || {}); } catch { /* ignore */ }
     }
   };
+  const title = 'Evidence probe ' + Date.now();
   page.on('request', watch);
   try {
     await login('seeker@demo.ph', 'demo123');
     await page.goto(B + '/resume-builder', { waitUntil: 'networkidle' });
     await page.waitForTimeout(1200);
+    await page.fill('#rtitle', title);
     await page.fill('#pName', 'Evidence Probe');
+    await page.fill('#pEmail', 'seeker@demo.ph');
+    await page.locator('.rail button', { hasText: 'Education' }).click();
+    await page.click('#s1 button:has-text("Add")');
+    await page.fill('#edu-school-0', 'Holy Angel University');
+    await page.fill('#edu-degree-0', 'BS Information Technology');
+    await page.click('#edu-level-0');
+    await page.locator('[role=option]', { hasText: 'Bachelor' }).first().click();
+    await page.locator('.rail button', { hasText: 'Skills' }).click();
+    await page.waitForTimeout(800);
+    await page.fill('#skillInput', 'JavaScript');
+    await page.press('#skillInput', 'Enter');
     await page.click('button:has-text("Save draft")');
     await page.waitForTimeout(1600);
     if (seen.length === 0) throw new Error('the builder never saved');
-    if (seen[seen.length - 1] !== false)
-      throw new Error('a resume saved before the skills step must carry NO evidence map');
-
-    await page.locator('.rail button', { hasText: 'Skills' }).click();
-    await page.waitForTimeout(800);
-    await page.click('button:has-text("Save draft")');
-    await page.waitForTimeout(1600);
-    if (seen[seen.length - 1] !== true)
+    const last = seen[seen.length - 1];
+    if (!('skillEvidence' in last))
       throw new Error('once the skills step is reached the map must be sent, empty or not');
+    if (last.skillEvidence && last.skillEvidence.JavaScript)
+      throw new Error('a source was invented for a skill nobody gave one');
   } finally {
     page.off('request', watch);
+    // leave the seeded account as it was
+    await page.evaluate(async ([base, t]) => {
+      const post = (r, d) => fetch(base + '/api/' + r, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(d) }).then((x) => x.json());
+      const mine = (await post('resumes/list', {})).resumes || [];
+      for (const r of mine.filter((x) => x.title === t)) await post('resumes/delete', { id: r.id });
+    }, [B, title]).catch(() => {});
   }
 });
 

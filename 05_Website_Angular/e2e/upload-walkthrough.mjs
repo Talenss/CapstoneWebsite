@@ -44,6 +44,23 @@ await page.waitForTimeout(1400);
 
 await step('the builder exposes a file input for the applicant’s own file', async () => {
   await go('/resume-builder');
+  /* A file is kept WITH a saved resume, and a resume cannot be saved without a
+     name, an education entry and a skill (the panel and expert revisions):
+     attaching to an empty one is refused with that reason. So fill in the
+     minimum first, the way an applicant reaching the last step would have. */
+  await page.fill('#rtitle', 'Upload check ' + Date.now());
+  await page.fill('#pName', 'Juan Dela Cruz');
+  await page.fill('#pEmail', 'seeker@demo.ph');
+  await page.locator('.rail button', { hasText: 'Education' }).click();
+  await page.click('#s1 button:has-text("Add")');
+  await page.fill('#edu-school-0', 'Holy Angel University');
+  await page.fill('#edu-degree-0', 'BS Information Technology');
+  await page.click('#edu-level-0');
+  await page.locator('[role=option]', { hasText: 'Bachelor' }).first().click();
+  await page.locator('.rail button', { hasText: 'Skills' }).click();
+  await page.waitForTimeout(500);
+  await page.fill('#skillInput', 'JavaScript');
+  await page.press('#skillInput', 'Enter');
   const finish = page.locator('button').filter({ hasText: /Finish/ }).first();
   if (await finish.count()) { await finish.click(); await page.waitForTimeout(900); }
   const input = page.locator('input[type=file]#ownFile, input[type=file]');
@@ -158,7 +175,9 @@ await step('an imported CV credits its skills to the file it was read from', asy
   const unsourced = state.skills.filter(k => !state.ev[k]);
   if (unsourced.length) throw new Error('skills read out of the file were left unsourced: ' + unsourced.join(', '));
   for (const k of state.skills) {
-    if (state.ev[k].kind !== 'document' || state.ev[k].ref !== state.file)
+    // One source, or a list of them: a skill can now point at several.
+    const sources = Array.isArray(state.ev[k]) ? state.ev[k] : [state.ev[k]];
+    if (!sources.some((x) => x && x.kind === 'document' && x.ref === state.file))
       throw new Error(`${k} points at ${JSON.stringify(state.ev[k])}, not at the uploaded file`);
   }
 });

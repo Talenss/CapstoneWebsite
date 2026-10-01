@@ -28,9 +28,11 @@ export class Privacy {
    *  assumed: clicking one left the URL at /#rights with no <article> in the
    *  document at all.
    *
-   *  The href stays exactly as it is, so the link still reads as a link,
-   *  still announces its target, and still works for open-in-new-tab. Only
-   *  the default navigation is replaced, by the scroll it was meant to do. */
+   *  The href names the page as well as the section (/privacy#rights, not
+   *  #rights), so the link still reads as a link, still announces its
+   *  target, and opened in a new tab or copied it lands on this section
+   *  rather than on the home page. Only the default navigation is replaced,
+   *  by the scroll it was meant to do. */
   jump(event: Event, id: string): void {
     event.preventDefault();
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
