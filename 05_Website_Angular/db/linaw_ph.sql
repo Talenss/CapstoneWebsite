@@ -105,6 +105,9 @@ CREATE TABLE users (
   position_title      VARCHAR(120),
   verified            SMALLINT NOT NULL DEFAULT 0,    -- a recruiter cannot log in until this is 1
   email_notifications SMALLINT NOT NULL DEFAULT 1,
+  -- Job alerts for a seeker: a new opening scoring 'possible' (50%+) or better,
+  -- 'strong' (80%+) only, or 'off'. Sent only while email_notifications is on.
+  job_alerts          VARCHAR(10) NOT NULL DEFAULT 'possible' CHECK (job_alerts IN ('possible','strong','off')),
   -- Admin access given to a RECRUITER, who keeps recruiting as well. An
   -- admin-only account (an IT manager) is role 'admin' and leaves this off.
   is_admin            BOOLEAN NOT NULL DEFAULT false,

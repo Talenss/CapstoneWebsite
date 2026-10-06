@@ -378,3 +378,53 @@ test('nothing is emailed to a seeker who turned notifications off', async () => 
 
   await seeker('auth/set-notifications', { enabled: true });
 });
+
+/* JOB ALERTS, EACH APPLICANT'S OWN BAR. 'possible' (the default) is a new
+   opening scoring 50% or more; 'strong' is 80% or more only; 'off' is none.
+   The scores are read back from the site rather than assumed, so the test
+   states which opening is which before it judges the inbox. */
+test('job alerts follow the level each applicant chose: 50%+, 80%+ only, or off', async () => {
+  const seeker = client();
+  assert.equal((await seeker('auth/login', { email: 'seeker@demo.ph', password: 'demo123' })).body.ok, true);
+  const hr = client();
+  assert.equal((await hr('auth/login', { email: 'hr@demo.ph', password: 'demo123' })).body.ok, true);
+  const me = (await seeker('auth/me')).body.user;
+  assert.equal(me.jobAlerts, 'possible', 'everyone starts on 50% and up, as before');
+  assert.equal((await seeker('auth/set-job-alerts', { level: 'loud' })).body.ok, false, 'an unknown level is refused');
+  assert.equal((await hr('auth/set-job-alerts', { level: 'strong' })).body.ok, false, 'recruiters have no job alerts');
+
+  const opening = async (title: string, skills: string[]) => {
+    const r = await hr('postings/save', { posting: { title, department: 'Information Technology', employmentType: 'full-time',
+      description: 'A job-alert check.', skills, educationLevel: 'bachelor', minExperienceMonths: 0 } });
+    assert.equal(r.body.ok, true, JSON.stringify(r.body));
+    const s = await seeker('match/score', { resumeId: me.activeResumeId, postingId: r.body.posting.id });
+    return { title, score: s.body.score as number };
+  };
+  const strongSkills = ['HTML/CSS', 'JavaScript', 'Git'];
+  const possibleSkills = ['JavaScript', 'Bookkeeping', 'QuickBooks', 'Canva'];
+  const gotAlert = async (title: string, expect: boolean) => {
+    const pred = (m: any) => m.to.includes('seeker@demo.ph') && m.subject.includes(title);
+    if (expect) { await sink.waitFor(pred); return; }
+    await new Promise((r) => setTimeout(r, 2500));
+    assert.equal(sink.messages.filter(pred).length, 0, `no alert expected for ${title}`);
+  };
+
+  sink.clear();
+  assert.equal((await seeker('auth/set-job-alerts', { level: 'strong' })).body.user.jobAlerts, 'strong');
+  const a = await opening('Alert check strong A', strongSkills);
+  const b = await opening('Alert check possible B', possibleSkills);
+  assert.ok(a.score >= 80 && b.score >= 50 && b.score < 80, `scores: ${a.score}, ${b.score}`);
+  await gotAlert(a.title, true);
+  await gotAlert(b.title, false);
+
+  sink.clear();
+  await seeker('auth/set-job-alerts', { level: 'off' });
+  const c = await opening('Alert check off C', strongSkills);
+  assert.ok(c.score >= 80);
+  await gotAlert(c.title, false);
+
+  sink.clear();
+  await seeker('auth/set-job-alerts', { level: 'possible' });
+  const d = await opening('Alert check possible D', possibleSkills);
+  await gotAlert(d.title, true);
+});

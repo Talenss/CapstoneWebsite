@@ -317,7 +317,7 @@ export const EDU_FIELD_VOCAB: Record<string, string> = {
   // information technology
   informationtechnology: 'it', computerscience: 'it', computerengineering: 'it',
   informationsystems: 'it', softwareengineering: 'it', computerstudies: 'it',
-  it: 'it', ict: 'it', cs: 'it', datascience: 'it', informationtech: 'it',
+  it: 'it', ict: 'it', cs: 'it', datascience: 'it', informationtech: 'it', infotech: 'it',
   // healthcare
   nursing: 'healthcare', pharmacy: 'healthcare', medicaltechnology: 'healthcare',
   medtech: 'healthcare', midwifery: 'healthcare', radiologictechnology: 'healthcare',
@@ -351,6 +351,9 @@ export const EDU_FIELD_VOCAB: Record<string, string> = {
   // communication
   masscommunication: 'communication', communication: 'communication',
   journalism: 'communication', broadcasting: 'communication', englishlanguage: 'communication',
+  // AB English is in the degree list the builder suggests; it was the one
+  // listed degree the system could not place in a field.
+  english: 'communication', abenglish: 'communication',
   // security
   criminology: 'security', criminaljustice: 'security',
   // logistics

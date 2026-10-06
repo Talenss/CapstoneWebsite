@@ -32,6 +32,7 @@ export interface ApiAdapter {
     changeEmailConfirm(newEmail: string, code: string): Promise<ApiResult<{ user: User }>>;
     /** Toggle application-event emails. Security codes are unaffected. */
     setEmailNotifications(enabled: boolean): Promise<ApiResult<{ user: User }>>;
+    setJobAlerts(level: 'possible' | 'strong' | 'off'): Promise<ApiResult<{ user: User }>>;
     deleteAccount(password: string): Promise<ApiResult<object>>;
     exportMyData(): Promise<ApiResult<{ data: any }>>;
   };

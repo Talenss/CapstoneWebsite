@@ -39,7 +39,8 @@ async function alertMatchingSeekers(postingId: number): Promise<void> {
 
   const seekers = await query<UserRow>(
     `SELECT * FROM users
-      WHERE role='seeker' AND email_notifications=1 AND active_resume_id IS NOT NULL`,
+      WHERE role='seeker' AND email_notifications=1 AND active_resume_id IS NOT NULL
+        AND COALESCE(job_alerts, 'possible') <> 'off'`,
   );
   // Score everyone first, then send. Scoring and mailing used to be
   // interleaved in one serial loop, so a single slow SMTP handshake stalled
@@ -51,7 +52,8 @@ async function alertMatchingSeekers(postingId: number): Promise<void> {
       const r = await fetchResume(s.active_resume_id!);
       if (!r) continue;
       const score = await rmScore(visibleResume(await serializeResume(r as ResumeRow)), posting);
-      if (score.score < T.related) continue; // below "possible" — no alert
+      // Each seeker's own bar: 'possible' is 50%+, 'strong' is 80%+.
+      if (score.score < (s.job_alerts === 'strong' ? T.strong : T.related)) continue;
       recipients.push({ email: s.email, name: s.full_name, score: score.score, tier: score.tier });
     } catch (e: any) {
       console.error('job alert scoring failed for', s.email, '-', e?.message || e);

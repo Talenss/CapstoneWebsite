@@ -1331,18 +1331,23 @@ test('a linked synonym matches in both engines, after the built-in list, and unl
    found only because it is two words. Checked on both engines, which must
    agree for the builder's "Read as" line to tell the truth. */
 import { educationFields as serverEduFields } from '../src/lib/engine';
-import { educationFields as clientEduFields } from '../../client/src/app/core/engine';
+import { educationFields as clientEduFields, DEGREE_CATALOGUE } from '../../client/src/app/core/engine';
 test('common degree abbreviations are read as their field, the same on both sides', () => {
   const cases: [string, string][] = [
     ['BSIT', 'it'], ['BS IT', 'it'], ['BSCS', 'it'], ['BSN', 'healthcare'], ['BSA', 'finance'],
     ['BSBA Marketing Management', 'business'], ['BSEd English', 'education'], ['BSHM', 'hospitality'],
     ['BS Criminology', 'security'], ['BSCrim', 'security'],
+    ['AB English', 'communication'], ['BS in Info Tech', 'it'],
   ];
   for (const [text, field] of cases) {
     assert.ok(serverEduFields(text).has(field), `server: ${text} → ${[...serverEduFields(text)]}`);
     assert.deepEqual([...clientEduFields(text)].sort(), [...serverEduFields(text)].sort(), `client and server differ on ${text}`);
   }
   assert.equal(serverEduFields('Bachelor of Arts').size, 0, 'a degree that names no field is not guessed at');
+  // Every degree the builder suggests can be placed in a field, except the
+  // senior high strands, where the field is not checked at all.
+  const unplaced = DEGREE_CATALOGUE.filter((d) => !/^Senior High School/.test(d) && serverEduFields(d).size === 0);
+  assert.deepEqual(unplaced, [], 'suggested degrees with no field: ' + unplaced.join(', '));
 });
 
 /* FIELD OF WORK: a job the applicant says was in the opening's field counts

@@ -153,6 +153,24 @@ export class Account {
     this.showToast('Email address updated.');
   }
 
+  // ---- job alerts (seekers): which new openings are worth an email ----
+  readonly alertLevels = [
+    { v: 'possible', label: 'Possible and strong matches', sub: 'a new opening that scores 50% or more for your active resume' },
+    { v: 'strong', label: 'Strong matches only', sub: '80% or more' },
+    { v: 'off', label: 'Off', sub: 'no emails about new openings' },
+  ] as const;
+  alertLevel = computed(() => this.session.user()?.jobAlerts ?? 'possible');
+  alertSaving = signal(false);
+  async setAlerts(level: 'possible' | 'strong' | 'off'): Promise<void> {
+    if (level === this.alertLevel()) return;
+    this.alertSaving.set(true);
+    const res = await this.api.auth.setJobAlerts(level);
+    this.alertSaving.set(false);
+    if (!res.ok) { this.msg.set(res.error); return; }
+    this.session.user.set(res.user);
+    this.showToast(level === 'off' ? 'Job alerts are off.' : level === 'strong' ? 'You’ll hear about strong matches (80%+).' : 'You’ll hear about possible and strong matches (50%+).');
+  }
+
   // ---- email notifications toggle ----
   isDemo = environment.mode === 'demo';
   notifySaving = signal(false);

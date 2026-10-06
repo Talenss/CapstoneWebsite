@@ -12,6 +12,7 @@ import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { labelFor, SelectOption } from '../../shared/select-options';
 import { describeSchedule, googleCalendarUrl } from '../../core/calendar';
+import { DialogService } from '../../shared/dialog/dialog.service';
 
 /** Port of the PHP hr-applicants.html — the ranked-applicant list
  *  for a single posting (?id=), with a search/filter bar and a dual-resume
@@ -29,6 +30,7 @@ export class HrApplicants {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private sanitizer = inject(DomSanitizer);
+  private dialog = inject(DialogService);
 
   readonly statusOrder = STATUS_ORDER;
   readonly experienceLabel = experienceLabel;
@@ -110,6 +112,82 @@ export class HrApplicants {
   belowMin = signal(0);
 
   current = signal<RankedRow | null>(null);
+  /** The resume pane filling the whole window, if any. A recruiter reading an
+   *  applicant properly wants the page, not a half-width box inside a dialog. */
+  fullPane = signal<'scored' | 'human' | null>(null);
+
+  /* SELECTING SEVERAL APPLICANTS. A BPO screens in volume: moving ten people
+     to Initial interview one dialog at a time is ten round trips through the
+     same panel. Ticked rows can be moved together, or 2–3 of them compared
+     side by side. The selection is of what is on screen, so it is cleared
+     whenever the list reloads (a filter, a page, a save). */
+  selected = signal<ReadonlySet<string>>(new Set());
+  bulkStatus = signal<AppStatus>('initial_interview');
+  bulkBusy = signal(false);
+  comparing = signal(false);
+  readonly MAX_COMPARE = 3;
+  selectedRows = computed(() => this.filteredRows().filter((r) => this.selected().has(r.application.id)));
+  isSelected(r: RankedRow): boolean { return this.selected().has(r.application.id); }
+  toggleSelect(r: RankedRow, e?: Event): void {
+    e?.stopPropagation();
+    const next = new Set(this.selected());
+    if (next.has(r.application.id)) next.delete(r.application.id); else next.add(r.application.id);
+    this.selected.set(next);
+  }
+  allSelected = computed(() => this.filteredRows().length > 0 && this.filteredRows().every((r) => this.selected().has(r.application.id)));
+  toggleSelectAll(): void {
+    this.selected.set(this.allSelected() ? new Set() : new Set(this.filteredRows().map((r) => r.application.id)));
+  }
+  clearSelection(): void { this.selected.set(new Set()); this.comparing.set(false); }
+  onBulkStatus(v: AppStatus): void { if (v) this.bulkStatus.set(v); }
+
+  async moveSelected(): Promise<void> {
+    const rows = this.selectedRows();
+    const to = this.bulkStatus();
+    if (!rows.length) return;
+    const n = rows.length;
+    const ok = await this.dialog.confirm({
+      title: `Move ${n} applicant${n === 1 ? '' : 's'} to ${STATUS_LABELS[to]}?`,
+      message: rows.map((r) => r.seeker.name).join(', ') + '. Each change is recorded against your account, and each applicant sees it on their dashboard.',
+      confirmLabel: `Move ${n}`,
+      danger: to === 'rejected',
+    });
+    if (!ok) return;
+    this.bulkBusy.set(true);
+    const failed: string[] = [];
+    let closed = false;
+    // One at a time, not in parallel: the last hire can close the opening,
+    // and every change after that must see it closed.
+    for (const r of rows) {
+      if (r.application.status === to) continue;
+      const res = await this.api.applications.setStatus(r.application.id, to, null);
+      if (!res.ok) failed.push(`${r.seeker.name} (${res.error})`);
+      else if ((res as any).postingClosed) closed = true;
+    }
+    this.bulkBusy.set(false);
+    this.clearSelection();
+    const id = this.postingId();
+    if (id) await this.load(id);
+    const moved = n - failed.length;
+    this.showToast(failed.length
+      ? `${moved} moved to ${STATUS_LABELS[to]}. Not moved: ${failed.join('; ')}`
+      : `${moved} moved to ${STATUS_LABELS[to]}.${closed ? ' That fills every opening, so this posting is now closed to new applicants.' : ''}`);
+  }
+
+  openCompare(): void {
+    const n = this.selectedRows().length;
+    if (n >= 2 && n <= this.MAX_COMPARE) this.comparing.set(true);
+  }
+  closeCompare(): void { this.comparing.set(false); }
+  /** The highest education on a resume, as the compare table shows it. */
+  topDegree(r: RankedRow): string {
+    const ed = [...(r.resume.education || [])].sort((a, b) => (EDU_RANK[b.level] ?? 0) - (EDU_RANK[a.level] ?? 0))[0];
+    if (!ed) return 'None listed';
+    return (ed.field ? `${ed.degree}, ${ed.field}` : ed.degree) || EDU_LABELS[ed.level] || 'Listed';
+  }
+  eduWord(r: RankedRow): string {
+    return r.eduMeets ? 'meets' : (r.eduLevelMeets && r.eduFieldRelated === false ? 'other field · counts half' : 'below');
+  }
   modalStatus = signal<AppStatus>('submitted');
   /** Only sent on a rejection, and even then optional. See saveStatus(). */
   modalReason = signal<string>('');
@@ -321,6 +399,7 @@ export class HrApplicants {
     if (!res.ok) { this.loadError.set(res.error); return; }
     this.posting.set(res.posting);
     this.rows.set(res.rows);
+    this.clearSelection();
     this.total.set(res.total ?? res.rows.length);
     this.matched.set(res.matched ?? res.rows.length);
     this.belowMin.set(res.belowMin ?? 0);
@@ -669,7 +748,12 @@ export class HrApplicants {
     return 'waiting ' + days + ' days since the last update';
   });
 
+  toggleFull(pane: 'scored' | 'human'): void {
+    this.fullPane.set(this.fullPane() === pane ? null : pane);
+  }
+
   closeModal(): void {
+    this.fullPane.set(null);
     this.current.set(null);
     this.history.set([]);
     this.historyError.set('');
@@ -681,7 +765,10 @@ export class HrApplicants {
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    if (this.current()) this.closeModal();
+    // Esc steps back one level: out of full screen first, then out of the dialog.
+    if (this.fullPane()) this.fullPane.set(null);
+    else if (this.current()) this.closeModal();
+    else if (this.comparing()) this.closeCompare();
   }
 
   async saveStatus(): Promise<void> {

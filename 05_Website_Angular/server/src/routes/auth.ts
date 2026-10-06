@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import { query, queryOne, exec } from '../db';
 import { UserRow, ResumeRow, ApplicationRow } from '../types';
 import { ok, fail } from '../lib/http';
-import { currentUser, requireUser, isCompanyAdmin, companyAdminCount } from '../lib/auth';
+import { currentUser, requireUser, requireRole, isCompanyAdmin, companyAdminCount } from '../lib/auth';
 import { serializeUser, serializeResume, serializeApplication, prefetchResumeChildren} from '../lib/serializers';
 import { DEBUG } from '../config';
 import { deleteFile } from '../lib/storage';
@@ -242,6 +242,18 @@ router.post('/set-notifications', async (req, res) => {
   if (!u) return;
   const enabled = req.body?.enabled ? 1 : 0;
   await exec('UPDATE users SET email_notifications = ? WHERE user_id = ?', [enabled, u.user_id]);
+  const updated = await queryOne<UserRow>('SELECT * FROM users WHERE user_id = ?', [u.user_id]);
+  ok(res, { user: serializeUser(updated) });
+});
+
+/** Job alerts (seekers): which brand-new openings are worth an email —
+ *  'possible' (50% and up, the default), 'strong' (80% and up) or 'off'. */
+router.post('/set-job-alerts', async (req, res) => {
+  const u = await requireRole(req, res, 'seeker');
+  if (!u) return;
+  const level = String(req.body?.level ?? '');
+  if (!['possible', 'strong', 'off'].includes(level)) return fail(res, 'Choose which openings to hear about.');
+  await exec('UPDATE users SET job_alerts = ? WHERE user_id = ?', [level, u.user_id]);
   const updated = await queryOne<UserRow>('SELECT * FROM users WHERE user_id = ?', [u.user_id]);
   ok(res, { user: serializeUser(updated) });
 });

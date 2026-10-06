@@ -135,6 +135,20 @@
           {{ session.user()?.role === 'seeker' ? 'my applications' : 'new applicants' }}
         </span>
       </label>
+      @if (session.user()?.role === 'seeker') {
+        <fieldset class="alerts" [disabled]="alertSaving()">
+          <legend>Job alerts: email me when a new opening is posted that is</legend>
+          @for (o of alertLevels; track o.v) {
+            <label class="alert-opt">
+              <input type="radio" name="jobAlerts" [value]="o.v" [checked]="alertLevel() === o.v" (change)="setAlerts(o.v)">
+              <span><b>{{ o.label }}</b> <span class="hint">{{ o.sub }}</span></span>
+            </label>
+          }
+          @if (!notifyOn() && alertLevel() !== 'off') {
+            <p class="hint" style="margin-top:6px">Email updates are off above, so no alerts are sent until you turn them back on.</p>
+          }
+        </fieldset>
+      }
       @if (isDemo) {
         <p class="hint" style="margin-top:12px">Demo mode runs entirely in your browser, so no email is actually sent. The setting itself works and is remembered.</p>
       }

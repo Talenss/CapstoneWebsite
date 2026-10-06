@@ -3,7 +3,7 @@
    Everything here is idempotent (IF NOT EXISTS / DROP-then-ADD), so a
    database created from db/linaw_ph.sql boots with nothing to do,
    and one carried over from an earlier feature set catches up on boot. */
-import { exec, query, queryOne, withTransaction, Tx } from '../db';
+import { db, exec, query, queryOne, withTransaction, Tx } from '../db';
 import { BUILT_IN_CATALOGUE } from './skill-catalogue';
 import { skillNorm } from './engine';
 import { ensureEmailCodesTable } from './email-codes';
@@ -237,7 +237,25 @@ async function ensureUniqueResumeTitles(): Promise<void> {
   });
 }
 
+/* Two copies of the server starting against one database at the same moment
+   (a deploy overlapping a restart, or a second instance) used to run these
+   CREATE … IF NOT EXISTS statements side by side, and Postgres rejects the
+   loser of that race with a duplicate key in its own catalogue: measured, the
+   second copy refused to start. A session-level advisory lock makes it wait
+   for the first instead, and then find nothing left to do. */
+const MIGRATION_LOCK = 0x4c696e61; // "Lina"
 export async function runMigrations(): Promise<void> {
+  const client = await db().connect();
+  try {
+    await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK]);
+    await migrateUnderLock();
+  } finally {
+    await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK]).catch(() => {});
+    client.release();
+  }
+}
+
+async function migrateUnderLock(): Promise<void> {
   await ensureEmailCodesTable();
   await ensureRowLevelSecurity();
   await ensureFunctionSearchPath();
@@ -245,6 +263,10 @@ export async function runMigrations(): Promise<void> {
 
   // users.email_notifications — the per-user opt-out for application emails
   await exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_notifications SMALLINT NOT NULL DEFAULT 1');
+  // Job alerts: which new openings a seeker is emailed about. 'possible' keeps
+  // what everyone already had (50% and up); 'strong' is 80% and up; 'off' none.
+  await exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS job_alerts VARCHAR(10) NOT NULL DEFAULT 'possible'
+    CHECK (job_alerts IN ('possible','strong','off'))`);
 
   // users.is_admin — admin access GIVEN TO A RECRUITER (the expert review:
   // the admin panel belongs to the main recruiter / IT manager). The

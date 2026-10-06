@@ -443,6 +443,8 @@ const pubUser = (u: DemoUser | null): User | null => {
   // Derived, as the server derives it; recruiters and admins only.
   delete c.adminGranted;
   if (u.role === 'recruiter' || u.role === 'admin') c.isAdmin = demoIsAdmin(u);
+  // Seekers' job-alert level, defaulting exactly as the server's column does.
+  if (u.role === 'seeker') c.jobAlerts = (u as any).jobAlerts || 'possible';
   return c;
 };
 
@@ -589,6 +591,15 @@ export class DemoAdapter implements ApiAdapter {
       const db = load(); const u = meRow(db);
       if (!u) return apiFail('You are not signed in.');
       u.emailNotifications = enabled;
+      persist(db);
+      return apiOk({ user: pubUser(u)! });
+    },
+    setJobAlerts: (level: 'possible' | 'strong' | 'off') => {
+      const db = load(); const u = meRow(db);
+      if (!u) return apiFail('You are not signed in.');
+      if (u.role !== 'seeker') return apiFail('Only job seekers get job alerts.');
+      if (!['possible', 'strong', 'off'].includes(level)) return apiFail('Choose which openings to hear about.');
+      (u as any).jobAlerts = level;
       persist(db);
       return apiOk({ user: pubUser(u)! });
     },

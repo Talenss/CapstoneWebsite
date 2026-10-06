@@ -45,6 +45,8 @@ export class HrPosting {
 
   postingId = signal<string | null>(null);
   postingStatus = signal<'open' | 'closed'>('open');
+  /** The opening this form was copied from ("Post again"), shown as a notice. */
+  copiedFrom = signal<Posting | null>(null);
 
   titleVal = signal('');
   deptVal = signal('');
@@ -267,7 +269,7 @@ export class HrPosting {
 
   constructor() {
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
-      this.init(params.get('id'));
+      this.init(params.get('id'), params.get('copy'));
     });
 
     // Take the pick, then hand the control back its empty state so the next
@@ -287,18 +289,25 @@ export class HrPosting {
     });
   }
 
-  private async init(id: string | null): Promise<void> {
+  private async init(id: string | null, copyId: string | null = null): Promise<void> {
     this.postingId.set(id);
+    this.copiedFrom.set(null);
 
     const mineRes = await this.api.postings.mine();
     const posts = mineRes.ok ? mineRes.postings : [];
     this.posts.set(posts);
 
-    if (id) {
-      const res = await this.api.postings.get(id);
+    /* "Post again": a BPO opens the same role batch after batch, so the form
+       starts as a copy of an earlier opening. It is still a NEW opening — no
+       id — and publishing it leaves the original exactly as it was. A
+       deadline already past would be refused, so it is cleared. */
+    const source = id || copyId;
+    if (source) {
+      const res = await this.api.postings.get(source);
       if (!res.ok) { this.router.navigateByUrl('/hr-dashboard'); return; }
       const p = res.posting;
-      this.postingStatus.set(p.status);
+      if (!id) this.copiedFrom.set(p);
+      this.postingStatus.set(id ? p.status : 'open');
       this.titleVal.set(p.title);
       this.deptVal.set(p.department);
       this.typeVal.set(p.employmentType || 'full-time');
@@ -312,9 +321,10 @@ export class HrPosting {
       this.setupVal.set(p.workSetup || '');
       this.locationVal.set(p.workLocation || '');
       this.vacanciesVal.set(p.vacancies != null ? String(p.vacancies) : '');
-      this.filledNote.set(p.vacancies != null ? `${p.filled ?? 0} of ${p.vacancies} filled so far.` : null);
+      this.filledNote.set(id && p.vacancies != null ? `${p.filled ?? 0} of ${p.vacancies} filled so far.` : null);
       this.monthsVal.set(p.minExperienceMonths || 0);
-      this.deadlineVal.set(p.deadline || '');
+      const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+      this.deadlineVal.set(id || (p.deadline && p.deadline >= today) ? (p.deadline || '') : '');
       this.certsVal.set([...(p.certifications ?? [])]);
       this.langsVal.set([...(p.languages ?? [])]);
       this.minProjects.set(p.minProjects ?? 0);

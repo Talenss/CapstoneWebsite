@@ -126,6 +126,39 @@
         }
       </div>
     } @else if (posting(); as p) {
+      <!-- Ticking rows: move several to one stage, or compare 2–3 side by side. -->
+      <div class="bulk no-print" [class.on]="selected().size > 0" role="region" aria-label="Selected applicants">
+        <label class="bulk-all">
+          <input type="checkbox" [checked]="allSelected()" (change)="toggleSelectAll()"
+                 aria-label="Select every applicant on this page">
+          @if (selected().size) { <b>{{ selected().size }} selected</b> } @else { <span>Tick applicants to move several at once or compare them</span> }
+        </label>
+        @if (selected().size) {
+          <span class="bulk-acts">
+            <span class="bulk-move">
+              <span class="w">Move to</span>
+              <hlm-select class="sel-status" [value]="bulkStatus()" [itemToString]="statusLabel"
+                          (valueChange)="onBulkStatus($any($event))">
+                <hlm-select-trigger aria-label="Stage to move the selected applicants to"><hlm-select-value /></hlm-select-trigger>
+                <hlm-select-content *hlmSelectPortal>
+                  @for (k of statusOrder; track k) {
+                    <hlm-select-item [value]="k">{{ statusLabels[k] }}</hlm-select-item>
+                  }
+                </hlm-select-content>
+              </hlm-select>
+              <button class="btn primary sm" type="button" [disabled]="bulkBusy()" (click)="moveSelected()">
+                @if (bulkBusy()) { <span class="spinner"></span> Moving… } @else { Move {{ selected().size }} }
+              </button>
+            </span>
+            <button class="btn ghost sm" type="button" (click)="openCompare()"
+                    [disabled]="selected().size < 2 || selected().size > MAX_COMPARE"
+                    [title]="selected().size < 2 || selected().size > MAX_COMPARE ? 'Tick 2 or 3 applicants to compare them' : 'Compare side by side'">
+              Compare{{ selected().size >= 2 && selected().size <= MAX_COMPARE ? ' ' + selected().size : '' }}
+            </button>
+            <button class="btn ghost sm" type="button" (click)="clearSelection()">Clear</button>
+          </span>
+        }
+      </div>
       @for (r of filteredRows(); track r.application.id) {
         <!-- The whole row opens the applicant, not just the button. The
              resume, the score breakdown and the status control all live in
@@ -133,7 +166,11 @@
              recruiter concludes the resume is not there at all. The button
              stays because it is the keyboard and screen-reader path; this
              is a pointer affordance on top of it, not a replacement. -->
-        <div class="app" (click)="openModal(r)">
+        <div class="app" [class.picked]="isSelected(r)" (click)="openModal(r)">
+          <label class="pick no-print" (click)="$event.stopPropagation()">
+            <input type="checkbox" [checked]="isSelected(r)" (change)="toggleSelect(r)"
+                   [attr.aria-label]="'Select ' + r.seeker.name">
+          </label>
           <span class="rank">{{ rank(r) }}</span>
           <span class="score-ring" [style.--p]="r.score" [style.--c]="tierColor(r.score)"><b>{{ r.score }}%</b></span>
           <div class="who">
@@ -239,6 +276,70 @@
 </main>
 
 <app-footer />
+
+<!-- Compare 2–3 ticked applicants: the same facts in the same rows. -->
+<div class="modal-back" [class.show]="comparing()" (click)="$event.target === $event.currentTarget && closeCompare()">
+  @if (comparing() && posting(); as p) {
+    <div appFocusTrap class="modal wide">
+      <button class="close-x" type="button" aria-label="Close" (click)="closeCompare()">&times;</button>
+      <div class="modal-head">
+        <h3>Compare applicants</h3>
+        <p class="sub">{{ p.title }} · the score each had when they applied</p>
+      </div>
+      <div class="modal-body">
+        <div class="cmp-wrap">
+          <table class="cmp">
+            <thead>
+              <tr><th scope="col"></th>
+                @for (r of selectedRows(); track r.application.id) {
+                  <th scope="col">
+                    <span class="score-ring" [style.--p]="r.score" [style.--c]="tierColor(r.score)"><b>{{ r.score }}%</b></span>
+                    <b class="cmp-name">{{ r.seeker.name }}</b>
+                    <span class="badge {{ tierBadgeClass(r.tier) }}">{{ tierLabel(r.score) }}</span>
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Status</th>
+                @for (r of selectedRows(); track r.application.id) { <td><span class="badge {{ statusBadge(r.application.status) }}">{{ statusLabels[r.application.status] }}</span></td> }
+              </tr>
+              <tr><th scope="row">Skills asked for</th>
+                @for (r of selectedRows(); track r.application.id) {
+                  <td><b>{{ r.matchedSkills.length }} of {{ r.totalSkills }}</b>
+                    <span class="chips">
+                      @for (s of p.skills; track s) { <span class="chip" [class.miss]="!r.matchedSkills.includes(s)">{{ s }}</span> }
+                    </span>
+                  </td>
+                }
+              </tr>
+              <tr><th scope="row">Education</th>
+                @for (r of selectedRows(); track r.application.id) { <td>{{ topDegree(r) }}<span class="w">{{ eduWord(r) }}</span></td> }
+              </tr>
+              <tr><th scope="row">Experience</th>
+                @for (r of selectedRows(); track r.application.id) {
+                  <td>{{ r.seekerMonths }} mo, {{ r.relevantMonths }} related<span class="w">asks for {{ p.minExperienceMonths || 0 }} mo · {{ r.expMeets ? 'meets' : 'below' }}</span></td>
+                }
+              </tr>
+              <tr><th scope="row">Own resume file</th>
+                @for (r of selectedRows(); track r.application.id) { <td>{{ r.resume.ownFile ? 'Attached' : 'None' }}</td> }
+              </tr>
+              <tr><th scope="row">Applied</th>
+                @for (r of selectedRows(); track r.application.id) { <td>{{ day(r.application.appliedAt) }}</td> }
+              </tr>
+              <tr><th scope="row"></th>
+                @for (r of selectedRows(); track r.application.id) {
+                  <td><button class="btn primary sm" type="button" (click)="closeCompare(); openModal(r)">Open both resumes</button></td>
+                }
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="w" style="margin-top:12px">The score is a reading aid; the decision is yours.</p>
+      </div>
+    </div>
+  }
+</div>
 
 <!-- applicant detail: both resumes, side by side -->
 <!-- appFocusTrap sits INSIDE the @if, matching the browse and dashboard
@@ -444,10 +545,12 @@
           </div>
         }
         <div class="dual">
-          <section class="pane scored">
+          <section class="pane scored" [class.full]="fullPane() === 'scored'">
             <header>
               <b>Structured resume</b>
               <span style="display:flex;gap:8px;align-items:center">
+                <button type="button" class="btn ghost sm" (click)="toggleFull('scored')"
+                        [attr.aria-pressed]="fullPane() === 'scored'">{{ fullPane() === 'scored' ? 'Exit full screen' : 'Full screen' }}</button>
                 <!-- The pane below is a window onto a document that is often
                      taller than it. A recruiter reading properly wants the
                      whole sheet, laid out as it prints, which this page can
@@ -585,8 +688,16 @@
               }
             </div>
           </section>
-          <section class="pane human">
-            <header><b>Applicant's own file</b><span class="badge slate">Not used for ranking</span></header>
+          <section class="pane human" [class.full]="fullPane() === 'human'">
+            <header><b>Applicant's own file</b>
+              <span style="display:flex;gap:8px;align-items:center">
+                @if (r.resume.ownFile) {
+                  <button type="button" class="btn ghost sm" (click)="toggleFull('human')"
+                          [attr.aria-pressed]="fullPane() === 'human'">{{ fullPane() === 'human' ? 'Exit full screen' : 'Full screen' }}</button>
+                }
+                <span class="badge slate">Not used for ranking</span>
+              </span>
+            </header>
             @if (r.resume.ownFile; as f) {
               <div>
                 @if (f.mime === 'application/pdf') {

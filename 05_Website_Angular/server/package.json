@@ -2,7 +2,7 @@
   "name": "linaw-ph-server",
   "version": "1.0.0",
   "private": true,
-  "description": "Linaw PH \u2014 Node/Express API (port of api/*.php)",
+  "description": "Linaw PH — Node/Express API (port of api/*.php)",
   "type": "commonjs",
   "main": "dist/server.js",
   "engines": {
@@ -41,7 +41,7 @@
     "helmet": "^8.3.0",
     "mammoth": "^1.12.0",
     "multer": "^2.0.0",
-    "nodemailer": "^9.0.3",
+    "nodemailer": "^10.0.15",
     "pdfjs-dist": "^4.10.38",
     "pg": "^8.22.0"
   },

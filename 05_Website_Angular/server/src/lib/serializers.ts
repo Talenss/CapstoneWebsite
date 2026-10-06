@@ -32,6 +32,7 @@ export function serializeUser(u: UserRow | null): any {
   };
   if (u.role === 'seeker') {
     out.activeResumeId = u.active_resume_id !== null ? String(u.active_resume_id) : null;
+    out.jobAlerts = u.job_alerts || 'possible';
   } else if (u.role === 'recruiter') {
     out.companyId = u.company_id !== null ? String(u.company_id) : null;
     out.position = u.position_title;

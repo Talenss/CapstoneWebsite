@@ -21,6 +21,7 @@ export interface UserRow {
   position_title: string | null;
   verified: number;
   email_notifications: number;
+  job_alerts?: 'possible' | 'strong' | 'off';
   /** Admin access given to a recruiter. See lib/auth.ts isCompanyAdmin(). */
   is_admin?: boolean;
   created_at: string;

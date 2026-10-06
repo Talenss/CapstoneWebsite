@@ -20,3 +20,10 @@
 /* First and last name side by side; stacks on a narrow screen. */
 .two-up { display: grid; grid-template-columns: 1fr 1fr; gap:0 14px; }
 @media (max-width: 560px) { .two-up { grid-template-columns: 1fr; } }
+
+/* Job alerts */
+.alerts{border:none;padding:0;margin:18px 0 0;display:flex;flex-direction:column;gap:8px}
+.alerts legend{font-size:13px;font-weight:700;margin-bottom:8px;padding:0}
+.alert-opt{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;cursor:pointer}
+.alert-opt input{margin-top:3px;accent-color:var(--navy, #16305C)}
+.alert-opt .hint{color:var(--muted);font-size:12.5px}

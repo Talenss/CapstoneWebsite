@@ -264,6 +264,8 @@
                 {{ stage() && stageCount(p) ? 'Review these ' + stageCount(p) : (p.applicantCount ? 'Review applicants' : 'No applicants yet') }}
               </a>
               <a class="btn ghost sm" [routerLink]="['/hr-posting']" [queryParams]="{ id: p.id }">Edit</a>
+              <a class="btn ghost sm" [routerLink]="['/hr-posting']" [queryParams]="{ copy: p.id }"
+                 title="Open a new batch of this role: the form starts as a copy of this opening">Post again</a>
               <button class="btn ghost sm" type="button" (click)="toggle(p)">{{ p.status === 'open' ? 'Close' : 'Reopen' }}</button>
             </div>
           </div>

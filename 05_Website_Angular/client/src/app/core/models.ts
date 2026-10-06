@@ -105,6 +105,8 @@ export interface User {
   createdAt: number;
   /** Application-event emails (status changes / new applicants). Absent = on. */
   emailNotifications?: boolean;
+  /** Seekers: which new openings are emailed. Absent means 'possible'. */
+  jobAlerts?: 'possible' | 'strong' | 'off';
   // seeker
   activeResumeId?: string | null;
   // recruiter

@@ -4,6 +4,7 @@
    SETUP.md. When SMTP isn't configured, callers can still let development
    proceed by surfacing the code another way (see routes/auth.ts). */
 import nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 import { SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, MAIL_FROM, BREVO_API_KEY } from '../config';
 
 export type CodePurpose = 'verify' | 'reset';
@@ -60,8 +61,8 @@ async function sendViaHttps(
   }
 }
 
-let transport: nodemailer.Transporter | null = null;
-function getTransport(): nodemailer.Transporter {
+let transport: Transporter | null = null;
+function getTransport(): Transporter {
   if (!transport) {
     /* POOLED, and that is a latency decision rather than a tidiness one.
        Without a pool nodemailer opens a fresh connection for every message:
