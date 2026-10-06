@@ -1,16 +1,9 @@
 /* ------------------------------------------------------------
-   FONTS FIRST — and this line must stay first.
-
-   CSS requires @import to precede every other rule in a stylesheet. When the
-   Tailwind block below was added above this line, the browser silently
-   dropped this import: no request to fonts.googleapis.com was made at all
-   and the whole site fell back to Georgia and the system sans. Nothing
-   errored, which is exactly why it has to be pinned here.
-
-   (A bare `@layer a, b;` statement is the one thing allowed before an
-   @import, so the layer order below is still declared ahead of Tailwind's.)
+   FONTS are loaded by a <link> in index.html, not by an @import here: an
+   @import is only discovered once this whole file has downloaded, which put
+   the font CSS a round trip behind and held up the first paint. (It also had
+   to stay the very first rule, or browsers silently dropped it.)
    ------------------------------------------------------------ */
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=Manrope:wght@400..800&family=JetBrains+Mono:wght@500;600;700&display=swap');
 
 /* ------------------------------------------------------------
    TAILWIND, DELIBERATELY WITHOUT PREFLIGHT.

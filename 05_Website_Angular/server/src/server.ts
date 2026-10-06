@@ -30,6 +30,7 @@ import adminRoutes from './routes/admin';
 import savedRoutes from './routes/saved';
 import metricsRoutes from './routes/metrics';
 import skillsRoutes, { loadSkillLinks } from './routes/skills';
+import compression from 'compression';
 import { runMigrations } from './lib/migrate';
 import { db } from './db';
 
@@ -40,6 +41,10 @@ const app = express();
 // Behind an HTTPS reverse proxy, TRUST_PROXY=true makes X-Forwarded-*
 // trustworthy (real client IPs for the rate limiters, https detection).
 if (TRUST_PROXY) app.set('trust proxy', 1);
+
+// Text compressed on the way out: the app's JavaScript and the API's JSON
+// shrink to roughly a quarter, which is most of the wait on mobile data.
+app.use(compression());
 
 // Security headers. The CSP allows what the Angular app actually uses:
 // its own bundles, inline style bindings, Google Fonts, and same-origin
@@ -115,9 +120,21 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 // the API — this keeps the session cookie same-site with no CORS needed.
 const clientDist = path.join(__dirname, '..', '..', 'client', 'dist', 'client', 'browser');
 if (fs.existsSync(clientDist)) {
-  app.use(express.static(clientDist));
+  /* The build names every script and stylesheet after its content
+     (main-3XXNCS4U.js), so a file of that name can never change: the browser
+     may keep it for a year and never ask again. index.html is the one file
+     that must always be fresh, because it names the current set; a deploy
+     then reaches everyone on their next page load. */
+  const HASHED = /-[A-Z0-9]{8}\.(js|css)$/;
+  app.use(express.static(clientDist, {
+    setHeaders: (res, file) => {
+      if (HASHED.test(file)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      else if (file.endsWith('index.html')) res.setHeader('Cache-Control', 'no-cache');
+    },
+  }));
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api')) return next();
+    res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 }

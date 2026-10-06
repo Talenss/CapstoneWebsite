@@ -22,6 +22,16 @@
   <meta name="theme-color" content="#16305C">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 
+  <!-- Fonts from the head, not from an @import inside styles.css. An @import
+       is only found after the whole stylesheet has downloaded, so the font CSS
+       started a round trip late and held up the first paint; from here it
+       loads alongside the stylesheet. The preconnects open both Google hosts
+       while the HTML is still arriving. At build time Angular inlines this
+       stylesheet (optimization.fonts), which saves the request altogether. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=Manrope:wght@400..800&family=JetBrains+Mono:wght@500;600;700&display=swap">
+
   <!-- Open Graph / Twitter, for the same pre-JavaScript audience. Absolute
        URLs are required by both specifications and neither accepts a
        relative path, so these are only correct once the site has a domain —
