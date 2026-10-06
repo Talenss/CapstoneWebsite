@@ -112,3 +112,20 @@ button.chip.more:hover { color: var(--text); border-color: var(--ink-line); }
 /* A refused date, in the same words and colour as the recruiter's dashboard. */
 .app-filters input[type=date].bad { border-color: var(--accent); }
 .date-err { font-size: 12.5px; color: var(--accent-deep); font-weight: 600; margin: 8px 0 0; }
+
+/* My applications on a phone: one card per application, every column
+   labelled, instead of a table whose status and buttons sat off-screen to
+   the right with nothing to say they were there. */
+@media (max-width: 640px) {
+  #apps thead { display: none; }
+  #apps, #apps tbody, #apps tr, #apps td { display: block; width: 100%; }
+  #apps tbody tr:not(.hist-row) { border: 1px solid var(--rule); border-radius: var(--r); padding: 12px 14px;
+    margin-bottom: 10px; background: var(--paper); }
+  #apps tbody tr:not(.hist-row) td { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 5px 0; border: none; white-space: normal !important; text-align: left !important; }
+  #apps td[data-label]::before { content: attr(data-label); font-size: 11px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted); flex: none; }
+  #apps td.app-title { font-size: 15px; padding-bottom: 8px; }
+  #apps td.app-acts { flex-wrap: wrap; justify-content: flex-start; gap: 6px; padding-top: 10px; }
+  #apps .hist-inline { position: static; width: auto; }
+}

@@ -1,6 +1,6 @@
 .head-row { display: flex; justify-content: space-between; align-items: flex-end; gap:18px; flex-wrap: wrap; }
 
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:12px; margin-bottom:40px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:40px; }
 .tile {
   background: var(--ivory); border: 1px solid var(--rule); border-radius: var(--r);
   padding:18px 20px;
@@ -9,7 +9,7 @@
 .tile b i { font-style: normal; font-size: 17px; color: var(--muted); }
 .tile span { font-size: 12px; color: var(--muted); line-height: 1.5; display: block; margin-top:4px; }
 
-.block { margin-bottom:40px; }
+section.block { margin-bottom:40px; }
 .block h2 { font-size: 22px; margin-bottom:4px; }
 .lede { font-size: 13.5px; color: var(--muted); margin-bottom:18px; max-width: 70ch; }
 

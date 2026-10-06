@@ -46,6 +46,12 @@
    the resume in full and the single outer scroll moves through it. */
 .pane .inner{padding:20px;font-family:Georgia,serif;font-size:12.5px;line-height:1.55;
   flex:1;background:#fff}
+/* The resume is a sheet of paper in either theme: white, with the light
+   theme's ink. In dark mode it kept the white page but took the dark theme's
+   pale text, so the name and summary all but vanished. */
+.pane .inner{--paper:#FFFFFF;--ivory:#F5F6F8;--stone-2:#E9EDF2;--rule:#D9DFE7;--rule-2:#EAEEF3;
+  --text:#1B2430;--muted:#5C6675;--faint:#66707E;--emerald:#2F7A4A;--emerald-wash:#E7F2EB;
+  --amber:#8F5A00;--amber-wash:#FDF3E2;--slate:#5B6472;--slate-wash:#EDEFF3;color:var(--text)}
 .pane .none{padding:44px 20px;text-align:center;color:var(--muted);font-size:13px;background:var(--ivory);flex:1;
   display:flex;flex-direction:column;justify-content:center;gap:12px}
 /* The applicant's own document keeps a fixed frame: a PDF viewer scrolls
@@ -284,14 +290,14 @@
 /* Ticking applicants */
 .bulk{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
   padding:10px 14px;margin-bottom:10px;border:1px solid var(--rule);border-radius:var(--r);background:var(--paper);font-size:13px}
-.bulk.on{position:sticky;top:8px;z-index:4;border-color:var(--navy, #16305C);box-shadow:var(--shadow-sm, 0 2px 8px rgba(0,0,0,.08))}
+.bulk.on{position:sticky;top:8px;z-index:4;border-color:var(--focus);box-shadow:var(--shadow-sm, 0 2px 8px rgba(0,0,0,.08))}
 .bulk-all{display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--muted)}
 .bulk-all b{color:var(--text)}
 .bulk-acts,.bulk-move{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .bulk-move .sel-status{min-width:170px}
 .app .pick{display:flex;align-items:center;padding:6px 4px 6px 0;cursor:pointer}
-.app .pick input,.bulk-all input{width:17px;height:17px;accent-color:var(--navy, #16305C);cursor:pointer}
-.app.picked{background:color-mix(in srgb, var(--navy, #16305C) 5%, var(--paper))}
+.app .pick input,.bulk-all input{width:17px;height:17px;accent-color:var(--focus);cursor:pointer}
+.app.picked{background:var(--focus-wash)}
 /* Compare */
 .cmp-wrap{overflow-x:auto}
 .cmp{width:100%;border-collapse:collapse;font-size:13px}

@@ -71,7 +71,7 @@
     @if (isDemo) {
       <p class="hint">Demo mode computes these live from this browser's data, in server mode the same numbers come from the real database, where time-to-decision uses the full status history.</p>
     }
-    <p class="hint">Generated {{ mm.generatedAt }}. Thresholds: strong ≥ {{ mm.thresholds.strong }}%, related ≥ {{ mm.thresholds.related }}%.</p>
+    <p class="hint">Generated {{ stamp(mm.generatedAt) }}. Strong match from {{ mm.thresholds.strong }}%, possible match from {{ mm.thresholds.related }}%, related role below {{ mm.thresholds.related }}%.</p>
   }
 </main>
 

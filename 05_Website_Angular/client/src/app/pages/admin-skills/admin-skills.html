@@ -50,14 +50,14 @@
         <div class="card empty"><p>Nothing yet. Every skill in use is in the catalogue.</p></div>
       } @else {
         <div class="card" style="padding:0;overflow-x:auto">
-          <table>
+          <table class="stack-sm">
             <thead><tr><th>Term</th><th>Used on</th><th>Counts as</th><th></th></tr></thead>
             <tbody>
               @for (t of typed(); track t.id) {
                 <tr>
                   <td><b>{{ t.name }}</b></td>
-                  <td>{{ usedLabel(t) }}</td>
-                  <td>@if (t.linkedTo) { <span class="badge green">{{ t.linkedTo }}</span> } @else { <span class="muted">Only itself</span> }</td>
+                  <td data-label="Used on">{{ usedLabel(t) }}</td>
+                  <td data-label="Counts as">@if (t.linkedTo) { <span class="badge green">{{ t.linkedTo }}</span> } @else { <span class="muted">Only itself</span> }</td>
                   <td class="acts">
                     @if (!t.linkedTo) {
                       <button class="btn ghost sm" type="button" (click)="countAs(t)">Count it as…</button>
@@ -85,7 +85,7 @@
         <span class="n">{{ shown().length }} shown</span>
       </div>
       <div class="card" style="padding:0;overflow-x:auto">
-        <table class="cat">
+        <table class="cat stack-sm">
           <thead><tr><th>Skill</th><th>Kind</th><th>Industry</th><th>Also counts</th><th>Used on</th><th></th></tr></thead>
           <tbody>
             @for (s of shown(); track s.id) {
@@ -110,9 +110,9 @@
               } @else {
                 <tr>
                   <td><b>{{ s.name }}</b></td>
-                  <td>{{ s.category === 'soft' ? 'Soft' : 'Technical' }}</td>
-                  <td>{{ s.industry }}</td>
-                  <td class="syn">
+                  <td data-label="Kind">{{ s.category === 'soft' ? 'Soft' : 'Technical' }}</td>
+                  <td data-label="Industry">{{ s.industry }}</td>
+                  <td class="syn" data-label="Also counts">
                     @for (l of s.links; track l.norm) {
                       <button type="button" class="chip link" [title]="linkTitle(l)" (click)="unlink(s, l)"
                               [attr.aria-label]="'Unlink ' + l.name + ' from ' + s.name">{{ l.name }} <span aria-hidden="true">×</span></button>
@@ -122,7 +122,7 @@
                     }
                     @if (!s.links.length && !s.builtIn.length) { <span class="muted">—</span> }
                   </td>
-                  <td class="muted">{{ usedLabel(s) }}</td>
+                  <td class="muted" data-label="Used on">{{ usedLabel(s) }}</td>
                   <td class="acts">
                     <button class="btn ghost sm" type="button" (click)="startEdit(s)">Edit</button>
                     <button class="btn warn sm" type="button" (click)="remove(s)">Remove</button>

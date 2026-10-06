@@ -130,8 +130,7 @@
       <label class="notify-toggle">
         <input type="checkbox" [checked]="notifyOn()" [disabled]="notifySaving()" (change)="onToggleNotify($event)">
         <span>
-          <b>{{ notifyOn() ? 'On' : 'Off' }}</b>
-         , email me about
+          <b>{{ notifyOn() ? 'On' : 'Off' }}</b>{{ ': email me about' }}
           {{ session.user()?.role === 'seeker' ? 'my applications' : 'new applicants' }}
         </span>
       </label>
@@ -141,7 +140,7 @@
           @for (o of alertLevels; track o.v) {
             <label class="alert-opt">
               <input type="radio" name="jobAlerts" [value]="o.v" [checked]="alertLevel() === o.v" (change)="setAlerts(o.v)">
-              <span><b>{{ o.label }}</b> <span class="hint">{{ o.sub }}</span></span>
+              <span class="alert-text"><b>{{ o.label }}</b><span class="hint">{{ o.sub }}</span></span>
             </label>
           }
           @if (!notifyOn() && alertLevel() !== 'off') {

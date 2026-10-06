@@ -1,4 +1,6 @@
-.block { margin-bottom:44px; }
+/* section.block, not .block: spartan's select also carries a Tailwind "block" class,
+   and the bare selector gave every dropdown on this page a 44px bottom margin. */
+section.block { margin-bottom:44px; }
 .block h2 { font-size: 22px; margin-bottom:14px; display: flex; align-items: center; gap:10px; }
 .count {
   font-family: var(--body); font-size: 12px; font-weight: 700; color: var(--accent-deep);

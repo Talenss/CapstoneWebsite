@@ -56,7 +56,7 @@
         <div class="card empty"><p>No recruiter accounts yet.</p></div>
       } @else {
         <div class="card" style="padding:0;overflow-x:auto">
-          <table>
+          <table class="stack-sm">
             <thead>
               <tr><th>Name</th><th>Email</th><th>Position</th><th>Since</th><th>Last login</th><th>Admin access</th></tr>
             </thead>
@@ -64,11 +64,11 @@
               @for (u of recruiters(); track u.id) {
                 <tr>
                   <td><b>{{ u.name }}</b></td>
-                  <td>{{ u.email }}</td>
-                  <td>{{ u.position || '—' }}</td>
-                  <td>{{ day(u.createdAt) }}</td>
-                  <td>{{ u.lastLoginAt ? day(u.lastLoginAt) : 'Never' }}</td>
-                  <td>
+                  <td data-label="Email">{{ u.email }}</td>
+                  <td data-label="Position">{{ u.position || '—' }}</td>
+                  <td data-label="Since">{{ day(u.createdAt) }}</td>
+                  <td data-label="Last login">{{ u.lastLoginAt ? day(u.lastLoginAt) : 'Never' }}</td>
+                  <td data-label="Admin access">
                     @if (u.isAdmin) {
                       <span class="badge green">Admin</span>
                     } @else if (u.verified) {
@@ -97,14 +97,14 @@
         There is always at least one admin, so your company can never be locked out.
       </p>
       <div class="card" style="padding:0;overflow-x:auto">
-        <table>
+        <table class="stack-sm">
           <thead><tr><th>Name</th><th>Position</th><th>Account</th><th></th></tr></thead>
           <tbody>
             @for (a of admins(); track a.id) {
               <tr>
                 <td><b>{{ a.name }}</b>@if (a.isYou) { <span class="muted">&nbsp;(you)</span> }<br><span class="muted">{{ a.email }}</span></td>
-                <td>{{ a.position || '—' }}</td>
-                <td>{{ a.kind === 'admin' ? 'Admin only' : 'Recruiter with admin access' }}</td>
+                <td data-label="Position">{{ a.position || '—' }}</td>
+                <td data-label="Account">{{ a.kind === 'admin' ? 'Admin only' : 'Recruiter with admin access' }}</td>
                 <td style="text-align:right">
                   <button class="btn warn sm" type="button" [disabled]="busyAdmin() === a.id || admins().length <= 1"
                           [attr.title]="admins().length <= 1 ? 'The only admin cannot be removed' : null"
@@ -147,13 +147,13 @@
               <p style="padding:0 20px 18px;color:var(--muted);font-size:13px">No departments posted yet.</p>
             } @else {
               <div style="overflow-x:auto">
-                <table>
+                <table class="stack-sm">
                   <thead><tr><th>Department</th><th>Application notice goes to</th></tr></thead>
                   <tbody>
                     @for (d of co.departments; track d) {
                       <tr>
                         <td><b>{{ d }}</b></td>
-                        <td>
+                        <td data-label="Notice goes to">
                           <hlm-select [value]="ownerOf(co, d)" [itemToString]="ownerLabel(co)"
                                       [disabled]="busyDept() === co.id + '::' + d"
                                       (valueChange)="assign(co, d, $any($event))">
@@ -186,7 +186,7 @@
         <div class="card empty"><p>No approved or declined requests yet.</p></div>
       } @else {
         <div class="card" style="padding:0;overflow-x:auto">
-          <table>
+          <table class="stack-sm">
             <thead>
               <tr><th>Name</th><th>Email</th><th>Company</th><th>Requested</th><th>Outcome</th></tr>
             </thead>
@@ -194,10 +194,10 @@
               @for (r of handled(); track r.id) {
                 <tr>
                   <td><b>{{ r.name }}</b></td>
-                  <td>{{ r.email }}</td>
-                  <td>{{ r.companyName }}</td>
-                  <td>{{ day(r.requestedAt) }}</td>
-                  <td>
+                  <td data-label="Email">{{ r.email }}</td>
+                  <td data-label="Company">{{ r.companyName }}</td>
+                  <td data-label="Requested">{{ day(r.requestedAt) }}</td>
+                  <td data-label="Outcome">
                     @if (r.status === 'approved') { <span class="badge green">Approved</span> }
                     @else { <span class="badge wine">Declined</span> }
                   </td>

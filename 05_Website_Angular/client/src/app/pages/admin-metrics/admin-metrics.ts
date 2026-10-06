@@ -18,6 +18,12 @@ import { environment } from '../../../environments/environment';
   styleUrl: './admin-metrics.css',
 })
 export class AdminMetrics implements OnInit {
+  /** "Oct 6, 2026, 9:25 AM", not an ISO timestamp. */
+  stamp(iso: string | null | undefined): string {
+    const d = iso ? new Date(iso) : null;
+    return d && !isNaN(d.getTime()) ? d.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+  }
+
   private api = inject(ApiService);
 
   isDemo = environment.mode === 'demo';
@@ -79,7 +85,7 @@ export class AdminMetrics implements OnInit {
     const rows: (string | number)[][] = [['Section', 'Metric', 'Value']];
     rows.push(['Meta', 'Generated at', d.generatedAt]);
     rows.push(['Thresholds', 'Strong match at or above (%)', d.thresholds?.strong]);
-    rows.push(['Thresholds', 'Related at or above (%)', d.thresholds?.related]);
+    rows.push(['Thresholds', 'Possible match at or above (%); related role below it', d.thresholds?.related]);
 
     const vol: [string, unknown][] = [
       ['Job seekers', d.volumes?.seekers], ['Recruiters', d.volumes?.recruiters],

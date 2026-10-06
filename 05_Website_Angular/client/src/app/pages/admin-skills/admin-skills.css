@@ -1,4 +1,4 @@
-.block { margin-bottom: 44px; }
+section.block { margin-bottom: 44px; }
 .block h2 { font-size: 22px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .count {
   font-family: var(--body); font-size: 12px; font-weight: 700; color: var(--accent-deep);

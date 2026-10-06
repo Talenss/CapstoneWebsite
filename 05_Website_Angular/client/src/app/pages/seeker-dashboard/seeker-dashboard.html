@@ -209,19 +209,19 @@
           <tbody>
             @for (a of filteredApps(); track a.id) {
               <tr>
-                <td><b>{{ a.posting ? a.posting.title : 'Removed' }}</b></td>
-                <td>{{ a.company ? a.company.name : '—' }}</td>
-                <td>{{ a.resumeTitle || '—' }}</td>
+                <td class="app-title"><b>{{ a.posting ? a.posting.title : 'Removed' }}</b></td>
+                <td data-label="Company">{{ a.company ? a.company.name : '—' }}</td>
+                <td data-label="Resume sent">{{ a.resumeTitle || '—' }}</td>
                 <!-- The number this application actually carries. Without it the
                      board above shows a live score for the same opening while the
                      recruiter ranks on the frozen one, and nothing on this page
                      accounts for the difference. -->
-                <td style="white-space:nowrap">
+                <td style="white-space:nowrap" data-label="Score sent">
                   @if (a.scoreSnapshot != null) { <b>{{ a.scoreSnapshot }}%</b> } @else { <span class="w">—</span> }
                 </td>
-                <td style="white-space:nowrap">{{ day(a.appliedAt) }}</td>
-                <td><span class="badge {{ statusBadge(a.status) }}">{{ STATUS_LABELS[a.status] }}</span></td>
-                <td style="text-align:right;white-space:nowrap">
+                <td style="white-space:nowrap" data-label="Applied">{{ day(a.appliedAt) }}</td>
+                <td data-label="Status"><span class="badge {{ statusBadge(a.status) }}">{{ STATUS_LABELS[a.status] }}</span></td>
+                <td class="app-acts" style="text-align:right;white-space:nowrap">
                   <!-- The record of what happened to this application has
                        always been kept; this is the applicant reading it.
 

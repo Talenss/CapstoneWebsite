@@ -30,7 +30,14 @@
 .pipe-hint{font-size:12.5px;color:var(--muted);margin:0}
 /* Nine stages do not fit across a phone; they scroll sideways as one strip
    rather than squeezing each label to a letter per line. */
-@media(max-width:760px){.pipe{overflow-x:auto}.pipe button{flex:0 0 112px}}
+/* On a narrow screen the nine stages sit in a 3 x 3 grid. A sideways-scrolling
+   strip showed three and hid six, with nothing to say they were there. */
+@media(max-width:760px){
+  .pipe{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .pipe button{padding:12px 8px;border-bottom:1px solid var(--rule-2)}
+  .pipe button:nth-child(3n){border-right:none}
+  .pipe button:nth-last-child(-n+3){border-bottom:none}
+}
 .pipe b{display:block;font-family:var(--display);font-size:26px;line-height:1;color:var(--text)}
 .pipe span{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:6px;font-weight:600}
 

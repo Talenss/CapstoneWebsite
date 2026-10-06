@@ -805,3 +805,19 @@ table.tbl tbody tr:hover{background:var(--ivory)}
 @media (max-width: 380px) {
   .btn { white-space: normal; }
 }
+
+/* A table that becomes one labelled card per row on a phone, so no column
+   (often the one holding the action button) ends up off the right edge with
+   nothing to say it is there. Give each cell a data-label; a cell without
+   one is shown on its own, which suits the row's name. */
+@media (max-width: 640px) {
+  table.stack-sm thead { display: none; }
+  table.stack-sm, table.stack-sm tbody, table.stack-sm tr, table.stack-sm td { display: block; width: 100%; }
+  table.stack-sm tbody tr { padding: 10px 14px; border-bottom: 1px solid var(--rule-2); }
+  table.stack-sm tbody tr:last-child { border-bottom: none; }
+  table.stack-sm td { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 4px 0 !important; border: none !important; text-align: left !important; }
+  table.stack-sm td:not([data-label]) { display: block; }
+  table.stack-sm td[data-label]::before { content: attr(data-label); font-size: 11px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted); flex: none; }
+}
